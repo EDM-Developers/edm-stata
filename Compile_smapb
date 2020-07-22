@@ -1,0 +1,1 @@
+gcc -bundle -DSYSTEM=APPLEMAC stplugin.c smap_block_mdap.c -o smap_block_mdap.plugin
