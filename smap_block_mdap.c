@@ -263,8 +263,18 @@ STDLL stata_call(int argc, char *argv[])
     ystar[i] = mf_smap_single(count_obs,mani,M,b,y,l,theta,S[i],algorithm,\
 			      save_mode*i,force_compute,missingdistance);
 
-    sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
-    SF_display(temps);
+    //sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
+    //SF_display(temps);
+  }
+
+  /* returning the value of ystar to Stata */
+  /* TO BE ADDED: check variable number in varlist */
+  j=0;
+  for (i=0; i < nobs; i++) {
+    if (predict_use[i] == 1) {
+      SF_vstore(4,i+1,ystar[j]);
+      j++;
+    }
   }
   
   /* deallocation of matrices and arrays before exiting the plugin */

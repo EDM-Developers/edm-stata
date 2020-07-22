@@ -580,8 +580,9 @@ program define edmExplore, eclass sortpreserve
 
                                 
                                 /* ==== CODE FOR C PLUGIN ==== */
-                                
-				mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
+
+                                /* comment out the call to mata function */
+				/*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
 
                                 local myvars ``manifold'' `co_mapping' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
@@ -1601,8 +1602,6 @@ mata:
 			b=Mp[i,.]
 			ystar[i]=mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
 		}
-                /* TO BE DELETED: just a check on values */
-                ystar
 	}
 end
 capture mata mata drop mf_smap_single()
