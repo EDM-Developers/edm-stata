@@ -23,6 +23,9 @@ void quicksortind(ST_double*, ST_int*, ST_int, ST_int);
 ST_double *d;
 ST_int *ind;
 
+/* global variable placeholder for missing values */
+ST_double missval = -1.;
+
 /*
 Example call to the plugin:
 
@@ -48,7 +51,6 @@ STDLL stata_call(int argc, char *argv[])
   ST_double *y, *ystar, *S, *b;
 
   ST_int i, j, force_compute, missingdistance, count_obs, obsi;
-  ST_double missval = -1.; /* placeholder for missing values */
   
   char temps[500], algorithm[500];
   
@@ -455,7 +457,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
       free(X_ls);
       
       /* return missing value flag to ystar[j] */
-      return(-1.);
+      return(missval);
       
     }
 

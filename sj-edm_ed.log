@@ -1,0 +1,159 @@
+
+  ___  ____  ____  ____  ____ (R)
+ /__    /   ____/   /   ____/
+___/   /   /___/   /   /___/   16.1   Copyright 1985-2019 StataCorp LLC
+  Statistics/Data analysis            StataCorp
+                                      4905 Lakeway Drive
+     Special Edition                  College Station, Texas 77845 USA
+                                      800-STATA-PC        https://www.stata.com
+                                      979-696-4600        stata@stata.com
+                                      979-696-4601 (fax)
+
+Stata license: 300-user network, expiring 31 Aug 2020
+Serial number: 401609303231
+  Licensed to: The University of Melbourne
+               Infrastructure Services
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. Maximum number of variables is set to 5,000; see help set_maxvar.
+
+. do sj-edm_ed.do 
+
+. /* edm paper replication do file
+>    Jinjing Li, University of Canberra
+>    Michael Zyphur, University of Melbourne
+> */
+. 
+. discard
+
+. 
+. set more off
+
+. 
+. set scheme sj
+
+. 
+. /* Example with a Synthetic Dataset */
+. /* Create a dynamic system */
+. 
+. set obs 10
+number of observations (_N) was 0, now 10
+
+. 
+. gen t = _n
+
+. tsset t
+        time variable:  t, 1 to 10
+                delta:  1 unit
+
+. 
+. gen x = 0.2 if _n==1
+(9 missing values generated)
+
+. gen y = 0.3 if _n==1
+(9 missing values generated)
+
+. gen z = 0.1 if _n==1
+(9 missing values generated)
+
+. 
+. local r_x 3.79
+
+. local r_y 3.79
+
+. local r_z 3.77
+
+. local beta_xy = 0.0
+
+. local beta_yx=0.2
+
+. local beta_zy = 0.5
+
+. local tau = 1
+
+. drawnorm u1 u2
+
+. qui {
+
+. 
+. //keep in 300/450
+. set seed 12345678
+
+. 
+. timer clear 1
+
+. timer on 1
+
+. 
+. /* Typical Output */
+. edm explore x
+
+pmani_flag: 0
+vsave_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 10
+first and last obs in sample = 1, 10
+
+arg 0: 1
+arg 1: 0
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = simplex
+
+missing distance = 0
+
+observations selected: 4
+
+number of variables in manifold = 2 
+
+p_manifold flag = 0 
+
+l = 3 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1 
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .76421          .25465 
+--------------------------------------------------------------------
+Note: Random 50/50 split for training and validation data
+For more information, please refer to help file and the article.
+
+. //edm xmap x y
+. 
+. timer off 1
+
+. /* Run time in seconds */
+. timer list 1
+   1:      0.41 /        1 =       0.4060
+
+. 
+. /* Plot the system */
+. //twoway (connected x t)(connected y t) in 1/40, ytitle(value) xtitle(t) lege
+> nd(position(7) ring(0)) 
+. //graph export plot.png, replace
+. 
+end of do-file
