@@ -148,7 +148,7 @@ For more information, please refer to help file and the article.
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.41 /        1 =       0.4060
+   1:      0.01 /        1 =       0.0080
 
 . 
 . /* Plot the system */

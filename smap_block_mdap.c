@@ -274,7 +274,7 @@ STDLL stata_call(int argc, char *argv[])
   j=0;
   for (i=0; i < nobs; i++) {
     if (predict_use[i] == 1) {
-      if (ystar[j] != -1.) {
+      if (ystar[j] != missval) {
         SF_vstore(4,i+1,ystar[j]);
       } else {
 	/* returning a missing value */
@@ -415,12 +415,12 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     rowc = -1;
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
       /* TO BE ADDED: CHEK OF MISSING VALUES HANDLING */
-      if (y[ind[j]] == -1.) {
+      if (y[ind[j]] == missval) {
 	continue;
       }
       bocont = 0;
       for (i=0; i<colsm; i++) {
-        if (M[ind[j]][i] == -1.) {
+        if (M[ind[j]][i] == missval) {
 	  bocont = 1;
         }
       }
