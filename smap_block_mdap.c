@@ -272,7 +272,12 @@ STDLL stata_call(int argc, char *argv[])
   j=0;
   for (i=0; i < nobs; i++) {
     if (predict_use[i] == 1) {
-      SF_vstore(4,i+1,ystar[j]);
+      if (ystar[j] != -1.) {
+        SF_vstore(4,i+1,ystar[j]);
+      } else {
+	/* returning a missing value */
+	SF_vstore(4,i+1,SV_missval);
+      }
       j++;
     }
   }
@@ -387,17 +392,116 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
       r = r + y[ind[j]] * w[j];
     }
+    /* deallocation of matrices and arrays before exiting the function */
+    free(d);
+    free(a);
+    free(ind);
+    free(w);
+
+    /* returning the value of ystar[j] */
     return(r);
+    
+  } else if ((strcmp(algorithm,"smap") == 0) ||\
+	     (strcmp(algorithm,"llr") == 0)) {
+    ST_double *y_ls, *b_ls;
+
+    ST_int rowc, bocont;
+
+    y_ls = (ST_double*)malloc(sizeof(ST_double)*l);
+    ST_double (*X_ls)[colsm] = malloc(l*sizeof(*X_ls));
+    
+    rowc = -1;
+    for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
+      /* TO BE ADDED: CHEK OF MISSING VALUES HANDLING */
+      if (y[ind[j]] == -1.) {
+	continue;
+      }
+      bocont = 0;
+      for (i=0; i<colsm; i++) {
+        if (M[ind[j]][i] == -1.) {
+	  bocont = 1;
+        }
+      }
+      if (bocont == 1) {
+	continue;
+      }
+      rowc++;
+      if (strcmp(algorithm,"llr") == 0) {
+	/* llr algorithm is not needed at this stage */
+	sprintf(temps,"llr algorithm not yet implemented\n");
+        SF_error(temps);
+	/* deallocation of matrices and arrays before exiting the function */
+	free(d);
+        free(a);
+        free(ind);
+        free(w);
+	free(y_ls);
+        free(X_ls);
+        return( (ST_retcode)908);
+      } else if (strcmp(algorithm,"smap") == 0) {
+	y_ls[rowc] = y[ind[j]] * w[j];
+	for (i=0; i<colsm; i++) {
+	  X_ls[rowc][i] = M[ind[j]][i] * w[j];
+	}
+      }
+    }
+    if (rowc == -1) {
+      /* deallocation of matrices and arrays before exiting the function */
+      free(d);
+      free(a);
+      free(ind);
+      free(w);
+      free(y_ls);
+      free(X_ls);
+      
+      /* return missing value flag to ystar[j] */
+      return(-1.);
+      
+    }
+
+    /* TO BE ADDED:
+	y_ls=y_ls[1..rowc]
+	X_ls=X_ls[1..rowc,.]
+	n_ls=rows(X_ls)
+	X_ls=X_ls,J(n_ls,1,1) */
+    
+    if (strcmp(algorithm,"llr") == 0) {
+	/* llr algorithm is not needed at this stage */
+	sprintf(temps,"llr algorithm not yet implemented\n");
+        SF_error(temps);
+        return( (ST_retcode)908);
+    } else {
+      
+      /* TO BE ADDED:
+         b_ls=svsolve(X_ls, y_ls) */
+
+    }
+    /* TO BE ADDED: check the value of save index, in C indexes start at 0 */
+    if (save_index > 0) {
+
+      /* TO BE ADDED:
+         Beta_smap[save_index,.]=editvalue(b_ls',0,.) */
+    }
+    /* TO BE ADDED:
+       x_pred=editvalue(b,.,0),1
+       r=x_pred * b_ls */
+
+    /* deallocation of matrices and arrays before exiting the function */
+    free(d);
+    free(a);
+    free(ind);
+    free(w);
+    free(y_ls);
+    free(X_ls);
+
+    /* returning the value of ystar[j] */
+    return(r);
+    
   }
   
-  /* deallocation of matrices and arrays before exiting the function */
-  free(d);
-  free(a);
-  free(ind);
-  free(w);
-
-  /* returning the result to the main program */
-  return b[1];
+  /* returning the result to the main program, added just to avoid
+     a warning when compiling, not really necessary */
+  return(1);
   
 }
 
