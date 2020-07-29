@@ -24,6 +24,7 @@ ST_double *d;
 ST_int *ind;
 
 /* global variable placeholder for missing values */
+
 ST_double missval = -1.;
 
 /*
@@ -45,7 +46,6 @@ STDLL stata_call(int argc, char *argv[])
 {
   ST_int nvars, nobs, first, last, mani, pmani_flag;
   ST_int Mpcol, l, vsave_flag, save_mode, theta;
-  ST_retcode rc;
 
   ST_double value, *train_use, *predict_use, *skip_obs;
   ST_double *y, *ystar, *S, *b;
@@ -60,7 +60,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("Start of the plugin\n");
   SF_display("\n");
 
-  /* overview on variables and arguments passed and observations in sample */
+  /* overview of variables and arguments passed and observations in sample */
   nvars = SF_nvars();
   nobs = SF_nobs();
   first = SF_in1();
@@ -100,23 +100,17 @@ STDLL stata_call(int argc, char *argv[])
   SF_display(temps);
   SF_display("\n");
   
-  /* rc holds the return code that the plugin will return to Stata */
-  rc = (ST_retcode) 0;
-  
   /* allocation of train_use, predict_use and skip_obs variables */
-
   train_use = (ST_double*)malloc(sizeof(ST_double)*nobs);
   predict_use = (ST_double*)malloc(sizeof(ST_double)*nobs);
   skip_obs = (ST_double*)malloc(sizeof(ST_double)*nobs);
-
   if ((train_use == NULL) || (predict_use == NULL) || (skip_obs == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return( (ST_retcode)909);
+    return((ST_retcode)909);
   }
   
   count_obs = 0;
-  
   for(i=1; i<=(last-first+1); i++) {
     SF_vdata(5, i, &value);
     train_use[i-1] = value;
@@ -143,7 +137,6 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* allocation of matrices M and y */
-
   mani = atoi(argv[5]); /* contains the number of columns in manifold */
   sprintf(temps,"number of variables in manifold = %i \n",mani);
   SF_display(temps);
@@ -154,7 +147,7 @@ STDLL stata_call(int argc, char *argv[])
   if ((*M == NULL) || (y == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return( (ST_retcode)909);
+    return((ST_retcode)909);
   }
 
   obsi = 0;
@@ -178,8 +171,7 @@ STDLL stata_call(int argc, char *argv[])
     }
   }
   
-  /* allocation of matrices ystar, Mp, S and b */
-
+  /* allocation of matrices Mp, S, ystar and b */
   pmani_flag = atoi(argv[6]); /* contains the flag for p_manifold */
   sprintf(temps,"p_manifold flag = %i \n",pmani_flag);
   SF_display(temps);
@@ -194,7 +186,7 @@ STDLL stata_call(int argc, char *argv[])
   if ((*Mp == NULL) || (S == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return( (ST_retcode)909);
+    return((ST_retcode)909);
   }
   
   if (pmani_flag == 1) {
@@ -248,7 +240,12 @@ STDLL stata_call(int argc, char *argv[])
 
   ystar = (ST_double*)malloc(sizeof(ST_double)*count_obs);
   b = (ST_double*)malloc(sizeof(ST_double)*mani);
-
+  if ((ystar == NULL) || (b == NULL)) {
+    sprintf(temps,"Insufficient memory\n");
+    SF_error(temps);
+    return((ST_retcode)909);
+  }
+  
   theta = atoi(argv[0]); /* contains value of theta = first argument */
   sprintf(temps,"theta = %i \n",theta); /* CHECK TYPE OF theta */
   SF_display(temps);
@@ -290,9 +287,9 @@ STDLL stata_call(int argc, char *argv[])
   free(skip_obs);
   free(M);
   free(y);
-  free(ystar);
   free(Mp);
   free(S);
+  free(ystar);
   free(b);
   
   /* footer of the plugin */
@@ -322,7 +319,12 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
   d = (ST_double*)malloc(sizeof(ST_double)*rowsm);
   a = (ST_double*)malloc(sizeof(ST_double)*colsm);
   ind = (ST_int*)malloc(sizeof(ST_int)*rowsm);
-  
+  if ((d == NULL) || (a == NULL) || (ind == NULL)) {
+    sprintf(temps,"Insufficient memory\n");
+    SF_error(temps);
+    return((ST_retcode)909);
+  }
+
   for (i=0; i<rowsm; i++) {
     value = 0.;
     for (j=0; j<colsm; j++) {
@@ -369,17 +371,22 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 	sprintf(temps,"Insufficient number of unique observations in the\
                        dataset even with -force- option\n");
         SF_error(temps);
-        return( (ST_retcode)503);
+        return((ST_retcode)503);
       }
     } else {
       sprintf(temps,"Insufficient number of unique observations, consider\
                      tweaking the values of E, k or use -force- option\n");
       SF_error(temps);
-      return( (ST_retcode)503);
+      return((ST_retcode)503);
     }
   }
 
   w = (ST_double*)malloc(sizeof(ST_double)*(l+(int)skip_obs));
+  if (w == NULL) {
+    sprintf(temps,"Insufficient memory\n");
+    SF_error(temps);
+    return((ST_retcode)909);
+  }
   sumw = 0.;
   for (j=(int)skip_obs; j<l+(int)skip_obs; j++) {
     w[j] = exp(-(ST_double)theta*pow((d[ind[j]] / d_base),(0.5)));
@@ -411,7 +418,12 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 
     y_ls = (ST_double*)malloc(sizeof(ST_double)*l);
     ST_double (*X_ls)[colsm] = malloc(l*sizeof(*X_ls));
-    
+    if ((y_ls == NULL) || (*X_ls == NULL)) {
+      sprintf(temps,"Insufficient memory\n");
+      SF_error(temps);
+      return((ST_retcode)909);
+    }
+
     rowc = -1;
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
       /* TO BE ADDED: CHEK OF MISSING VALUES HANDLING */
@@ -432,14 +444,8 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 	/* llr algorithm is not needed at this stage */
 	sprintf(temps,"llr algorithm not yet implemented\n");
         SF_error(temps);
-	/* deallocation of matrices and arrays before exiting the function */
-	free(d);
-        free(a);
-        free(ind);
-        free(w);
-	free(y_ls);
-        free(X_ls);
-        return( (ST_retcode)908);
+        return((ST_retcode)908);
+
       } else if (strcmp(algorithm,"smap") == 0) {
 	y_ls[rowc] = y[ind[j]] * w[j];
 	for (i=0; i<colsm; i++) {
@@ -471,7 +477,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 	/* llr algorithm is not needed at this stage */
 	sprintf(temps,"llr algorithm not yet implemented\n");
         SF_error(temps);
-        return( (ST_retcode)908);
+        return((ST_retcode)908);
     } else {
       
       /* TO BE ADDED:
@@ -503,13 +509,14 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
   
   /* returning the result to the main program, added just to avoid
      a warning when compiling, not really necessary */
-  return(1);
+  return(-1.);
   
 }
 
 /* NOTE: in mata, minindex(v,k,i,w) returns in i and w the indices of the
-   k minimums of v. The internal function minindex below only returns i
-   and does not return w, as w is not used in the original edm code */
+   k minimums of v. The internal function minindex below only returns i +
+   the number of k minimums and does not return w, as w is not used in the
+   original edm code */
 ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
 	      ST_int ind[])
 {
@@ -534,6 +541,11 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
 	   repeated values */
         temp_ind = (ST_double*)malloc(sizeof(ST_double)*count_ord);
 	subind = (ST_int*)malloc(sizeof(ST_int)*count_ord);
+	if ((temp_ind == NULL) || (subind == NULL)) {
+          sprintf(temps,"Insufficient memory\n");
+          SF_error(temps);
+          return((ST_retcode)909);
+        }
         for (j=0; j<count_ord; j++) {
 	  temp_ind[j] = (ST_double)ind[i-1-j];
 	  subind[j] = j;
@@ -555,13 +567,18 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
       count_ord++;
       i++;
       if (i == rvect) {
-	/* here I chek if I reached the end of the array */
+	/* here I check whether I reached the end of the array */
         if (count_ord > 1) {
 	  /* here I reorder the indexes from low to high in case of
 	     repeated values */
           temp_ind = (ST_double*)malloc(sizeof(ST_double)*count_ord);
 	  subind = (ST_int*)malloc(sizeof(ST_int)*count_ord);
-          for (j=0; j<count_ord; j++) {
+          if ((temp_ind == NULL) || (subind == NULL)) {
+            sprintf(temps,"Insufficient memory\n");
+            SF_error(temps);
+            return((ST_retcode)909);
+          }
+	  for (j=0; j<count_ord; j++) {
 	    temp_ind[j] = (ST_double)ind[i-1-j];
 	    subind[j] = j;
 	  }
@@ -576,6 +593,7 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
     }
   }
 
+  /* returning the number of k minimums (and indices via ind) */
   return numind;
   
 }
