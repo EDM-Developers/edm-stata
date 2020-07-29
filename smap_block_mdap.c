@@ -44,7 +44,7 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 
 STDLL stata_call(int argc, char *argv[])
 {
-  ST_int nvars, nobs, first, last, mani, pmani_flag;
+  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani;
   ST_int Mpcol, l, vsave_flag, save_mode, theta;
 
   ST_double value, *train_use, *predict_use, *skip_obs;
@@ -164,8 +164,8 @@ STDLL stata_call(int argc, char *argv[])
       SF_vdata(j+1, i+1, &value);
       y[obsi] = value;
       if (SF_is_missing(value)) {
-          /* missing value */
-          y[obsi] = missval;
+        /* missing value */
+        y[obsi] = missval;
       }
       obsi++;
     }
@@ -175,12 +175,17 @@ STDLL stata_call(int argc, char *argv[])
   pmani_flag = atoi(argv[6]); /* contains the flag for p_manifold */
   sprintf(temps,"p_manifold flag = %i \n",pmani_flag);
   SF_display(temps);
-  SF_display("\n");
-  
-  /* TO BE ADDED */
-  /* allocation of Mp according to mani or p_mani flags*/
-  Mpcol = mani; /* for now, to be changed according to the flag */
-  
+
+  if (pmani_flag == 1) {
+    pmani = atoi(argv[8]); /* contains the number of columns in p_manifold */
+    sprintf(temps,"number of variables in p_manifold = %i \n",pmani);
+    SF_display(temps);
+    SF_display("\n");
+    Mpcol = pmani;
+  } else {
+    SF_display("\n");
+    Mpcol = mani;
+  }
   ST_double (*Mp)[Mpcol] = malloc(count_obs*sizeof(*Mp));
   S = (ST_double*)malloc(sizeof(ST_double)*count_obs);
   if ((*Mp == NULL) || (S == NULL)) {
@@ -190,15 +195,25 @@ STDLL stata_call(int argc, char *argv[])
   }
   
   if (pmani_flag == 1) {
-
-    /* TO BE ADDED */
-    /* st_view(Mp, ., tokens(p_manifold), predict_use) */
-    
-  } else {
-
     obsi = 0;
     for(i=0; i<nobs; i++) {
-      if (predict_use[i] == 1) {  
+      if (predict_use[i] == 1) {
+        for(j=0; j<Mpcol; j++) {
+          SF_vdata(j+1, i+1, &value);
+          Mp[obsi][j] = value;
+          if (SF_is_missing(value)) {
+            /* missing value */
+            Mp[obsi][j] = missval;
+          }
+        }
+        S[obsi] = skip_obs[i];
+        obsi++;
+      }
+    }
+  } else {
+    obsi = 0;
+    for(i=0; i<nobs; i++) {
+      if (predict_use[i] == 1) {
         for(j=0; j<Mpcol; j++) {
           SF_vdata(j+1, i+1, &value);
           Mp[obsi][j] = value;
@@ -212,7 +227,7 @@ STDLL stata_call(int argc, char *argv[])
       }
     }
   }
-
+  
   l = atoi(argv[1]); /* contains l */
   if (l <= 0) {
     l = mani + 1;

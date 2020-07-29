@@ -584,7 +584,7 @@ program define edmExplore, eclass sortpreserve
                                 /* comment out the call to mata function */
 				/*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
 
-                                local myvars ``manifold'' `co_mapping' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+                                local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
                                 unab vars : ``manifold''
                                 local mani `: word count `vars''
