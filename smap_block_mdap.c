@@ -262,7 +262,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
 
   ystar = (ST_double*)malloc(sizeof(ST_double)*count_predict_set);
-  b = (ST_double*)malloc(sizeof(ST_double)*mani);
+  b = (ST_double*)malloc(sizeof(ST_double)*Mpcol);
   if ((ystar == NULL) || (b == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
@@ -291,7 +291,6 @@ STDLL stata_call(int argc, char *argv[])
   }
 
   /* returning the value of ystar to Stata */
-  /* TO BE ADDED: check variable number in varlist */
   j=0;
   for (i=0; i < nobs; i++) {
     if (predict_use[i] == 1) {
