@@ -114,9 +114,10 @@ algorithm = simplex
 
 missing distance = 0
 
-observations selected: 499
-
 number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
 
 p_manifold flag = 0 
 
@@ -148,7 +149,7 @@ For more information, please refer to help file and the article.
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.03 /        1 =       0.0340
+   1:      0.04 /        1 =       0.0360
 
 . 
 . /* Plot the system */

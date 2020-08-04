@@ -50,7 +50,8 @@ STDLL stata_call(int argc, char *argv[])
   ST_double value, *train_use, *predict_use, *skip_obs;
   ST_double *y, *ystar, *S, *b;
 
-  ST_int i, j, force_compute, missingdistance, count_obs, obsi;
+  ST_int i, j, force_compute, missingdistance;
+  ST_int count_train_set, count_predict_set, obsi, obsj;
   
   char temps[500], algorithm[500];
   
@@ -99,6 +100,12 @@ STDLL stata_call(int argc, char *argv[])
   sprintf(temps,"missing distance = %i\n",missingdistance);
   SF_display(temps);
   SF_display("\n");
+
+  /* allocation of number of columns in manifold */
+  mani = atoi(argv[5]);
+  sprintf(temps,"number of variables in manifold = %i \n",mani);
+  SF_display(temps);
+  SF_display("\n");
   
   /* allocation of train_use, predict_use and skip_obs variables */
   train_use = (ST_double*)malloc(sizeof(ST_double)*nobs);
@@ -110,40 +117,39 @@ STDLL stata_call(int argc, char *argv[])
     return((ST_retcode)909);
   }
   
-  count_obs = 0;
+  count_train_set = 0;
+  count_predict_set = 0;
   for(i=1; i<=(last-first+1); i++) {
-    SF_vdata(5, i, &value);
+    SF_vdata(mani+3, i, &value);
     train_use[i-1] = value;
+    if (value == 1.) count_train_set++;
     if (SF_is_missing(value)) {
       /* missing value */
       train_use[i-1] = missval;
     }
-    SF_vdata(6, i, &value);
+    SF_vdata(mani+4, i, &value);
     predict_use[i-1] = value;
-    if (value == 1) count_obs++;
+    if (value == 1.) count_predict_set++;
     if (SF_is_missing(value)) {
       /* missing value */
       predict_use[i-1] = missval;
     }
-    SF_vdata(7, i, &value);
+    SF_vdata(mani+5, i, &value);
     skip_obs[i-1] = value;
     if (SF_is_missing(value)) {
       /* missing value */
       skip_obs[i-1] = missval;
     }
   }
-  sprintf(temps,"observations selected: %i\n",count_obs);
+  sprintf(temps,"train set obs: %i\n",count_train_set);
+  SF_display(temps);
+  sprintf(temps,"predict set obs: %i\n",count_predict_set);
   SF_display(temps);
   SF_display("\n");
   
   /* allocation of matrices M and y */
-  mani = atoi(argv[5]); /* contains the number of columns in manifold */
-  sprintf(temps,"number of variables in manifold = %i \n",mani);
-  SF_display(temps);
-  SF_display("\n");
-  
-  ST_double (*M)[mani] = malloc(count_obs*sizeof(*M)); 
-  y = (ST_double*)malloc(sizeof(ST_double)*count_obs);
+  ST_double (*M)[mani] = malloc(count_train_set*sizeof(*M)); 
+  y = (ST_double*)malloc(sizeof(ST_double)*count_train_set);
   if ((*M == NULL) || (y == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
@@ -152,7 +158,7 @@ STDLL stata_call(int argc, char *argv[])
 
   obsi = 0;
   for(i=0; i<nobs; i++) {
-    if (train_use[i] == 1) {  
+    if (train_use[i] == 1.) {  
       for(j=0; j<mani; j++) {
         SF_vdata(j+1, i+1, &value);
         M[obsi][j] = value;
@@ -186,8 +192,8 @@ STDLL stata_call(int argc, char *argv[])
     SF_display("\n");
     Mpcol = mani;
   }
-  ST_double (*Mp)[Mpcol] = malloc(count_obs*sizeof(*Mp));
-  S = (ST_double*)malloc(sizeof(ST_double)*count_obs);
+  ST_double (*Mp)[Mpcol] = malloc(count_predict_set*sizeof(*Mp));
+  S = (ST_double*)malloc(sizeof(ST_double)*count_predict_set);
   if ((*Mp == NULL) || (S == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
@@ -197,14 +203,16 @@ STDLL stata_call(int argc, char *argv[])
   if (pmani_flag == 1) {
     obsi = 0;
     for(i=0; i<nobs; i++) {
-      if (predict_use[i] == 1) {
-        for(j=0; j<Mpcol; j++) {
+      if (predict_use[i] == 1.) {
+	obsj = 0;
+        for(j=mani+5; j<mani+5+Mpcol; j++) {
           SF_vdata(j+1, i+1, &value);
-          Mp[obsi][j] = value;
+          Mp[obsi][obsj] = value;
           if (SF_is_missing(value)) {
             /* missing value */
-            Mp[obsi][j] = missval;
+            Mp[obsi][obsj] = missval;
           }
+	  obsj++;
         }
         S[obsi] = skip_obs[i];
         obsi++;
@@ -213,7 +221,7 @@ STDLL stata_call(int argc, char *argv[])
   } else {
     obsi = 0;
     for(i=0; i<nobs; i++) {
-      if (predict_use[i] == 1) {
+      if (predict_use[i] == 1.) {
         for(j=0; j<Mpcol; j++) {
           SF_vdata(j+1, i+1, &value);
           Mp[obsi][j] = value;
@@ -253,7 +261,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display(temps);
   SF_display("\n");
 
-  ystar = (ST_double*)malloc(sizeof(ST_double)*count_obs);
+  ystar = (ST_double*)malloc(sizeof(ST_double)*count_predict_set);
   b = (ST_double*)malloc(sizeof(ST_double)*mani);
   if ((ystar == NULL) || (b == NULL)) {
     sprintf(temps,"Insufficient memory\n");
@@ -267,15 +275,16 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* loop with call to mf_smap_single function */
-  for (i=0; i<count_obs; i++) {
+  for (i=0; i<count_predict_set; i++) {
     for (j=0; j<Mpcol; j++) {
       b[j] = Mp[i][j];
     }
 
     /* TO BE ADDED case when save_mode = 1 and matrix B is allocated */
     
-    ystar[i] = mf_smap_single(count_obs,mani,M,b,y,l,theta,S[i],algorithm,\
-			      save_mode*i,force_compute,missingdistance);
+    ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
+			      algorithm,save_mode*i,force_compute,\
+			      missingdistance);
 
     //sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
     //SF_display(temps);
@@ -287,10 +296,10 @@ STDLL stata_call(int argc, char *argv[])
   for (i=0; i < nobs; i++) {
     if (predict_use[i] == 1) {
       if (ystar[j] != missval) {
-        SF_vstore(4,i+1,ystar[j]);
+        SF_vstore(mani+2,i+1,ystar[j]);
       } else {
 	/* returning a missing value */
-	SF_vstore(4,i+1,SV_missval);
+	SF_vstore(mani+2,i+1,SV_missval);
       }
       j++;
     }
