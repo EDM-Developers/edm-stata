@@ -402,19 +402,18 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     SF_error(temps);
     return((ST_retcode)909);
   }
-  sumw = 0.;
-  for (j=(int)skip_obs; j<l+(int)skip_obs; j++) {
-    w[j] = exp(-(ST_double)theta*pow((d[ind[j]] / d_base),(0.5)));
-    sumw = sumw + w[j];
-  }
-  for (j=(int)skip_obs; j<l+(int)skip_obs; j++) {
-    w[j] = w[j]/sumw;
-  }
 
+  sumw = 0.;
   r = 0.;
   if ((strcmp(algorithm,"") == 0) || (strcmp(algorithm,"simplex") == 0)) {
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
-      r = r + y[ind[j]] * w[j];
+      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
+      /* w[j] = exp(-(ST_double)theta*pow((d[ind[j]] / d_base),(0.5))); */
+      w[j] = exp(-(ST_double)theta*sqrt(d[ind[j]] / d_base));
+      sumw = sumw + w[j];
+    }
+    for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
+      r = r + y[ind[j]] * (w[j] / sumw);
     }
     /* deallocation of matrices and arrays before exiting the function */
     free(d);
@@ -424,21 +423,34 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 
     /* returning the value of ystar[j] */
     return(r);
-    
   } else if ((strcmp(algorithm,"smap") == 0) ||\
-	     (strcmp(algorithm,"llr") == 0)) {
-    ST_double *y_ls, *b_ls;
+	     (strcmp(algorithm,"llr") == 0)) { 
+ 
+    ST_double *y_ls, *w_ls, *b_ls, mean_w;
 
     ST_int rowc, bocont;
 
     y_ls = (ST_double*)malloc(sizeof(ST_double)*l);
+    w_ls = (ST_double*)malloc(sizeof(ST_double)*l);
     ST_double (*X_ls)[colsm] = malloc(l*sizeof(*X_ls));
-    if ((y_ls == NULL) || (*X_ls == NULL)) {
+    if ((y_ls == NULL) || (w_ls == NULL) || (*X_ls == NULL)) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
       return((ST_retcode)909);
     }
 
+    mean_w = 0.;
+    for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
+      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
+      /* w[j] = pow(d[ind[j]],0.5); */
+      w[j] = sqrt(d[ind[j]]);
+      mean_w = mean_w + w[j];
+    }
+    mean_w = mean_w / (ST_double)l;
+    for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
+      w[j] = exp(-(ST_double)theta * (w[j] / mean_w));
+    }
+    
     rowc = -1;
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
       /* TO BE ADDED: CHEK OF MISSING VALUES HANDLING */
@@ -463,6 +475,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 
       } else if (strcmp(algorithm,"smap") == 0) {
 	y_ls[rowc] = y[ind[j]] * w[j];
+	w_ls[rowc] = w[j];
 	for (i=0; i<colsm; i++) {
 	  X_ls[rowc][i] = M[ind[j]][i] * w[j];
 	}
@@ -485,8 +498,9 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     /* TO BE ADDED:
 	y_ls=y_ls[1..rowc]
 	X_ls=X_ls[1..rowc,.]
+        w_ls = w_ls[1..rowc] // not needed
 	n_ls=rows(X_ls)
-	X_ls=X_ls,J(n_ls,1,1) */
+	X_ls=w_ls,X_ls */
     
     if (strcmp(algorithm,"llr") == 0) {
 	/* llr algorithm is not needed at this stage */
@@ -506,7 +520,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
          Beta_smap[save_index,.]=editvalue(b_ls',0,.) */
     }
     /* TO BE ADDED:
-       x_pred=editvalue(b,.,0),1
+       x_pred=editvalue(b,.,0)
        r=x_pred * b_ls */
 
     /* deallocation of matrices and arrays before exiting the function */
