@@ -335,7 +335,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
   ST_double *a, *w;
   ST_double value, pre_adj_skip_obs, d_base, sumw, r;
 
-  ST_int i, j, numind;
+  ST_int i, j, numind, boolmiss;
   
   char temps[500];
 
@@ -350,16 +350,25 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 
   for (i=0; i<rowsm; i++) {
     value = 0.;
+    boolmiss = 0;
     for (j=0; j<colsm; j++) {
-      a[j] = M[i][j] - b[j];
-      if (missingdistance !=0) {
-
-	/* TO BE ADDED: HANDLING OF MISSING VALUES */
-	
+      if ((M[i][j] == missval) || (b[j] == missval)) {
+        if (missingdistance !=0) {
+          a[j] = (ST_double)missingdistance;
+	  value = value + a[j]*a[j];
+	} else {
+          boolmiss = 1;
+	}
+      } else {
+        a[j] = M[i][j] - b[j];
+	value = value + a[j]*a[j]; 
       }
-      value = value + a[j]*a[j]; 
     }
-    d[i] = value;
+    if (boolmiss == 1) {
+      d[i] = missval;
+    } else {
+      d[i] = value;
+    }
     ind[i] = i;
   }
   
