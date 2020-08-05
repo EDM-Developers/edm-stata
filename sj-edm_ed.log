@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 100
-number of observations (_N) was 0, now 100
+. set obs 30000
+number of observations (_N) was 0, now 30,000
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 100
+        time variable:  t, 1 to 30000
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(99 missing values generated)
+(29,999 missing values generated)
 
 . gen y = 0.3 if _n==1
-(99 missing values generated)
+(29,999 missing values generated)
 
 . gen z = 0.1 if _n==1
-(99 missing values generated)
+(29,999 missing values generated)
 
 . 
 . local r_x 3.79
@@ -96,8 +96,8 @@ vsave_flag: 0
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 100
-first and last obs in sample = 1, 100
+number of vars & obs = 7, 30000
+first and last obs in sample = 1, 30000
 
 arg 0: 1
 arg 1: 0
@@ -116,8 +116,8 @@ missing distance = 0
 
 number of variables in manifold = 2 
 
-train set obs: 49
-predict set obs: 49
+train set obs: 14999
+predict set obs: 14999
 
 p_manifold flag = 0 
 
@@ -138,7 +138,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99584         .014282 
+                 2               1          .99999       .00071576 
 --------------------------------------------------------------------
 Note: Random 50/50 split for training and validation data
 For more information, please refer to help file and the article.
@@ -149,7 +149,7 @@ For more information, please refer to help file and the article.
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.01 /        1 =       0.0090
+   1:     44.49 /        1 =      44.4940
 
 . 
 . /* Plot the system */

@@ -25,7 +25,7 @@ ST_int *ind;
 
 /* global variable placeholder for missing values */
 
-ST_double missval = -1.;
+ST_double missval = 100000.;
 
 /*
 Example call to the plugin:
@@ -389,11 +389,15 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
   }
 
   if (d[ind[(int)skip_obs]] == 0.) {
-
-    /* TO BE ADDED: HANDLING OF MISSING VALUES */
-    
+    for (i=0; i<rowsm; i++) {
+      if (d[i] == 0.) {
+        d[i] = missval;
+      }
+    }
+    skip_obs = 0.;
+    numind = minindex(rowsm,d,l+(int)skip_obs,ind);
   }
-
+  
   d_base = d[ind[(int)skip_obs]];
 
   if (numind < l+(int)skip_obs) {
