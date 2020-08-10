@@ -1656,12 +1656,12 @@ mata:
 				exit(error(503))
 			}
 		}
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
-		}
-		w=w/sum(w)
 		r=0
 		if (algorithm==""|algorithm=="simplex") {
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
+			}
+			w=w/sum(w)
 			for(j=1+skip_obs;j<=l+skip_obs;j++) {
 				r=r + y[ind[j]] * w[j]
 			}
@@ -1671,6 +1671,14 @@ mata:
 			real colvector y_ls, b_ls, w_ls
 			real matrix X_ls, XpXi
 			real rowvector x_pred
+			real scalar mean_w
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=d[ind[j]] ^ (1/2)
+			}
+			mean_w=mean(w)
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=exp(-theta*(w[j] / mean_w))
+			}
 			y_ls=J(l, 1, .)
 			X_ls=J(l, cols(M), .)
 			w_ls=J(l, 1, .)
@@ -1689,6 +1697,7 @@ mata:
 				else if (algorithm=="smap") {
 					y_ls[rowc]=y[ind[j]] * w[j]
 					X_ls[rowc,.]=M[ind[j],.] * w[j]
+					w_ls[rowc]=w[j]
 				}
 			}
 			if (rowc==0) {
@@ -1696,8 +1705,9 @@ mata:
 			}
 			y_ls=y_ls[1..rowc]
 			X_ls=X_ls[1..rowc,.]
+			w_ls=w_ls[1..rowc]
 			n_ls=rows(X_ls)
-			X_ls=X_ls,J(n_ls,1,1)
+			X_ls=w_ls,X_ls
 			if (algorithm=="llr") {
 				w_ls=w_ls[1..rowc]
 				XpXi=quadcross(X_ls, w_ls, X_ls)
@@ -1710,7 +1720,7 @@ mata:
 			if (save_index>0) {
 				Beta_smap[save_index,.]=editvalue(b_ls',0,.)
 			}
-			x_pred=editvalue(b,.,0),1
+			x_pred=1,editvalue(b,.,0)
 			r=x_pred * b_ls
 			return(r)
 		}

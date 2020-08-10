@@ -12,7 +12,7 @@ set scheme sj
 /* Example with a Synthetic Dataset */
 /* Create a dynamic system */
 
-set obs 30000
+set obs 1000
 
 gen t = _n
 tsset t

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <gsl/gsl_linalg.h>
 
 /* internal functions */
 
@@ -444,6 +445,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 
     /* returning the value of ystar[j] */
     return(r);
+    
   } else if ((strcmp(algorithm,"smap") == 0) ||\
 	     (strcmp(algorithm,"llr") == 0)) { 
  
@@ -516,12 +518,18 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
       
     }
 
-    /* TO BE ADDED:
-	y_ls=y_ls[1..rowc]
-	X_ls=X_ls[1..rowc,.]
-        w_ls = w_ls[1..rowc] // not needed
-	n_ls=rows(X_ls)
-	X_ls=w_ls,X_ls */
+    ST_double (*X_ls_cjoint)[colsm+1] = malloc((rowc+1)*sizeof(*X_ls_cjoint));
+    if (X_ls_cjoint == NULL) {
+      sprintf(temps,"Insufficient memory\n");
+      SF_error(temps);
+      return((ST_retcode)909);
+    }
+    for(i=0; i<rowc+1; i++) {
+      X_ls_cjoint[i][0] = w_ls[i];
+      for (j=1; j<colsm+1; j++) {
+        X_ls_cjoint[i][j] = X_ls[i][j-1];
+      }
+    }
     
     if (strcmp(algorithm,"llr") == 0) {
 	/* llr algorithm is not needed at this stage */
@@ -551,6 +559,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     free(w);
     free(y_ls);
     free(X_ls);
+    free(X_ls_cjoint);
 
     /* returning the value of ystar[j] */
     return(r);
@@ -581,7 +590,7 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
   tempval = vect[ind[0]];
   contin = 0;
   numind = 0;
-  count_ord = 0;
+  count_ord = 1;
   i = 1;
   while ((contin < k) && (i < rvect)) {
     if (vect[ind[i]] != tempval) {
@@ -606,11 +615,10 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
 	}
 	free(temp_ind);
 	free(subind);
-	count_ord = 0;
+	count_ord = 1;
       }
       contin++;
       numind++;
-      count_ord++;
       i++;
     } else {
       numind++;
