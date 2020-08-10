@@ -1,4 +1,4 @@
-/* version 1, 22 July 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
+/* version 1.1, 10 Aug 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
 #include "stplugin.h"
@@ -518,16 +518,18 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
       
     }
 
-    ST_double (*X_ls_cjoint)[colsm+1] = malloc((rowc+1)*sizeof(*X_ls_cjoint));
-    if (X_ls_cjoint == NULL) {
+    gsl_matrix *X_ls_cj = gsl_matrix_alloc(rowc+1,colsm+1);
+    gsl_vector *y_ls_cj = gsl_vector_alloc(rowc+1);
+    if ((X_ls_cj == NULL) || (y_ls_cj == NULL)) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
       return((ST_retcode)909);
     }
     for(i=0; i<rowc+1; i++) {
-      X_ls_cjoint[i][0] = w_ls[i];
+      gsl_matrix_set(X_ls_cj,i,0,w_ls[i]);
+      gsl_vector_set(y_ls_cj,i,y_ls[i]);
       for (j=1; j<colsm+1; j++) {
-        X_ls_cjoint[i][j] = X_ls[i][j-1];
+	gsl_matrix_set(X_ls_cj,i,j,X_ls[i][j-1]);
       }
     }
     
@@ -537,33 +539,52 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
         SF_error(temps);
         return((ST_retcode)908);
     } else {
+      gsl_matrix *V = gsl_matrix_alloc(rowc+1,colsm+1);
+      gsl_vector *Esse = gsl_vector_alloc(colsm+1);
+      gsl_vector *ics = gsl_vector_alloc(colsm+1);
+      if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
+        sprintf(temps,"Insufficient memory\n");
+        SF_error(temps);
+        return((ST_retcode)909);
+      }
       
-      /* TO BE ADDED:
-         b_ls=svsolve(X_ls, y_ls) */
+      gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);
 
+      gsl_linalg_SV_solve(X_ls_cj,V,Esse,y_ls_cj,ics);
+
+      /* TO BE ADDED: check the value of save index, in C indexes start at 0 */
+      if (save_index > 0) {
+
+        /* TO BE ADDED:
+        Beta_smap[save_index,.]=editvalue(b_ls',0,.) */
+
+      }
+      
+      r = gsl_vector_get(ics,0);
+      for (j=1; j<colsm+1; j++) {
+        if (b[j-1] == missval) {
+	  b[j-1] = 0.;
+        }
+        r = r + b[j-1] * gsl_vector_get(ics,j);
+      }
+      
+      /* deallocation of matrices and arrays before exiting the function */
+      free(d);
+      free(a);
+      free(ind);
+      free(w);
+      free(y_ls);
+      free(X_ls);
+      gsl_matrix_free(X_ls_cj);
+      gsl_vector_free(y_ls_cj);
+      gsl_matrix_free(V);
+      gsl_vector_free(Esse);
+      gsl_vector_free(ics);
+   
+      /* returning the value of ystar[j] */
+      return(r);
+      
     }
-    /* TO BE ADDED: check the value of save index, in C indexes start at 0 */
-    if (save_index > 0) {
-
-      /* TO BE ADDED:
-         Beta_smap[save_index,.]=editvalue(b_ls',0,.) */
-    }
-    /* TO BE ADDED:
-       x_pred=editvalue(b,.,0)
-       r=x_pred * b_ls */
-
-    /* deallocation of matrices and arrays before exiting the function */
-    free(d);
-    free(a);
-    free(ind);
-    free(w);
-    free(y_ls);
-    free(X_ls);
-    free(X_ls_cjoint);
-
-    /* returning the value of ystar[j] */
-    return(r);
-    
   }
   
   /* returning the result to the main program, added just to avoid

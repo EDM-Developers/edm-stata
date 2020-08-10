@@ -149,7 +149,7 @@ For more information, please refer to help file and the article.
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.46 /        1 =       0.4630
+   1:      0.04 /        1 =       0.0370
 
 . 
 . /* Plot the system */
