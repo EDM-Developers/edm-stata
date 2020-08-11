@@ -646,7 +646,32 @@ program define edmExplore, eclass sortpreserve
 			qui replace `co_train_set'=0 if `usable'==0
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
-			mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
+
+
+                        /* ==== CODE FOR C PLUGIN ==== */
+
+                        /* comment out the call to mata function */
+			/*mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')*/
+
+                        local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `vars_save' `co_mapping'
+
+                        unab vars : ``manifold''
+			local mani `: word count `vars''
+
+                        unab vars : `co_mapping' 
+			local pmani `: word count `vars''
+
+                        local pmani_flag = 1
+                        display "pmani_flag: " `pmani_flag'
+
+                        local vsave_flag = 0
+                        display "vsave_flag: " `vsave_flag'
+
+                        plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
+
+                        /* ==== END CODE FOR C PLUGIN ==== */
+
+
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}

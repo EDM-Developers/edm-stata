@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 1000
-number of observations (_N) was 0, now 1,000
+. set obs 100
+number of observations (_N) was 0, now 100
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 1000
+        time variable:  t, 1 to 100
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(999 missing values generated)
+(99 missing values generated)
 
 . gen y = 0.3 if _n==1
-(999 missing values generated)
+(99 missing values generated)
 
 . gen z = 0.1 if _n==1
-(999 missing values generated)
+(99 missing values generated)
 
 . 
 . local r_x 3.79
@@ -88,7 +88,7 @@ number of observations (_N) was 0, now 1,000
 
 . 
 . /* Typical Output */
-. edm explore x
+. edm explore x, algorithm(smap)
 
 pmani_flag: 0
 vsave_flag: 0
@@ -96,12 +96,12 @@ vsave_flag: 0
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 1000
-first and last obs in sample = 1, 1000
+number of vars & obs = 7, 100
+first and last obs in sample = 1, 100
 
 arg 0: 1
 arg 1: 0
-arg 2: simplex
+arg 2: smap
 arg 3: 
 arg 4: 0
 arg 5: 2
@@ -110,14 +110,14 @@ arg 7: 0
 
 force compute = 0
 
-algorithm = simplex
+algorithm = smap
 
 missing distance = 0
 
 number of variables in manifold = 2 
 
-train set obs: 499
-predict set obs: 499
+train set obs: 49
+predict set obs: 49
 
 p_manifold flag = 0 
 
@@ -138,17 +138,18 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99996        .0012499 
+                 2               1               1       .00028263 
 --------------------------------------------------------------------
 Note: Random 50/50 split for training and validation data
 
+. //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
 . //edm xmap x y
 . 
 . timer off 1
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.04 /        1 =       0.0360
+   1:      0.01 /        1 =       0.0110
 
 . 
 . /* Plot the system */
