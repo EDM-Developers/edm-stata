@@ -1,6 +1,6 @@
 /* edm paper replication do file
-   Jinjing Li, University of Canberra
-   Michael Zyphur, University of Melbourne
+Jinjing Li, University of Canberra
+Michael Zyphur, University of Melbourne
 */
 
 discard

@@ -22,8 +22,8 @@ Notes:
 . do sj-edm_ed.do 
 
 . /* edm paper replication do file
->    Jinjing Li, University of Canberra
->    Michael Zyphur, University of Melbourne
+> Jinjing Li, University of Canberra
+> Michael Zyphur, University of Melbourne
 > */
 . 
 . discard
@@ -141,7 +141,6 @@ Univariate mapping with x and its lag values
                  2               1          .99996        .0012499 
 --------------------------------------------------------------------
 Note: Random 50/50 split for training and validation data
-For more information, please refer to help file and the article.
 
 . //edm xmap x y
 . 
@@ -149,7 +148,7 @@ For more information, please refer to help file and the article.
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.48 /        1 =       0.4780
+   1:      0.04 /        1 =       0.0360
 
 . 
 . /* Plot the system */

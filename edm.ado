@@ -1,5 +1,5 @@
-*!version 1.3.6, 29May2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
-global EDM_VERSION="1.3.6"
+*!version 1.3.7, 29Jul2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
+global EDM_VERSION="1.3.7"
 program define edm, eclass
 	version 14
 	if replay() {
@@ -146,7 +146,7 @@ program define edmVersion
 	di "${EDM_VERSION}"
 end
 program define edmExplore, eclass sortpreserve
-	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)]
+	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -521,6 +521,15 @@ program define edmExplore, eclass sortpreserve
 	}
 	loc no_of_runs=0
 	tempvar overlap
+	if `round' > 1 & `dot' >0 {
+		if `replicate' > 1 {
+			di "Replication progress (`replicate' in total)"
+		}
+		else if `crossfold' >1 {
+			di "`crossfold'-fold cross-validation progress (`crossfold' in total)"
+		}
+		loc finished_rep=0
+	}
 	forvalues t=1/`round' {
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
@@ -578,11 +587,11 @@ program define edmExplore, eclass sortpreserve
 				}
 				loc vars_save ""
 
-                                
+
                                 /* ==== CODE FOR C PLUGIN ==== */
 
                                 /* comment out the call to mata function */
-				/*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
+                                /*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
 
                                 local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
@@ -600,8 +609,8 @@ program define edmExplore, eclass sortpreserve
                                 
                                 /* ==== END CODE FOR C PLUGIN ==== */
 
-                                
-				qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
+
+                                qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 				qui sum `mae'
 				loc rmae=r(mean)
 				drop `mae'
@@ -615,6 +624,20 @@ program define edmExplore, eclass sortpreserve
 				mat r=(r \ `current_e', `j',`=r(rho)',`rmae')
 				loc ++no_of_runs
 			}
+		}
+		if `round' > 1 & `dot' >0 {
+			loc ++finished_rep
+			if mod(`finished_rep',50*`dot')==0 {
+				di as text ". `finished_rep'"
+			}
+			else if mod(`finished_rep',`dot')==0{
+				di as text "." _c
+			}
+		}
+	}
+	if `round' > 1 & `dot' >0 {
+		if mod(`finished_rep',50*`dot')!=0 {
+			di ""
 		}
 	}
 	if "`copredictvar'"!="" {
@@ -703,7 +726,7 @@ program define edmExplore, eclass sortpreserve
 	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
-	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)]
+	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -1103,6 +1126,10 @@ program define edmXmap, eclass sortpreserve
 		tempvar u urank
 		tempvar overlap
 		loc no_of_runs=0
+		if `replicate' > 1 & `round'==1 & `dot' >0 {
+			di "Replication progress (`=`replicate'*`max_round'' in total)"
+			loc finished_rep=0
+		}
 		forvalues rep=1/`replicate' {
 			cap drop `u' `urank'
 			qui gen double `u'=runiform() if `usable'==1
@@ -1145,14 +1172,14 @@ program define edmXmap, eclass sortpreserve
 						loc vars_save ""
 						if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 							loc ii=0
+							qui gen double `savesmap'`round'_b0_rep`rep'=.
+							qui label variable `savesmap'`round'_b0_rep`rep' "constant in `=cond(`round'==1,"`ori_x'","`ori_y'")' predicting `=cond(`round'==1,"`ori_y'","`ori_x'")' S-map equation (rep `rep')"
+							loc vars_save "`vars_save' `savesmap'`round'_b0_rep`rep'"
 							foreach name of local mapping_`=`esize'-1'_name {
 								qui gen double `savesmap'`round'_b`++ii'_rep`rep'=.
 								qui label variable `savesmap'`round'_b`ii'_rep`rep' "`name' predicting `=cond(`round'==1,"`ori_y'","`ori_x'")' or `=cond(`round'==1,"`ori_y'","`ori_x'")'|M(`=cond(`round'==1,"`ori_x'","`ori_y'")') S-map coefficient (rep `rep')"
 								loc vars_save "`vars_save' `savesmap'`round'_b`ii'_rep`rep'"
 							}
-							qui gen double `savesmap'`round'_b0_rep`rep'=.
-							qui label variable `savesmap'`round'_b0_rep`rep' "constant in `=cond(`round'==1,"`ori_x'","`ori_y'")' predicting `=cond(`round'==1,"`ori_y'","`ori_x'")' S-map equation (rep `rep')"
-							loc vars_save "`vars_save' `savesmap'`round'_b0_rep`rep'"
 						}
 						qui gen byte `overlap'=`train_set'==`predict_set' if `predict_set'==1
 						loc last_theta=`j'
@@ -1186,6 +1213,15 @@ program define edmXmap, eclass sortpreserve
 					}
 				}
 			}
+			if `replicate' > 1 & `dot' >0 {
+				loc ++finished_rep
+				if mod(`finished_rep',50*`dot')==0 {
+					di as text ". `finished_rep'"
+				}
+				else if mod(`finished_rep',`dot')==0{
+					di as text "." _c
+				}
+			}
 		}
 		if "`dt'"=="dt" {
 			sort `original_id' `original_t'
@@ -1206,6 +1242,11 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 		mat r`round'=r`round'[2...,.]
+	}
+	if `replicate' > 1 & `dot' >0 {
+		if mod(`finished_rep',50*`dot')!=0 {
+			di ""
+		}
 	}
 	if "`copredictvar'"!="" {
 		if `no_of_runs'==1{
@@ -1345,11 +1386,14 @@ program define edmDisplay, eclass
 		}
 		else {
 			di as txt "{hline 70}"
+			di as text %22s " " _c
+			di as txt "{hline 9} rho {hline 9} " _c
+			di as txt "{hline 9} MAE {hline 9}"
 			di as text %9s cond(e(report_actuale)==1,"Actual E","E") _c
 			di as text %9s "theta" _c
-			di as text %13s "Mean rho" _c
+			di as text %13s "Mean" _c
 			di as text %13s "Std. Dev." _c
-			di as text %13s "Mean MAE" _c
+			di as text %13s "Mean" _c
 			di as text %13s "Std. Dev."
 			di as txt "{hline 70}"
 			loc dformat "%13s"
@@ -1558,7 +1602,6 @@ program define edmDisplay, eclass
 			di `:di %8.2g `=e(dtw)''
 		}
 	}
-	di as txt "For more information, please refer to {help edm:help file} and the article."
 end
 program define edmExtractExtra, rclass
 	syntax [anything]
