@@ -26,7 +26,7 @@ ST_int *ind;
 
 /* global variable placeholder for missing values */
 
-ST_double missval = 100000.;
+ST_double missval = 1.0e+100;
 
 /*
 Example call to the plugin:
@@ -547,7 +547,8 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
         SF_error(temps);
         return((ST_retcode)909);
       }
-      
+      /* singular value decomposition to solve
+	 X_ls_cj * ics = y_ls_cj and return ics, using gsl libraries */
       gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);
 
       gsl_linalg_SV_solve(X_ls_cj,V,Esse,y_ls_cj,ics);
