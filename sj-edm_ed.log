@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 15000
-number of observations (_N) was 0, now 15,000
+. set obs 1000
+number of observations (_N) was 0, now 1,000
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 15000
+        time variable:  t, 1 to 1000
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(14,999 missing values generated)
+(999 missing values generated)
 
 . gen y = 0.3 if _n==1
-(14,999 missing values generated)
+(999 missing values generated)
 
 . gen z = 0.1 if _n==1
-(14,999 missing values generated)
+(999 missing values generated)
 
 . 
 . local r_x 3.79
@@ -89,16 +89,19 @@ number of observations (_N) was 0, now 15,000
 . 
 . /* Typical Output */
 . //edm explore x
-. edm explore x, algorithm(smap)
+. //edm explore x, algorithm(smap)
+. //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
+. //edm xmap x y, algorithm(smap) savesmap(beta)
+. edm xmap x y, algorithm(smap)
+vsave_flag: 0
 
 pmani_flag: 0
-vsave_flag: 0
 
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 15000
-first and last obs in sample = 1, 15000
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
 
 arg 0: 1
 arg 1: 0
@@ -117,8 +120,51 @@ missing distance = 0
 
 number of variables in manifold = 2 
 
-train set obs: 7499
-predict set obs: 7499
+train set obs: 999
+predict set obs: 999
+
+p_manifold flag = 0 
+
+l = 3 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1
+arg 1: 0
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 999
+predict set obs: 999
 
 p_manifold flag = 0 
 
@@ -135,22 +181,21 @@ End of the plugin
 
 
 Empirical Dynamic Modelling
-Univariate mapping with x and its lag values
---------------------------------------------------------------------
-          Actual E           theta             rho             MAE
---------------------------------------------------------------------
-                 2               1          .99999       .00069994 
---------------------------------------------------------------------
-Note: Random 50/50 split for training and validation data
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             999        -.015043           4.551 
+   x ~ x|M(y)             999           .4316         .068061 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
 
-. //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
-. //edm xmap x y
 . 
 . timer off 1
 
 . /* Run time in seconds */
 . timer list 1
-   1:     11.79 /        1 =      11.7870
+   1:      0.59 /        1 =       0.5920
 
 . 
 . /* Plot the system */

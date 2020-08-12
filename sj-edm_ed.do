@@ -12,7 +12,7 @@ set scheme sj
 /* Example with a Synthetic Dataset */
 /* Create a dynamic system */
 
-set obs 15000
+set obs 1000
 
 gen t = _n
 tsset t
@@ -45,9 +45,10 @@ timer on 1
 
 /* Typical Output */
 //edm explore x
-edm explore x, algorithm(smap)
+//edm explore x, algorithm(smap)
 //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
-//edm xmap x y
+//edm xmap x y, algorithm(smap) savesmap(beta)
+edm xmap x y, algorithm(smap)
 
 timer off 1
 /* Run time in seconds */

@@ -653,7 +653,7 @@ program define edmExplore, eclass sortpreserve
                         /* comment out the call to mata function */
 			/*mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')*/
 
-                        local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `vars_save' `co_mapping'
+                        local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
 
                         unab vars : ``manifold''
 			local mani `: word count `vars''
@@ -1219,7 +1219,38 @@ program define edmXmap, eclass sortpreserve
 								loc ++counter
 							}
 						}
-						mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
+
+
+                                                /* ==== CODE FOR C PLUGIN ==== */
+
+                                                /* comment out the call to mata function */
+						/*mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')*/
+
+                                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {                       
+                                                    local vsave_flag = 1
+                                                    display "vsave_flag: " `vsave_flag'
+                                                    unab vars : `vars_save' 
+			                            local varssv `: word count `vars''
+                                                }
+                                                else {
+                                                    local vsave_flag = 0
+                                                    display "vsave_flag: " `vsave_flag'
+                                                }               
+
+                                                local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+
+                                                unab vars : ``manifold''
+                                                local mani `: word count `vars''
+
+                                                display ""
+                                                local pmani_flag = 0
+                                                display "pmani_flag: " `pmani_flag'
+
+                                                plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
+                                                
+                                                /* ==== END CODE FOR C PLUGIN ==== */
+
+
 						tempvar mae
 						qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 						qui sum `mae'

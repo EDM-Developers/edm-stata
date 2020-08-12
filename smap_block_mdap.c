@@ -13,7 +13,7 @@
 
 ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*)[],\
 			 ST_double*, ST_double*, ST_int, ST_int, ST_double,\
-			 char*, ST_int, ST_int, ST_int);
+			 char*, ST_int, ST_double*, ST_int, ST_int);
 
 ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
 
@@ -45,13 +45,13 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 
 STDLL stata_call(int argc, char *argv[])
 {
-  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani;
-  ST_int Mpcol, l, vsave_flag, save_mode, theta;
+  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani, smaploc;
+  ST_int Mpcol, l, vsave_flag, save_mode, varssv, theta;
 
   ST_double value, *train_use, *predict_use, *skip_obs;
-  ST_double *y, *ystar, *S, *b;
+  ST_double *y, *S, *Bi, *ystar, *b;
 
-  ST_int i, j, force_compute, missingdistance;
+  ST_int i, j, h, force_compute, missingdistance;
   ST_int count_train_set, count_predict_set, obsi, obsj;
   
   char temps[500], algorithm[500];
@@ -202,6 +202,7 @@ STDLL stata_call(int argc, char *argv[])
   }
   
   if (pmani_flag == 1) {
+    smaploc = mani+5+Mpcol+1;
     obsi = 0;
     for(i=0; i<nobs; i++) {
       if (predict_use[i] == 1.) {
@@ -220,6 +221,7 @@ STDLL stata_call(int argc, char *argv[])
       }
     }
   } else {
+    smaploc = mani+5+1;
     obsi = 0;
     for(i=0; i<nobs; i++) {
       if (predict_use[i] == 1.) {
@@ -250,13 +252,21 @@ STDLL stata_call(int argc, char *argv[])
   SF_display(temps);
 
   if (vsave_flag == 1) {
-
-    /* TO BE ADDED */
-    /* st_view(B, ., tokens(vars_save), predict_use)*/
-    save_mode = 1; /*CHECK TYPE OF save_mode*/
-    
+    varssv = atoi(argv[8]); /* contains the number of columns
+                               in smap coefficents */
+    sprintf(temps,"coumns in smap coefficents = %i \n",varssv);
+    SF_display(temps);
+    save_mode = 1;
   } else {
-    save_mode = 0; /* CHECK TYPE OF save_mode */
+    varssv = 0;
+    save_mode = 0;
+  }
+  Bi = (ST_double*)malloc(sizeof(ST_double)*varssv);
+  ST_double (*Bi_map)[varssv] = malloc(count_predict_set*sizeof(*Bi_map));
+  if ((Bi == NULL) || (*Bi_map == NULL)) {
+    sprintf(temps,"Insufficient memory\n");
+    SF_error(temps);
+    return((ST_retcode)909);
   }
   sprintf(temps,"save_mode = %i \n",save_mode);
   SF_display(temps);
@@ -280,18 +290,19 @@ STDLL stata_call(int argc, char *argv[])
     for (j=0; j<Mpcol; j++) {
       b[j] = Mp[i][j];
     }
-
-    /* TO BE ADDED case when save_mode = 1 and matrix B is allocated */
     
     ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
-			      algorithm,save_mode*i,force_compute,\
+			      algorithm,save_mode*(i+1),Bi,force_compute, \
 			      missingdistance);
 
+    for (h=0; h<varssv; h++) {
+      Bi_map[i][h] = Bi[h];
+    }
     //sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
     //SF_display(temps);
   }
 
-  /* returning the value of ystar to Stata */
+  /* returning the value of ystar (and smap coefficients) to Stata */
   j=0;
   for (i=0; i < nobs; i++) {
     if (predict_use[i] == 1) {
@@ -300,6 +311,15 @@ STDLL stata_call(int argc, char *argv[])
       } else {
 	/* returning a missing value */
 	SF_vstore(mani+2,i+1,SV_missval);
+      }
+      if (vsave_flag == 1) {
+	for (h=0; h < varssv; h++) {
+          if (Bi_map[j][h] != missval) {
+            SF_vstore(smaploc+h,i+1,Bi_map[j][h]);
+	  } else {
+	    SF_vstore(smaploc+h,i+1,SV_missval);
+	  }
+	}
       }
       j++;
     }
@@ -313,6 +333,8 @@ STDLL stata_call(int argc, char *argv[])
   free(y);
   free(Mp);
   free(S);
+  free(Bi);
+  free(Bi_map);
   free(ystar);
   free(b);
   
@@ -326,12 +348,11 @@ STDLL stata_call(int argc, char *argv[])
 
 }
 
-/* TO BE ADDED: passing matrix B when save_mode = 1 */
 ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 			 ST_double b[], ST_double y[], ST_int l, ST_int theta,\
 			 ST_double skip_obs, char *algorithm,\
-			 ST_int save_index, ST_int force_compute,\
-			 ST_int missingdistance)
+			 ST_int save_index, ST_double Beta_smap[],\
+			 ST_int force_compute, ST_int missingdistance)
 {
   ST_double *a, *w;
   ST_double value, pre_adj_skip_obs, d_base, sumw, r;
@@ -476,7 +497,6 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     
     rowc = -1;
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
-      /* TO BE ADDED: CHEK OF MISSING VALUES HANDLING */
       if (y[ind[j]] == missval) {
 	continue;
       }
@@ -569,12 +589,15 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 	 using gsl libraries */
       gsl_linalg_SV_solve(X_ls_cj,V,Esse,y_ls_cj,ics);
 
-      /* TO BE ADDED: check the value of save index, in C indexes start at 0 */
-      if (save_index > 0) {
-
-        /* TO BE ADDED:
-        Beta_smap[save_index,.]=editvalue(b_ls',0,.) */
-
+      /* saving ics coefficients if savesmap option enabled */
+      if (save_index > 0) {  
+        for (j=0; j<colsm+1; j++) {
+	  if (gsl_vector_get(ics,j) == 0.) {
+	    Beta_smap[j] = missval;
+	  } else {
+	    Beta_smap[j] = gsl_vector_get(ics,j);
+	  }
+        }
       }
       
       r = gsl_vector_get(ics,0);
