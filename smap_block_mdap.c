@@ -1,4 +1,4 @@
-/* version 1.1, 10 Aug 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
+/* version 1.2, 13 Aug 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
 #include "stplugin.h"

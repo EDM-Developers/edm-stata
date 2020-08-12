@@ -48,7 +48,9 @@ timer on 1
 //edm explore x, algorithm(smap)
 //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
 //edm xmap x y, algorithm(smap) savesmap(beta)
-edm xmap x y, algorithm(smap)
+gen x_copy = z
+gen y_copy = y
+edm xmap x y, copredict(xmap_y_p) copredictvar(x_copy y_copy) algorithm(smap)
 
 timer off 1
 /* Run time in seconds */
