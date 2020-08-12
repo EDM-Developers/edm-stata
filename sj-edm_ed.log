@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 100
-number of observations (_N) was 0, now 100
+. set obs 15000
+number of observations (_N) was 0, now 15,000
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 100
+        time variable:  t, 1 to 15000
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(99 missing values generated)
+(14,999 missing values generated)
 
 . gen y = 0.3 if _n==1
-(99 missing values generated)
+(14,999 missing values generated)
 
 . gen z = 0.1 if _n==1
-(99 missing values generated)
+(14,999 missing values generated)
 
 . 
 . local r_x 3.79
@@ -88,6 +88,7 @@ number of observations (_N) was 0, now 100
 
 . 
 . /* Typical Output */
+. //edm explore x
 . edm explore x, algorithm(smap)
 
 pmani_flag: 0
@@ -96,8 +97,8 @@ vsave_flag: 0
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 100
-first and last obs in sample = 1, 100
+number of vars & obs = 7, 15000
+first and last obs in sample = 1, 15000
 
 arg 0: 1
 arg 1: 0
@@ -116,8 +117,8 @@ missing distance = 0
 
 number of variables in manifold = 2 
 
-train set obs: 49
-predict set obs: 49
+train set obs: 7499
+predict set obs: 7499
 
 p_manifold flag = 0 
 
@@ -138,7 +139,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1               1       .00028263 
+                 2               1          .99999       .00069994 
 --------------------------------------------------------------------
 Note: Random 50/50 split for training and validation data
 
@@ -149,7 +150,7 @@ Note: Random 50/50 split for training and validation data
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.01 /        1 =       0.0110
+   1:     11.79 /        1 =      11.7870
 
 . 
 . /* Plot the system */

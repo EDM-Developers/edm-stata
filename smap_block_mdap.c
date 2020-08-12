@@ -539,7 +539,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
         SF_error(temps);
         return((ST_retcode)908);
     } else {
-      gsl_matrix *V = gsl_matrix_alloc(rowc+1,colsm+1);
+      gsl_matrix *V = gsl_matrix_alloc(colsm+1,colsm+1);
       gsl_vector *Esse = gsl_vector_alloc(colsm+1);
       gsl_vector *ics = gsl_vector_alloc(colsm+1);
       if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
@@ -547,10 +547,26 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
         SF_error(temps);
         return((ST_retcode)909);
       }
-      /* singular value decomposition to solve
-	 X_ls_cj * ics = y_ls_cj and return ics, using gsl libraries */
-      gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);
 
+      /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
+
+      /* TOBE ADDED: benchmark which one of the following methods work best*/
+      /*Golub-Reinsch SVD algorithm*/
+      /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
+
+      /* one-sided Jacobi orthogonalization method */
+      gsl_linalg_SV_decomp_jacobi(X_ls_cj,V,Esse);
+
+      /* setting to zero extremely small values of Esse to avoid
+	 underflow errors */
+      for (j=0; j<colsm+1; j++) {
+        if (gsl_vector_get(Esse,j) < 1.0e-12) {
+	  gsl_vector_set(Esse,j,0.);
+        }
+      }
+      
+      /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
+	 using gsl libraries */
       gsl_linalg_SV_solve(X_ls_cj,V,Esse,y_ls_cj,ics);
 
       /* TO BE ADDED: check the value of save index, in C indexes start at 0 */
