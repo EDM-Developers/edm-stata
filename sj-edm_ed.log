@@ -195,7 +195,7 @@ Note: The embedding dimension E is 2
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.59 /        1 =       0.5920
+   1:      0.23 /        1 =       0.2320
 
 . 
 . /* Plot the system */

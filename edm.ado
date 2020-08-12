@@ -593,6 +593,17 @@ program define edmExplore, eclass sortpreserve
                                 /* comment out the call to mata function */
                                 /*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
 
+                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {                       
+                                    local vsave_flag = 1
+                                    display "vsave_flag: " `vsave_flag'
+                                    unab vars : `vars_save' 
+			            local varssv `: word count `vars''
+                                }
+                                else {
+                                  local vsave_flag = 0
+                                  display "vsave_flag: " `vsave_flag'
+                                }               
+
                                 local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
                                 unab vars : ``manifold''
@@ -602,10 +613,7 @@ program define edmExplore, eclass sortpreserve
                                 local pmani_flag = 0
                                 display "pmani_flag: " `pmani_flag'
 
-                                local vsave_flag = 0
-                                display "vsave_flag: " `vsave_flag'
-
-                                plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag'
+                                plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
                                 
                                 /* ==== END CODE FOR C PLUGIN ==== */
 
@@ -1226,7 +1234,7 @@ program define edmXmap, eclass sortpreserve
                                                 /* comment out the call to mata function */
 						/*mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')*/
 
-                                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {                       
+                                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
                                                     local vsave_flag = 1
                                                     display "vsave_flag: " `vsave_flag'
                                                     unab vars : `vars_save' 
