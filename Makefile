@@ -1,5 +1,5 @@
 all: build
-	cmake --build build -- $(MFLAGS)
+	cmake --build build -- $(MFLAGS) install
 
 build:
 	cmake -B build -S . ${CMAKE_OPTS} ${CMAKE_BUILD_TYPE}
