@@ -52,3 +52,7 @@ target_include_directories(smap_block_mdap PRIVATE vendor)
 # GSL
 find_package(GSL REQUIRED)
 target_link_libraries(smap_block_mdap PRIVATE GSL::gsl GSL::gslcblas)
+
+# OPENMP
+find_package(OpenMP)
+target_link_libraries(smap_block_mdap PRIVATE OpenMP::OpenMP_C)
