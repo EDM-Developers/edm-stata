@@ -1,0 +1,27 @@
+image: python:3.8-slim-buster
+
+stages:
+  - docs
+  - deploy static pages
+
+build docs:
+  stage: docs
+  script:
+    - pip install mkdocs
+    - mkdocs build
+
+  artifacts:
+    paths:
+      - site/
+
+pages:
+  stage: deploy static pages
+  dependencies:
+    - build docs
+  script: 
+    - mkdir -p public/docs
+    - cp -R site/* public/docs
+
+  artifacts:
+    paths:
+      - public/

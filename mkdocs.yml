@@ -1,0 +1,12 @@
+site_name: My Docs
+
+nav:
+    - Home: index.md
+    - State EDM plugin: plugin.md
+    - Infrastructure: infrastructure.md
+
+theme:
+  name: readthedocs
+  hljs_languages:
+        - stata
+        

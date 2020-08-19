@@ -1,0 +1,1 @@
+# Stata EDM C plugin
