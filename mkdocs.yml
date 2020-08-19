@@ -3,6 +3,7 @@ site_name: My Docs
 nav:
     - Home: index.md
     - Stata EDM plugin: plugin.md
+    - Other EDM implementations: other_edm.md
     - Infrastructure: infrastructure.md
 
 theme:
