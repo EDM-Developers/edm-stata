@@ -54,7 +54,7 @@ STDLL stata_call(int argc, char *argv[])
 
   ST_double value, *train_use, *predict_use, *skip_obs;
   ST_double *y, *S, *Bi, *ystar, *b;
-
+  ST_double **M, **Mp, **Bi_map;
   ST_int i, j, h, force_compute, missingdistance;
   ST_int count_train_set, count_predict_set, obsi, obsj;
   
@@ -153,7 +153,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* allocation of matrices M and y */
-  ST_double **M = alloc_matrix(count_train_set, mani); 
+  M = alloc_matrix(count_train_set, mani); 
   y = (ST_double*)malloc(sizeof(ST_double)*count_train_set);
   if ((M == NULL) || (y == NULL)) {
     sprintf(temps,"Insufficient memory\n");
@@ -197,7 +197,7 @@ STDLL stata_call(int argc, char *argv[])
     SF_display("\n");
     Mpcol = mani;
   }
-  ST_double **Mp = alloc_matrix(count_predict_set, Mpcol);
+  Mp = alloc_matrix(count_predict_set, Mpcol);
   S = (ST_double*)malloc(sizeof(ST_double)*count_predict_set);
   if ((Mp == NULL) || (S == NULL)) {
     sprintf(temps,"Insufficient memory\n");
@@ -258,19 +258,20 @@ STDLL stata_call(int argc, char *argv[])
   if (vsave_flag == 1) {
     varssv = atoi(argv[8]); /* contains the number of columns
                                in smap coefficents */
-    sprintf(temps,"coumns in smap coefficents = %i \n",varssv);
+    sprintf(temps,"columns in smap coefficents = %i \n",varssv);
     SF_display(temps);
     save_mode = 1;
+  
+    Bi = (ST_double*)malloc(sizeof(ST_double)*varssv);
+    Bi_map = alloc_matrix(count_predict_set, varssv);
+    if ((Bi == NULL) || (Bi_map == NULL)) {
+      sprintf(temps,"Insufficient memory\n");
+      SF_error(temps);
+      return((ST_retcode)909);
+    }
   } else {
     varssv = 0;
     save_mode = 0;
-  }
-  Bi = (ST_double*)malloc(sizeof(ST_double)*varssv);
-  ST_double **Bi_map = alloc_matrix(count_predict_set, varssv);
-  if ((Bi == NULL) || (Bi_map == NULL)) {
-    sprintf(temps,"Insufficient memory\n");
-    SF_error(temps);
-    return((ST_retcode)909);
   }
   sprintf(temps,"save_mode = %i \n",save_mode);
   SF_display(temps);
@@ -337,8 +338,10 @@ STDLL stata_call(int argc, char *argv[])
   free(y);
   free_matrix(Mp, count_predict_set);
   free(S);
-  free(Bi);
-  free_matrix(Bi_map, count_predict_set);
+  if (save_mode) {
+    free(Bi);
+    free_matrix(Bi_map, count_predict_set);
+  }
   free(ystar);
   free(b);
   
@@ -503,13 +506,12 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
   } else if ((strcmp(algorithm,"smap") == 0) ||\
 	     (strcmp(algorithm,"llr") == 0)) { 
  
-    ST_double *y_ls, *w_ls, mean_w;
-
+    ST_double mean_w, *y_ls, *w_ls, **X_ls;
     ST_int rowc, bocont;
 
     y_ls = (ST_double*)malloc(sizeof(ST_double)*l);
     w_ls = (ST_double*)malloc(sizeof(ST_double)*l);
-    ST_double **X_ls = alloc_matrix(l, colsm);
+    X_ls = alloc_matrix(l, colsm);
     if ((y_ls == NULL) || (w_ls == NULL) || (X_ls == NULL)) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
