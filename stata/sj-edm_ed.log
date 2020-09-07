@@ -9,10 +9,10 @@ ___/   /   /___/   /   /___/   16.1   Copyright 1985-2019 StataCorp LLC
                                       979-696-4600        stata@stata.com
                                       979-696-4601 (fax)
 
-Stata license: 300-user network, expiring 31 Aug 2020
-Serial number: 401609303231
-  Licensed to: The University of Melbourne
-               Infrastructure Services
+Stata license: Single-user , expiring 14 Nov 2020
+Serial number: 501609261776
+  Licensed to: Edoardo Tescari
+               University of Melbourne
 
 Notes:
       1. Stata is running in batch mode.
@@ -107,7 +107,7 @@ number of vars & obs = 7, 1000
 first and last obs in sample = 1, 1000
 
 arg 0: 1
-arg 1: 0
+arg 1: 4
 arg 2: smap
 arg 3: 
 arg 4: 0
@@ -128,7 +128,7 @@ predict set obs: 999
 
 p_manifold flag = 0 
 
-l = 3 
+l = 4 
 
 vars_save flag = 0 
 save_mode = 0 
@@ -149,7 +149,7 @@ number of vars & obs = 7, 1000
 first and last obs in sample = 1, 1000
 
 arg 0: 1
-arg 1: 0
+arg 1: 4
 arg 2: smap
 arg 3: 
 arg 4: 0
@@ -170,7 +170,7 @@ predict set obs: 999
 
 p_manifold flag = 0 
 
-l = 3 
+l = 4 
 
 vars_save flag = 0 
 save_mode = 0 
@@ -191,7 +191,7 @@ number of vars & obs = 9, 1000
 first and last obs in sample = 1, 1000
 
 arg 0: 1
-arg 1: 0
+arg 1: 4
 arg 2: smap
 arg 3: 
 arg 4: 0
@@ -214,7 +214,7 @@ predict set obs: 999
 p_manifold flag = 1 
 number of variables in p_manifold = 2 
 
-l = 3 
+l = 4 
 
 vars_save flag = 0 
 save_mode = 0 
@@ -231,8 +231,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             999        -.015043           4.551 
-   x ~ x|M(y)             999           .4316         .068061 
+   y ~ y|M(x)             999        -.061484          .67022 
+   x ~ x|M(y)             999          .94681         .025491 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -241,7 +241,7 @@ Note: The embedding dimension E is 2
 
 . /* Run time in seconds */
 . timer list 1
-   1:      0.34 /        1 =       0.3410
+   1:      0.23 /        1 =       0.2270
 
 . 
 . /* Plot the system */

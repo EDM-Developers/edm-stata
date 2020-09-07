@@ -1,5 +1,5 @@
-*!version 1.3.7, 29Jul2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
-global EDM_VERSION="1.3.7"
+*!version 1.3.8, 15Aug2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
+global EDM_VERSION="1.3.8"
 program define edm, eclass
 	version 14
 	if replay() {
@@ -571,7 +571,7 @@ program define edmExplore, eclass sortpreserve
 					loc lib_size=min(`k',`train_size')
 				}
 				else if `k'==0{
-					loc lib_size=`i'+1 +`zcount' + `parsed_dt'==1
+					loc lib_size=`i' +`zcount' + (`parsed_dt'==1) + cond("`algorithm'"=="smap",2,1)
 				}
 				else {
 					loc lib_size=`max_lib_size'
@@ -583,16 +583,17 @@ program define edmExplore, eclass sortpreserve
 					loc cmdfootnote="Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
 				else if `k'!=`lib_size' & `k'==0 {
-					loc cmdfootnote="Note: Number of neighbours (k) is set to E+`=1 +`zcount' + `parsed_dt'==1'" + char(10)
+					loc plus_amt=`zcount' + (`parsed_dt'==1) + cond("`algorithm'"=="smap",2,1)
+					loc cmdfootnote="Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 				loc vars_save ""
 
-
+                                
                                 /* ==== CODE FOR C PLUGIN ==== */
 
                                 /* comment out the call to mata function */
-                                /*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
-
+				/*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
+                                
                                 if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {                       
                                     local vsave_flag = 1
                                     display "vsave_flag: " `vsave_flag'
@@ -616,8 +617,8 @@ program define edmExplore, eclass sortpreserve
                                 
                                 /* ==== END CODE FOR C PLUGIN ==== */
 
-
-                                qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
+                                
+				qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 				qui sum `mae'
 				loc rmae=r(mean)
 				drop `mae'
@@ -659,7 +660,7 @@ program define edmExplore, eclass sortpreserve
 
                         /* comment out the call to mata function */
 			/*mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')*/
-
+                        
                         local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
 
                         unab vars : ``manifold''
@@ -678,7 +679,7 @@ program define edmExplore, eclass sortpreserve
 
                         /* ==== END CODE FOR C PLUGIN ==== */
 
-
+                        
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
@@ -1191,7 +1192,7 @@ program define edmXmap, eclass sortpreserve
 							loc k_size=min(`k',`train_size' -1)
 						}
 						else if `k'==0{
-							loc k_size=`i'+1 +`zcount' + `parsed_dt'==1
+							loc k_size=`i' +`zcount' + (`parsed_dt'==1) + cond("`algorithm'"=="smap",2,1)
 						}
 						else if `k' < 0 {
 							loc k_size=`train_size' -1
@@ -1232,7 +1233,7 @@ program define edmXmap, eclass sortpreserve
 
                                                 /* comment out the call to mata function */
 						/*mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')*/
-
+                                                
                                                 if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
                                                     local vsave_flag = 1
                                                     display "vsave_flag: " `vsave_flag'
@@ -1256,7 +1257,7 @@ program define edmXmap, eclass sortpreserve
                                                 
                                                 /* ==== END CODE FOR C PLUGIN ==== */
 
-
+                                                
 						tempvar mae
 						qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 						qui sum `mae'
@@ -1322,7 +1323,7 @@ program define edmXmap, eclass sortpreserve
 
                         /* comment out the call to mata function */
 			/*mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')*/
-
+                        
                         local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
 
                         unab vars : ``manifold''
@@ -1341,8 +1342,8 @@ program define edmXmap, eclass sortpreserve
 
                         /* ==== END CODE FOR C PLUGIN ==== */
 
-
-                        qui gen double `copredict'=`co_x_p'
+                        
+			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
 		else {
@@ -1839,7 +1840,6 @@ mata:
 			n_ls=rows(X_ls)
 			X_ls=w_ls,X_ls
 			if (algorithm=="llr") {
-				w_ls=w_ls[1..rowc]
 				XpXi=quadcross(X_ls, w_ls, X_ls)
 				XpXi=invsym(XpXi)
 				b_ls=XpXi*quadcross(X_ls, w_ls, y_ls)
