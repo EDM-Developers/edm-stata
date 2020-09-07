@@ -272,6 +272,9 @@ STDLL stata_call(int argc, char *argv[])
   } else {
     varssv = 0;
     save_mode = 0;
+
+    Bi = NULL;
+    Bi_map = NULL;
   }
   sprintf(temps,"save_mode = %i \n",save_mode);
   SF_display(temps);
