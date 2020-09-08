@@ -19,11 +19,6 @@ ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
 
 void quicksortind(ST_double*, ST_int*, ST_int, ST_int);
 
-/* global variables d and ind used in minindex and quicksortind functions */
-
-ST_double *d;
-ST_int *ind;
-
 /* global variable placeholder for missing values */
 
 ST_double missval = 1.0e+100;
@@ -354,7 +349,9 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
 			 ST_int save_index, ST_double Beta_smap[],\
 			 ST_int force_compute, ST_int missingdistance)
 {
-  ST_double *a, *w;
+  ST_double *d, *a, *w;
+  ST_int *ind;
+
   ST_double value, pre_adj_skip_obs, d_base, sumw, r;
 
   ST_int i, j, numind, boolmiss;
