@@ -1,4 +1,4 @@
-/* version 1.2, 13 Aug 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
+/* version 2.1, 09 Sep 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
 #include "stplugin.h"
@@ -23,6 +23,12 @@ void quicksortind(ST_double*, ST_int*, ST_int, ST_int);
 
 ST_double missval = 1.0e+100;
 
+/* OpenMP routines */
+
+int omp_get_num_procs(void);
+
+void omp_set_num_threads(int num_threads);
+
 /*
 Example call to the plugin:
 
@@ -44,7 +50,7 @@ STDLL stata_call(int argc, char *argv[])
   ST_int Mpcol, l, vsave_flag, save_mode, varssv, theta;
 
   ST_double value, *train_use, *predict_use, *skip_obs;
-  ST_double *y, *S, *Bi, *ystar, *b;
+  ST_double *y, *S, *Bi, *ystar;
 
   ST_int i, j, h, force_compute, missingdistance;
   ST_int count_train_set, count_predict_set, obsi, obsj;
@@ -173,7 +179,7 @@ STDLL stata_call(int argc, char *argv[])
     }
   }
   
-  /* allocation of matrices Mp, S, ystar and b */
+  /* allocation of matrices Mp, S, ystar */
   pmani_flag = atoi(argv[6]); /* contains the flag for p_manifold */
   sprintf(temps,"p_manifold flag = %i \n",pmani_flag);
   SF_display(temps);
@@ -268,35 +274,51 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
 
   ystar = (ST_double*)malloc(sizeof(ST_double)*count_predict_set);
-  b = (ST_double*)malloc(sizeof(ST_double)*Mpcol);
-  if ((ystar == NULL) || (b == NULL)) {
+  if (ystar == NULL) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
     return((ST_retcode)909);
   }
   
   theta = atoi(argv[0]); /* contains value of theta = first argument */
-  sprintf(temps,"theta = %i \n",theta); /* CHECK TYPE OF theta */
+  sprintf(temps,"theta = %i\n",theta); /* CHECK TYPE OF theta */
   SF_display(temps);
   SF_display("\n");
   
-  /* loop with call to mf_smap_single function */
+  /* setting the number of OpenMP threads = number of processors available */ 
+  omp_set_num_threads(omp_get_num_procs());
+  sprintf(temps,"Using %i OpenMP threads \n",omp_get_num_procs());
+  SF_display(temps);
+  SF_display("\n");
+  
+  /* OpenMP loop with call to mf_smap_single function */
+  #pragma omp parallel for
   for (i=0; i<count_predict_set; i++) {
-    for (j=0; j<Mpcol; j++) {
-      b[j] = Mp[i][j];
+
+    ST_double *b;
+    ST_int o;
+    b = (ST_double*)malloc(sizeof(ST_double)*Mpcol);
+    for (o=0; o<Mpcol; o++) {
+      b[o] = Mp[i][o];
     }
     
     ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
 			      algorithm,save_mode*(i+1),Bi,force_compute, \
 			      missingdistance);
 
-    for (h=0; h<varssv; h++) {
+    free(b);
+    
+    /* TO BE ADDED: treatment of Bi_map */
+    /*for (h=0; h<varssv; h++) {
       Bi_map[i][h] = Bi[h];
-    }
-    //sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
-    //SF_display(temps);
+    }*/
   }
 
+  /*for (i=0; i<count_predict_set; i++) {
+    sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
+    SF_display(temps);
+  }*/
+  
   /* returning the value of ystar (and smap coefficients) to Stata */
   j=0;
   for (i=0; i < nobs; i++) {
@@ -331,7 +353,6 @@ STDLL stata_call(int argc, char *argv[])
   free(Bi);
   free(Bi_map);
   free(ystar);
-  free(b);
   
   /* footer of the plugin */
   SF_display("\n");
