@@ -423,14 +423,14 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
     if (force_compute == 1) {
       l = numind - (int)skip_obs;
       if (l <= 0) {
-	sprintf(temps,"Insufficient number of unique observations in the\
-                       dataset even with -force- option\n");
+	sprintf(temps,"Insufficient number of unique observations in the "
+                      "dataset even with -force- option\n");
         SF_error(temps);
         return((ST_retcode)503);
       }
     } else {
-      sprintf(temps,"Insufficient number of unique observations, consider\
-                     tweaking the values of E, k or use -force- option\n");
+      sprintf(temps,"Insufficient number of unique observations, consider "
+                    "tweaking the values of E, k or use -force- option\n");
       SF_error(temps);
       return((ST_retcode)503);
     }
