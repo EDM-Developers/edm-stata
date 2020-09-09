@@ -13,10 +13,6 @@ set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSYSTEM=${SYSTEM}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 
-if(MSVC)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
-
 include(CheckCCompilerFlag)
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fsanitize=undefined" "-fno-common" "-fno-omit-frame-pointer")
