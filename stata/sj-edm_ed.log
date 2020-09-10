@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 80000
-number of observations (_N) was 0, now 80,000
+. set obs 20000
+number of observations (_N) was 0, now 20,000
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 80000
+        time variable:  t, 1 to 20000
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(79,999 missing values generated)
+(19,999 missing values generated)
 
 . gen y = 0.3 if _n==1
-(79,999 missing values generated)
+(19,999 missing values generated)
 
 . gen z = 0.1 if _n==1
-(79,999 missing values generated)
+(19,999 missing values generated)
 
 . 
 . local r_x 3.79
@@ -88,80 +88,9 @@ number of observations (_N) was 0, now 80,000
 
 . 
 . /* Typical Output */
-. edm explore x
-vsave_flag: 0
-pmani_flag: 0
-
-====================
-Start of the plugin
-
-number of vars & obs = 7, 80000
-first and last obs in sample = 1, 80000
-
-arg 0: 1
-arg 1: 3
-arg 2: simplex
-arg 3: 
-arg 4: 0
-arg 5: 2
-arg 6: 0
-arg 7: 0
-
-force compute = 0
-
-algorithm = simplex
-
-missing distance = 0
-
-number of variables in manifold = 2 
-
-train set obs: 39999
-predict set obs: 39999
-
-p_manifold flag = 0 
-
-l = 3 
-
-vars_save flag = 0 
-save_mode = 0 
-
-theta = 1
-
-Using 8 OpenMP threads 
-
-
-End of the plugin
-====================
-
-
-Empirical Dynamic Modelling
-Univariate mapping with x and its lag values
---------------------------------------------------------------------
-          Actual E           theta             rho             MAE
---------------------------------------------------------------------
-                 2               1          .99999       .00071417 
---------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
-
+. //edm explore x
 . //edm explore x, algorithm(smap)
 . //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
-. //edm xmap x y, algorithm(smap) savesmap(beta)
-. //gen x_copy = z
-. //gen y_copy = y
-. //edm xmap x y, copredict(xmap_y_p) copredictvar(x_copy y_copy) algorithm(sma
-> p)
-. 
-. timer off 1
-
-. /* Run time in seconds */
-. timer list 1
-   1:     46.64 /        1 =      46.6360
-
-. 
-. /* Plot the system */
-. //twoway (connected x t)(connected y t) in 1/40, ytitle(value) xtitle(t) lege
-> nd(position(7) ring(0)) 
-. //graph export plot.png, replace
-. 
-end of do-file
+. edm xmap x y, algorithm(smap) savesmap(beta)
+vsave_flag: 1
+pmani_flag: 0

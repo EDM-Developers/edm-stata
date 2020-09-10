@@ -53,7 +53,7 @@ STDLL stata_call(int argc, char *argv[])
   ST_double *y, *S, *Bi, *ystar;
 
   ST_int i, j, h, force_compute, missingdistance;
-  ST_int count_train_set, count_predict_set, obsi, obsj;
+  ST_int count_train_set, count_predict_set, allocbim, obsi, obsj;
   
   char temps[500], algorithm[500];
   
@@ -252,22 +252,27 @@ STDLL stata_call(int argc, char *argv[])
   sprintf(temps,"vars_save flag = %i \n",vsave_flag);
   SF_display(temps);
 
-  if (vsave_flag == 1) {
+  if (vsave_flag == 1) { /* flag savesmap is ON */
     varssv = atoi(argv[8]); /* contains the number of columns
                                in smap coefficents */
     sprintf(temps,"coumns in smap coefficents = %i \n",varssv);
     SF_display(temps);
+    allocbim = count_predict_set;
     save_mode = 1;
-  } else {
-    varssv = 0;
+  } else { /* flag savesmap is OFF */
+    varssv = 1; /* to avoid allocating arrays Bi and Bi_map of zero dimension */
+    allocbim = 1; /* to minimise the size of Bi_map, not used in this case */
     save_mode = 0;
   }
   Bi = (ST_double*)malloc(sizeof(ST_double)*varssv);
-  ST_double (*Bi_map)[varssv] = malloc(count_predict_set*sizeof(*Bi_map));
+  ST_double (*Bi_map)[varssv] = malloc(allocbim*sizeof(*Bi_map));
   if ((Bi == NULL) || (*Bi_map == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
     return((ST_retcode)909);
+  }
+  if (vsave_flag != 1) {
+    varssv = 0; /* reset varssv to 0 in case flag savesmap is OFF */
   }
   sprintf(temps,"save_mode = %i \n",save_mode);
   SF_display(temps);
@@ -292,26 +297,30 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* OpenMP loop with call to mf_smap_single function */
-  #pragma omp parallel for
-  for (i=0; i<count_predict_set; i++) {
-
+  #pragma omp parallel
+  {
     ST_double *b;
     ST_int o;
+
     b = (ST_double*)malloc(sizeof(ST_double)*Mpcol);
-    for (o=0; o<Mpcol; o++) {
-      b[o] = Mp[i][o];
+    
+    #pragma omp for
+    for (i=0; i<count_predict_set; i++) {
+
+      for (o=0; o<Mpcol; o++) {
+        b[o] = Mp[i][o];
+      }
+      
+      ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
+			        algorithm,save_mode*(i+1),Bi,force_compute,\
+			        missingdistance);
+      
+      for (o=0; o<varssv; o++) {
+        Bi_map[i][o] = Bi[o];
+      }
     }
     
-    ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
-			      algorithm,save_mode*(i+1),Bi,force_compute, \
-			      missingdistance);
-
     free(b);
-    
-    /* TO BE ADDED: treatment of Bi_map */
-    /*for (h=0; h<varssv; h++) {
-      Bi_map[i][h] = Bi[h];
-    }*/
   }
 
   /*for (i=0; i<count_predict_set; i++) {
