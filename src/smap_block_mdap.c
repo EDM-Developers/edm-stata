@@ -299,18 +299,12 @@ STDLL stata_call(int argc, char *argv[])
   /* OpenMP loop with call to mf_smap_single function */
   #pragma omp parallel
   {
-    ST_double *b;
-    ST_int o;
-
-    b = (ST_double*)malloc(sizeof(ST_double)*Mpcol);
+     ST_double *b = Mp[i];
+     ST_int o;
     
     #pragma omp for
     for (i=0; i<count_predict_set; i++) {
 
-      for (o=0; o<Mpcol; o++) {
-        b[o] = Mp[i][o];
-      }
-      
       ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
 			        algorithm,save_mode*(i+1),Bi,force_compute,\
 			        missingdistance);
@@ -319,8 +313,6 @@ STDLL stata_call(int argc, char *argv[])
         Bi_map[i][o] = Bi[o];
       }
     }
-    
-    free(b);
   }
 
   /*for (i=0; i<count_predict_set; i++) {
@@ -558,6 +550,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
       free(ind);
       free(w);
       free(y_ls);
+      free(w_ls);
       free(X_ls);
       
       /* return missing value flag to ystar[j] */
@@ -641,6 +634,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double (*M)[colsm],\
       free(ind);
       free(w);
       free(y_ls);
+      free(w_ls);
       free(X_ls);
       gsl_matrix_free(X_ls_cj);
       gsl_vector_free(y_ls_cj);
