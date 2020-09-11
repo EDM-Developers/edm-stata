@@ -297,21 +297,15 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* OpenMP loop with call to mf_smap_single function */
-  #pragma omp parallel
-  {
-     ST_double *b = Mp[i];
-     ST_int o;
-    
-    #pragma omp for
-    for (i=0; i<count_predict_set; i++) {
+  #pragma omp parallel for
+  for (i=0; i<count_predict_set; i++) {
 
-      ystar[i] = mf_smap_single(count_train_set,mani,M,b,y,l,theta,S[i],\
-			        algorithm,save_mode*(i+1),Bi,force_compute,\
-			        missingdistance);
+    ystar[i] = mf_smap_single(count_train_set,mani,M,Mp[i],y,l,theta,S[i],\
+	        algorithm,save_mode*(i+1),Bi,force_compute,\
+	        missingdistance);
       
-      for (o=0; o<varssv; o++) {
-        Bi_map[i][o] = Bi[o];
-      }
+    for (ST_int o=0; o<varssv; o++) {
+      Bi_map[i][o] = Bi[o];
     }
   }
 
