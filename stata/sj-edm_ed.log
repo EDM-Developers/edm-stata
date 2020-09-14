@@ -38,25 +38,25 @@ Notes:
 . /* Example with a Synthetic Dataset */
 . /* Create a dynamic system */
 . 
-. set obs 20000
-number of observations (_N) was 0, now 20,000
+. set obs 1000
+number of observations (_N) was 0, now 1,000
 
 . 
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 20000
+        time variable:  t, 1 to 1000
                 delta:  1 unit
 
 . 
 . gen x = 0.2 if _n==1
-(19,999 missing values generated)
+(999 missing values generated)
 
 . gen y = 0.3 if _n==1
-(19,999 missing values generated)
+(999 missing values generated)
 
 . gen z = 0.1 if _n==1
-(19,999 missing values generated)
+(999 missing values generated)
 
 . 
 . local r_x 3.79
@@ -88,9 +88,948 @@ number of observations (_N) was 0, now 20,000
 
 . 
 . /* Typical Output */
-. //edm explore x
+. edm explore x
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = simplex
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 3 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.0000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99996        .0012499 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .2
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.2000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .3
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.3000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .4
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.4000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .5
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.5000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .6
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.6000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .7
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.7000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .8
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.8000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: .9
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 0.9000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.0000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.1
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.1000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.2
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.2000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.3
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.3000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.4
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.4000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.5
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.5000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.6
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.6000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.7
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.7000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.8
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.8000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 1.9
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 1.9000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+vsave_flag: 0
+pmani_flag: 0
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 1000
+first and last obs in sample = 1, 1000
+
+arg 0: 2
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+
+force compute = 0
+
+algorithm = smap
+
+missing distance = 0
+
+number of variables in manifold = 2 
+
+train set obs: 499
+predict set obs: 499
+
+p_manifold flag = 0 
+
+l = 4 
+
+vars_save flag = 0 
+save_mode = 0 
+
+theta = 2.0000
+
+Using 8 OpenMP threads 
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2              .2               1      5.2952e-07 
+                 2              .3               1      5.2305e-07 
+                 2              .4               1      5.1675e-07 
+                 2              .5               1      5.1047e-07 
+                 2              .6               1      5.0416e-07 
+                 2              .7               1      4.9786e-07 
+                 2              .8               1      4.9156e-07 
+                 2              .9               1      4.8519e-07 
+                 2               1               1      4.7873e-07 
+                 2             1.1               1      4.7276e-07 
+                 2             1.2               1      4.6715e-07 
+                 2             1.3               1      4.6415e-07 
+                 2             1.4               1      4.6170e-07 
+                 2             1.5               1      4.5924e-07 
+                 2             1.6               1      4.5664e-07 
+                 2             1.7               1      4.5386e-07 
+                 2             1.8               1      4.5095e-07 
+                 2             1.9               1      4.4791e-07 
+                 2               2               1      4.4468e-07 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+2
+Note: Random 50/50 split for training and validation data
+
+. 
 . //edm explore x, algorithm(smap)
 . //edm explore x, copredict(cop) copredictvar(z) algorithm(smap)
-. edm xmap x y, algorithm(smap) savesmap(beta)
-vsave_flag: 1
-pmani_flag: 0
+. //edm xmap x y, algorithm(smap) savesmap(beta)
+. //gen x_copy = z
+. //gen y_copy = y
+. //edm xmap x y, copredict(xmap_y_p) copredictvar(x_copy y_copy) algorithm(sma
+> p)
+. 
+. timer off 1
+
+. /* Run time in seconds */
+. timer list 1
+   1:      0.12 /        1 =       0.1190
+
+. 
+. /* Plot the system */
+. //twoway (connected x t)(connected y t) in 1/40, ytitle(value) xtitle(t) lege
+> nd(position(7) ring(0)) 
+. //graph export plot.png, replace
+. 
+end of do-file

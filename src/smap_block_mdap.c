@@ -21,7 +21,7 @@ ST_double **alloc_matrix(ST_int nrow, ST_int ncol);
 void free_matrix(ST_double **M, ST_int nrow);
 
 ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **,\
-			 ST_double*, ST_double*, ST_int, ST_int, ST_double,\
+			 ST_double*, ST_double*, ST_int, ST_double, ST_double,\
 			 char*, ST_int, ST_double*, ST_int, ST_int);
 
 ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
@@ -56,9 +56,9 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 STDLL stata_call(int argc, char *argv[])
 {
   ST_int nvars, nobs, first, last, mani, pmani_flag, pmani, smaploc;
-  ST_int Mpcol, l, vsave_flag, save_mode, varssv, theta;
+  ST_int Mpcol, l, vsave_flag, save_mode, varssv;
 
-  ST_double value, *train_use, *predict_use, *skip_obs;
+  ST_double value, theta, *train_use, *predict_use, *skip_obs;
   ST_double **M, **Mp, **Bi_map;
   ST_double *y, *S, *Bi, *ystar, *b;
   ST_int i, j, h, force_compute, missingdistance;
@@ -294,8 +294,8 @@ STDLL stata_call(int argc, char *argv[])
     return((ST_retcode)909);
   }
   
-  theta = atoi(argv[0]); /* contains value of theta = first argument */
-  sprintf(temps,"theta = %i\n",theta); /* CHECK TYPE OF theta */
+  theta = atof(argv[0]); /* contains value of theta = first argument */
+  sprintf(temps,"theta = %6.4f\n",theta);
   SF_display(temps);
   SF_display("\n");
   
@@ -400,8 +400,8 @@ void free_matrix(ST_double **M, ST_int nrow) {
 }
 
 ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
-			 ST_double b[], ST_double y[], ST_int l, ST_int theta,\
-			 ST_double skip_obs, char *algorithm,\
+			 ST_double b[], ST_double y[], ST_int l,\
+			 ST_double theta, ST_double skip_obs, char *algorithm,\
 			 ST_int save_index, ST_double Beta_smap[],\
 			 ST_int force_compute, ST_int missingdistance)
 {
@@ -504,8 +504,8 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
   if ((strcmp(algorithm,"") == 0) || (strcmp(algorithm,"simplex") == 0)) {
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = exp(-(ST_double)theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-(ST_double)theta*sqrt(d[ind[j]] / d_base));
+      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
+      w[j] = exp(-theta*sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
@@ -544,7 +544,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
     }
     mean_w = mean_w / (ST_double)l;
     for(j=(int)skip_obs; j<l+(int)skip_obs; j++) {
-      w[j] = exp(-(ST_double)theta * (w[j] / mean_w));
+      w[j] = exp(-theta * (w[j] / mean_w));
     }
     
     rowc = -1;
@@ -623,7 +623,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
 
       /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
 
-      /* TOBE ADDED: benchmark which one of the following methods work best*/
+      /* TO BE ADDED: benchmark which one of the following methods work best*/
       /*Golub-Reinsch SVD algorithm*/
       /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
 
