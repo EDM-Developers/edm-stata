@@ -1856,4 +1856,4 @@ mata:
 		}
 	}
 end
-program smap_block_mdap, plugin using("edm-`c(os)'-`c(bit)'.plugin")
+program smap_block_mdap, plugin
