@@ -1,6 +1,6 @@
 # Project specific
 vendor/stplugin.[ch]
-stata/smap_block_mdap.plugin
+stata/*.plugin
 build
 
 # Prerequisites
