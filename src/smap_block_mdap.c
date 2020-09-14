@@ -1,6 +1,11 @@
 /* version 1.2, 13 Aug 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
+/* Suppress Windows problems with sprintf etc. functions. */
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "stplugin.h"
 
 #include <stdlib.h>
@@ -8,11 +13,6 @@
 #include <string.h>
 #include <math.h>
 #include <gsl/gsl_linalg.h>
-
-/* Suppress Windows problems with sprintf etc. functions. */
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
-#endif
 
 /* internal functions */
 
