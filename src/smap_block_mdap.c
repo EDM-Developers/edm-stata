@@ -20,9 +20,9 @@ ST_double **alloc_matrix(ST_int nrow, ST_int ncol);
 
 void free_matrix(ST_double **M, ST_int nrow);
 
-ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **,\
-			 ST_double*, ST_double*, ST_int, ST_double, ST_double,\
-			 char*, ST_int, ST_double*, ST_int, ST_int);
+ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **,
+			 ST_double*, ST_double*, ST_int, ST_double, ST_double,
+			 char*, ST_int, ST_double*, ST_int, ST_int, ST_int);
 
 ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
 
@@ -60,9 +60,9 @@ STDLL stata_call(int argc, char *argv[])
 
   ST_double value, theta, *train_use, *predict_use, *skip_obs;
   ST_double **M, **Mp, **Bi_map;
-  ST_double *y, *S, *Bi, *ystar, *b;
+  ST_double *y, *S, *ystar, *b;
   ST_int i, j, h, force_compute, missingdistance;
-  ST_int count_train_set, count_predict_set, allocbim, obsi, obsj;
+  ST_int count_train_set, count_predict_set, obsi, obsj;
   
   char temps[500], algorithm[500];
   
@@ -262,27 +262,22 @@ STDLL stata_call(int argc, char *argv[])
   SF_display(temps);
 
   if (vsave_flag == 1) { /* flag savesmap is ON */
+    save_mode = 1;
     varssv = atoi(argv[8]); /* contains the number of columns
                                in smap coefficents */
+    Bi_map = alloc_matrix(count_predict_set, varssv);
+    if (Bi_map == NULL) {
+      sprintf(temps,"Insufficient memory\n");
+      SF_error(temps);
+      return((ST_retcode)909);
+    }
     sprintf(temps,"columns in smap coefficents = %i \n",varssv);
     SF_display(temps);
-    allocbim = count_predict_set;
-    save_mode = 1;
   } else { /* flag savesmap is OFF */
-    varssv = 1; /* to avoid allocating arrays Bi and Bi_map of zero dimension */
-    allocbim = 1; /* to minimise the size of Bi_map, not used in this case */
     save_mode = 0;
+    varssv = 0;
   }
-  Bi = (ST_double*)malloc(sizeof(ST_double)*varssv);
-  Bi_map = alloc_matrix(count_predict_set, varssv);
-  if ((Bi == NULL) || (Bi_map == NULL)) {
-    sprintf(temps,"Insufficient memory\n");
-    SF_error(temps);
-    return((ST_retcode)909);
-  }
-  if (vsave_flag != 1) {
-    varssv = 0; /* reset varssv to 0 in case flag savesmap is OFF */
-  }
+  
   sprintf(temps,"save_mode = %i \n",save_mode);
   SF_display(temps);
   SF_display("\n");
@@ -306,16 +301,16 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* OpenMP loop with call to mf_smap_single function */
-  #pragma omp parallel for
+  ST_double *Bi = NULL;
+  #pragma omp parallel for private(Bi)
   for (i=0; i<count_predict_set; i++) {
+    if (save_mode) {
+      Bi = Bi_map[i];
+    }
 
     ystar[i] = mf_smap_single(count_train_set,mani,M,Mp[i],y,l,theta,S[i],\
-	        algorithm,save_mode*(i+1),Bi,force_compute,\
+	        algorithm,save_mode,Bi,varssv,force_compute,\
 	        missingdistance);
-      
-    for (ST_int o=0; o<varssv; o++) {
-      Bi_map[i][o] = Bi[o];
-    }
   }
 
   /*for (i=0; i<count_predict_set; i++) {
@@ -333,7 +328,7 @@ STDLL stata_call(int argc, char *argv[])
 	/* returning a missing value */
 	SF_vstore(mani+2,i+1,SV_missval);
       }
-      if (vsave_flag == 1) {
+      if (save_mode) {
 	for (h=0; h < varssv; h++) {
           if (Bi_map[j][h] != missval) {
             SF_vstore(smaploc+h,i+1,Bi_map[j][h]);
@@ -355,7 +350,6 @@ STDLL stata_call(int argc, char *argv[])
   free_matrix(Mp, count_predict_set);
   free(S);
   if (save_mode) {
-    free(Bi);
     free_matrix(Bi_map, count_predict_set);
   }
   free(ystar);
@@ -399,10 +393,10 @@ void free_matrix(ST_double **M, ST_int nrow) {
   }
 }
 
-ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
-			 ST_double b[], ST_double y[], ST_int l,\
-			 ST_double theta, ST_double skip_obs, char *algorithm,\
-			 ST_int save_index, ST_double Beta_smap[],\
+ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
+			 ST_double b[], ST_double y[], ST_int l,
+			 ST_double theta, ST_double skip_obs, char *algorithm,
+			 ST_int save_mode, ST_double Bi[], ST_int varssv,
 			 ST_int force_compute, ST_int missingdistance)
 {
   ST_double *d, *a, *w;
@@ -643,12 +637,12 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,\
       gsl_linalg_SV_solve(X_ls_cj,V,Esse,y_ls_cj,ics);
 
       /* saving ics coefficients if savesmap option enabled */
-      if (save_index > 0) {  
-        for (j=0; j<colsm+1; j++) {
+      if (save_mode) {
+        for (j=0; j<varssv; j++) {
 	  if (gsl_vector_get(ics,j) == 0.) {
-	    Beta_smap[j] = missval;
+	    Bi[j] = missval;
 	  } else {
-	    Beta_smap[j] = gsl_vector_get(ics,j);
+	    Bi[j] = gsl_vector_get(ics,j);
 	  }
         }
       }
