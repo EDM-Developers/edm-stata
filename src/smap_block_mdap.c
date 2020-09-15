@@ -6,6 +6,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#define SUCCESS 0
+#define INVALID_ALGORITHM 400
+#define INSUFFICIENT_UNIQUE 503
+#define NOT_IMPLEMENTED 908
+#define MALLOC_ERROR 909
+
 #include "stplugin.h"
 
 #include <stdlib.h>
@@ -20,9 +26,9 @@ ST_double **alloc_matrix(ST_int nrow, ST_int ncol);
 
 void free_matrix(ST_double **M, ST_int nrow);
 
-ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **,
+ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **,
 			 ST_double*, ST_double*, ST_int, ST_double, ST_double,
-			 char*, ST_int, ST_double*, ST_int, ST_int, ST_int);
+			 char*, ST_int, ST_double*, ST_int, ST_int, ST_int, ST_double *);
 
 ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
 
@@ -125,7 +131,7 @@ STDLL stata_call(int argc, char *argv[])
   if ((train_use == NULL) || (predict_use == NULL) || (skip_obs == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
   
   count_train_set = 0;
@@ -157,14 +163,14 @@ STDLL stata_call(int argc, char *argv[])
   sprintf(temps,"predict set obs: %i\n",count_predict_set);
   SF_display(temps);
   SF_display("\n");
-  
+
   /* allocation of matrices M and y */
   M = alloc_matrix(count_train_set, mani); 
   y = (ST_double*)malloc(sizeof(ST_double)*count_train_set);
   if ((M == NULL) || (y == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
 
   obsi = 0;
@@ -208,7 +214,7 @@ STDLL stata_call(int argc, char *argv[])
   if ((Mp == NULL) || (S == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
   
   if (pmani_flag == 1) {
@@ -269,7 +275,7 @@ STDLL stata_call(int argc, char *argv[])
     if (Bi_map == NULL) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
-      return((ST_retcode)909);
+      return(MALLOC_ERROR);
     }
     sprintf(temps,"columns in smap coefficents = %i \n",varssv);
     SF_display(temps);
@@ -286,7 +292,7 @@ STDLL stata_call(int argc, char *argv[])
   if (ystar == NULL) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
   
   theta = atof(argv[0]); /* contains value of theta = first argument */
@@ -301,6 +307,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("\n");
   
   /* OpenMP loop with call to mf_smap_single function */
+  ST_retcode *rc = malloc(count_predict_set * sizeof(ST_retcode));
   ST_double *Bi = NULL;
   #pragma omp parallel for private(Bi)
   for (i=0; i<count_predict_set; i++) {
@@ -308,36 +315,41 @@ STDLL stata_call(int argc, char *argv[])
       Bi = Bi_map[i];
     }
 
-    ystar[i] = mf_smap_single(count_train_set,mani,M,Mp[i],y,l,theta,S[i],\
-	        algorithm,save_mode,Bi,varssv,force_compute,\
-	        missingdistance);
+    rc[i] = mf_smap_single(count_train_set,mani,M,Mp[i],y,l,theta,S[i],
+	        algorithm,save_mode,Bi,varssv,force_compute,
+	        missingdistance, &(ystar[i]));
+  }
+  
+  /* Check if any mf_smap_single call failed, and if so find the most serious error */
+  ST_retcode maxError = 0;
+  for (i=0; i<count_predict_set; i++) {
+    if (rc[i] > maxError) {
+      maxError = rc[i];
+    }
   }
 
-  /*for (i=0; i<count_predict_set; i++) {
-    sprintf(temps,"ystar[%i] = %12.10f \n",i, ystar[i]);
-    SF_display(temps);
-  }*/
-  
-  /* returning the value of ystar (and smap coefficients) to Stata */
-  j=0;
-  for (i=0; i < nobs; i++) {
-    if (predict_use[i] == 1) {
-      if (ystar[j] != missval) {
-        SF_vstore(mani+2,i+1,ystar[j]);
-      } else {
-	/* returning a missing value */
-	SF_vstore(mani+2,i+1,SV_missval);
+  /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
+  if (maxError == 0) {
+    j=0;
+    for (i=0; i < nobs; i++) {
+      if (predict_use[i] == 1) {
+        if (ystar[j] != missval) {
+          SF_vstore(mani+2,i+1,ystar[j]);
+        } else {
+          /* returning a missing value */
+          SF_vstore(mani+2,i+1,SV_missval);
+        }
+        if (save_mode) {
+          for (h=0; h < varssv; h++) {
+            if (Bi_map[j][h] != missval) {
+              SF_vstore(smaploc+h,i+1,Bi_map[j][h]);
+            } else {
+              SF_vstore(smaploc+h,i+1,SV_missval);
+            }
+          }
+        }
+        j++;
       }
-      if (save_mode) {
-	for (h=0; h < varssv; h++) {
-          if (Bi_map[j][h] != missval) {
-            SF_vstore(smaploc+h,i+1,Bi_map[j][h]);
-	  } else {
-	    SF_vstore(smaploc+h,i+1,SV_missval);
-	  }
-	}
-      }
-      j++;
     }
   }
   
@@ -360,8 +372,7 @@ STDLL stata_call(int argc, char *argv[])
   SF_display("====================\n");
   SF_display("\n");
   
-  return(0);
-
+  return(maxError);
 }
 
 ST_double **alloc_matrix(ST_int nrow, ST_int ncol) {
@@ -393,11 +404,11 @@ void free_matrix(ST_double **M, ST_int nrow) {
   }
 }
 
-ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
+ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
 			 ST_double b[], ST_double y[], ST_int l,
 			 ST_double theta, ST_double skip_obs, char *algorithm,
 			 ST_int save_mode, ST_double Bi[], ST_int varssv,
-			 ST_int force_compute, ST_int missingdistance)
+			 ST_int force_compute, ST_int missingdistance, ST_double *ystar)
 {
   ST_double *d, *a, *w;
   ST_int *ind;
@@ -414,7 +425,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
   if ((d == NULL) || (a == NULL) || (ind == NULL)) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
 
   for (i=0; i<rowsm; i++) {
@@ -476,13 +487,13 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
 	sprintf(temps,"Insufficient number of unique observations in the "
                       "dataset even with -force- option\n");
         SF_error(temps);
-        return((ST_retcode)503);
+        return(INSUFFICIENT_UNIQUE);
       }
     } else {
       sprintf(temps,"Insufficient number of unique observations, consider "
                     "tweaking the values of E, k or use -force- option\n");
       SF_error(temps);
-      return((ST_retcode)503);
+      return(INSUFFICIENT_UNIQUE);
     }
   }
 
@@ -490,7 +501,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
   if (w == NULL) {
     sprintf(temps,"Insufficient memory\n");
     SF_error(temps);
-    return((ST_retcode)909);
+    return(MALLOC_ERROR);
   }
 
   sumw = 0.;
@@ -511,8 +522,9 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
     free(ind);
     free(w);
 
-    /* returning the value of ystar[j] */
-    return(r);
+    /* save the value of ystar[j] */
+    *ystar = r;
+    return(SUCCESS);
     
   } else if ((strcmp(algorithm,"smap") == 0) ||\
 	     (strcmp(algorithm,"llr") == 0)) { 
@@ -526,7 +538,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
     if ((y_ls == NULL) || (w_ls == NULL) || (X_ls == NULL)) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
-      return((ST_retcode)909);
+      return(MALLOC_ERROR);
     }
 
     mean_w = 0.;
@@ -560,7 +572,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
 	/* llr algorithm is not needed at this stage */
 	sprintf(temps,"llr algorithm not yet implemented\n");
         SF_error(temps);
-        return((ST_retcode)908);
+        return(NOT_IMPLEMENTED);
 
       } else if (strcmp(algorithm,"smap") == 0) {
 	y_ls[rowc] = y[ind[j]] * w[j];
@@ -580,9 +592,9 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
       free(w_ls);
       free_matrix(X_ls, l);
       
-      /* return missing value flag to ystar[j] */
-      return(missval);
-      
+      /* save the missing value flag to ystar[j] */
+      *ystar = missval;
+      return(SUCCESS);
     }
 
     gsl_matrix *X_ls_cj = gsl_matrix_alloc(rowc+1,colsm+1);
@@ -590,7 +602,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
     if ((X_ls_cj == NULL) || (y_ls_cj == NULL)) {
       sprintf(temps,"Insufficient memory\n");
       SF_error(temps);
-      return((ST_retcode)909);
+      return(MALLOC_ERROR);
     }
     for(i=0; i<rowc+1; i++) {
       gsl_matrix_set(X_ls_cj,i,0,w_ls[i]);
@@ -604,7 +616,7 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
 	/* llr algorithm is not needed at this stage */
 	sprintf(temps,"llr algorithm not yet implemented\n");
         SF_error(temps);
-        return((ST_retcode)908);
+        return(NOT_IMPLEMENTED);
     } else {
       gsl_matrix *V = gsl_matrix_alloc(colsm+1,colsm+1);
       gsl_vector *Esse = gsl_vector_alloc(colsm+1);
@@ -612,10 +624,15 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
       if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
         sprintf(temps,"Insufficient memory\n");
         SF_error(temps);
-        return((ST_retcode)909);
+        return(MALLOC_ERROR);
       }
 
       /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
+      if (rowc+1 < colsm+1) {
+        sprintf(temps,"GSL method is not yet implemented\n");
+        SF_error(temps);
+        return(NOT_IMPLEMENTED);
+      }
 
       /* TO BE ADDED: benchmark which one of the following methods work best*/
       /*Golub-Reinsch SVD algorithm*/
@@ -669,16 +686,13 @@ ST_double mf_smap_single(ST_int rowsm, ST_int colsm, ST_double **M,
       gsl_vector_free(Esse);
       gsl_vector_free(ics);
    
-      /* returning the value of ystar[j] */
-      return(r);
-      
+      /* save the value of ystar[j] */
+      *ystar = r;
+      return(SUCCESS);
     }
   }
   
-  /* returning the result to the main program, added just to avoid
-     a warning when compiling, not really necessary */
-  return(-1.);
-  
+  return(INVALID_ALGORITHM);
 }
 
 /* NOTE: in mata, minindex(v,k,i,w) returns in i and w the indices of the
@@ -712,7 +726,7 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
 	if ((temp_ind == NULL) || (subind == NULL)) {
           sprintf(temps,"Insufficient memory\n");
           SF_error(temps);
-          return((ST_retcode)909);
+          return(MALLOC_ERROR);
         }
         for (j=0; j<count_ord; j++) {
 	  temp_ind[j] = (ST_double)ind[i-1-j];
@@ -743,7 +757,7 @@ ST_int minindex(ST_int rvect, ST_double vect[], ST_int k,\
           if ((temp_ind == NULL) || (subind == NULL)) {
             sprintf(temps,"Insufficient memory\n");
             SF_error(temps);
-            return((ST_retcode)909);
+            return(MALLOC_ERROR);
           }
 	  for (j=0; j<count_ord; j++) {
 	    temp_ind[j] = (ST_double)ind[i-1-j];
