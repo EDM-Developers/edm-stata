@@ -5,6 +5,7 @@ build:
 	if [ ! -d build ]; then mkdir build; fi
 	cd build && cmake .. ${CMAKE_OPTS} ${CMAKE_BUILD_TYPE}
 	ln -sf build/compile_commands.json
+	rm -f a.out cmake_hdf5_test.o
 
 release: CMAKE_BUILD_TYPE = -DCMAKE_BUILD_TYPE=Release
 release: build all
