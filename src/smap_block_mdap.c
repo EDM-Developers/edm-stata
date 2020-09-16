@@ -16,32 +16,447 @@
 
 #include <gsl/gsl_linalg.h>
 #include <math.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* internal functions */
-
-ST_double** alloc_matrix(ST_int nrow, ST_int ncol);
-
-void free_matrix(ST_double** M, ST_int nrow);
-
-ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double**, ST_double*, ST_double*, ST_int, ST_double, ST_double,
-                          char*, ST_int, ST_double*, ST_int, ST_int, ST_int, ST_double*);
-
-ST_int minindex(ST_int, ST_double*, ST_int, ST_int*);
-
-void quicksortind(ST_double*, ST_int*, ST_int, ST_int);
 
 /* global variable placeholder for missing values */
 
 ST_double missval = 1.0e+100;
 
+/* internal functions */
+
+static void free_matrix(ST_double** M, ST_int nrow)
+{
+  if (M != NULL) {
+    for (ST_int i = 0; i < nrow; i++) {
+      if (M[i] != NULL) {
+        free(M[i]);
+      }
+    }
+    free(M);
+  }
+}
+
+static ST_double** alloc_matrix(ST_int nrow, ST_int ncol)
+{
+  if (nrow == 0 || ncol == 0) {
+    return NULL;
+  }
+
+  ST_double** M = calloc(nrow, sizeof(ST_double*));
+  if (M != NULL) {
+    for (ST_int i = 0; i < nrow; i++) {
+      M[i] = malloc(ncol * (sizeof(ST_double)));
+      if (M[i] == NULL) {
+        free_matrix(M, nrow);
+        return NULL;
+      }
+    }
+  }
+  return M;
+}
+
+/* function that returns the sorted indices of an array */
+static void quicksortind(ST_double A[], ST_int I[], ST_int lo, ST_int hi)
+{
+  while (lo < hi) {
+    ST_double pivot = A[I[lo + (hi - lo) / 2]];
+    ST_int t;
+    ST_int i = lo - 1;
+    ST_int j = hi + 1;
+    while (1) {
+      while (A[I[++i]] < pivot) {};
+      while (A[I[--j]] > pivot) {};
+      if (i >= j)
+        break;
+      t = I[i];
+      I[i] = I[j];
+      I[j] = t;
+    }
+    /* avoid stack overflow */
+    if ((j - lo) < (hi - j)) {
+      quicksortind(A, I, lo, j);
+      lo = j + 1;
+    } else {
+      quicksortind(A, I, j + 1, hi);
+      hi = j;
+    }
+  }
+}
+
+/* NOTE: in mata, minindex(v,k,i,w) returns in i and w the indices of the
+   k minimums of v. The internal function minindex below only returns i +
+   the number of k minimums and does not return w, as w is not used in the
+   original edm code */
+static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
+{
+  ST_int i, j, contin, numind, count_ord, *subind;
+
+  ST_double tempval, *temp_ind;
+
+  char temps[500];
+
+  quicksortind(vect, ind, 0, rvect - 1);
+
+  tempval = vect[ind[0]];
+  contin = 0;
+  numind = 0;
+  count_ord = 1;
+  i = 1;
+  while ((contin < k) && (i < rvect)) {
+    if (vect[ind[i]] != tempval) {
+      tempval = vect[ind[i]];
+      if (count_ord > 1) {
+        /* here I reorder the indexes from low to high in case of
+           repeated values */
+        temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
+        subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
+        if ((temp_ind == NULL) || (subind == NULL)) {
+          sprintf(temps, "Insufficient memory\n");
+          SF_error(temps);
+          return (MALLOC_ERROR);
+        }
+        for (j = 0; j < count_ord; j++) {
+          temp_ind[j] = (ST_double)ind[i - 1 - j];
+          subind[j] = j;
+        }
+        quicksortind(temp_ind, subind, 0, count_ord - 1);
+        for (j = 0; j < count_ord; j++) {
+          ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
+        }
+        free(temp_ind);
+        free(subind);
+        count_ord = 1;
+      }
+      contin++;
+      numind++;
+      i++;
+    } else {
+      numind++;
+      count_ord++;
+      i++;
+      if (i == rvect) {
+        /* here I check whether I reached the end of the array */
+        if (count_ord > 1) {
+          /* here I reorder the indexes from low to high in case of
+             repeated values */
+          temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
+          subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
+          if ((temp_ind == NULL) || (subind == NULL)) {
+            sprintf(temps, "Insufficient memory\n");
+            SF_error(temps);
+            return (MALLOC_ERROR);
+          }
+          for (j = 0; j < count_ord; j++) {
+            temp_ind[j] = (ST_double)ind[i - 1 - j];
+            subind[j] = j;
+          }
+          quicksortind(temp_ind, subind, 0, count_ord - 1);
+          for (j = 0; j < count_ord; j++) {
+            ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
+          }
+          free(temp_ind);
+          free(subind);
+        }
+      }
+    }
+  }
+
+  /* returning the number of k minimums (and indices via ind) */
+  return numind;
+}
+
+static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_double b[], ST_double y[], ST_int l,
+                                 ST_double theta, ST_double skip_obs, char* algorithm, ST_int save_mode, ST_double Bi[],
+                                 ST_int varssv, ST_int force_compute, ST_int missingdistance, ST_double* ystar)
+{
+  ST_double *d, *a, *w;
+  ST_int* ind;
+
+  ST_double value, pre_adj_skip_obs, d_base, sumw, r;
+
+  ST_int i, j, numind, boolmiss;
+
+  char temps[500];
+
+  d = (ST_double*)malloc(sizeof(ST_double) * rowsm);
+  a = (ST_double*)malloc(sizeof(ST_double) * colsm);
+  ind = (ST_int*)malloc(sizeof(ST_int) * rowsm);
+  if ((d == NULL) || (a == NULL) || (ind == NULL)) {
+    sprintf(temps, "Insufficient memory\n");
+    SF_error(temps);
+    return (MALLOC_ERROR);
+  }
+
+  for (i = 0; i < rowsm; i++) {
+    value = 0.;
+    boolmiss = 0;
+    for (j = 0; j < colsm; j++) {
+      if ((M[i][j] == missval) || (b[j] == missval)) {
+        if (missingdistance != 0) {
+          a[j] = (ST_double)missingdistance;
+          value = value + a[j] * a[j];
+        } else {
+          boolmiss = 1;
+        }
+      } else {
+        a[j] = M[i][j] - b[j];
+        value = value + a[j] * a[j];
+      }
+    }
+    if (boolmiss == 1) {
+      d[i] = missval;
+    } else {
+      d[i] = value;
+    }
+    ind[i] = i;
+  }
+
+  numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+
+  pre_adj_skip_obs = skip_obs;
+
+  for (j = 0; j < l; j++) {
+    if (d[ind[j + (int)skip_obs]] == 0.) {
+      skip_obs++;
+    } else {
+      break;
+    }
+  }
+
+  if (pre_adj_skip_obs != skip_obs) {
+    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+  }
+
+  if (d[ind[(int)skip_obs]] == 0.) {
+    for (i = 0; i < rowsm; i++) {
+      if (d[i] == 0.) {
+        d[i] = missval;
+      }
+    }
+    skip_obs = 0.;
+    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+  }
+
+  d_base = d[ind[(int)skip_obs]];
+
+  if (numind < l + (int)skip_obs) {
+    if (force_compute == 1) {
+      l = numind - (int)skip_obs;
+      if (l <= 0) {
+        sprintf(temps, "Insufficient number of unique observations in the "
+                       "dataset even with -force- option\n");
+        SF_error(temps);
+        return (INSUFFICIENT_UNIQUE);
+      }
+    } else {
+      sprintf(temps, "Insufficient number of unique observations, consider "
+                     "tweaking the values of E, k or use -force- option\n");
+      SF_error(temps);
+      return (INSUFFICIENT_UNIQUE);
+    }
+  }
+
+  w = (ST_double*)malloc(sizeof(ST_double) * (l + (int)skip_obs));
+  if (w == NULL) {
+    sprintf(temps, "Insufficient memory\n");
+    SF_error(temps);
+    return (MALLOC_ERROR);
+  }
+
+  sumw = 0.;
+  r = 0.;
+  if ((strcmp(algorithm, "") == 0) || (strcmp(algorithm, "simplex") == 0)) {
+    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
+      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
+      w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
+      sumw = sumw + w[j];
+    }
+    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+      r = r + y[ind[j]] * (w[j] / sumw);
+    }
+    /* deallocation of matrices and arrays before exiting the function */
+    free(d);
+    free(a);
+    free(ind);
+    free(w);
+
+    /* save the value of ystar[j] */
+    *ystar = r;
+    return (SUCCESS);
+
+  } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
+
+    ST_double mean_w, *y_ls, *w_ls, **X_ls;
+    ST_int rowc, bocont;
+
+    y_ls = (ST_double*)malloc(sizeof(ST_double) * l);
+    w_ls = (ST_double*)malloc(sizeof(ST_double) * l);
+    X_ls = alloc_matrix(l, colsm);
+    if ((y_ls == NULL) || (w_ls == NULL) || (X_ls == NULL)) {
+      sprintf(temps, "Insufficient memory\n");
+      SF_error(temps);
+      return (MALLOC_ERROR);
+    }
+
+    mean_w = 0.;
+    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
+      /* w[j] = pow(d[ind[j]],0.5); */
+      w[j] = sqrt(d[ind[j]]);
+      mean_w = mean_w + w[j];
+    }
+    mean_w = mean_w / (ST_double)l;
+    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+      w[j] = exp(-theta * (w[j] / mean_w));
+    }
+
+    rowc = -1;
+    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+      if (y[ind[j]] == missval) {
+        continue;
+      }
+      bocont = 0;
+      for (i = 0; i < colsm; i++) {
+        if (M[ind[j]][i] == missval) {
+          bocont = 1;
+        }
+      }
+      if (bocont == 1) {
+        continue;
+      }
+      rowc++;
+      if (strcmp(algorithm, "llr") == 0) {
+        /* llr algorithm is not needed at this stage */
+        sprintf(temps, "llr algorithm not yet implemented\n");
+        SF_error(temps);
+        return (NOT_IMPLEMENTED);
+
+      } else if (strcmp(algorithm, "smap") == 0) {
+        y_ls[rowc] = y[ind[j]] * w[j];
+        w_ls[rowc] = w[j];
+        for (i = 0; i < colsm; i++) {
+          X_ls[rowc][i] = M[ind[j]][i] * w[j];
+        }
+      }
+    }
+    if (rowc == -1) {
+      /* deallocation of matrices and arrays before exiting the function */
+      free(d);
+      free(a);
+      free(ind);
+      free(w);
+      free(y_ls);
+      free(w_ls);
+      free_matrix(X_ls, l);
+
+      /* save the missing value flag to ystar[j] */
+      *ystar = missval;
+      return (SUCCESS);
+    }
+
+    gsl_matrix* X_ls_cj = gsl_matrix_alloc(rowc + 1, colsm + 1);
+    gsl_vector* y_ls_cj = gsl_vector_alloc(rowc + 1);
+    if ((X_ls_cj == NULL) || (y_ls_cj == NULL)) {
+      sprintf(temps, "Insufficient memory\n");
+      SF_error(temps);
+      return (MALLOC_ERROR);
+    }
+    for (i = 0; i < rowc + 1; i++) {
+      gsl_matrix_set(X_ls_cj, i, 0, w_ls[i]);
+      gsl_vector_set(y_ls_cj, i, y_ls[i]);
+      for (j = 1; j < colsm + 1; j++) {
+        gsl_matrix_set(X_ls_cj, i, j, X_ls[i][j - 1]);
+      }
+    }
+
+    if (strcmp(algorithm, "llr") == 0) {
+      /* llr algorithm is not needed at this stage */
+      sprintf(temps, "llr algorithm not yet implemented\n");
+      SF_error(temps);
+      return (NOT_IMPLEMENTED);
+    } else {
+      gsl_matrix* V = gsl_matrix_alloc(colsm + 1, colsm + 1);
+      gsl_vector* Esse = gsl_vector_alloc(colsm + 1);
+      gsl_vector* ics = gsl_vector_alloc(colsm + 1);
+      if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
+        sprintf(temps, "Insufficient memory\n");
+        SF_error(temps);
+        return (MALLOC_ERROR);
+      }
+
+      /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
+      if (rowc + 1 < colsm + 1) {
+        sprintf(temps, "GSL method is not yet implemented\n");
+        SF_error(temps);
+        return (NOT_IMPLEMENTED);
+      }
+
+      /* TO BE ADDED: benchmark which one of the following methods work best*/
+      /*Golub-Reinsch SVD algorithm*/
+      /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
+
+      /* one-sided Jacobi orthogonalization method */
+      gsl_linalg_SV_decomp_jacobi(X_ls_cj, V, Esse);
+
+      /* setting to zero extremely small values of Esse to avoid
+         underflow errors */
+      for (j = 0; j < colsm + 1; j++) {
+        if (gsl_vector_get(Esse, j) < 1.0e-12) {
+          gsl_vector_set(Esse, j, 0.);
+        }
+      }
+
+      /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
+         using gsl libraries */
+      gsl_linalg_SV_solve(X_ls_cj, V, Esse, y_ls_cj, ics);
+
+      /* saving ics coefficients if savesmap option enabled */
+      if (save_mode) {
+        for (j = 0; j < varssv; j++) {
+          if (gsl_vector_get(ics, j) == 0.) {
+            Bi[j] = missval;
+          } else {
+            Bi[j] = gsl_vector_get(ics, j);
+          }
+        }
+      }
+
+      r = gsl_vector_get(ics, 0);
+      for (j = 1; j < colsm + 1; j++) {
+        if (b[j - 1] == missval) {
+          b[j - 1] = 0.;
+        }
+        r = r + b[j - 1] * gsl_vector_get(ics, j);
+      }
+
+      /* deallocation of matrices and arrays before exiting the function */
+      free(d);
+      free(a);
+      free(ind);
+      free(w);
+      free(y_ls);
+      free(w_ls);
+      free(X_ls);
+      gsl_matrix_free(X_ls_cj);
+      gsl_vector_free(y_ls_cj);
+      gsl_matrix_free(V);
+      gsl_vector_free(Esse);
+      gsl_vector_free(ics);
+
+      /* save the value of ystar[j] */
+      *ystar = r;
+      return (SUCCESS);
+    }
+  }
+
+  return (INVALID_ALGORITHM);
+}
+
 /* OpenMP routines */
-
-int omp_get_num_procs(void);
-
-void omp_set_num_threads(int num_threads);
 
 ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
                         ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_int theta, ST_double* S,
@@ -389,433 +804,4 @@ STDLL stata_call(int argc, char* argv[])
   SF_display("\n");
 
   return (maxError);
-}
-
-ST_double** alloc_matrix(ST_int nrow, ST_int ncol)
-{
-  if (nrow == 0 || ncol == 0) {
-    return NULL;
-  }
-
-  ST_double** M = calloc(nrow, sizeof(ST_double*));
-  if (M != NULL) {
-    for (ST_int i = 0; i < nrow; i++) {
-      M[i] = malloc(ncol * (sizeof(ST_double)));
-      if (M[i] == NULL) {
-        free_matrix(M, nrow);
-        return NULL;
-      }
-    }
-  }
-  return M;
-}
-
-void free_matrix(ST_double** M, ST_int nrow)
-{
-  if (M != NULL) {
-    for (ST_int i = 0; i < nrow; i++) {
-      if (M[i] != NULL) {
-        free(M[i]);
-      }
-    }
-    free(M);
-  }
-}
-
-ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_double b[], ST_double y[], ST_int l,
-                          ST_double theta, ST_double skip_obs, char* algorithm, ST_int save_mode, ST_double Bi[],
-                          ST_int varssv, ST_int force_compute, ST_int missingdistance, ST_double* ystar)
-{
-  ST_double *d, *a, *w;
-  ST_int* ind;
-
-  ST_double value, pre_adj_skip_obs, d_base, sumw, r;
-
-  ST_int i, j, numind, boolmiss;
-
-  char temps[500];
-
-  d = (ST_double*)malloc(sizeof(ST_double) * rowsm);
-  a = (ST_double*)malloc(sizeof(ST_double) * colsm);
-  ind = (ST_int*)malloc(sizeof(ST_int) * rowsm);
-  if ((d == NULL) || (a == NULL) || (ind == NULL)) {
-    sprintf(temps, "Insufficient memory\n");
-    SF_error(temps);
-    return (MALLOC_ERROR);
-  }
-
-  for (i = 0; i < rowsm; i++) {
-    value = 0.;
-    boolmiss = 0;
-    for (j = 0; j < colsm; j++) {
-      if ((M[i][j] == missval) || (b[j] == missval)) {
-        if (missingdistance != 0) {
-          a[j] = (ST_double)missingdistance;
-          value = value + a[j] * a[j];
-        } else {
-          boolmiss = 1;
-        }
-      } else {
-        a[j] = M[i][j] - b[j];
-        value = value + a[j] * a[j];
-      }
-    }
-    if (boolmiss == 1) {
-      d[i] = missval;
-    } else {
-      d[i] = value;
-    }
-    ind[i] = i;
-  }
-
-  numind = minindex(rowsm, d, l + (int)skip_obs, ind);
-
-  pre_adj_skip_obs = skip_obs;
-
-  for (j = 0; j < l; j++) {
-    if (d[ind[j + (int)skip_obs]] == 0.) {
-      skip_obs++;
-    } else {
-      break;
-    }
-  }
-
-  if (pre_adj_skip_obs != skip_obs) {
-    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
-  }
-
-  if (d[ind[(int)skip_obs]] == 0.) {
-    for (i = 0; i < rowsm; i++) {
-      if (d[i] == 0.) {
-        d[i] = missval;
-      }
-    }
-    skip_obs = 0.;
-    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
-  }
-
-  d_base = d[ind[(int)skip_obs]];
-
-  if (numind < l + (int)skip_obs) {
-    if (force_compute == 1) {
-      l = numind - (int)skip_obs;
-      if (l <= 0) {
-        sprintf(temps, "Insufficient number of unique observations in the "
-                       "dataset even with -force- option\n");
-        SF_error(temps);
-        return (INSUFFICIENT_UNIQUE);
-      }
-    } else {
-      sprintf(temps, "Insufficient number of unique observations, consider "
-                     "tweaking the values of E, k or use -force- option\n");
-      SF_error(temps);
-      return (INSUFFICIENT_UNIQUE);
-    }
-  }
-
-  w = (ST_double*)malloc(sizeof(ST_double) * (l + (int)skip_obs));
-  if (w == NULL) {
-    sprintf(temps, "Insufficient memory\n");
-    SF_error(temps);
-    return (MALLOC_ERROR);
-  }
-
-  sumw = 0.;
-  r = 0.;
-  if ((strcmp(algorithm, "") == 0) || (strcmp(algorithm, "simplex") == 0)) {
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
-      sumw = sumw + w[j];
-    }
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
-      r = r + y[ind[j]] * (w[j] / sumw);
-    }
-    /* deallocation of matrices and arrays before exiting the function */
-    free(d);
-    free(a);
-    free(ind);
-    free(w);
-
-    /* save the value of ystar[j] */
-    *ystar = r;
-    return (SUCCESS);
-
-  } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
-
-    ST_double mean_w, *y_ls, *w_ls, **X_ls;
-    ST_int rowc, bocont;
-
-    y_ls = (ST_double*)malloc(sizeof(ST_double) * l);
-    w_ls = (ST_double*)malloc(sizeof(ST_double) * l);
-    X_ls = alloc_matrix(l, colsm);
-    if ((y_ls == NULL) || (w_ls == NULL) || (X_ls == NULL)) {
-      sprintf(temps, "Insufficient memory\n");
-      SF_error(temps);
-      return (MALLOC_ERROR);
-    }
-
-    mean_w = 0.;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = pow(d[ind[j]],0.5); */
-      w[j] = sqrt(d[ind[j]]);
-      mean_w = mean_w + w[j];
-    }
-    mean_w = mean_w / (ST_double)l;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
-      w[j] = exp(-theta * (w[j] / mean_w));
-    }
-
-    rowc = -1;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
-      if (y[ind[j]] == missval) {
-        continue;
-      }
-      bocont = 0;
-      for (i = 0; i < colsm; i++) {
-        if (M[ind[j]][i] == missval) {
-          bocont = 1;
-        }
-      }
-      if (bocont == 1) {
-        continue;
-      }
-      rowc++;
-      if (strcmp(algorithm, "llr") == 0) {
-        /* llr algorithm is not needed at this stage */
-        sprintf(temps, "llr algorithm not yet implemented\n");
-        SF_error(temps);
-        return (NOT_IMPLEMENTED);
-
-      } else if (strcmp(algorithm, "smap") == 0) {
-        y_ls[rowc] = y[ind[j]] * w[j];
-        w_ls[rowc] = w[j];
-        for (i = 0; i < colsm; i++) {
-          X_ls[rowc][i] = M[ind[j]][i] * w[j];
-        }
-      }
-    }
-    if (rowc == -1) {
-      /* deallocation of matrices and arrays before exiting the function */
-      free(d);
-      free(a);
-      free(ind);
-      free(w);
-      free(y_ls);
-      free(w_ls);
-      free_matrix(X_ls, l);
-
-      /* save the missing value flag to ystar[j] */
-      *ystar = missval;
-      return (SUCCESS);
-    }
-
-    gsl_matrix* X_ls_cj = gsl_matrix_alloc(rowc + 1, colsm + 1);
-    gsl_vector* y_ls_cj = gsl_vector_alloc(rowc + 1);
-    if ((X_ls_cj == NULL) || (y_ls_cj == NULL)) {
-      sprintf(temps, "Insufficient memory\n");
-      SF_error(temps);
-      return (MALLOC_ERROR);
-    }
-    for (i = 0; i < rowc + 1; i++) {
-      gsl_matrix_set(X_ls_cj, i, 0, w_ls[i]);
-      gsl_vector_set(y_ls_cj, i, y_ls[i]);
-      for (j = 1; j < colsm + 1; j++) {
-        gsl_matrix_set(X_ls_cj, i, j, X_ls[i][j - 1]);
-      }
-    }
-
-    if (strcmp(algorithm, "llr") == 0) {
-      /* llr algorithm is not needed at this stage */
-      sprintf(temps, "llr algorithm not yet implemented\n");
-      SF_error(temps);
-      return (NOT_IMPLEMENTED);
-    } else {
-      gsl_matrix* V = gsl_matrix_alloc(colsm + 1, colsm + 1);
-      gsl_vector* Esse = gsl_vector_alloc(colsm + 1);
-      gsl_vector* ics = gsl_vector_alloc(colsm + 1);
-      if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
-        sprintf(temps, "Insufficient memory\n");
-        SF_error(temps);
-        return (MALLOC_ERROR);
-      }
-
-      /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
-      if (rowc + 1 < colsm + 1) {
-        sprintf(temps, "GSL method is not yet implemented\n");
-        SF_error(temps);
-        return (NOT_IMPLEMENTED);
-      }
-
-      /* TO BE ADDED: benchmark which one of the following methods work best*/
-      /*Golub-Reinsch SVD algorithm*/
-      /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
-
-      /* one-sided Jacobi orthogonalization method */
-      gsl_linalg_SV_decomp_jacobi(X_ls_cj, V, Esse);
-
-      /* setting to zero extremely small values of Esse to avoid
-         underflow errors */
-      for (j = 0; j < colsm + 1; j++) {
-        if (gsl_vector_get(Esse, j) < 1.0e-12) {
-          gsl_vector_set(Esse, j, 0.);
-        }
-      }
-
-      /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
-         using gsl libraries */
-      gsl_linalg_SV_solve(X_ls_cj, V, Esse, y_ls_cj, ics);
-
-      /* saving ics coefficients if savesmap option enabled */
-      if (save_mode) {
-        for (j = 0; j < varssv; j++) {
-          if (gsl_vector_get(ics, j) == 0.) {
-            Bi[j] = missval;
-          } else {
-            Bi[j] = gsl_vector_get(ics, j);
-          }
-        }
-      }
-
-      r = gsl_vector_get(ics, 0);
-      for (j = 1; j < colsm + 1; j++) {
-        if (b[j - 1] == missval) {
-          b[j - 1] = 0.;
-        }
-        r = r + b[j - 1] * gsl_vector_get(ics, j);
-      }
-
-      /* deallocation of matrices and arrays before exiting the function */
-      free(d);
-      free(a);
-      free(ind);
-      free(w);
-      free(y_ls);
-      free(w_ls);
-      free(X_ls);
-      gsl_matrix_free(X_ls_cj);
-      gsl_vector_free(y_ls_cj);
-      gsl_matrix_free(V);
-      gsl_vector_free(Esse);
-      gsl_vector_free(ics);
-
-      /* save the value of ystar[j] */
-      *ystar = r;
-      return (SUCCESS);
-    }
-  }
-
-  return (INVALID_ALGORITHM);
-}
-
-/* NOTE: in mata, minindex(v,k,i,w) returns in i and w the indices of the
-   k minimums of v. The internal function minindex below only returns i +
-   the number of k minimums and does not return w, as w is not used in the
-   original edm code */
-ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
-{
-  ST_int i, j, contin, numind, count_ord, *subind;
-
-  ST_double tempval, *temp_ind;
-
-  char temps[500];
-
-  quicksortind(vect, ind, 0, rvect - 1);
-
-  tempval = vect[ind[0]];
-  contin = 0;
-  numind = 0;
-  count_ord = 1;
-  i = 1;
-  while ((contin < k) && (i < rvect)) {
-    if (vect[ind[i]] != tempval) {
-      tempval = vect[ind[i]];
-      if (count_ord > 1) {
-        /* here I reorder the indexes from low to high in case of
-           repeated values */
-        temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
-        subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
-        if ((temp_ind == NULL) || (subind == NULL)) {
-          sprintf(temps, "Insufficient memory\n");
-          SF_error(temps);
-          return (MALLOC_ERROR);
-        }
-        for (j = 0; j < count_ord; j++) {
-          temp_ind[j] = (ST_double)ind[i - 1 - j];
-          subind[j] = j;
-        }
-        quicksortind(temp_ind, subind, 0, count_ord - 1);
-        for (j = 0; j < count_ord; j++) {
-          ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
-        }
-        free(temp_ind);
-        free(subind);
-        count_ord = 1;
-      }
-      contin++;
-      numind++;
-      i++;
-    } else {
-      numind++;
-      count_ord++;
-      i++;
-      if (i == rvect) {
-        /* here I check whether I reached the end of the array */
-        if (count_ord > 1) {
-          /* here I reorder the indexes from low to high in case of
-             repeated values */
-          temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
-          subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
-          if ((temp_ind == NULL) || (subind == NULL)) {
-            sprintf(temps, "Insufficient memory\n");
-            SF_error(temps);
-            return (MALLOC_ERROR);
-          }
-          for (j = 0; j < count_ord; j++) {
-            temp_ind[j] = (ST_double)ind[i - 1 - j];
-            subind[j] = j;
-          }
-          quicksortind(temp_ind, subind, 0, count_ord - 1);
-          for (j = 0; j < count_ord; j++) {
-            ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
-          }
-          free(temp_ind);
-          free(subind);
-        }
-      }
-    }
-  }
-
-  /* returning the number of k minimums (and indices via ind) */
-  return numind;
-}
-
-/* function that returns the sorted indices of an array */
-void quicksortind(ST_double A[], ST_int I[], ST_int lo, ST_int hi)
-{
-  while (lo < hi) {
-    ST_double pivot = A[I[lo + (hi - lo) / 2]];
-    ST_int t;
-    ST_int i = lo - 1;
-    ST_int j = hi + 1;
-    while (1) {
-      while (A[I[++i]] < pivot) {};
-      while (A[I[--j]] > pivot) {};
-      if (i >= j)
-        break;
-      t = I[i];
-      I[i] = I[j];
-      I[j] = t;
-    }
-    /* avoid stack overflow */
-    if ((j - lo) < (hi - j)) {
-      quicksortind(A, I, lo, j);
-      lo = j + 1;
-    } else {
-      quicksortind(A, I, j + 1, hi);
-      hi = j;
-    }
-  }
 }
