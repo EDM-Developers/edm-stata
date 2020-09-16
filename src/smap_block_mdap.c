@@ -43,6 +43,39 @@ int omp_get_num_procs(void);
 
 void omp_set_num_threads(int num_threads);
 
+ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
+                        ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_int theta, ST_double* S,
+                        char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute, ST_int missingdistance,
+                        ST_double* ystar)
+{
+
+  /* OpenMP loop with call to mf_smap_single function */
+  ST_retcode* rc = malloc(count_predict_set * sizeof(ST_retcode));
+  ST_double* Bi = NULL;
+
+#pragma omp parallel for private(Bi)
+  for (int i = 0; i < count_predict_set; i++) {
+    if (save_mode) {
+      Bi = Bi_map[i];
+    }
+
+    rc[i] = mf_smap_single(count_train_set, mani, M, Mp[i], y, l, theta, S[i], algorithm, save_mode, Bi, varssv,
+                           force_compute, missingdistance, &(ystar[i]));
+  }
+
+  /* Check if any mf_smap_single call failed, and if so find the most serious error */
+  ST_retcode maxError = 0;
+  for (int i = 0; i < count_predict_set; i++) {
+    if (rc[i] > maxError) {
+      maxError = rc[i];
+    }
+  }
+
+  free(rc);
+
+  return maxError;
+}
+
 /*
 Example call to the plugin:
 
@@ -308,26 +341,8 @@ STDLL stata_call(int argc, char* argv[])
   SF_display(temps);
   SF_display("\n");
 
-  /* OpenMP loop with call to mf_smap_single function */
-  ST_retcode* rc = malloc(count_predict_set * sizeof(ST_retcode));
-  ST_double* Bi = NULL;
-#pragma omp parallel for private(Bi)
-  for (i = 0; i < count_predict_set; i++) {
-    if (save_mode) {
-      Bi = Bi_map[i];
-    }
-
-    rc[i] = mf_smap_single(count_train_set, mani, M, Mp[i], y, l, theta, S[i], algorithm, save_mode, Bi, varssv,
-                           force_compute, missingdistance, &(ystar[i]));
-  }
-
-  /* Check if any mf_smap_single call failed, and if so find the most serious error */
-  ST_retcode maxError = 0;
-  for (i = 0; i < count_predict_set; i++) {
-    if (rc[i] > maxError) {
-      maxError = rc[i];
-    }
-  }
+  ST_retcode maxError = mf_smap_loop(count_predict_set, count_train_set, Bi_map, mani, M, Mp, y, l, theta, S, algorithm,
+                                     save_mode, varssv, force_compute, missingdistance, ystar);
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (maxError == 0) {
