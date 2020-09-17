@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(edm-mdap)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # output paths
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/stata)
@@ -60,3 +61,9 @@ target_link_libraries(smap_block_mdap PRIVATE GSL::gsl GSL::gslcblas)
 # OPENMP
 find_package(OpenMP)
 target_link_libraries(smap_block_mdap PRIVATE OpenMP::OpenMP_C)
+
+# ↓↓↓ formatting with clang-format ↓↓↓
+include(ClangFormat)
+clangformat_setup(
+  src/smap_block_mdap.c
+)
