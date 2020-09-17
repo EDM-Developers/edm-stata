@@ -3,12 +3,12 @@ global EDM_VERSION="1.4.0dev"
 program define edm, eclass
 	version 14
 	if replay() {
-	  if (`"`e(cmd)'"'!="edm") {
-		noi di as error "results for edm not found"
-		exit 301
-	  }
-	  edmDisplay `0'
-	  exit `rc'
+		if (`"`e(cmd)'"'!="edm") {
+			noi di as error "results for edm not found"
+			exit 301
+		}
+		edmDisplay `0'
+		exit `rc'
 	}
 	else edmParser `0'
 end
@@ -794,7 +794,7 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 	}
-if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
+	if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		di as error "savesmap() option should only be specified with S-map"
 		error 119
 	}
@@ -968,7 +968,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		loc zlist_name ""
 		loc zlist ""
 		qui {
-				foreach v of local parsed_extravars {
+			foreach v of local parsed_extravars {
 				tempvar z`++zcount'
 				if substr("`v'",1,2)=="z." {
 					sum `=substr("`v'",3,.)' if `touse'==1
@@ -1378,72 +1378,202 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	edmDisplay
 end
 program define edmDisplay, eclass
-		di _n "Empirical Dynamic Modelling"
-		loc diopts "`options'"
-		loc fmt "%12.5g"
-		loc fmtprop "%8.3f"
-		loc ci_counter=1
-		if e(subcommand)=="explore" {
-			if e(univariate_main)==1 {
-				if!inlist("`=e(extraembed)'","",".") {
-					di as text "Multivariate mapping with `=e(x)' and its lag values"
-				}
-				else {
-					di as text "Univariate mapping with `=e(x)' and its lag values"
-				}
+	di _n "Empirical Dynamic Modelling"
+	loc diopts "`options'"
+	loc fmt "%12.5g"
+	loc fmtprop "%8.3f"
+	loc ci_counter=1
+	if e(subcommand)=="explore" {
+		if e(univariate_main)==1 {
+			if!inlist("`=e(extraembed)'","",".") {
+				di as text "Multivariate mapping with `=e(x)' and its lag values"
 			}
 			else {
-				di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
+				di as text "Univariate mapping with `=e(x)' and its lag values"
 			}
-			if!inlist("`=e(extraembed)'","",".") {
-				di as text "Additional variable" _c
-				di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
-				di " in the embedding: `=e(extraembed)'"
+		}
+		else {
+			di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
+		}
+		if!inlist("`=e(extraembed)'","",".") {
+			di as text "Additional variable" _c
+			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
+			di " in the embedding: `=e(extraembed)'"
+		}
+		if e(missingdistance)>0 & e(missingdistance)!=.{
+			di as text "Missing values are assumed to have a distance of " _c
+			di `:di %8.2g `=e(missingdistance)'' _c
+			di " with all values."
+		}
+		if ((e(replicate)==1 & e(crossfold) <=0)|e(rep_details)==1) {
+			di as txt "{hline 68}"
+			di as text %18s cond(e(report_actuale)==1,"Actual E","E") _c
+			di as text %16s "theta" _c
+			di as text %16s "rho" _c
+			di as text %16s "MAE"
+			di as txt "{hline 68}"
+			mat r=e(explore_result)
+			loc nr=rowsof(r)
+			loc kr=colsof(r)
+			forvalues i=1/ `nr' {
+				forvalues j=1/`kr' {
+					if `j'==1 {
+						loc dformat "%18s"
+					}
+					else {
+						loc dformat "%16s"
+					}
+					di as result `dformat' `"`:display `fmt' r[`i',`j'] '"' _c
+				}
+				di " "
 			}
-			if e(missingdistance)>0 & e(missingdistance)!=.{
-				di as text "Missing values are assumed to have a distance of " _c
+			di as txt "{hline 68}"
+		}
+		else {
+			di as txt "{hline 70}"
+			di as text %22s " " _c
+			di as txt "{hline 9} rho {hline 9} " _c
+			di as txt "{hline 9} MAE {hline 9}"
+			di as text %9s cond(e(report_actuale)==1,"Actual E","E") _c
+			di as text %9s "theta" _c
+			di as text %13s "Mean" _c
+			di as text %13s "Std. Dev." _c
+			di as text %13s "Mean" _c
+			di as text %13s "Std. Dev."
+			di as txt "{hline 70}"
+			loc dformat "%13s"
+			tempname reported_r r buffer summary_r
+			mat `r'=e(explore_result)
+			loc nr=rowsof(`r')
+			loc kr=colsof(`r')
+			mat `reported_r'=J(`nr',1,0)
+			mat `summary_r'=J(1,6,.)
+			forvalues i=1/ `nr' {
+				mat `buffer'=J(1,2,.)
+				if `reported_r'[`i',1]==1 {
+					continue
+				}
+				loc base_E=`r'[`i',1]
+				loc base_theta=`r'[`i',2]
+				forvalues j=1/`nr' {
+					if `reported_r'[`j',1]==0 {
+						if `r'[`j',1]==`base_E' & `r'[`j',2]==`base_theta' {
+							mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
+							mat `reported_r'[`j',1]=1
+						}
+					}
+				}
+				tempname mat_mean mat_sd
+				mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
+				mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
+				di as result %9s `"`: display %9.0g `r'[`i',1] '"' _c
+				di as result %9s `"`: display %9.5g `r'[`i',2] '"' _c
+				forvalues j=1/2{
+					di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
+					di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
+				}
+				mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
+				di ""
+				if `=e(ci)'>0 & `=e(ci)'<100 {
+					edmDisplayCI , mat(`buffer') ci(`=e(ci)')
+					loc type1 "rho"
+					loc type2 "mae"
+					forvalues j=1/2 {
+						foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
+							ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
+						}
+					}
+					loc ++ci_counter
+				}
+			}
+			mat `summary_r'=`summary_r'[2...,.]
+			ereturn matrix summary=`summary_r'
+			di as txt "{hline 70}"
+			di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
+		}
+		if e(e_offset)!=0 {
+			di as text "Note: Actual E is higher than the specified E due to extras"
+		}
+		di as text ustrtrim(e(cmdfootnote))
+	}
+	else if e(subcommand)=="xmap" {
+		di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
+		if!inlist("`=e(extraembed)'","",".") {
+			di as text "Additional variable" _c
+			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
+			di " in the embedding: `=e(extraembed)'"
+		}
+		if e(missingdistance)>0 & e(missingdistance)!=.{
+			di as text "Missing values are assumed to have a distance of " _c
+			if `=e(missingdistance1)'!=`=e(missingdistance2)' & `=e(missingdistance1)'!=. & e(direction)!="oneway" {
+				di `:di %8.2g `=e(missingdistance1)'' _c
+				di " and " _c
+				di `:di %8.2g `=e(missingdistance2)''
+			}
+			else {
 				di `:di %8.2g `=e(missingdistance)'' _c
 				di " with all values."
 			}
-			if ((e(replicate)==1 & e(crossfold) <=0)|e(rep_details)==1) {
-				di as txt "{hline 68}"
-				di as text %18s cond(e(report_actuale)==1,"Actual E","E") _c
-				di as text %16s "theta" _c
-				di as text %16s "rho" _c
-				di as text %16s "MAE"
-				di as txt "{hline 68}"
-				mat r=e(explore_result)
+		}
+		loc direction1="`=e(y)' ~ `=e(y)'|M(`=e(x)')"
+		loc direction2="`=e(x)' ~ `=e(x)'|M(`=e(y)')"
+		forvalues i=1/2{
+			if strlen("`direction`i''")>26 {
+				loc direction`i'=substr("`direction`i''",1,24) + ".."
+			}
+		}
+		loc mapp_col_length=min(28, max(strlen("`direction1'"), strlen("`direction2'")) +3)
+		loc line_length=50 + `mapp_col_length'
+		if (e(replicate)==1|e(rep_details)==1) {
+			di as txt "{hline `line_length'}"
+			di as text %`mapp_col_length's "Mapping" _c
+			di as text %16s "Library size" _c
+			di as text %16s "rho" _c
+			di as text %16s "MAE"
+			di as txt "{hline `line_length'}"
+			loc max_round=1+ (e(direction)=="both")
+			forvalues round=1/`max_round'{
+				if `round'==1 {
+					mat r=e(xmap_1)
+				}
+				else {
+					mat r=e(xmap_2)
+				}
 				loc nr=rowsof(r)
 				loc kr=colsof(r)
 				forvalues i=1/ `nr' {
 					forvalues j=1/`kr' {
 						if `j'==1 {
-							loc dformat "%18s"
+							di as result %`mapp_col_length's "`direction`=r[`i',`j']''" _c
 						}
 						else {
-							loc dformat "%16s"
+							di as result %16s `"`:display `fmt' r[`i',`j'] '"' _c
 						}
-						di as result `dformat' `"`:display `fmt' r[`i',`j'] '"' _c
 					}
 					di " "
 				}
-				di as txt "{hline 68}"
 			}
-			else {
-				di as txt "{hline 70}"
-				di as text %22s " " _c
-				di as txt "{hline 9} rho {hline 9} " _c
-				di as txt "{hline 9} MAE {hline 9}"
-				di as text %9s cond(e(report_actuale)==1,"Actual E","E") _c
-				di as text %9s "theta" _c
-				di as text %13s "Mean" _c
-				di as text %13s "Std. Dev." _c
-				di as text %13s "Mean" _c
-				di as text %13s "Std. Dev."
-				di as txt "{hline 70}"
-				loc dformat "%13s"
-				tempname reported_r r buffer summary_r
-				mat `r'=e(explore_result)
+			di as txt "{hline `line_length'}"
+		}
+		else {
+			di as txt "{hline `line_length'}"
+			di as text %`mapp_col_length's "Mapping" _c
+			di as text %16s "Lib size" _c
+			di as text %16s "Mean rho" _c
+			di as text %16s "Std. Dev."
+			di as txt "{hline `line_length'}"
+			loc dformat "%16s"
+			tempname reported_r r buffer summary_r
+			forvalues round=1/2{
+				if `round'==1 {
+					mat `r'=e(xmap_1)
+				}
+				else {
+					mat `r'=e(xmap_2)
+					if e(direction)=="oneway" {
+						continue, break
+					}
+				}
 				loc nr=rowsof(`r')
 				loc kr=colsof(`r')
 				mat `reported_r'=J(`nr',1,0)
@@ -1453,11 +1583,11 @@ program define edmDisplay, eclass
 					if `reported_r'[`i',1]==1 {
 						continue
 					}
-					loc base_E=`r'[`i',1]
-					loc base_theta=`r'[`i',2]
+					loc base_direction=`r'[`i',1]
+					loc base_L=`r'[`i',2]
 					forvalues j=1/`nr' {
 						if `reported_r'[`j',1]==0 {
-							if `r'[`j',1]==`base_E' & `r'[`j',2]==`base_theta' {
+							if `r'[`j',1]==`base_direction' & `r'[`j',2]==`base_L' {
 								mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
 								mat `reported_r'[`j',1]=1
 							}
@@ -1466,19 +1596,19 @@ program define edmDisplay, eclass
 					tempname mat_mean mat_sd
 					mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
 					mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
-					di as result %9s `"`: display %9.0g `r'[`i',1] '"' _c
-					di as result %9s `"`: display %9.5g `r'[`i',2] '"' _c
-					forvalues j=1/2{
+					di as result %`mapp_col_length's "`direction`base_direction''" _c
+					di as result `dformat' `"`: display `fmt' `r'[`i',2] '"' _c
+					forvalues j=1/1{
 						di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
 						di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
 					}
 					mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
 					di ""
 					if `=e(ci)'>0 & `=e(ci)'<100 {
-						edmDisplayCI , mat(`buffer') ci(`=e(ci)')
+						edmDisplayCI , mat(`buffer') ci(`=e(ci)') maxr(1)
 						loc type1 "rho"
 						loc type2 "mae"
-						forvalues j=1/2 {
+						forvalues j=1/1 {
 							foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
 								ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
 							}
@@ -1486,167 +1616,37 @@ program define edmDisplay, eclass
 						loc ++ci_counter
 					}
 				}
-				mat `summary_r'=`summary_r'[2...,.]
-				ereturn matrix summary=`summary_r'
-				di as txt "{hline 70}"
-				di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
 			}
-			if e(e_offset)!=0 {
-				di as text "Note: Actual E is higher than the specified E due to extras"
-			}
+			mat `summary_r'=`summary_r'[2...,.]
+			ereturn matrix summary=`summary_r'
+			di as txt "{hline `line_length'}"
+			di as text "Note: Results from `=e(replicate)' replications"
+		}
+		if "`=e(cmdfootnote)'"!="." {
 			di as text ustrtrim(e(cmdfootnote))
 		}
-		else if e(subcommand)=="xmap" {
-			di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
-			if!inlist("`=e(extraembed)'","",".") {
-				di as text "Additional variable" _c
-				di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
-				di " in the embedding: `=e(extraembed)'"
-			}
-			if e(missingdistance)>0 & e(missingdistance)!=.{
-				di as text "Missing values are assumed to have a distance of " _c
-				if `=e(missingdistance1)'!=`=e(missingdistance2)' & `=e(missingdistance1)'!=. & e(direction)!="oneway" {
-					di `:di %8.2g `=e(missingdistance1)'' _c
-					di " and " _c
-					di `:di %8.2g `=e(missingdistance2)''
-				}
-				else {
-					di `:di %8.2g `=e(missingdistance)'' _c
-					di " with all values."
-				}
-			}
-			loc direction1="`=e(y)' ~ `=e(y)'|M(`=e(x)')"
-			loc direction2="`=e(x)' ~ `=e(x)'|M(`=e(y)')"
-			forvalues i=1/2{
-				if strlen("`direction`i''")>26 {
-					loc direction`i'=substr("`direction`i''",1,24) + ".."
-				}
-			}
-			loc mapp_col_length=min(28, max(strlen("`direction1'"), strlen("`direction2'")) +3)
-			loc line_length=50 + `mapp_col_length'
-			if (e(replicate)==1|e(rep_details)==1) {
-				di as txt "{hline `line_length'}"
-				di as text %`mapp_col_length's "Mapping" _c
-				di as text %16s "Library size" _c
-				di as text %16s "rho" _c
-				di as text %16s "MAE"
-				di as txt "{hline `line_length'}"
-				loc max_round=1+ (e(direction)=="both")
-				forvalues round=1/`max_round'{
-					if `round'==1 {
-						mat r=e(xmap_1)
-					}
-					else {
-						mat r=e(xmap_2)
-					}
-					loc nr=rowsof(r)
-					loc kr=colsof(r)
-					forvalues i=1/ `nr' {
-						forvalues j=1/`kr' {
-							if `j'==1 {
-								di as result %`mapp_col_length's "`direction`=r[`i',`j']''" _c
-							}
-							else {
-								di as result %16s `"`:display `fmt' r[`i',`j'] '"' _c
-							}
-						}
-						di " "
-					}
-				}
-				di as txt "{hline `line_length'}"
-			}
-			else {
-				di as txt "{hline `line_length'}"
-				di as text %`mapp_col_length's "Mapping" _c
-				di as text %16s "Lib size" _c
-				di as text %16s "Mean rho" _c
-				di as text %16s "Std. Dev."
-				di as txt "{hline `line_length'}"
-				loc dformat "%16s"
-				tempname reported_r r buffer summary_r
-				forvalues round=1/2{
-					if `round'==1 {
-						mat `r'=e(xmap_1)
-					}
-					else {
-						mat `r'=e(xmap_2)
-						if e(direction)=="oneway" {
-							continue, break
-						}
-					}
-					loc nr=rowsof(`r')
-					loc kr=colsof(`r')
-					mat `reported_r'=J(`nr',1,0)
-					mat `summary_r'=J(1,6,.)
-					forvalues i=1/ `nr' {
-						mat `buffer'=J(1,2,.)
-						if `reported_r'[`i',1]==1 {
-							continue
-						}
-						loc base_direction=`r'[`i',1]
-						loc base_L=`r'[`i',2]
-						forvalues j=1/`nr' {
-							if `reported_r'[`j',1]==0 {
-								if `r'[`j',1]==`base_direction' & `r'[`j',2]==`base_L' {
-									mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
-									mat `reported_r'[`j',1]=1
-								}
-							}
-						}
-						tempname mat_mean mat_sd
-						mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
-						mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
-						di as result %`mapp_col_length's "`direction`base_direction''" _c
-						di as result `dformat' `"`: display `fmt' `r'[`i',2] '"' _c
-						forvalues j=1/1{
-							di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
-							di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
-						}
-						mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
-						di ""
-						if `=e(ci)'>0 & `=e(ci)'<100 {
-							edmDisplayCI , mat(`buffer') ci(`=e(ci)') maxr(1)
-							loc type1 "rho"
-							loc type2 "mae"
-							forvalues j=1/1 {
-								foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
-									ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
-								}
-							}
-							loc ++ci_counter
-						}
-					}
-				}
-				mat `summary_r'=`summary_r'[2...,.]
-				ereturn matrix summary=`summary_r'
-				di as txt "{hline `line_length'}"
-				di as text "Note: Results from `=e(replicate)' replications"
-			}
-			if "`=e(cmdfootnote)'"!="." {
-				di as text ustrtrim(e(cmdfootnote))
-			}
-			di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
-			if e(e_main)!=e(e_actual) {
-				di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
-			}
-			else {
-				di ""
-			}
+		di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
+		if e(e_main)!=e(e_actual) {
+			di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
 		}
-		if `=e(force_compute)'==1 {
-			di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+		else {
+			di ""
 		}
-		if `=e(dt)'==1 {
-			di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
-			if `=e(dtw1)'!=`=e(dtw2)' & `=e(dtw2)'!=. & e(direction)!="oneway" {
-				di `:di %8.2g `=e(dtw1)'' _c
-				di " and " _c
-				di `:di %8.2g `=e(dtw2)''
-			}
-			else {
-				di `:di %8.2g `=e(dtw)''
-			}
+	}
+	if `=e(force_compute)'==1 {
+		di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+	}
+	if `=e(dt)'==1 {
+		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
+		if `=e(dtw1)'!=`=e(dtw2)' & `=e(dtw2)'!=. & e(direction)!="oneway" {
+			di `:di %8.2g `=e(dtw1)'' _c
+			di " and " _c
+			di `:di %8.2g `=e(dtw2)''
 		}
+		else {
+			di `:di %8.2g `=e(dtw)''
+		}
+	}
 end
 program define edmExtractExtra, rclass
 	syntax [anything]
