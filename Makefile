@@ -13,3 +13,7 @@ release: build all
 clean:
 	rm -rf build
 	rm -f compile_commands.json
+
+.PHONY: format
+format:
+	cmake --build build -- format

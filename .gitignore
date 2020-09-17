@@ -2,6 +2,7 @@
 vendor/stplugin.[ch]
 stata/*.plugin
 build
+.clangd
 
 # Prerequisites
 *.d
