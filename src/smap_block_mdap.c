@@ -467,9 +467,10 @@ ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_dou
   /* OpenMP loop with call to mf_smap_single function */
   ST_retcode* rc = malloc(count_predict_set * sizeof(ST_retcode));
   ST_double* Bi = NULL;
+  ST_int i;
 
 #pragma omp parallel for private(Bi)
-  for (int i = 0; i < count_predict_set; i++) {
+  for (i = 0; i < count_predict_set; i++) {
     if (save_mode) {
       Bi = Bi_map[i];
     }
@@ -514,7 +515,7 @@ STDLL stata_call(int argc, char* argv[])
 
   ST_double value, theta, *train_use, *predict_use, *skip_obs;
   ST_double **M, **Mp, **Bi_map;
-  ST_double *y, *S, *ystar, *b;
+  ST_double *y, *S, *ystar;
   ST_int i, j, h, force_compute, missingdistance;
   ST_int count_train_set, count_predict_set, obsi, obsj;
 
