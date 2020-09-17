@@ -588,22 +588,22 @@ program define edmExplore, eclass sortpreserve
 				}
 				loc vars_save ""
 
-                                
+
                                 /* ==== CODE FOR C PLUGIN ==== */
 
                                 /* comment out the call to mata function */
 				/*mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')*/
-                                
-                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {                       
+
+                                if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
                                     local vsave_flag = 1
                                     display "vsave_flag: " `vsave_flag'
-                                    unab vars : `vars_save' 
+                                    unab vars : `vars_save'
 			            local varssv `: word count `vars''
                                 }
                                 else {
                                   local vsave_flag = 0
                                   display "vsave_flag: " `vsave_flag'
-                                }               
+                                }
 
                                 local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
@@ -614,10 +614,10 @@ program define edmExplore, eclass sortpreserve
                                 display "pmani_flag: " `pmani_flag'
 
                                 plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
-                                
+
                                 /* ==== END CODE FOR C PLUGIN ==== */
 
-                                
+
 				qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 				qui sum `mae'
 				loc rmae=r(mean)
@@ -660,13 +660,13 @@ program define edmExplore, eclass sortpreserve
 
                         /* comment out the call to mata function */
 			/*mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')*/
-                        
+
                         local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
 
                         unab vars : ``manifold''
 			local mani `: word count `vars''
 
-                        unab vars : `co_mapping' 
+                        unab vars : `co_mapping'
 			local pmani `: word count `vars''
 
                         local pmani_flag = 1
@@ -679,7 +679,7 @@ program define edmExplore, eclass sortpreserve
 
                         /* ==== END CODE FOR C PLUGIN ==== */
 
-                        
+
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
@@ -1233,17 +1233,17 @@ program define edmXmap, eclass sortpreserve
 
                                                 /* comment out the call to mata function */
 						/*mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')*/
-                                                
+
                                                 if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
                                                     local vsave_flag = 1
                                                     display "vsave_flag: " `vsave_flag'
-                                                    unab vars : `vars_save' 
+                                                    unab vars : `vars_save'
 			                            local varssv `: word count `vars''
                                                 }
                                                 else {
                                                     local vsave_flag = 0
                                                     display "vsave_flag: " `vsave_flag'
-                                                }               
+                                                }
 
                                                 local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
 
@@ -1254,10 +1254,10 @@ program define edmXmap, eclass sortpreserve
                                                 display "pmani_flag: " `pmani_flag'
 
                                                 plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
-                                                
+
                                                 /* ==== END CODE FOR C PLUGIN ==== */
 
-                                                
+
 						tempvar mae
 						qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 						qui sum `mae'
@@ -1323,13 +1323,13 @@ program define edmXmap, eclass sortpreserve
 
                         /* comment out the call to mata function */
 			/*mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')*/
-                        
+
                         local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
 
                         unab vars : ``manifold''
 			local mani `: word count `vars''
 
-                        unab vars : `co_mapping' 
+                        unab vars : `co_mapping'
 			local pmani `: word count `vars''
 
                         local pmani_flag = 1
@@ -1342,7 +1342,7 @@ program define edmXmap, eclass sortpreserve
 
                         /* ==== END CODE FOR C PLUGIN ==== */
 
-                        
+
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
