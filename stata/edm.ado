@@ -2,15 +2,15 @@
 global EDM_VERSION="1.4.0dev"
 program define edm, eclass
 	version 14
-    if replay() {
-      if (`"`e(cmd)'"'!="edm") {
-        noi di as error "results for edm not found"
-        exit 301
-      }
-      edmDisplay `0'
-      exit `rc'
-    }
-    else edmParser `0'
+	if replay() {
+	  if (`"`e(cmd)'"'!="edm") {
+		noi di as error "results for edm not found"
+		exit 301
+	  }
+	  edmDisplay `0'
+	  exit `rc'
+	}
+	else edmParser `0'
 end
 program define edmDisplayCI, rclass
 	syntax , mat(name) ci(integer) [maxr(integer 2)]
@@ -76,17 +76,17 @@ program define edmDisplayCI, rclass
 	}
 end
 program define edmParser, eclass
-    loc subcommand "`1'"
+	loc subcommand "`1'"
 	if strpos("`subcommand'",",")!=0 {
 		loc subcommand=substr("`1'",1,strpos("`subcommand'",",")-1)
 	}
-    loc subargs=substr("`0'", strlen("`subcommand'")+1,.)
+	loc subargs=substr("`0'", strlen("`subcommand'")+1,.)
 	if "`subcommand'"=="update" {
-        edmUpdate `subargs'
-    }
+		edmUpdate `subargs'
+	}
 	else if "`subcommand'"=="version" {
-        edmVersion `subargs'
-    }
+		edmVersion `subargs'
+	}
 	else {
 		qui xtset
 		loc original_t=r(timevar)
@@ -126,14 +126,14 @@ program define edmParser, eclass
 			error 1
 		}
 		ereturn local cmd "edm"
-    	ereturn local cmdline `"edm `0'"'
+		ereturn local cmdline `"edm `0'"'
 	}
 end
 program define edmUpdate
 	syntax , [DEVELOPment] [replace]
 	if "`development'"=="development" {
 		di "Updating edm from the development channel"
-	    net install edm, from("https://jinjingli.github.io/edm/") `replace'
+		net install edm, from("https://jinjingli.github.io/edm/") `replace'
 	}
 	else {
 		di "Updating edm from SSC"
@@ -146,7 +146,7 @@ program define edmVersion
 	di "${EDM_VERSION}"
 end
 program define edmExplore, eclass sortpreserve
-    syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata]
+	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -167,10 +167,10 @@ program define edmExplore, eclass sortpreserve
 			error 119
 		}
 	}
-    if "`theta'"==""{
-        loc theta=1
-    }
-    qui xtset
+	if "`theta'"==""{
+		loc theta=1
+	}
+	qui xtset
 	if "`=r(panelvar)'"!="." {
 		loc ispanel=1
 		loc panel_id=r(panelvar)
@@ -180,7 +180,7 @@ program define edmExplore, eclass sortpreserve
 	}
 	if!inlist("`algorithm'","smap","simplex","llr","") {
 		di as error "Not valid algorithm specification"
-        error 121
+		error 121
 	}
 	if "`algorithm'"=="" {
 		loc algorithm "simplex"
@@ -192,22 +192,22 @@ program define edmExplore, eclass sortpreserve
 	loc timevar "`=r(timevar)'"
 	loc total_t=int((r(tmax)-r(tmin))/r(tdelta)) + 1
 	tempvar x y
-    tokenize "`anything'"
+	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
 	if "`3'"!="" {
 		error 103
 	}
-    if "`2'"=="" {
-        loc univariate 1
+	if "`2'"=="" {
+		loc univariate 1
 		loc y ""
-    }
-    else {
-        loc univariate 0
-    }
+	}
+	else {
+		loc univariate 0
+	}
 	if "`e'"=="" {
-        loc e=3 - `univariate'
-    }
+		loc e=3 - `univariate'
+	}
 	loc report_actuale="`reportrawe'"==""
 	marksample touse
 	markout `touse' `timevar' `panel_id'
@@ -355,22 +355,22 @@ program define edmExplore, eclass sortpreserve
 	if (`missingdistance'!=0|"`allowmissing'"=="allowmissing") {
 		qui replace `usable'=`touse'
 	}
-    loc max_e=-1
-    loc min_e=.
-    foreach i of numlist `e' {
-        if `i'>`max_e' {
-            loc max_e=`i'
-        }
-        if `i' <`min_e' {
-            loc min_e=`i'
-        }
-    }
-    if (`max_e' < 3 - `univariate')|(`min_e' < 3 - `univariate') {
-        di as error "Some of the proposed number of dimensions for embedding is too small."
-        error 121
-    }
-    loc esize=`max_e' - (1- `univariate')
-    loc mapping_0 "`x' `y' `zlist'"
+	loc max_e=-1
+	loc min_e=.
+	foreach i of numlist `e' {
+		if `i'>`max_e' {
+			loc max_e=`i'
+		}
+		if `i' <`min_e' {
+			loc min_e=`i'
+		}
+	}
+	if (`max_e' < 3 - `univariate')|(`min_e' < 3 - `univariate') {
+		di as error "Some of the proposed number of dimensions for embedding is too small."
+		error 121
+	}
+	loc esize=`max_e' - (1- `univariate')
+	loc mapping_0 "`x' `y' `zlist'"
 	if `parsed_dt'==1 {
 		if `parsed_dtw'==0 {
 			qui sum `x' if `usable'==1
@@ -530,7 +530,7 @@ program define edmExplore, eclass sortpreserve
 		}
 		loc finished_rep=0
 	}
-    forvalues t=1/`round' {
+	forvalues t=1/`round' {
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
 			if `crossfold' > 0 {
@@ -589,7 +589,6 @@ program define edmExplore, eclass sortpreserve
 				loc vars_save ""
 				cap smap_block_mdap
 				loc mata_mode=(_rc==199)|("`mata'"=="mata")
-				di _rc
 				if `mata_mode'==1 {
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 				}
@@ -644,7 +643,21 @@ program define edmExplore, eclass sortpreserve
 			qui replace `co_train_set'=0 if `usable'==0
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
-			mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
+			if `mata_mode'==1 {
+				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
+			}
+			else {
+				loc myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
+				unab vars : ``manifold''
+				loc mani `: word count `vars''
+				unab vars : `co_mapping'
+				loc pmani `: word count `vars''
+				loc pmani_flag=1
+				di "pmani_flag: " `pmani_flag'
+				loc vsave_flag=0
+				di "vsave_flag: " `vsave_flag'
+				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
+			}
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
@@ -653,7 +666,7 @@ program define edmExplore, eclass sortpreserve
 			di as result ""
 		}
 	}
-    mat r=r[2...,.]
+	mat r=r[2...,.]
 	mat cfull=r[1,3]
 	loc cfullname=subinstr("`ori_x'",".","/",.)
 	matrix colnames cfull=`cfullname'
@@ -662,13 +675,13 @@ program define edmExplore, eclass sortpreserve
 	scalar total_obs=r(N)
 	ereturn post cfull, esample(`usable')
 	ereturn scalar N=total_obs
-    ereturn local subcommand="explore"
+	ereturn local subcommand="explore"
 	ereturn local direction="oneway"
-    ereturn scalar univariate_main=`univariate'
+	ereturn scalar univariate_main=`univariate'
 	ereturn scalar e_offset=`e_offset'
 	ereturn scalar report_actuale=`report_actuale'
-    ereturn local x "`ori_x'"
-    ereturn local y "`ori_y'"
+	ereturn local x "`ori_x'"
+	ereturn local y "`ori_y'"
 	if `crossfold' >0 {
 		ereturn local cmdfootnote "`cmdfootnote'Note: `crossfold'-fold cross validation results reported"
 	}
@@ -680,7 +693,7 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: Random 50/50 split for training and validation data"
 		}
 	}
-    ereturn matrix explore_result=r
+	ereturn matrix explore_result=r
 	ereturn local algorithm "`algorithm'"
 	ereturn scalar tau=`tau'
 	ereturn scalar replicate=`replicate'
@@ -721,10 +734,10 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
 	}
-    edmDisplay
+	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
-    syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata]
+	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -752,12 +765,12 @@ program define edmXmap, eclass sortpreserve
 			error 197
 		}
 	}
-    if "`e'"=="" {
-        loc e="2"
-    }
-    if "`theta'"==""{
-        loc theta=1
-    }
+	if "`e'"=="" {
+		loc e="2"
+	}
+	if "`theta'"==""{
+		loc theta=1
+	}
 	loc l_ori "`library'"
 	if "`library'"=="" {
 		loc l=0
@@ -767,7 +780,7 @@ program define edmXmap, eclass sortpreserve
 	}
 	if!inlist("`algorithm'","smap","simplex","llr","") {
 		di as error "Not valid algorithm specification"
-        error 121
+		error 121
 	}
 	if "`algorithm'"=="" {
 		loc algorithm "simplex"
@@ -792,7 +805,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		di as error "direction() option should be either both or oneway"
 		error 197
 	}
-    qui xtset
+	qui xtset
 	if "`=r(panelvar)'"!="." {
 		loc ispanel=1
 		loc panel_id=r(panelvar)
@@ -809,7 +822,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 	sort `panel_id' `timevar'
-    tokenize "`anything'"
+	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
 	if "`3'"!="" {
@@ -1314,7 +1327,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	}
 	ereturn post cfull, esample(`usable')
 	ereturn scalar N=total_obs
-    ereturn local subcommand="xmap"
+	ereturn local subcommand="xmap"
 	ereturn matrix xmap_1=r1
 	if "`direction'"=="both" {
 		ereturn matrix xmap_2=r2
@@ -1323,8 +1336,8 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	ereturn scalar e_actual=wordcount("``manifold''")
 	ereturn scalar e_offset=wordcount("``manifold''") - `e'
 	ereturn scalar theta=`theta'
-    ereturn local x "`ori_x'"
-    ereturn local y "`ori_y'"
+	ereturn local x "`ori_x'"
+	ereturn local y "`ori_y'"
 	ereturn local algorithm "`algorithm'"
 	ereturn local cmdfootnote "`cmdfootnote'"
 	ereturn scalar tau=`tau'
@@ -1362,26 +1375,26 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	else {
 		ereturn local extraembed="`parsed_extravars'"
 	}
-    edmDisplay
+	edmDisplay
 end
 program define edmDisplay, eclass
 		di _n "Empirical Dynamic Modelling"
-        loc diopts "`options'"
+		loc diopts "`options'"
 		loc fmt "%12.5g"
 		loc fmtprop "%8.3f"
-        loc ci_counter=1
-        if e(subcommand)=="explore" {
-            if e(univariate_main)==1 {
+		loc ci_counter=1
+		if e(subcommand)=="explore" {
+			if e(univariate_main)==1 {
 				if!inlist("`=e(extraembed)'","",".") {
 					di as text "Multivariate mapping with `=e(x)' and its lag values"
 				}
 				else {
 					di as text "Univariate mapping with `=e(x)' and its lag values"
 				}
-            }
-            else {
-                di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
-            }
+			}
+			else {
+				di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
+			}
 			if!inlist("`=e(extraembed)'","",".") {
 				di as text "Additional variable" _c
 				di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
@@ -1478,12 +1491,12 @@ program define edmDisplay, eclass
 				di as txt "{hline 70}"
 				di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
 			}
-            if e(e_offset)!=0 {
+			if e(e_offset)!=0 {
 				di as text "Note: Actual E is higher than the specified E due to extras"
 			}
-            di as text ustrtrim(e(cmdfootnote))
-        }
-        else if e(subcommand)=="xmap" {
+			di as text ustrtrim(e(cmdfootnote))
+		}
+		else if e(subcommand)=="xmap" {
 			di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
 			if!inlist("`=e(extraembed)'","",".") {
 				di as text "Additional variable" _c
@@ -1619,7 +1632,7 @@ program define edmDisplay, eclass
 			else {
 				di ""
 			}
-        }
+		}
 		if `=e(force_compute)'==1 {
 			di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
 		}
