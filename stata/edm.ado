@@ -2,15 +2,15 @@
 global EDM_VERSION="1.4.0dev"
 program define edm, eclass
 	version 14
-    if replay() {
-      if (`"`e(cmd)'"'!="edm") {
-        noi di as error "results for edm not found"
-        exit 301
-      }
-      edmDisplay `0'
-      exit `rc'
-    }
-    else edmParser `0'
+	if replay() {
+		if (`"`e(cmd)'"'!="edm") {
+			noi di as error "results for edm not found"
+			exit 301
+		}
+		edmDisplay `0'
+		exit `rc'
+	}
+	else edmParser `0'
 end
 program define edmDisplayCI, rclass
 	syntax , mat(name) ci(integer) [maxr(integer 2)]
@@ -76,17 +76,17 @@ program define edmDisplayCI, rclass
 	}
 end
 program define edmParser, eclass
-    loc subcommand "`1'"
+	loc subcommand "`1'"
 	if strpos("`subcommand'",",")!=0 {
 		loc subcommand=substr("`1'",1,strpos("`subcommand'",",")-1)
 	}
-    loc subargs=substr("`0'", strlen("`subcommand'")+1,.)
+	loc subargs=substr("`0'", strlen("`subcommand'")+1,.)
 	if "`subcommand'"=="update" {
-        edmUpdate `subargs'
-    }
+		edmUpdate `subargs'
+	}
 	else if "`subcommand'"=="version" {
-        edmVersion `subargs'
-    }
+		edmVersion `subargs'
+	}
 	else {
 		qui xtset
 		loc original_t=r(timevar)
@@ -126,14 +126,14 @@ program define edmParser, eclass
 			error 1
 		}
 		ereturn local cmd "edm"
-    	ereturn local cmdline `"edm `0'"'
+		ereturn local cmdline `"edm `0'"'
 	}
 end
 program define edmUpdate
 	syntax , [DEVELOPment] [replace]
 	if "`development'"=="development" {
 		di "Updating edm from the development channel"
-	    net install edm, from("https://jinjingli.github.io/edm/") `replace'
+		net install edm, from("https://jinjingli.github.io/edm/") `replace'
 	}
 	else {
 		di "Updating edm from SSC"
@@ -146,7 +146,7 @@ program define edmVersion
 	di "${EDM_VERSION}"
 end
 program define edmExplore, eclass sortpreserve
-    syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata]
+	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -167,10 +167,10 @@ program define edmExplore, eclass sortpreserve
 			error 119
 		}
 	}
-    if "`theta'"==""{
-        loc theta=1
-    }
-    qui xtset
+	if "`theta'"==""{
+		loc theta=1
+	}
+	qui xtset
 	if "`=r(panelvar)'"!="." {
 		loc ispanel=1
 		loc panel_id=r(panelvar)
@@ -180,7 +180,7 @@ program define edmExplore, eclass sortpreserve
 	}
 	if!inlist("`algorithm'","smap","simplex","llr","") {
 		di as error "Not valid algorithm specification"
-        error 121
+		error 121
 	}
 	if "`algorithm'"=="" {
 		loc algorithm "simplex"
@@ -192,22 +192,22 @@ program define edmExplore, eclass sortpreserve
 	loc timevar "`=r(timevar)'"
 	loc total_t=int((r(tmax)-r(tmin))/r(tdelta)) + 1
 	tempvar x y
-    tokenize "`anything'"
+	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
 	if "`3'"!="" {
 		error 103
 	}
-    if "`2'"=="" {
-        loc univariate 1
+	if "`2'"=="" {
+		loc univariate 1
 		loc y ""
-    }
-    else {
-        loc univariate 0
-    }
+	}
+	else {
+		loc univariate 0
+	}
 	if "`e'"=="" {
-        loc e=3 - `univariate'
-    }
+		loc e=3 - `univariate'
+	}
 	loc report_actuale="`reportrawe'"==""
 	marksample touse
 	markout `touse' `timevar' `panel_id'
@@ -355,22 +355,22 @@ program define edmExplore, eclass sortpreserve
 	if (`missingdistance'!=0|"`allowmissing'"=="allowmissing") {
 		qui replace `usable'=`touse'
 	}
-    loc max_e=-1
-    loc min_e=.
-    foreach i of numlist `e' {
-        if `i'>`max_e' {
-            loc max_e=`i'
-        }
-        if `i' <`min_e' {
-            loc min_e=`i'
-        }
-    }
-    if (`max_e' < 3 - `univariate')|(`min_e' < 3 - `univariate') {
-        di as error "Some of the proposed number of dimensions for embedding is too small."
-        error 121
-    }
-    loc esize=`max_e' - (1- `univariate')
-    loc mapping_0 "`x' `y' `zlist'"
+	loc max_e=-1
+	loc min_e=.
+	foreach i of numlist `e' {
+		if `i'>`max_e' {
+			loc max_e=`i'
+		}
+		if `i' <`min_e' {
+			loc min_e=`i'
+		}
+	}
+	if (`max_e' < 3 - `univariate')|(`min_e' < 3 - `univariate') {
+		di as error "Some of the proposed number of dimensions for embedding is too small."
+		error 121
+	}
+	loc esize=`max_e' - (1- `univariate')
+	loc mapping_0 "`x' `y' `zlist'"
 	if `parsed_dt'==1 {
 		if `parsed_dtw'==0 {
 			qui sum `x' if `usable'==1
@@ -530,7 +530,7 @@ program define edmExplore, eclass sortpreserve
 		}
 		loc finished_rep=0
 	}
-    forvalues t=1/`round' {
+	forvalues t=1/`round' {
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
 			if `crossfold' > 0 {
@@ -653,7 +653,7 @@ program define edmExplore, eclass sortpreserve
 			di as result ""
 		}
 	}
-    mat r=r[2...,.]
+	mat r=r[2...,.]
 	mat cfull=r[1,3]
 	loc cfullname=subinstr("`ori_x'",".","/",.)
 	matrix colnames cfull=`cfullname'
@@ -662,13 +662,13 @@ program define edmExplore, eclass sortpreserve
 	scalar total_obs=r(N)
 	ereturn post cfull, esample(`usable')
 	ereturn scalar N=total_obs
-    ereturn local subcommand="explore"
+	ereturn local subcommand="explore"
 	ereturn local direction="oneway"
-    ereturn scalar univariate_main=`univariate'
+	ereturn scalar univariate_main=`univariate'
 	ereturn scalar e_offset=`e_offset'
 	ereturn scalar report_actuale=`report_actuale'
-    ereturn local x "`ori_x'"
-    ereturn local y "`ori_y'"
+	ereturn local x "`ori_x'"
+	ereturn local y "`ori_y'"
 	if `crossfold' >0 {
 		ereturn local cmdfootnote "`cmdfootnote'Note: `crossfold'-fold cross validation results reported"
 	}
@@ -680,7 +680,7 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: Random 50/50 split for training and validation data"
 		}
 	}
-    ereturn matrix explore_result=r
+	ereturn matrix explore_result=r
 	ereturn local algorithm "`algorithm'"
 	ereturn scalar tau=`tau'
 	ereturn scalar replicate=`replicate'
@@ -721,10 +721,10 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
 	}
-    edmDisplay
+	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
-    syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata]
+	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -752,12 +752,12 @@ program define edmXmap, eclass sortpreserve
 			error 197
 		}
 	}
-    if "`e'"=="" {
-        loc e="2"
-    }
-    if "`theta'"==""{
-        loc theta=1
-    }
+	if "`e'"=="" {
+		loc e="2"
+	}
+	if "`theta'"==""{
+		loc theta=1
+	}
 	loc l_ori "`library'"
 	if "`library'"=="" {
 		loc l=0
@@ -767,7 +767,7 @@ program define edmXmap, eclass sortpreserve
 	}
 	if!inlist("`algorithm'","smap","simplex","llr","") {
 		di as error "Not valid algorithm specification"
-        error 121
+		error 121
 	}
 	if "`algorithm'"=="" {
 		loc algorithm "simplex"
@@ -781,7 +781,7 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 	}
-if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
+	if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		di as error "savesmap() option should only be specified with S-map"
 		error 119
 	}
@@ -792,7 +792,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		di as error "direction() option should be either both or oneway"
 		error 197
 	}
-    qui xtset
+	qui xtset
 	if "`=r(panelvar)'"!="." {
 		loc ispanel=1
 		loc panel_id=r(panelvar)
@@ -809,7 +809,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 	sort `panel_id' `timevar'
-    tokenize "`anything'"
+	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
 	if "`3'"!="" {
@@ -955,7 +955,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 		loc zlist_name ""
 		loc zlist ""
 		qui {
-				foreach v of local parsed_extravars {
+			foreach v of local parsed_extravars {
 				tempvar z`++zcount'
 				if substr("`v'",1,2)=="z." {
 					sum `=substr("`v'",3,.)' if `touse'==1
@@ -1314,7 +1314,7 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	}
 	ereturn post cfull, esample(`usable')
 	ereturn scalar N=total_obs
-    ereturn local subcommand="xmap"
+	ereturn local subcommand="xmap"
 	ereturn matrix xmap_1=r1
 	if "`direction'"=="both" {
 		ereturn matrix xmap_2=r2
@@ -1323,8 +1323,8 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	ereturn scalar e_actual=wordcount("``manifold''")
 	ereturn scalar e_offset=wordcount("``manifold''") - `e'
 	ereturn scalar theta=`theta'
-    ereturn local x "`ori_x'"
-    ereturn local y "`ori_y'"
+	ereturn local x "`ori_x'"
+	ereturn local y "`ori_y'"
 	ereturn local algorithm "`algorithm'"
 	ereturn local cmdfootnote "`cmdfootnote'"
 	ereturn scalar tau=`tau'
@@ -1362,75 +1362,205 @@ if "`savesmap'"!="" &!("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 	else {
 		ereturn local extraembed="`parsed_extravars'"
 	}
-    edmDisplay
+	edmDisplay
 end
 program define edmDisplay, eclass
-		di _n "Empirical Dynamic Modelling"
-        loc diopts "`options'"
-		loc fmt "%12.5g"
-		loc fmtprop "%8.3f"
-        loc ci_counter=1
-        if e(subcommand)=="explore" {
-            if e(univariate_main)==1 {
-				if!inlist("`=e(extraembed)'","",".") {
-					di as text "Multivariate mapping with `=e(x)' and its lag values"
-				}
-				else {
-					di as text "Univariate mapping with `=e(x)' and its lag values"
-				}
-            }
-            else {
-                di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
-            }
+	di _n "Empirical Dynamic Modelling"
+	loc diopts "`options'"
+	loc fmt "%12.5g"
+	loc fmtprop "%8.3f"
+	loc ci_counter=1
+	if e(subcommand)=="explore" {
+		if e(univariate_main)==1 {
 			if!inlist("`=e(extraembed)'","",".") {
-				di as text "Additional variable" _c
-				di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
-				di " in the embedding: `=e(extraembed)'"
+				di as text "Multivariate mapping with `=e(x)' and its lag values"
 			}
-			if e(missingdistance)>0 & e(missingdistance)!=.{
-				di as text "Missing values are assumed to have a distance of " _c
+			else {
+				di as text "Univariate mapping with `=e(x)' and its lag values"
+			}
+		}
+		else {
+			di as text "Multivariate mapping with `=e(x)', its lag values, and `=e(y)'"
+		}
+		if!inlist("`=e(extraembed)'","",".") {
+			di as text "Additional variable" _c
+			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
+			di " in the embedding: `=e(extraembed)'"
+		}
+		if e(missingdistance)>0 & e(missingdistance)!=.{
+			di as text "Missing values are assumed to have a distance of " _c
+			di `:di %8.2g `=e(missingdistance)'' _c
+			di " with all values."
+		}
+		if ((e(replicate)==1 & e(crossfold) <=0)|e(rep_details)==1) {
+			di as txt "{hline 68}"
+			di as text %18s cond(e(report_actuale)==1,"Actual E","E") _c
+			di as text %16s "theta" _c
+			di as text %16s "rho" _c
+			di as text %16s "MAE"
+			di as txt "{hline 68}"
+			mat r=e(explore_result)
+			loc nr=rowsof(r)
+			loc kr=colsof(r)
+			forvalues i=1/ `nr' {
+				forvalues j=1/`kr' {
+					if `j'==1 {
+						loc dformat "%18s"
+					}
+					else {
+						loc dformat "%16s"
+					}
+					di as result `dformat' `"`:display `fmt' r[`i',`j'] '"' _c
+				}
+				di " "
+			}
+			di as txt "{hline 68}"
+		}
+		else {
+			di as txt "{hline 70}"
+			di as text %22s " " _c
+			di as txt "{hline 9} rho {hline 9} " _c
+			di as txt "{hline 9} MAE {hline 9}"
+			di as text %9s cond(e(report_actuale)==1,"Actual E","E") _c
+			di as text %9s "theta" _c
+			di as text %13s "Mean" _c
+			di as text %13s "Std. Dev." _c
+			di as text %13s "Mean" _c
+			di as text %13s "Std. Dev."
+			di as txt "{hline 70}"
+			loc dformat "%13s"
+			tempname reported_r r buffer summary_r
+			mat `r'=e(explore_result)
+			loc nr=rowsof(`r')
+			loc kr=colsof(`r')
+			mat `reported_r'=J(`nr',1,0)
+			mat `summary_r'=J(1,6,.)
+			forvalues i=1/ `nr' {
+				mat `buffer'=J(1,2,.)
+				if `reported_r'[`i',1]==1 {
+					continue
+				}
+				loc base_E=`r'[`i',1]
+				loc base_theta=`r'[`i',2]
+				forvalues j=1/`nr' {
+					if `reported_r'[`j',1]==0 {
+						if `r'[`j',1]==`base_E' & `r'[`j',2]==`base_theta' {
+							mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
+							mat `reported_r'[`j',1]=1
+						}
+					}
+				}
+				tempname mat_mean mat_sd
+				mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
+				mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
+				di as result %9s `"`: display %9.0g `r'[`i',1] '"' _c
+				di as result %9s `"`: display %9.5g `r'[`i',2] '"' _c
+				forvalues j=1/2{
+					di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
+					di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
+				}
+				mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
+				di ""
+				if `=e(ci)'>0 & `=e(ci)'<100 {
+					edmDisplayCI , mat(`buffer') ci(`=e(ci)')
+					loc type1 "rho"
+					loc type2 "mae"
+					forvalues j=1/2 {
+						foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
+							ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
+						}
+					}
+					loc ++ci_counter
+				}
+			}
+			mat `summary_r'=`summary_r'[2...,.]
+			ereturn matrix summary=`summary_r'
+			di as txt "{hline 70}"
+			di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
+		}
+		if e(e_offset)!=0 {
+			di as text "Note: Actual E is higher than the specified E due to extras"
+		}
+		di as text ustrtrim(e(cmdfootnote))
+	}
+	else if e(subcommand)=="xmap" {
+		di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
+		if!inlist("`=e(extraembed)'","",".") {
+			di as text "Additional variable" _c
+			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
+			di " in the embedding: `=e(extraembed)'"
+		}
+		if e(missingdistance)>0 & e(missingdistance)!=.{
+			di as text "Missing values are assumed to have a distance of " _c
+			if `=e(missingdistance1)'!=`=e(missingdistance2)' & `=e(missingdistance1)'!=. & e(direction)!="oneway" {
+				di `:di %8.2g `=e(missingdistance1)'' _c
+				di " and " _c
+				di `:di %8.2g `=e(missingdistance2)''
+			}
+			else {
 				di `:di %8.2g `=e(missingdistance)'' _c
 				di " with all values."
 			}
-			if ((e(replicate)==1 & e(crossfold) <=0)|e(rep_details)==1) {
-				di as txt "{hline 68}"
-				di as text %18s cond(e(report_actuale)==1,"Actual E","E") _c
-				di as text %16s "theta" _c
-				di as text %16s "rho" _c
-				di as text %16s "MAE"
-				di as txt "{hline 68}"
-				mat r=e(explore_result)
+		}
+		loc direction1="`=e(y)' ~ `=e(y)'|M(`=e(x)')"
+		loc direction2="`=e(x)' ~ `=e(x)'|M(`=e(y)')"
+		forvalues i=1/2{
+			if strlen("`direction`i''")>26 {
+				loc direction`i'=substr("`direction`i''",1,24) + ".."
+			}
+		}
+		loc mapp_col_length=min(28, max(strlen("`direction1'"), strlen("`direction2'")) +3)
+		loc line_length=50 + `mapp_col_length'
+		if (e(replicate)==1|e(rep_details)==1) {
+			di as txt "{hline `line_length'}"
+			di as text %`mapp_col_length's "Mapping" _c
+			di as text %16s "Library size" _c
+			di as text %16s "rho" _c
+			di as text %16s "MAE"
+			di as txt "{hline `line_length'}"
+			loc max_round=1+ (e(direction)=="both")
+			forvalues round=1/`max_round'{
+				if `round'==1 {
+					mat r=e(xmap_1)
+				}
+				else {
+					mat r=e(xmap_2)
+				}
 				loc nr=rowsof(r)
 				loc kr=colsof(r)
 				forvalues i=1/ `nr' {
 					forvalues j=1/`kr' {
 						if `j'==1 {
-							loc dformat "%18s"
+							di as result %`mapp_col_length's "`direction`=r[`i',`j']''" _c
 						}
 						else {
-							loc dformat "%16s"
+							di as result %16s `"`:display `fmt' r[`i',`j'] '"' _c
 						}
-						di as result `dformat' `"`:display `fmt' r[`i',`j'] '"' _c
 					}
 					di " "
 				}
-				di as txt "{hline 68}"
 			}
-			else {
-				di as txt "{hline 70}"
-				di as text %22s " " _c
-				di as txt "{hline 9} rho {hline 9} " _c
-				di as txt "{hline 9} MAE {hline 9}"
-				di as text %9s cond(e(report_actuale)==1,"Actual E","E") _c
-				di as text %9s "theta" _c
-				di as text %13s "Mean" _c
-				di as text %13s "Std. Dev." _c
-				di as text %13s "Mean" _c
-				di as text %13s "Std. Dev."
-				di as txt "{hline 70}"
-				loc dformat "%13s"
-				tempname reported_r r buffer summary_r
-				mat `r'=e(explore_result)
+			di as txt "{hline `line_length'}"
+		}
+		else {
+			di as txt "{hline `line_length'}"
+			di as text %`mapp_col_length's "Mapping" _c
+			di as text %16s "Lib size" _c
+			di as text %16s "Mean rho" _c
+			di as text %16s "Std. Dev."
+			di as txt "{hline `line_length'}"
+			loc dformat "%16s"
+			tempname reported_r r buffer summary_r
+			forvalues round=1/2{
+				if `round'==1 {
+					mat `r'=e(xmap_1)
+				}
+				else {
+					mat `r'=e(xmap_2)
+					if e(direction)=="oneway" {
+						continue, break
+					}
+				}
 				loc nr=rowsof(`r')
 				loc kr=colsof(`r')
 				mat `reported_r'=J(`nr',1,0)
@@ -1440,11 +1570,11 @@ program define edmDisplay, eclass
 					if `reported_r'[`i',1]==1 {
 						continue
 					}
-					loc base_E=`r'[`i',1]
-					loc base_theta=`r'[`i',2]
+					loc base_direction=`r'[`i',1]
+					loc base_L=`r'[`i',2]
 					forvalues j=1/`nr' {
 						if `reported_r'[`j',1]==0 {
-							if `r'[`j',1]==`base_E' & `r'[`j',2]==`base_theta' {
+							if `r'[`j',1]==`base_direction' & `r'[`j',2]==`base_L' {
 								mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
 								mat `reported_r'[`j',1]=1
 							}
@@ -1453,19 +1583,19 @@ program define edmDisplay, eclass
 					tempname mat_mean mat_sd
 					mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
 					mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
-					di as result %9s `"`: display %9.0g `r'[`i',1] '"' _c
-					di as result %9s `"`: display %9.5g `r'[`i',2] '"' _c
-					forvalues j=1/2{
+					di as result %`mapp_col_length's "`direction`base_direction''" _c
+					di as result `dformat' `"`: display `fmt' `r'[`i',2] '"' _c
+					forvalues j=1/1{
 						di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
 						di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
 					}
 					mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
 					di ""
 					if `=e(ci)'>0 & `=e(ci)'<100 {
-						edmDisplayCI , mat(`buffer') ci(`=e(ci)')
+						edmDisplayCI , mat(`buffer') ci(`=e(ci)') maxr(1)
 						loc type1 "rho"
 						loc type2 "mae"
-						forvalues j=1/2 {
+						forvalues j=1/1 {
 							foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
 								ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
 							}
@@ -1473,167 +1603,37 @@ program define edmDisplay, eclass
 						loc ++ci_counter
 					}
 				}
-				mat `summary_r'=`summary_r'[2...,.]
-				ereturn matrix summary=`summary_r'
-				di as txt "{hline 70}"
-				di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
 			}
-            if e(e_offset)!=0 {
-				di as text "Note: Actual E is higher than the specified E due to extras"
-			}
-            di as text ustrtrim(e(cmdfootnote))
-        }
-        else if e(subcommand)=="xmap" {
-			di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
-			if!inlist("`=e(extraembed)'","",".") {
-				di as text "Additional variable" _c
-				di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
-				di " in the embedding: `=e(extraembed)'"
-			}
-			if e(missingdistance)>0 & e(missingdistance)!=.{
-				di as text "Missing values are assumed to have a distance of " _c
-				if `=e(missingdistance1)'!=`=e(missingdistance2)' & `=e(missingdistance1)'!=. & e(direction)!="oneway" {
-					di `:di %8.2g `=e(missingdistance1)'' _c
-					di " and " _c
-					di `:di %8.2g `=e(missingdistance2)''
-				}
-				else {
-					di `:di %8.2g `=e(missingdistance)'' _c
-					di " with all values."
-				}
-			}
-			loc direction1="`=e(y)' ~ `=e(y)'|M(`=e(x)')"
-			loc direction2="`=e(x)' ~ `=e(x)'|M(`=e(y)')"
-			forvalues i=1/2{
-				if strlen("`direction`i''")>26 {
-					loc direction`i'=substr("`direction`i''",1,24) + ".."
-				}
-			}
-			loc mapp_col_length=min(28, max(strlen("`direction1'"), strlen("`direction2'")) +3)
-			loc line_length=50 + `mapp_col_length'
-			if (e(replicate)==1|e(rep_details)==1) {
-				di as txt "{hline `line_length'}"
-				di as text %`mapp_col_length's "Mapping" _c
-				di as text %16s "Library size" _c
-				di as text %16s "rho" _c
-				di as text %16s "MAE"
-				di as txt "{hline `line_length'}"
-				loc max_round=1+ (e(direction)=="both")
-				forvalues round=1/`max_round'{
-					if `round'==1 {
-						mat r=e(xmap_1)
-					}
-					else {
-						mat r=e(xmap_2)
-					}
-					loc nr=rowsof(r)
-					loc kr=colsof(r)
-					forvalues i=1/ `nr' {
-						forvalues j=1/`kr' {
-							if `j'==1 {
-								di as result %`mapp_col_length's "`direction`=r[`i',`j']''" _c
-							}
-							else {
-								di as result %16s `"`:display `fmt' r[`i',`j'] '"' _c
-							}
-						}
-						di " "
-					}
-				}
-				di as txt "{hline `line_length'}"
-			}
-			else {
-				di as txt "{hline `line_length'}"
-				di as text %`mapp_col_length's "Mapping" _c
-				di as text %16s "Lib size" _c
-				di as text %16s "Mean rho" _c
-				di as text %16s "Std. Dev."
-				di as txt "{hline `line_length'}"
-				loc dformat "%16s"
-				tempname reported_r r buffer summary_r
-				forvalues round=1/2{
-					if `round'==1 {
-						mat `r'=e(xmap_1)
-					}
-					else {
-						mat `r'=e(xmap_2)
-						if e(direction)=="oneway" {
-							continue, break
-						}
-					}
-					loc nr=rowsof(`r')
-					loc kr=colsof(`r')
-					mat `reported_r'=J(`nr',1,0)
-					mat `summary_r'=J(1,6,.)
-					forvalues i=1/ `nr' {
-						mat `buffer'=J(1,2,.)
-						if `reported_r'[`i',1]==1 {
-							continue
-						}
-						loc base_direction=`r'[`i',1]
-						loc base_L=`r'[`i',2]
-						forvalues j=1/`nr' {
-							if `reported_r'[`j',1]==0 {
-								if `r'[`j',1]==`base_direction' & `r'[`j',2]==`base_L' {
-									mat `buffer'=(`buffer'\ `=`r'[`j',3]',`=`r'[`j',4]')
-									mat `reported_r'[`j',1]=1
-								}
-							}
-						}
-						tempname mat_mean mat_sd
-						mata: st_matrix("`mat_sd'", diagonal(sqrt(variance(st_matrix("`buffer'"))))')
-						mata: st_matrix("`mat_mean'", mean(st_matrix("`buffer'")))
-						di as result %`mapp_col_length's "`direction`base_direction''" _c
-						di as result `dformat' `"`: display `fmt' `r'[`i',2] '"' _c
-						forvalues j=1/1{
-							di as result `dformat' `"`:display `fmt' `mat_mean'[1,`j'] '"' _c
-							di as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
-						}
-						mat `summary_r'=(`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
-						di ""
-						if `=e(ci)'>0 & `=e(ci)'<100 {
-							edmDisplayCI , mat(`buffer') ci(`=e(ci)') maxr(1)
-							loc type1 "rho"
-							loc type2 "mae"
-							forvalues j=1/1 {
-								foreach t_type in "lb_mean" "ub_mean" "lb_pco" "ub_pco" "lb_pce" "ub_pce" {
-									ereturn scalar `t_type'_`type`j''`ci_counter'=r(`t_type'_`type`j'')
-								}
-							}
-							loc ++ci_counter
-						}
-					}
-				}
-				mat `summary_r'=`summary_r'[2...,.]
-				ereturn matrix summary=`summary_r'
-				di as txt "{hline `line_length'}"
-				di as text "Note: Results from `=e(replicate)' replications"
-			}
-			if "`=e(cmdfootnote)'"!="." {
-				di as text ustrtrim(e(cmdfootnote))
-			}
-			di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
-			if e(e_main)!=e(e_actual) {
-				di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
-			}
-			else {
-				di ""
-			}
-        }
-		if `=e(force_compute)'==1 {
-			di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+			mat `summary_r'=`summary_r'[2...,.]
+			ereturn matrix summary=`summary_r'
+			di as txt "{hline `line_length'}"
+			di as text "Note: Results from `=e(replicate)' replications"
 		}
-		if `=e(dt)'==1 {
-			di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
-			if `=e(dtw1)'!=`=e(dtw2)' & `=e(dtw2)'!=. & e(direction)!="oneway" {
-				di `:di %8.2g `=e(dtw1)'' _c
-				di " and " _c
-				di `:di %8.2g `=e(dtw2)''
-			}
-			else {
-				di `:di %8.2g `=e(dtw)''
-			}
+		if "`=e(cmdfootnote)'"!="." {
+			di as text ustrtrim(e(cmdfootnote))
 		}
+		di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
+		if e(e_main)!=e(e_actual) {
+			di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
+		}
+		else {
+			di ""
+		}
+	}
+	if `=e(force_compute)'==1 {
+		di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+	}
+	if `=e(dt)'==1 {
+		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
+		if `=e(dtw1)'!=`=e(dtw2)' & `=e(dtw2)'!=. & e(direction)!="oneway" {
+			di `:di %8.2g `=e(dtw1)'' _c
+			di " and " _c
+			di `:di %8.2g `=e(dtw2)''
+		}
+		else {
+			di `:di %8.2g `=e(dtw)''
+		}
+	}
 end
 program define edmExtractExtra, rclass
 	syntax [anything]
@@ -1641,163 +1641,163 @@ program define edmExtractExtra, rclass
 end
 capture mata mata drop smap_block()
 mata:
-mata set matastrict on
-void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar skip_obs, string scalar algorithm, string scalar vars_save, string scalar force, real scalar missingdistance)
-{
-	real scalar force_compute, k, i
-	force_compute=force=="force"
-	real matrix M, Mp, y, ystar,S
-	st_view(M, ., tokens(manifold), train_use)
-	st_view(y, ., prediction, train_use)
-	st_view(ystar, ., result, predict_use)
-	if (p_manifold!="") {
-		st_view(Mp, ., tokens(p_manifold), predict_use)
+	mata set matastrict on
+	void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar skip_obs, string scalar algorithm, string scalar vars_save, string scalar force, real scalar missingdistance)
+	{
+		real scalar force_compute, k, i
+		force_compute=force=="force"
+		real matrix M, Mp, y, ystar,S
+		st_view(M, ., tokens(manifold), train_use)
+		st_view(y, ., prediction, train_use)
+		st_view(ystar, ., result, predict_use)
+		if (p_manifold!="") {
+			st_view(Mp, ., tokens(p_manifold), predict_use)
+		}
+		else {
+			st_view(Mp, ., tokens(manifold), predict_use)
+		}
+		st_view(S, ., skip_obs, predict_use)
+		if (l <=0) {
+			k=cols(M)
+			l=k + 1
+		}
+		real matrix B
+		real scalar save_mode
+		if (vars_save!="") {
+			st_view(B, ., tokens(vars_save), predict_use)
+			save_mode=1
+		}
+		else {
+			save_mode=0
+		}
+		real scalar n
+		n=rows(Mp)
+		real rowvector b
+		for(i=1;i<=n;i++) {
+			b=Mp[i,.]
+			ystar[i]=mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
+		}
 	}
-	else {
-		st_view(Mp, ., tokens(manifold), predict_use)
-	}
-	st_view(S, ., skip_obs, predict_use)
-	if (l <=0) {
-		k=cols(M)
-		l=k + 1
-	}
-	real matrix B
-	real scalar save_mode
-	if (vars_save!="") {
-		st_view(B, ., tokens(vars_save), predict_use)
-		save_mode=1
-	}
-	else {
-		save_mode=0
-	}
-	real scalar n
-	n=rows(Mp)
-	real rowvector b
-	for(i=1;i<=n;i++) {
-		b=Mp[i,.]
-		ystar[i]=mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
-	}
-}
 end
 capture mata mata drop mf_smap_single()
 mata:
-mata set matastrict on
-real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
-{
-	real colvector d, w, a
-	real colvector ind, v
-	real scalar i,j,n,r,n_ls
-	n=rows(M)
-	d=J(n, 1, 0)
-	for(i=1;i<=n;i++) {
-		a=M[i,.] - b
-		if (missingdistance!=0) {
-			a=editvalue(a,., missingdistance)
+	mata set matastrict on
+	real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
+	{
+		real colvector d, w, a
+		real colvector ind, v
+		real scalar i,j,n,r,n_ls
+		n=rows(M)
+		d=J(n, 1, 0)
+		for(i=1;i<=n;i++) {
+			a=M[i,.] - b
+			if (missingdistance!=0) {
+				a=editvalue(a,., missingdistance)
+			}
+			d[i]=a*a'
 		}
-		d[i]=a*a'
-	}
-	minindex(d, l+skip_obs, ind, v)
-	real scalar d_base
-	real scalar pre_adj_skip_obs
-	pre_adj_skip_obs=skip_obs
-	for(j=1;j<=l;j++) {
-		if (d[ind[j+skip_obs]]==0) {
-			skip_obs++
-		}
-		else {
-			break
-		}
-	}
-	if (pre_adj_skip_obs!=skip_obs) {
 		minindex(d, l+skip_obs, ind, v)
-	}
-	if (d[ind[1+skip_obs]]==0) {
-		d=editvalue(d, 0,.)
-		skip_obs=0
-		minindex(d, l+skip_obs, ind, v)
-	}
-	d_base=d[ind[1+skip_obs]]
-	w=J(l+skip_obs, 1, .)
-	if (rows(ind)<l+skip_obs) {
-		if (force_compute==1) {
-			l=rows(ind)-skip_obs
-			if (l<=0) {
-				sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
+		real scalar d_base
+		real scalar pre_adj_skip_obs
+		pre_adj_skip_obs=skip_obs
+		for(j=1;j<=l;j++) {
+			if (d[ind[j+skip_obs]]==0) {
+				skip_obs++
+			}
+			else {
+				break
+			}
+		}
+		if (pre_adj_skip_obs!=skip_obs) {
+			minindex(d, l+skip_obs, ind, v)
+		}
+		if (d[ind[1+skip_obs]]==0) {
+			d=editvalue(d, 0,.)
+			skip_obs=0
+			minindex(d, l+skip_obs, ind, v)
+		}
+		d_base=d[ind[1+skip_obs]]
+		w=J(l+skip_obs, 1, .)
+		if (rows(ind)<l+skip_obs) {
+			if (force_compute==1) {
+				l=rows(ind)-skip_obs
+				if (l<=0) {
+					sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
+					exit(error(503))
+				}
+			}
+			else {
+				sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
 				exit(error(503))
 			}
 		}
-		else {
-			sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
-			exit(error(503))
-		}
-	}
-	r=0
-	if (algorithm==""|algorithm=="simplex") {
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
-		}
-		w=w/sum(w)
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			r=r + y[ind[j]] * w[j]
-		}
-		return(r)
-	}
-	else if (algorithm=="smap"|algorithm=="llr") {
-		real colvector y_ls, b_ls, w_ls
-		real matrix X_ls, XpXi
-		real rowvector x_pred
-		real scalar mean_w
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j]=d[ind[j]] ^ (1/2)
-		}
-		mean_w=mean(w)
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j]=exp(-theta*(w[j] / mean_w))
-		}
-		y_ls=J(l, 1, .)
-		X_ls=J(l, cols(M), .)
-		w_ls=J(l, 1, .)
-		real scalar rowc
-		rowc=0
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			if (hasmissing(y[ind[j]])|hasmissing(M[ind[j],.])) {
-				continue
+		r=0
+		if (algorithm==""|algorithm=="simplex") {
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
 			}
-			rowc++
+			w=w/sum(w)
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				r=r + y[ind[j]] * w[j]
+			}
+			return(r)
+		}
+		else if (algorithm=="smap"|algorithm=="llr") {
+			real colvector y_ls, b_ls, w_ls
+			real matrix X_ls, XpXi
+			real rowvector x_pred
+			real scalar mean_w
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=d[ind[j]] ^ (1/2)
+			}
+			mean_w=mean(w)
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				w[j]=exp(-theta*(w[j] / mean_w))
+			}
+			y_ls=J(l, 1, .)
+			X_ls=J(l, cols(M), .)
+			w_ls=J(l, 1, .)
+			real scalar rowc
+			rowc=0
+			for(j=1+skip_obs;j<=l+skip_obs;j++) {
+				if (hasmissing(y[ind[j]])|hasmissing(M[ind[j],.])) {
+					continue
+				}
+				rowc++
+				if (algorithm=="llr") {
+					y_ls[rowc]=y[ind[j]]
+					X_ls[rowc,.]=M[ind[j],.]
+					w_ls[rowc]=w[j]
+				}
+				else if (algorithm=="smap") {
+					y_ls[rowc]=y[ind[j]] * w[j]
+					X_ls[rowc,.]=M[ind[j],.] * w[j]
+					w_ls[rowc]=w[j]
+				}
+			}
+			if (rowc==0) {
+				return(.)
+			}
+			y_ls=y_ls[1..rowc]
+			X_ls=X_ls[1..rowc,.]
+			w_ls=w_ls[1..rowc]
+			n_ls=rows(X_ls)
+			X_ls=w_ls,X_ls
 			if (algorithm=="llr") {
-				y_ls[rowc]=y[ind[j]]
-				X_ls[rowc,.]=M[ind[j],.]
-				w_ls[rowc]=w[j]
+				XpXi=quadcross(X_ls, w_ls, X_ls)
+				XpXi=invsym(XpXi)
+				b_ls=XpXi*quadcross(X_ls, w_ls, y_ls)
 			}
-			else if (algorithm=="smap") {
-				y_ls[rowc]=y[ind[j]] * w[j]
-				X_ls[rowc,.]=M[ind[j],.] * w[j]
-				w_ls[rowc]=w[j]
+			else {
+				b_ls=svsolve(X_ls, y_ls)
 			}
+			if (save_index>0) {
+				Beta_smap[save_index,.]=editvalue(b_ls',0,.)
+			}
+			x_pred=1,editvalue(b,.,0)
+			r=x_pred * b_ls
+			return(r)
 		}
-		if (rowc==0) {
-			return(.)
-		}
-		y_ls=y_ls[1..rowc]
-		X_ls=X_ls[1..rowc,.]
-		w_ls=w_ls[1..rowc]
-		n_ls=rows(X_ls)
-		X_ls=w_ls,X_ls
-		if (algorithm=="llr") {
-			XpXi=quadcross(X_ls, w_ls, X_ls)
-			XpXi=invsym(XpXi)
-			b_ls=XpXi*quadcross(X_ls, w_ls, y_ls)
-		}
-		else {
-			b_ls=svsolve(X_ls, y_ls)
-		}
-		if (save_index>0) {
-			Beta_smap[save_index,.]=editvalue(b_ls',0,.)
-		}
-		x_pred=1,editvalue(b,.,0)
-		r=x_pred * b_ls
-		return(r)
 	}
-}
 end
 cap program smap_block_mdap, plugin using(edm_`=c(os)'_x`=c(bit)'.plugin)
