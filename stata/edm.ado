@@ -1661,163 +1661,163 @@ program define edmExtractExtra, rclass
 end
 capture mata mata drop smap_block()
 mata:
-	mata set matastrict on
-	void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar skip_obs, string scalar algorithm, string scalar vars_save, string scalar force, real scalar missingdistance)
-	{
-		real scalar force_compute, k, i
-		force_compute=force=="force"
-		real matrix M, Mp, y, ystar,S
-		st_view(M, ., tokens(manifold), train_use)
-		st_view(y, ., prediction, train_use)
-		st_view(ystar, ., result, predict_use)
-		if (p_manifold!="") {
-			st_view(Mp, ., tokens(p_manifold), predict_use)
-		}
-		else {
-			st_view(Mp, ., tokens(manifold), predict_use)
-		}
-		st_view(S, ., skip_obs, predict_use)
-		if (l <=0) {
-			k=cols(M)
-			l=k + 1
-		}
-		real matrix B
-		real scalar save_mode
-		if (vars_save!="") {
-			st_view(B, ., tokens(vars_save), predict_use)
-			save_mode=1
-		}
-		else {
-			save_mode=0
-		}
-		real scalar n
-		n=rows(Mp)
-		real rowvector b
-		for(i=1;i<=n;i++) {
-			b=Mp[i,.]
-			ystar[i]=mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
-		}
+mata set matastrict on
+void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar skip_obs, string scalar algorithm, string scalar vars_save, string scalar force, real scalar missingdistance)
+{
+	real scalar force_compute, k, i
+	force_compute=force=="force"
+	real matrix M, Mp, y, ystar,S
+	st_view(M, ., tokens(manifold), train_use)
+	st_view(y, ., prediction, train_use)
+	st_view(ystar, ., result, predict_use)
+	if (p_manifold!="") {
+		st_view(Mp, ., tokens(p_manifold), predict_use)
 	}
+	else {
+		st_view(Mp, ., tokens(manifold), predict_use)
+	}
+	st_view(S, ., skip_obs, predict_use)
+	if (l <=0) {
+		k=cols(M)
+		l=k + 1
+	}
+	real matrix B
+	real scalar save_mode
+	if (vars_save!="") {
+		st_view(B, ., tokens(vars_save), predict_use)
+		save_mode=1
+	}
+	else {
+		save_mode=0
+	}
+	real scalar n
+	n=rows(Mp)
+	real rowvector b
+	for(i=1;i<=n;i++) {
+		b=Mp[i,.]
+		ystar[i]=mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
+	}
+}
 end
 capture mata mata drop mf_smap_single()
 mata:
-	mata set matastrict on
-	real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
-	{
-		real colvector d, w, a
-		real colvector ind, v
-		real scalar i,j,n,r,n_ls
-		n=rows(M)
-		d=J(n, 1, 0)
-		for(i=1;i<=n;i++) {
-			a=M[i,.] - b
-			if (missingdistance!=0) {
-				a=editvalue(a,., missingdistance)
-			}
-			d[i]=a*a'
+mata set matastrict on
+real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
+{
+	real colvector d, w, a
+	real colvector ind, v
+	real scalar i,j,n,r,n_ls
+	n=rows(M)
+	d=J(n, 1, 0)
+	for(i=1;i<=n;i++) {
+		a=M[i,.] - b
+		if (missingdistance!=0) {
+			a=editvalue(a,., missingdistance)
 		}
+		d[i]=a*a'
+	}
+	minindex(d, l+skip_obs, ind, v)
+	real scalar d_base
+	real scalar pre_adj_skip_obs
+	pre_adj_skip_obs=skip_obs
+	for(j=1;j<=l;j++) {
+		if (d[ind[j+skip_obs]]==0) {
+			skip_obs++
+		}
+		else {
+			break
+		}
+	}
+	if (pre_adj_skip_obs!=skip_obs) {
 		minindex(d, l+skip_obs, ind, v)
-		real scalar d_base
-		real scalar pre_adj_skip_obs
-		pre_adj_skip_obs=skip_obs
-		for(j=1;j<=l;j++) {
-			if (d[ind[j+skip_obs]]==0) {
-				skip_obs++
-			}
-			else {
-				break
-			}
-		}
-		if (pre_adj_skip_obs!=skip_obs) {
-			minindex(d, l+skip_obs, ind, v)
-		}
-		if (d[ind[1+skip_obs]]==0) {
-			d=editvalue(d, 0,.)
-			skip_obs=0
-			minindex(d, l+skip_obs, ind, v)
-		}
-		d_base=d[ind[1+skip_obs]]
-		w=J(l+skip_obs, 1, .)
-		if (rows(ind)<l+skip_obs) {
-			if (force_compute==1) {
-				l=rows(ind)-skip_obs
-				if (l<=0) {
-					sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
-					exit(error(503))
-				}
-			}
-			else {
-				sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
+	}
+	if (d[ind[1+skip_obs]]==0) {
+		d=editvalue(d, 0,.)
+		skip_obs=0
+		minindex(d, l+skip_obs, ind, v)
+	}
+	d_base=d[ind[1+skip_obs]]
+	w=J(l+skip_obs, 1, .)
+	if (rows(ind)<l+skip_obs) {
+		if (force_compute==1) {
+			l=rows(ind)-skip_obs
+			if (l<=0) {
+				sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
 				exit(error(503))
 			}
 		}
-		r=0
-		if (algorithm==""|algorithm=="simplex") {
-			for(j=1+skip_obs;j<=l+skip_obs;j++) {
-				w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
-			}
-			w=w/sum(w)
-			for(j=1+skip_obs;j<=l+skip_obs;j++) {
-				r=r + y[ind[j]] * w[j]
-			}
-			return(r)
-		}
-		else if (algorithm=="smap"|algorithm=="llr") {
-			real colvector y_ls, b_ls, w_ls
-			real matrix X_ls, XpXi
-			real rowvector x_pred
-			real scalar mean_w
-			for(j=1+skip_obs;j<=l+skip_obs;j++) {
-				w[j]=d[ind[j]] ^ (1/2)
-			}
-			mean_w=mean(w)
-			for(j=1+skip_obs;j<=l+skip_obs;j++) {
-				w[j]=exp(-theta*(w[j] / mean_w))
-			}
-			y_ls=J(l, 1, .)
-			X_ls=J(l, cols(M), .)
-			w_ls=J(l, 1, .)
-			real scalar rowc
-			rowc=0
-			for(j=1+skip_obs;j<=l+skip_obs;j++) {
-				if (hasmissing(y[ind[j]])|hasmissing(M[ind[j],.])) {
-					continue
-				}
-				rowc++
-				if (algorithm=="llr") {
-					y_ls[rowc]=y[ind[j]]
-					X_ls[rowc,.]=M[ind[j],.]
-					w_ls[rowc]=w[j]
-				}
-				else if (algorithm=="smap") {
-					y_ls[rowc]=y[ind[j]] * w[j]
-					X_ls[rowc,.]=M[ind[j],.] * w[j]
-					w_ls[rowc]=w[j]
-				}
-			}
-			if (rowc==0) {
-				return(.)
-			}
-			y_ls=y_ls[1..rowc]
-			X_ls=X_ls[1..rowc,.]
-			w_ls=w_ls[1..rowc]
-			n_ls=rows(X_ls)
-			X_ls=w_ls,X_ls
-			if (algorithm=="llr") {
-				XpXi=quadcross(X_ls, w_ls, X_ls)
-				XpXi=invsym(XpXi)
-				b_ls=XpXi*quadcross(X_ls, w_ls, y_ls)
-			}
-			else {
-				b_ls=svsolve(X_ls, y_ls)
-			}
-			if (save_index>0) {
-				Beta_smap[save_index,.]=editvalue(b_ls',0,.)
-			}
-			x_pred=1,editvalue(b,.,0)
-			r=x_pred * b_ls
-			return(r)
+		else {
+			sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
+			exit(error(503))
 		}
 	}
+	r=0
+	if (algorithm==""|algorithm=="simplex") {
+		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+			w[j]=exp(-theta*(d[ind[j]] / d_base)^(1/2))
+		}
+		w=w/sum(w)
+		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+			r=r + y[ind[j]] * w[j]
+		}
+		return(r)
+	}
+	else if (algorithm=="smap"|algorithm=="llr") {
+		real colvector y_ls, b_ls, w_ls
+		real matrix X_ls, XpXi
+		real rowvector x_pred
+		real scalar mean_w
+		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+			w[j]=d[ind[j]] ^ (1/2)
+		}
+		mean_w=mean(w)
+		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+			w[j]=exp(-theta*(w[j] / mean_w))
+		}
+		y_ls=J(l, 1, .)
+		X_ls=J(l, cols(M), .)
+		w_ls=J(l, 1, .)
+		real scalar rowc
+		rowc=0
+		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+			if (hasmissing(y[ind[j]])|hasmissing(M[ind[j],.])) {
+				continue
+			}
+			rowc++
+			if (algorithm=="llr") {
+				y_ls[rowc]=y[ind[j]]
+				X_ls[rowc,.]=M[ind[j],.]
+				w_ls[rowc]=w[j]
+			}
+			else if (algorithm=="smap") {
+				y_ls[rowc]=y[ind[j]] * w[j]
+				X_ls[rowc,.]=M[ind[j],.] * w[j]
+				w_ls[rowc]=w[j]
+			}
+		}
+		if (rowc==0) {
+			return(.)
+		}
+		y_ls=y_ls[1..rowc]
+		X_ls=X_ls[1..rowc,.]
+		w_ls=w_ls[1..rowc]
+		n_ls=rows(X_ls)
+		X_ls=w_ls,X_ls
+		if (algorithm=="llr") {
+			XpXi=quadcross(X_ls, w_ls, X_ls)
+			XpXi=invsym(XpXi)
+			b_ls=XpXi*quadcross(X_ls, w_ls, y_ls)
+		}
+		else {
+			b_ls=svsolve(X_ls, y_ls)
+		}
+		if (save_index>0) {
+			Beta_smap[save_index,.]=editvalue(b_ls',0,.)
+		}
+		x_pred=1,editvalue(b,.,0)
+		r=x_pred * b_ls
+		return(r)
+	}
+}
 end
 program smap_block_mdap, plugin
