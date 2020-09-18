@@ -1,5 +1,5 @@
-*!version 1.3.8, 15Aug2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
-global EDM_VERSION="1.3.8"
+*!version 1.4.0, 15Sep2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
+global EDM_VERSION="1.4.0dev"
 program define edm, eclass
 	version 14
 	if replay() {
@@ -146,7 +146,7 @@ program define edmVersion
 	di "${EDM_VERSION}"
 end
 program define edmExplore, eclass sortpreserve
-	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)]
+	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -587,28 +587,26 @@ program define edmExplore, eclass sortpreserve
 					loc cmdfootnote="Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 				loc vars_save ""
-
-				if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
-					local vsave_flag = 1
-					display "vsave_flag: " `vsave_flag'
-					unab vars : `vars_save'
-					local varssv `: word count `vars''
+				cap smap_block_mdap
+				loc mata_mode=(_rc==199)|("`mata'"=="mata")
+				if `mata_mode'==1 {
+					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 				}
 				else {
-					local vsave_flag = 0
-					display "vsave_flag: " `vsave_flag'
+					if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
+						loc vsave_flag=1
+						unab vars : `vars_save'
+						loc varssv `: word count `vars''
+					}
+					else {
+						loc vsave_flag=0
+					}
+					loc myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+					unab vars : ``manifold''
+					loc mani `: word count `vars''
+					loc pmani_flag=0
+					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
 				}
-
-				local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
-
-				unab vars : ``manifold''
-				local mani `: word count `vars''
-
-				local pmani_flag = 0
-				display "pmani_flag: " `pmani_flag'
-
-				plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
-
 				qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 				qui sum `mae'
 				loc rmae=r(mean)
@@ -645,23 +643,21 @@ program define edmExplore, eclass sortpreserve
 			qui replace `co_train_set'=0 if `usable'==0
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
-
-			local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
-
-			unab vars : ``manifold''
-			local mani `: word count `vars''
-
-			unab vars : `co_mapping'
-			local pmani `: word count `vars''
-
-			local pmani_flag = 1
-			display "pmani_flag: " `pmani_flag'
-
-			local vsave_flag = 0
-			display "vsave_flag: " `vsave_flag'
-
-			plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
-
+			if `mata_mode'==1 {
+				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
+			}
+			else {
+				loc myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
+				unab vars : ``manifold''
+				loc mani `: word count `vars''
+				unab vars : `co_mapping'
+				loc pmani `: word count `vars''
+				loc pmani_flag=1
+				di "pmani_flag: " `pmani_flag'
+				loc vsave_flag=0
+				di "vsave_flag: " `vsave_flag'
+				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
+			}
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
@@ -741,7 +737,7 @@ program define edmExplore, eclass sortpreserve
 	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
-	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)]
+	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -1209,28 +1205,27 @@ program define edmXmap, eclass sortpreserve
 								loc ++counter
 							}
 						}
-
-						if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
-							local vsave_flag = 1
-							display "vsave_flag: " `vsave_flag'
-							unab vars : `vars_save'
-							local varssv `: word count `vars''
+						cap smap_block_mdap
+						loc mata_mode=(_rc==199)|("`mata'"=="mata")
+						if `mata_mode'==1 {
+							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
 						}
 						else {
-							local vsave_flag = 0
-							display "vsave_flag: " `vsave_flag'
+							if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
+								loc vsave_flag=1
+								unab vars : `vars_save'
+								loc varssv `: word count `vars''
+							}
+							else {
+								loc vsave_flag=0
+							}
+							loc myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+							unab vars : ``manifold''
+							loc mani `: word count `vars''
+							loc pmani_flag=0
+							plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
 						}
-
-						local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
-
-						unab vars : ``manifold''
-						local mani `: word count `vars''
-
-						local pmani_flag = 0
-						display "pmani_flag: " `pmani_flag'
-
-						plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv'
-
+						mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
 						tempvar mae
 						qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 						qui sum `mae'
@@ -1290,23 +1285,21 @@ program define edmXmap, eclass sortpreserve
 			qui replace `co_train_set'=0 if `usable'==0
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
-
-			local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
-
-			unab vars : ``manifold''
-			local mani `: word count `vars''
-
-			unab vars : `co_mapping'
-			local pmani `: word count `vars''
-
-			local pmani_flag = 1
-			display "pmani_flag: " `pmani_flag'
-
-			local vsave_flag = 0
-			display "vsave_flag: " `vsave_flag'
-
-			plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
-
+			cap smap_block_mdap
+			loc mata_mode=(_rc==199)|("`mata'"=="mata")
+			if `mata_mode'==1 {
+				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
+			}
+			else {
+				loc myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
+				unab vars : ``manifold''
+				loc mani `: word count `vars''
+				unab vars : `co_mapping'
+				loc pmani `: word count `vars''
+				loc pmani_flag=1
+				loc vsave_flag=0
+				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani'
+			}
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
@@ -1820,4 +1813,4 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	}
 }
 end
-program smap_block_mdap, plugin
+cap program smap_block_mdap, plugin using(edm_`=c(os)'_x`=c(bit)'.plugin)
