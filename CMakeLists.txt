@@ -14,7 +14,7 @@ set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSYSTEM=${SYSTEM}")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 
-if(MSVC)
+if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
@@ -44,23 +44,32 @@ set(SRC
     )
 
 # plugin build and installation
-add_library(smap_block_mdap MODULE ${SRC})
-set_target_properties(smap_block_mdap PROPERTIES C_STANDARD 99 SUFFIX .plugin PREFIX "")
-install(TARGETS smap_block_mdap DESTINATION .)
+add_library(edm MODULE ${SRC})
+set_target_properties(edm PROPERTIES C_STANDARD 99 PREFIX "")
+
+if(WIN32)
+  set_target_properties(edm PROPERTIES SUFFIX _Windows_x64.plugin)
+elseif(APPLE)
+  set_target_properties(edm PROPERTIES SUFFIX _MacOSX_x64.plugin)
+else()
+  set_target_properties(edm PROPERTIES SUFFIX _Unix_x64.plugin)
+endif()
+
+install(TARGETS edm DESTINATION .)
 
 # ↓↓↓ third-party code ↓↓↓
 
 # grab vendored files
 include(vendor/CMakeLists.txt)
-target_include_directories(smap_block_mdap PRIVATE vendor)
+target_include_directories(edm PRIVATE vendor)
 
 # GSL
 find_package(GSL REQUIRED)
-target_link_libraries(smap_block_mdap PRIVATE GSL::gsl GSL::gslcblas)
+target_link_libraries(edm PRIVATE GSL::gsl GSL::gslcblas)
 
 # OPENMP
 find_package(OpenMP)
-target_link_libraries(smap_block_mdap PRIVATE OpenMP::OpenMP_C)
+target_link_libraries(edm PRIVATE OpenMP::OpenMP_C)
 
 # ↓↓↓ formatting with clang-format ↓↓↓
 include(ClangFormat)
