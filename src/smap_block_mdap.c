@@ -3,7 +3,9 @@
 
 /* Suppress Windows problems with sprintf etc. functions. */
 #ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
 #define SUCCESS 0
@@ -464,22 +466,18 @@ ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_dou
 
   /* OpenMP loop with call to mf_smap_single function */
   ST_retcode* rc = malloc(count_predict_set * sizeof(ST_retcode));
-  ST_double* Bi = NULL;
   ST_int i;
 
-#pragma omp parallel for private(Bi)
+#pragma omp parallel for
   for (i = 0; i < count_predict_set; i++) {
-    if (save_mode) {
-      Bi = Bi_map[i];
-    }
-
+    ST_double* Bi = save_mode ? Bi_map[i] : NULL;
     rc[i] = mf_smap_single(count_train_set, mani, M, Mp[i], y, l, theta, S[i], algorithm, save_mode, Bi, varssv,
                            force_compute, missingdistance, &(ystar[i]));
   }
 
   /* Check if any mf_smap_single call failed, and if so find the most serious error */
   ST_retcode maxError = 0;
-  for (int i = 0; i < count_predict_set; i++) {
+  for (i = 0; i < count_predict_set; i++) {
     if (rc[i] > maxError) {
       maxError = rc[i];
     }
@@ -722,6 +720,7 @@ STDLL stata_call(int argc, char* argv[])
     SF_display(temps);
   } else { /* flag savesmap is OFF */
     save_mode = 0;
+    Bi_map = NULL;
     varssv = 0;
   }
 
