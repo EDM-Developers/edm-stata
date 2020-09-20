@@ -512,7 +512,7 @@ STDLL stata_call(int argc, char* argv[])
   ST_double value, theta, *train_use, *predict_use, *skip_obs;
   ST_double **M, **Mp, **Bi_map;
   ST_double *y, *S, *ystar;
-  ST_int i, j, h, force_compute, missingdistance;
+  ST_int i, j, h, force_compute, missingdistance, nthreads;
   ST_int count_train_set, count_predict_set, obsi, obsj;
 
   char temps[500], algorithm[500];
@@ -542,18 +542,23 @@ STDLL stata_call(int argc, char* argv[])
   }
   SF_display("\n");
 
-  /* allocation of variable force_compute based on fourth argument */
-  if (strcmp(argv[3], "force") == 0)
-    force_compute = 1;
-  else
-    force_compute = 0;
-  sprintf(temps, "force compute = %i\n", force_compute);
+  theta = atof(argv[0]); /* contains value of theta = first argument */
+  sprintf(temps, "theta = %6.4f\n", theta);
   SF_display(temps);
   SF_display("\n");
 
   /* allocation of string variable algorithm based on third argument */
   sprintf(algorithm, "%s", argv[2]);
   sprintf(temps, "algorithm = %s\n", algorithm);
+  SF_display(temps);
+  SF_display("\n");
+
+  /* allocation of variable force_compute based on fourth argument */
+  if (strcmp(argv[3], "force") == 0)
+    force_compute = 1;
+  else
+    force_compute = 0;
+  sprintf(temps, "force compute = %i\n", force_compute);
   SF_display(temps);
   SF_display("\n");
 
@@ -733,16 +738,16 @@ STDLL stata_call(int argc, char* argv[])
     return print_error(MALLOC_ERROR);
   }
 
-  theta = atof(argv[0]); /* contains value of theta = first argument */
-  sprintf(temps, "theta = %6.4f\n", theta);
+  /* setting the number of OpenMP threads */
+  nthreads = atoi(argv[9]);
+  sprintf(temps, "Requested %i OpenMP threads \n", nthreads);
+  SF_display(temps);
+  nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
+  sprintf(temps, "Using %i OpenMP threads \n", nthreads);
   SF_display(temps);
   SF_display("\n");
 
-  /* setting the number of OpenMP threads = number of processors available */
-  omp_set_num_threads(omp_get_num_procs());
-  sprintf(temps, "Using %i OpenMP threads \n", omp_get_num_procs());
-  SF_display(temps);
-  SF_display("\n");
+  omp_set_num_threads(nthreads);
 
   ST_retcode maxError = mf_smap_loop(count_predict_set, count_train_set, Bi_map, mani, M, Mp, y, l, theta, S, algorithm,
                                      save_mode, varssv, force_compute, missingdistance, ystar);
