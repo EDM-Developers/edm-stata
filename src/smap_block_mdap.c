@@ -193,7 +193,7 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
 
 static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_double b[], ST_double y[], ST_int l,
                                  ST_double theta, ST_double skip_obs, char* algorithm, ST_int save_mode, ST_double Bi[],
-                                 ST_int varssv, ST_int force_compute, ST_int missingdistance, ST_double* ystar)
+                                 ST_int varssv, ST_int force_compute, ST_double missingdistance, ST_double* ystar)
 {
   ST_double *d, *a, *w;
   ST_int* ind;
@@ -215,7 +215,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_d
     for (j = 0; j < colsm; j++) {
       if ((M[i][j] == missval) || (b[j] == missval)) {
         if (missingdistance != 0) {
-          a[j] = (ST_double)missingdistance;
+          a[j] = missingdistance;
           value = value + a[j] * a[j];
         } else {
           boolmiss = 1;
@@ -460,7 +460,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_d
 
 ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
                         ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S,
-                        char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute, ST_int missingdistance,
+                        char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
                         ST_double* ystar)
 {
 
@@ -509,10 +509,10 @@ STDLL stata_call(int argc, char* argv[])
   ST_int nvars, nobs, first, last, mani, pmani_flag, pmani, smaploc;
   ST_int Mpcol, l, vsave_flag, save_mode, varssv;
 
-  ST_double value, theta, *train_use, *predict_use, *skip_obs;
+  ST_double value, theta, missingdistance, *train_use, *predict_use, *skip_obs;
   ST_double **M, **Mp, **Bi_map;
   ST_double *y, *S, *ystar;
-  ST_int i, j, h, force_compute, missingdistance, nthreads;
+  ST_int i, j, h, force_compute, nthreads;
   ST_int count_train_set, count_predict_set, obsi, obsj;
 
   char temps[500], algorithm[500];
@@ -563,8 +563,8 @@ STDLL stata_call(int argc, char* argv[])
   SF_display("\n");
 
   /* allocation of variable missingdistance based on fifth argument */
-  missingdistance = atoi(argv[4]);
-  sprintf(temps, "missing distance = %i\n", missingdistance);
+  missingdistance = atof(argv[4]);
+  sprintf(temps, "missing distance = %f\n", missingdistance);
   SF_display(temps);
   SF_display("\n");
 
@@ -710,8 +710,6 @@ STDLL stata_call(int argc, char* argv[])
   SF_display("\n");
 
   vsave_flag = atoi(argv[7]); /* contains the flag for vars_save */
-  sprintf(temps, "vars_save flag = %i \n", vsave_flag);
-  SF_display(temps);
 
   if (vsave_flag == 1) { /* flag savesmap is ON */
     save_mode = 1;
