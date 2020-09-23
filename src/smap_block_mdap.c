@@ -14,8 +14,7 @@
 #define NOT_IMPLEMENTED 908
 #define MALLOC_ERROR 909
 
-#include "stplugin.h"
-
+#include "smap_block_mdap.h"
 #include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <omp.h>
@@ -62,7 +61,7 @@ ST_retcode print_error(ST_retcode rc)
   return rc;
 }
 
-void free_matrix(ST_double** M, ST_int nrow)
+DLL void free_matrix(ST_double** M, ST_int nrow)
 {
   if (M != NULL) {
     for (ST_int i = 0; i < nrow; i++) {
@@ -74,7 +73,7 @@ void free_matrix(ST_double** M, ST_int nrow)
   }
 }
 
-ST_double** alloc_matrix(ST_int nrow, ST_int ncol)
+DLL ST_double** alloc_matrix(ST_int nrow, ST_int ncol)
 {
   if (nrow == 0 || ncol == 0) {
     return NULL;
@@ -464,10 +463,10 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, ST_double** M, ST_d
 
 /* OpenMP routines */
 
-ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
-                        ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S,
-                        char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute,
-                        ST_double missingdistance, ST_double* ystar)
+DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
+                            ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S,
+                            char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute,
+                            ST_double missingdistance, ST_double* ystar)
 {
 
   /* OpenMP loop with call to mf_smap_single function */
@@ -510,7 +509,7 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 `vsave_flag'
 */
 
-STDLL stata_call(int argc, char* argv[])
+DLL ST_retcode stata_call(int argc, char* argv[])
 {
   ST_int nvars, nobs, first, last, mani, pmani_flag, pmani, smaploc;
   ST_int Mpcol, l, vsave_flag, save_mode, varssv;
