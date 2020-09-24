@@ -25,7 +25,6 @@
 #ifdef DUMP_INPUT
 #include <hdf5.h>
 #include <hdf5_hl.h>
-#include <uuid/uuid.h>
 #endif
 
 /* global variable placeholder for missing values */
@@ -755,61 +754,46 @@ DLL ST_retcode stata_call(int argc, char* argv[])
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
+  if (argc >= 11) {
+    hid_t fid = H5Fcreate(argv[10], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-  // generate a unique filename
-  uuid_t binuuid;
-  char uuid[37];
-  uuid_generate_random(binuuid);
-  uuid_unparse(binuuid, uuid);
-  char fname[128];
-  sprintf(fname, "smap_block_input-%s.h5", uuid);
+    H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
+    H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);
+    H5LTset_attribute_int(fid, "/", "Mpcol", &Mpcol, 1);
+    H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
 
-  // write the data
-  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    H5LTmake_dataset_double(fid, "y", 1, (hsize_t[]){ count_train_set }, y);
 
-  H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
-  H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);
-  H5LTset_attribute_int(fid, "/", "Mpcol", &Mpcol, 1);
-  H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
+    H5LTset_attribute_int(fid, "/", "l", &l, 1);
+    H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
 
-  H5LTmake_dataset_double(fid, "y", 1, (hsize_t[]){ count_train_set }, y);
+    H5LTmake_dataset_double(fid, "S", 1, (hsize_t[]){ count_predict_set }, S);
 
-  H5LTset_attribute_int(fid, "/", "l", &l, 1);
-  H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
+    H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
+    H5LTset_attribute_int(fid, "/", "save_mode", &save_mode, 1);
+    H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
+    H5LTset_attribute_int(fid, "/", "force_compute", &force_compute, 1);
+    H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
-  H5LTmake_dataset_double(fid, "S", 1, (hsize_t[]){ count_predict_set }, S);
-
-  H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
-  H5LTset_attribute_int(fid, "/", "save_mode", &save_mode, 1);
-  H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
-  H5LTset_attribute_int(fid, "/", "force_compute", &force_compute, 1);
-  H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
-
-#define flat_index(i, j) ((i)*Mpcol + (j))
-  {
     double* flat_Mp = malloc(count_predict_set * Mpcol * sizeof(double));
     for (int i = 0; i < count_predict_set; ++i)
       for (int j = 0; j < Mpcol; ++j)
-        flat_Mp[flat_index(i, j)] = Mp[i][j];
+        flat_Mp[i * Mpcol + j] = Mp[i][j];
 
     H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[]){ count_predict_set * Mpcol }, flat_Mp);
     free(flat_Mp);
-  }
-#undef flat_index
 
-#define flat_index(i, j) ((i)*mani + (j))
-  {
     double* flat_M = malloc(count_train_set * mani * sizeof(double));
     for (int i = 0; i < count_train_set; ++i)
       for (int j = 0; j < mani; ++j)
-        flat_M[flat_index(i, j)] = M[i][j];
+        flat_M[i * mani + j] = M[i][j];
 
     H5LTmake_dataset_double(fid, "flat_M", 1, (hsize_t[]){ count_train_set * mani }, flat_M);
 
     free(flat_M);
-  }
 
-  H5Fclose(fid);
+    H5Fclose(fid);
+  }
 #endif
 
   ST_retcode maxError = mf_smap_loop(count_predict_set, count_train_set, Bi_map, mani, M, Mp, y, l, theta, S, algorithm,

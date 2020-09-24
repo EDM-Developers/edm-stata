@@ -34,7 +34,7 @@ keep in 300/500
 
 * identify optimal E
 
-edm explore x, e(2/10) nthreads(`nthreads')
+edm explore x, e(2/10) nthreads(`nthreads') saveinputs(test1.h5)
 
 edm xmap x y, k(5) nthreads(`nthreads')
 

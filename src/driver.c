@@ -106,7 +106,9 @@ static void read_dumpfile(const char* fname, InputVars* vars)
   H5LTget_attribute_int(fid, "/", "force_compute", &(vars->force_compute));
   H5LTget_attribute_double(fid, "/", "missingdistance", &(vars->missingdistance));
 
+  vars->flat_Mp = malloc(vars->count_predict_set * vars->Mpcol * sizeof(ST_double));
   H5LTread_dataset_double(fid, "flat_Mp", vars->flat_Mp);
+  vars->flat_M = malloc(vars->count_train_set * vars->mani * sizeof(ST_double));
   H5LTread_dataset_double(fid, "flat_M", vars->flat_M);
 
   H5Fclose(fid);
@@ -114,23 +116,17 @@ static void read_dumpfile(const char* fname, InputVars* vars)
 
 static void call_mf_smap_loop(const InputVars* vars)
 {
-#define flat_index(i, j) ((i)*vars->count_train_set + (j))
   ST_double** M = alloc_matrix(vars->count_train_set, vars->mani);
-  for (int ii = 0; ii < vars->count_train_set; ++ii)
-    for (int jj = 0; jj < vars->mani; ++jj)
-      M[ii][jj] = vars->flat_M[flat_index(ii, jj)];
-#undef flat_index
+  for (int i = 0; i < vars->count_train_set; ++i)
+    for (int j = 0; j < vars->mani; ++j)
+      M[i][j] = vars->flat_M[i * vars->mani + j];
 
-#define flat_index(i, j) ((i)*vars->count_predict_set + (j))
   ST_double** Mp = alloc_matrix(vars->count_predict_set, vars->Mpcol);
-  for (int ii = 0; ii < vars->count_predict_set; ++ii)
-    for (int jj = 0; jj < vars->Mpcol; ++jj)
-      Mp[ii][jj] = vars->flat_Mp[flat_index(ii, jj)];
-#undef flat_index
+  for (int i = 0; i < vars->count_predict_set; ++i)
+    for (int j = 0; j < vars->Mpcol; ++j)
+      Mp[i][j] = vars->flat_Mp[i * vars->Mpcol + j];
 
   ST_double* ystar = malloc(sizeof(ST_double) * vars->count_predict_set);
-  ST_double* b = malloc(sizeof(ST_double) * vars->Mpcol);
-
   ST_double** Bi_map = alloc_matrix(vars->count_predict_set, vars->varssv);
 
   mf_smap_loop(vars->count_predict_set, vars->count_train_set, Bi_map, vars->mani, M, Mp, vars->y, vars->l, vars->theta,
@@ -138,7 +134,6 @@ static void call_mf_smap_loop(const InputVars* vars)
                vars->missingdistance, ystar);
 
   free_matrix(Bi_map, vars->count_predict_set);
-  free(b);
   free(ystar);
   free_matrix(Mp, vars->count_predict_set);
   free_matrix(M, vars->count_train_set);
