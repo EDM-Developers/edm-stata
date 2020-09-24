@@ -664,9 +664,7 @@ program define edmExplore, eclass sortpreserve
 				unab vars : `co_mapping'
 				loc pmani `: word count `vars''
 				loc pmani_flag=1
-				di "pmani_flag: " `pmani_flag'
 				loc vsave_flag=0
-				di "vsave_flag: " `vsave_flag'
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `saveinputs'
 			}
 			qui gen double `copredict'=`co_x_p'
