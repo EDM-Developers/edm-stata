@@ -751,6 +751,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   omp_set_num_threads(nthreads);
+
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
@@ -764,7 +765,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   sprintf(fname, "smap_block_input-%s.h5", uuid);
 
   // write the data
-  hid_t fid = H5Fopen(fname, H5F_ACC_CREAT, H5P_DEFAULT);
+  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
   H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);
@@ -784,25 +785,28 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   H5LTset_attribute_int(fid, "/", "force_compute", &force_compute, 1);
   H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
-#define flat_index(i, j) ((i)*count_predict_set + (j))
+#define flat_index(i, j) ((i)*Mpcol + (j))
   {
-    double flat_Mp[count_predict_set * Mpcol];
-    for (int ii = 0; ii < count_predict_set; ++ii)
-      for (int jj = 0; jj < Mpcol; ++jj)
-        flat_Mp[flat_index(ii, jj)] = Mp[i][j];
+    double* flat_Mp = malloc(count_predict_set * Mpcol * sizeof(double));
+    for (int i = 0; i < count_predict_set; ++i)
+      for (int j = 0; j < Mpcol; ++j)
+        flat_Mp[flat_index(i, j)] = Mp[i][j];
 
     H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[]){ count_predict_set * Mpcol }, flat_Mp);
+    free(flat_Mp);
   }
 #undef flat_index
 
-#define flat_index(i, j) ((i)*count_train_set + (j))
+#define flat_index(i, j) ((i)*mani + (j))
   {
-    double flat_M[count_train_set * mani];
-    for (int ii = 0; ii < count_train_set; ++ii)
-      for (int jj = 0; jj < mani; ++jj)
-        flat_M[flat_index(ii, jj)] = M[i][j];
+    double* flat_M = malloc(count_train_set * mani * sizeof(double));
+    for (int i = 0; i < count_train_set; ++i)
+      for (int j = 0; j < mani; ++j)
+        flat_M[flat_index(i, j)] = M[i][j];
 
     H5LTmake_dataset_double(fid, "flat_M", 1, (hsize_t[]){ count_train_set * mani }, flat_M);
+
+    free(flat_M);
   }
 
   H5Fclose(fid);
