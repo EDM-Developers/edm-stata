@@ -1,0 +1,7 @@
+{
+    "name": "edm",
+    "version-string": "1.4.0",
+    "dependencies": [
+        "gsl", "hdf5"
+    ]
+}
