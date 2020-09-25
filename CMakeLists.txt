@@ -89,8 +89,6 @@ target_link_libraries(edm PRIVATE OpenMP::OpenMP_C)
 if (HDF5_FOUND)
     target_include_directories(edm PUBLIC ${HDF5_INCLUDE_DIRS})
     target_link_libraries(edm PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
-    target_link_libraries(smap_driver PRIVATE GSL::gsl GSL::gslcblas)
-
     add_definitions(${HDF5_DEFINITIONS})
 else()
     set(DUMP_INPUT FALSE)

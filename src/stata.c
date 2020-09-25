@@ -238,12 +238,11 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   bool force_compute, pmani_flag, save_mode;
   char temps[500], *algorithm;
   ST_retcode rc;
-  ST_int mani, pmani, l, varssv;
+  ST_int mani, pmani, Mpcol, l, varssv;
   ST_int i, nthreads;
-  ST_int count_train_set, count_predict_set, Mpcol;
+  ST_int count_train_set, count_predict_set;
   ST_double theta, missingdistance;
   ST_double *train_use, *predict_use, *y, *S, *ystar;
-  gsl_matrix *M, *Mp, *Bi_map;
 
   /* header of the plugin */
   SF_display("\n");
@@ -320,9 +319,6 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   if (rc = train_manifold(train_use, count_train_set, mani, &flat_M)) {
     return print_error(rc);
   }
-  gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
-  M = &(M_view.matrix);
-
   if (rc = train_y(train_use, count_train_set, mani, &y)) {
     return print_error(rc);
   }
@@ -344,19 +340,17 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   ST_double* flat_Mp = NULL;
-  gsl_matrix_view Mp_view;
   if (pmani_flag) {
+    Mpcol = pmani;
     if (rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp)) {
       return rc;
     }
-    Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, pmani);
   } else {
+    Mpcol = mani;
     if (rc = predict_manifold(predict_use, count_predict_set, mani, &flat_Mp)) {
       return rc;
     }
-    Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, mani);
   }
-  Mp = &(Mp_view.matrix);
 
   l = atoi(argv[1]); /* contains l */
   if (l <= 0) {
@@ -369,8 +363,6 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   save_mode = atoi(argv[7]); /* contains the flag for vars_save */
 
   double* flat_Bi_map = NULL;
-  gsl_matrix_view Bi_map_view;
-  Bi_map = NULL;
 
   if (save_mode) {          /* flag savesmap is ON */
     varssv = atoi(argv[8]); /* contains the number of columns
@@ -379,14 +371,11 @@ DLL ST_retcode stata_call(int argc, char* argv[])
     if (flat_Bi_map == NULL) {
       return print_error(MALLOC_ERROR);
     }
-    Bi_map_view = gsl_matrix_view_array(flat_Bi_map, count_predict_set, varssv);
-    Bi_map = &Bi_map_view.matrix;
 
     sprintf(temps, "columns in smap coefficents = %i \n", varssv);
     SF_display(temps);
 
   } else { /* flag savesmap is OFF */
-    Bi_map = NULL;
     varssv = 0;
   }
 
@@ -440,8 +429,8 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   }
 #endif
 
-  rc = mf_smap_loop(count_predict_set, count_train_set, mani, M, Mp, y, l, theta, S, algorithm, save_mode, varssv,
-                    force_compute, missingdistance, ystar, Bi_map);
+  rc = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, flat_M, flat_Mp, y, l, theta, S, algorithm,
+                    save_mode, varssv, force_compute, missingdistance, ystar, flat_Bi_map);
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (rc == SUCCESS) {

@@ -9,6 +9,7 @@
 #endif
 
 #include "edm.h"
+#include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,10 +120,9 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
   return numind;
 }
 
-static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M, const gsl_vector* b,
-                                 const ST_double y[], ST_int l, ST_double theta, ST_int skip_obs, char* algorithm,
-                                 bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
-                                 ST_double* ystar, gsl_vector* Bi)
+static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const ST_double y[], ST_int l,
+                                 ST_double theta, ST_int skip_obs, char* algorithm, bool save_mode, ST_int varssv,
+                                 bool force_compute, ST_double missingdistance, ST_double* ystar, gsl_vector* Bi)
 {
   bool missing;
   ST_int i, j, numind;
@@ -130,17 +130,17 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
   ST_double value, pre_adj_skip_obs, d_base, sumw, r;
   ST_double *d, *a, *w;
 
-  d = (ST_double*)malloc(sizeof(ST_double) * rowsm);
-  a = (ST_double*)malloc(sizeof(ST_double) * colsm);
-  ind = (ST_int*)malloc(sizeof(ST_int) * rowsm);
+  d = (ST_double*)malloc(sizeof(ST_double) * M->size1);
+  a = (ST_double*)malloc(sizeof(ST_double) * M->size2);
+  ind = (ST_int*)malloc(sizeof(ST_int) * M->size1);
   if ((d == NULL) || (a == NULL) || (ind == NULL)) {
     return MALLOC_ERROR;
   }
 
-  for (i = 0; i < rowsm; i++) {
+  for (i = 0; i < M->size1; i++) {
     value = 0.;
     missing = false;
-    for (j = 0; j < colsm; j++) {
+    for (j = 0; j < M->size2; j++) {
       if ((gsl_matrix_get(M, i, j) == MISSING) || (gsl_vector_get(b, j) == MISSING)) {
         if (missingdistance != 0) {
           a[j] = missingdistance;
@@ -162,7 +162,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     ind[i] = i;
   }
 
-  numind = minindex(rowsm, d, l + skip_obs, ind);
+  numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
 
   pre_adj_skip_obs = skip_obs;
 
@@ -175,17 +175,17 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
   }
 
   if (pre_adj_skip_obs != skip_obs) {
-    numind = minindex(rowsm, d, l + skip_obs, ind);
+    numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
   }
 
   if (d[ind[skip_obs]] == 0.) {
-    for (i = 0; i < rowsm; i++) {
+    for (i = 0; i < M->size1; i++) {
       if (d[i] == 0.) {
         d[i] = MISSING;
       }
     }
     skip_obs = 0;
-    numind = minindex(rowsm, d, l + skip_obs, ind);
+    numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
   }
 
   d_base = d[ind[skip_obs]];
@@ -233,7 +233,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     gsl_matrix* X_ls;
     ST_double mean_w, *y_ls, *w_ls;
     ST_int rowc;
-    X_ls = gsl_matrix_alloc(l, colsm);
+    X_ls = gsl_matrix_alloc(l, M->size2);
     y_ls = (ST_double*)malloc(sizeof(ST_double) * l);
     w_ls = (ST_double*)malloc(sizeof(ST_double) * l);
     if ((y_ls == NULL) || (w_ls == NULL)) {
@@ -258,7 +258,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
         continue;
       }
       anyMissing = false;
-      for (i = 0; i < colsm; i++) {
+      for (i = 0; i < M->size2; i++) {
         if (gsl_matrix_get(M, ind[j], i) == MISSING) {
           anyMissing = true;
           break;
@@ -275,7 +275,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       } else if (strcmp(algorithm, "smap") == 0) {
         y_ls[rowc] = y[ind[j]] * w[j];
         w_ls[rowc] = w[j];
-        for (i = 0; i < colsm; i++) {
+        for (i = 0; i < M->size2; i++) {
           gsl_matrix_set(X_ls, rowc, i, gsl_matrix_get(M, ind[j], i) * w[j]);
         }
       }
@@ -295,15 +295,16 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       return SUCCESS;
     }
 
-    gsl_matrix* X_ls_cj = gsl_matrix_alloc(rowc + 1, colsm + 1);
-    gsl_vector* y_ls_cj = gsl_vector_alloc(rowc + 1);
-    if ((X_ls_cj == NULL) || (y_ls_cj == NULL)) {
-      return MALLOC_ERROR;
-    }
+    // Pull out the first 'rowc+1' elements of the y_ls vector
+    gsl_vector_const_view y_ls_cj_view = gsl_vector_const_view_array(y_ls, rowc + 1);
+    const gsl_vector* y_ls_cj = &y_ls_cj_view.vector;
+
+    // Concatenate the column vector 'w' with 'X_ls', keeping only
+    // the first 'rowc+1' rows.
+    gsl_matrix* X_ls_cj = gsl_matrix_alloc(rowc + 1, M->size2 + 1);
     for (i = 0; i < rowc + 1; i++) {
       gsl_matrix_set(X_ls_cj, i, 0, w_ls[i]);
-      gsl_vector_set(y_ls_cj, i, y_ls[i]);
-      for (j = 1; j < colsm + 1; j++) {
+      for (j = 1; j < X_ls->size2 + 1; j++) {
         gsl_matrix_set(X_ls_cj, i, j, gsl_matrix_get(X_ls, i, j - 1));
       }
     }
@@ -312,12 +313,12 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       /* llr algorithm is not needed at this stage */
       return NOT_IMPLEMENTED;
     } else {
-      gsl_vector* ics = gsl_vector_alloc(colsm + 1);
+      gsl_vector* ics = gsl_vector_alloc(M->size2 + 1);
 
       /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
       if (X_ls_cj->size1 >= X_ls_cj->size2) {
-        gsl_matrix* V = gsl_matrix_alloc(colsm + 1, colsm + 1);
-        gsl_vector* Esse = gsl_vector_alloc(colsm + 1);
+        gsl_matrix* V = gsl_matrix_alloc(M->size2 + 1, M->size2 + 1);
+        gsl_vector* Esse = gsl_vector_alloc(M->size2 + 1);
 
         /* TO BE ADDED: benchmark which one of the following methods work best*/
         /*Golub-Reinsch SVD algorithm*/
@@ -328,7 +329,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
 
         /* setting to zero extremely small values of Esse to avoid
         underflow errors */
-        for (j = 0; j < colsm + 1; j++) {
+        for (j = 0; j < Esse->size; j++) {
           if (gsl_vector_get(Esse, j) < 1.0e-12) {
             gsl_vector_set(Esse, j, 0.);
           }
@@ -367,7 +368,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       }
 
       r = gsl_vector_get(ics, 0);
-      for (j = 1; j < colsm + 1; j++) {
+      for (j = 1; j < M->size2 + 1; j++) {
         if (gsl_vector_get(b, j - 1) != MISSING) {
           r += gsl_vector_get(b, j - 1) * gsl_vector_get(ics, j);
         }
@@ -382,7 +383,6 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       free(w_ls);
       gsl_matrix_free(X_ls);
       gsl_matrix_free(X_ls_cj);
-      gsl_vector_free(y_ls_cj);
       gsl_vector_free(ics);
 
       /* save the value of ystar[j] */
@@ -395,18 +395,28 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
 }
 
 /* OpenMP routines */
-DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, gsl_matrix* M,
-                            gsl_matrix* Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S, char* algorithm,
-                            bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
-                            ST_double* ystar, gsl_matrix* Bi_map)
+
+DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, ST_int Mpcol,
+                            ST_double* flat_M, ST_double* flat_Mp, ST_double* y, ST_int l, ST_double theta,
+                            ST_double* S, char* algorithm, bool save_mode, ST_int varssv, bool force_compute,
+                            ST_double missingdistance, ST_double* ystar, ST_double* flat_Bi_map)
 {
+  /* Create GSL matrixes which are views of the supplied flattened matrices */
+  gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
+  gsl_matrix* M = &(M_view.matrix);
+
+  gsl_matrix_view Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, Mpcol);
+  gsl_matrix* Mp = &(Mp_view.matrix);
+
+  gsl_matrix_view Bi_map_view = gsl_matrix_view_array(flat_Bi_map, count_predict_set, varssv);
+  gsl_matrix* Bi_map = &Bi_map_view.matrix;
 
   /* OpenMP loop with call to mf_smap_single function */
-  ST_retcode* rc = malloc(count_predict_set * sizeof(ST_retcode));
+  ST_retcode* rc = malloc(Mp->size1 * sizeof(ST_retcode));
   ST_int i;
 
 #pragma omp parallel for
-  for (i = 0; i < count_predict_set; i++) {
+  for (i = 0; i < Mp->size1; i++) {
 
     gsl_vector_view Bi_view;
     gsl_vector* Bi = NULL;
@@ -418,13 +428,13 @@ DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST
     gsl_vector_const_view Mpi_view = gsl_matrix_const_row(Mp, i);
     const gsl_vector* Mpi = &Mpi_view.vector;
 
-    rc[i] = mf_smap_single(count_train_set, mani, M, Mpi, y, l, theta, (int)S[i], algorithm, save_mode, varssv,
-                           force_compute, missingdistance, &(ystar[i]), Bi);
+    rc[i] = mf_smap_single(M, Mpi, y, l, theta, (int)S[i], algorithm, save_mode, varssv, force_compute, missingdistance,
+                           &(ystar[i]), Bi);
   }
 
   /* Check if any mf_smap_single call failed, and if so find the most serious error */
   ST_retcode maxError = 0;
-  for (i = 0; i < count_predict_set; i++) {
+  for (i = 0; i < Mp->size1; i++) {
     if (rc[i] > maxError) {
       maxError = rc[i];
     }

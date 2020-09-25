@@ -17,12 +17,11 @@
 #define MISSING 1.0e+100
 
 #include "stplugin.h"
-#include <gsl/gsl_linalg.h>
 #include <stdbool.h>
 
-DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, gsl_matrix* M,
-                            gsl_matrix* Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S, char* algorithm,
-                            bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
-                            ST_double* ystar, gsl_matrix* Bi_map);
+DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, ST_int Mpcol,
+                            ST_double* flat_M, ST_double* flat_Mp, ST_double* y, ST_int l, ST_double theta,
+                            ST_double* S, char* algorithm, bool save_mode, ST_int varssv, bool force_compute,
+                            ST_double missingdistance, ST_double* ystar, ST_double* flat_Bi_map);
 
 #endif

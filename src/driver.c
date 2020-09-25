@@ -69,17 +69,6 @@ void free_InputVars(InputVars* vars)
     free(vars->S);
   if (vars->y != NULL)
     free(vars->y);
-
-  vars->count_train_set = EMPTY_INT;
-  vars->count_predict_set = EMPTY_INT;
-  vars->Mpcol = EMPTY_INT;
-  vars->mani = EMPTY_INT;
-  vars->l = EMPTY_INT;
-  vars->missingdistance = EMPTY_DOUBLE;
-  vars->theta = EMPTY_DOUBLE;
-  vars->save_mode = EMPTY_INT;
-  vars->varssv = EMPTY_INT;
-  vars->force_compute = EMPTY_INT;
 }
 
 /*! \brief Read in a dump file.
@@ -132,29 +121,6 @@ static void write_results(const char* fname_out, ST_double* ystar, ST_double* fl
   H5Fclose(fid);
 }
 
-static void call_mf_smap_loop(const InputVars* vars, const char* fname_out)
-{
-  gsl_matrix_view M_view = gsl_matrix_view_array(vars->flat_M, vars->count_train_set, vars->mani);
-  gsl_matrix* M = &(M_view.matrix);
-
-  gsl_matrix_view Mp_view = gsl_matrix_view_array(vars->flat_Mp, vars->count_predict_set, vars->Mpcol);
-  gsl_matrix* Mp = &(Mp_view.matrix);
-
-  ST_double* ystar = malloc(sizeof(ST_double) * vars->count_predict_set);
-  ST_double* flat_Bi_map = malloc(sizeof(ST_double) * vars->count_predict_set * vars->varssv);
-  gsl_matrix_view Bi_map_view = gsl_matrix_view_array(flat_Bi_map, vars->count_predict_set, vars->varssv);
-  gsl_matrix* Bi_map = &Bi_map_view.matrix;
-
-  mf_smap_loop(vars->count_predict_set, vars->count_train_set, vars->mani, M, Mp, vars->y, vars->l, vars->theta,
-               vars->S, (char*)(vars->algorithm), vars->save_mode, vars->varssv, vars->force_compute,
-               vars->missingdistance, ystar, Bi_map);
-
-  write_results(fname_out, ystar, flat_Bi_map, vars);
-
-  free(ystar);
-  free(flat_Bi_map);
-}
-
 static char* generate_output_fname(const char* fname_in)
 {
   char* ext = strrchr(fname_in, '.');
@@ -184,10 +150,19 @@ int main(int argc, char* argv[])
   read_dumpfile(argv[1], &vars);
 
   char* fname_out = generate_output_fname(argv[1]); // WATCH OUT: fname_out is malloc'd in this function!
+  ST_double* ystar = malloc(sizeof(ST_double) * vars.count_predict_set);
+  ST_double* flat_Bi_map = malloc(sizeof(ST_double) * vars.count_predict_set * vars.varssv);
 
-  call_mf_smap_loop(&vars, fname_out);
+  mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.flat_M, vars.flat_Mp, vars.y,
+               vars.l, vars.theta, vars.S, (char*)(vars.algorithm), vars.save_mode, vars.varssv, vars.force_compute,
+               vars.missingdistance, ystar, flat_Bi_map);
+
+  write_results(fname_out, ystar, flat_Bi_map, &vars);
 
   free(fname_out);
+  free(ystar);
+  free(flat_Bi_map);
+
   free_InputVars(&vars);
   return 0;
 }
