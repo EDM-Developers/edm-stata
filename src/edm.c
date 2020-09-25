@@ -120,7 +120,7 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
 }
 
 static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M, const gsl_vector* b,
-                                 const ST_double y[], ST_int l, ST_double theta, ST_double skip_obs, char* algorithm,
+                                 const ST_double y[], ST_int l, ST_double theta, ST_int skip_obs, char* algorithm,
                                  ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
                                  ST_double* ystar, gsl_vector* Bi)
 {
@@ -162,12 +162,12 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     ind[i] = i;
   }
 
-  numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+  numind = minindex(rowsm, d, l + skip_obs, ind);
 
   pre_adj_skip_obs = skip_obs;
 
   for (j = 0; j < l; j++) {
-    if (d[ind[j + (int)skip_obs]] == 0.) {
+    if (d[ind[j + skip_obs]] == 0.) {
       skip_obs++;
     } else {
       break;
@@ -175,24 +175,24 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
   }
 
   if (pre_adj_skip_obs != skip_obs) {
-    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+    numind = minindex(rowsm, d, l + skip_obs, ind);
   }
 
-  if (d[ind[(int)skip_obs]] == 0.) {
+  if (d[ind[skip_obs]] == 0.) {
     for (i = 0; i < rowsm; i++) {
       if (d[i] == 0.) {
         d[i] = MISSING;
       }
     }
-    skip_obs = 0.;
-    numind = minindex(rowsm, d, l + (int)skip_obs, ind);
+    skip_obs = 0;
+    numind = minindex(rowsm, d, l + skip_obs, ind);
   }
 
-  d_base = d[ind[(int)skip_obs]];
+  d_base = d[ind[skip_obs]];
 
-  if (numind < l + (int)skip_obs) {
+  if (numind < l + skip_obs) {
     if (force_compute == 1) {
-      l = numind - (int)skip_obs;
+      l = numind - skip_obs;
       if (l <= 0) {
         return INSUFFICIENT_UNIQUE;
       }
@@ -201,7 +201,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     }
   }
 
-  w = (ST_double*)malloc(sizeof(ST_double) * (l + (int)skip_obs));
+  w = (ST_double*)malloc(sizeof(ST_double) * (l + skip_obs));
   if (w == NULL) {
     return MALLOC_ERROR;
   }
@@ -209,13 +209,13 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
   sumw = 0.;
   r = 0.;
   if ((strcmp(algorithm, "") == 0) || (strcmp(algorithm, "simplex") == 0)) {
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+    for (j = skip_obs; j < l + skip_obs; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
       w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+    for (j = skip_obs; j < l + skip_obs; j++) {
       r = r + y[ind[j]] * (w[j] / sumw);
     }
     /* deallocation of matrices and arrays before exiting the function */
@@ -241,19 +241,19 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     }
 
     mean_w = 0.;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+    for (j = skip_obs; j < l + skip_obs; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = pow(d[ind[j]],0.5); */
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
     mean_w = mean_w / (ST_double)l;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+    for (j = skip_obs; j < l + skip_obs; j++) {
       w[j] = exp(-theta * (w[j] / mean_w));
     }
 
     rowc = -1;
-    for (j = (int)skip_obs; j < l + (int)skip_obs; j++) {
+    for (j = skip_obs; j < l + skip_obs; j++) {
       if (y[ind[j]] == MISSING) {
         continue;
       }
@@ -417,7 +417,7 @@ DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST
     gsl_vector_const_view Mpi_view = gsl_matrix_const_row(Mp, i);
     const gsl_vector* Mpi = &Mpi_view.vector;
 
-    rc[i] = mf_smap_single(count_train_set, mani, M, Mpi, y, l, theta, S[i], algorithm, save_mode, varssv,
+    rc[i] = mf_smap_single(count_train_set, mani, M, Mpi, y, l, theta, (int) S[i], algorithm, save_mode, varssv,
                            force_compute, missingdistance, &(ystar[i]), Bi);
   }
 
