@@ -43,7 +43,7 @@ endif()
 
 # source list
 set(SRC
-    src/smap_block_mdap.c
+    src/edm.c
     vendor/stplugin.c
     )
 
@@ -103,7 +103,7 @@ endif()
 # ↓↓↓ formatting with clang-format ↓↓↓
 include(ClangFormat)
 clangformat_setup(
-  src/smap_block_mdap.c
-  src/smap_block_mdap.h
+  src/edm.c
+  src/edm.h
   src/driver.c
 )

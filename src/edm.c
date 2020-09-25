@@ -14,7 +14,7 @@
 #define NOT_IMPLEMENTED 908
 #define MALLOC_ERROR 909
 
-#include "smap_block_mdap.h"
+#include "edm.h"
 #include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <omp.h>
