@@ -44,6 +44,180 @@ ST_retcode print_error(ST_retcode rc)
 }
 
 /*
+ * Count the number of rows that aren't being filtered out
+ * by Stata's 'if' or 'in' expressions.
+ */
+static int num_if_in_rows()
+{
+  int num = 0;
+  for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
+    if (SF_ifobs(i)) {
+      num += 1;
+    }
+  }
+  return num;
+}
+
+/*
+ * Read in columns from Stata (i.e. what Stata calls variables).
+ *
+ * Starting from column number 'j0', read in 'numCols' of columns.
+ * The result is stored in the 'out' variable, and the column sum in 'outSum'.
+ *
+ * If 'filter' is not NULL, we consider each row 'i' only if 'filter[i]'
+ * evaluates to true. To allocate properly the correct amount, pass in
+ * the 'numFiltered' argument which is the total number of rows which are
+ * true in the filter.
+ */
+static ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j0, int numCols, double** out,
+                                         double* outSum)
+{
+  // Allocate space for the matrix of data from Stata
+  int numRows = (filter == NULL) ? num_if_in_rows() : numFiltered;
+  double* M = (double*)malloc(sizeof(double) * numRows * numCols);
+  if (M == NULL) {
+    return print_error(MALLOC_ERROR);
+  }
+
+  int ind = 0; // Flattened index of M matrix
+  ST_retcode rc = 0;
+  ST_double value = 0;
+  ST_double sum = 0;
+
+  int r = 0; // Count each row that isn't filtered by Stata 'if'
+  for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
+    if (SF_ifobs(i)) {                   // Skip rows according to Stata's 'if'
+      if (filter == NULL || filter[r]) { // Skip rows given our own filter
+        for (ST_int j = j0; j < j0 + numCols; j++) {
+          if (rc = SF_vdata(j, i, &value)) {
+            free(M);
+            return rc;
+          }
+
+          // Set missing values to MISSING
+          if (!SF_is_missing(value)) {
+            M[ind] = value;
+            sum += value;
+          } else {
+            M[ind] = MISSING;
+          }
+          ind += 1;
+        }
+      }
+      r += 1;
+    }
+  }
+
+  *out = M;
+  if (outSum != NULL) {
+    *outSum = sum;
+  }
+
+  return SUCCESS;
+}
+
+/*
+ * Write data to columns in Stata (i.e. what Stata calls variables).
+ *
+ * Starting from column number 'j0', write 'numCols' of columns.
+ * The data being written is in the 'toSave' parameter, which is a
+ * flattened row-major array.
+ *
+ * If 'filter' is not NULL, we consider each row 'i' only if 'filter[i]'
+ * evaluates to true.
+ */
+static ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j0, int numCols, const double* toSave)
+{
+  int ind = 0; // Index of y vector
+  ST_retcode rc = 0;
+  ST_double value = 0;
+
+  int r = 0; // Count each row that isn't filtered by Stata 'if'
+  for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
+    if (SF_ifobs(i)) {                   // Skip rows according to Stata's 'if'
+      if (filter == NULL || filter[r]) { // Skip rows given our own filter
+        for (ST_int j = j0; j < j0 + numCols; j++) {
+          // Convert MISSING back to Stata's missing value
+          value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
+          if (rc = SF_vstore(j, i, value)) {
+            return rc;
+          }
+          ind += 1;
+        }
+      }
+      r += 1;
+    }
+  }
+
+  return SUCCESS;
+}
+
+static ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out,
+                                        double* outSum)
+{
+  return stata_columns_filtered(filter, numFiltered, j, 1, out, outSum);
+}
+
+static ST_retcode stata_column(ST_int j, double** out, double* outSum)
+{
+  return stata_columns_filtered(NULL, -1, j, 1, out, outSum);
+}
+
+static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j, const double* toSave)
+{
+  return write_stata_columns_filtered(filter, j, 1, toSave);
+}
+
+ST_retcode train_manifold(const ST_double* train_use, int count_train_set, int mani, double** out)
+{
+  return stata_columns_filtered(train_use, count_train_set, 1, mani, out, NULL);
+}
+
+ST_retcode train_y(const ST_double* train_use, int count_train_set, int mani, double** out)
+{
+  return stata_column_filtered(train_use, count_train_set, mani + 1, out, NULL);
+}
+
+ST_retcode predict_manifold(const ST_double* predict_use, int count_predict_set, int mani, double** out)
+{
+  return stata_columns_filtered(predict_use, count_predict_set, 1, mani, out, NULL);
+}
+
+ST_retcode train_set(int mani, ST_double** out, double* count_train_set) // a.k.a. co_train_set
+{
+  return stata_column(mani + 3, out, count_train_set);
+}
+
+ST_retcode predict_set(int mani, ST_double** out, double* count_predict_set) // a.k.a. co_predict_set
+{
+  return stata_column(mani + 4, out, count_predict_set);
+}
+
+ST_retcode skip_set(const ST_double* predict_use, int count_predict_set, int mani, ST_double** out) // a.k.a. overlap
+{
+  return stata_column_filtered(predict_use, count_predict_set, mani + 5, out, NULL);
+}
+
+// a.k.a. co_mapping
+ST_retcode predict_manifold_pmani(const ST_double* predict_use, int count_predict_set, int mani, int pmani,
+                                  double** out)
+{
+  return stata_columns_filtered(predict_use, count_predict_set, mani + 6, pmani, out, NULL);
+}
+
+ST_retcode write_ystar(const ST_double* predict_use, int mani, const double* ystar)
+{
+  return write_stata_column_filtered(predict_use, mani + 2, ystar);
+}
+
+ST_retcode write_smap_coefficients(const ST_double* predict_use, int mani, ST_double pmani_flag, int pmani, int varssv,
+                                   const double* Bi_map)
+{
+  ST_int j0 = mani + 5 + 1 + (int)pmani_flag * pmani;
+  return write_stata_columns_filtered(predict_use, j0, varssv, Bi_map);
+}
+
+/*
 Example call to the plugin:
 
 local myvars ``manifold'' `co_mapping' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
@@ -61,14 +235,14 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 
 DLL ST_retcode stata_call(int argc, char* argv[])
 {
-  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani, smaploc;
+  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani;
   ST_int Mpcol, l, vsave_flag, save_mode, varssv;
 
-  ST_double value, theta, missingdistance, *train_use, *predict_use, *skip_obs;
+  ST_double theta, missingdistance, *train_use, *predict_use;
   gsl_matrix *M, *Mp, *Bi_map;
   ST_double *y, *S, *ystar;
-  ST_int i, j, h, force_compute, nthreads;
-  ST_int count_train_set, count_predict_set, obsi, obsj;
+  ST_int i, force_compute, nthreads;
+  ST_int count_train_set, count_predict_set;
   ST_retcode rc;
 
   char temps[500], algorithm[500];
@@ -130,40 +304,20 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display(temps);
   SF_display("\n");
 
-  /* allocation of train_use, predict_use and skip_obs variables */
-  train_use = (ST_double*)malloc(sizeof(ST_double) * nobs);
-  predict_use = (ST_double*)malloc(sizeof(ST_double) * nobs);
-  skip_obs = (ST_double*)malloc(sizeof(ST_double) * nobs);
-  if ((train_use == NULL) || (predict_use == NULL) || (skip_obs == NULL)) {
-    return print_error(MALLOC_ERROR);
+  /* allocation of train_use, predict_use and S (prev. skip_obs) variables */
+  ST_double sum;
+  if (rc = train_set(mani, &train_use, &sum)) {
+    return print_error(rc);
+  }
+  count_train_set = (int)sum;
+  if (rc = predict_set(mani, &predict_use, &sum)) {
+    return print_error(rc);
+  }
+  count_predict_set = (int)sum;
+  if (rc = skip_set(predict_use, count_predict_set, mani, &S)) {
+    return print_error(rc);
   }
 
-  count_train_set = 0;
-  count_predict_set = 0;
-  for (i = 1; i <= (last - first + 1); i++) {
-    SF_vdata(mani + 3, i, &value);
-    train_use[i - 1] = value;
-    if (value == 1.)
-      count_train_set++;
-    if (SF_is_missing(value)) {
-      /* missing value */
-      train_use[i - 1] = MISSING;
-    }
-    SF_vdata(mani + 4, i, &value);
-    predict_use[i - 1] = value;
-    if (value == 1.)
-      count_predict_set++;
-    if (SF_is_missing(value)) {
-      /* missing value */
-      predict_use[i - 1] = MISSING;
-    }
-    SF_vdata(mani + 5, i, &value);
-    skip_obs[i - 1] = value;
-    if (SF_is_missing(value)) {
-      /* missing value */
-      skip_obs[i - 1] = MISSING;
-    }
-  }
   sprintf(temps, "train set obs: %i\n", count_train_set);
   SF_display(temps);
   sprintf(temps, "predict set obs: %i\n", count_predict_set);
@@ -171,31 +325,15 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   /* allocation of matrices M and y */
-  ST_double* flat_M = malloc(sizeof(ST_double) * count_train_set * mani);
+  ST_double* flat_M;
+  if (rc = train_manifold(train_use, count_train_set, mani, &flat_M)) {
+    return print_error(rc);
+  }
   gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
   M = &(M_view.matrix);
 
-  y = (ST_double*)malloc(sizeof(ST_double) * count_train_set);
-
-  obsi = 0;
-  for (i = 0; i < nobs; i++) {
-    if (train_use[i] == 1.) {
-      for (j = 0; j < mani; j++) {
-        SF_vdata(j + 1, i + 1, &value);
-        gsl_matrix_set(M, obsi, j, value);
-        if (SF_is_missing(value)) {
-          /* missing value */
-          gsl_matrix_set(M, obsi, j, MISSING);
-        }
-      }
-      SF_vdata(j + 1, i + 1, &value);
-      y[obsi] = value;
-      if (SF_is_missing(value)) {
-        /* missing value */
-        y[obsi] = MISSING;
-      }
-      obsi++;
-    }
+  if (rc = train_y(train_use, count_train_set, mani, &y)) {
+    return print_error(rc);
   }
 
   /* allocation of matrices Mp, S, ystar */
@@ -203,6 +341,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   sprintf(temps, "p_manifold flag = %i \n", pmani_flag);
   SF_display(temps);
 
+  pmani = 0;
   if (pmani_flag == 1) {
     pmani = atoi(argv[8]); /* contains the number of columns in p_manifold */
     sprintf(temps, "number of variables in p_manifold = %i \n", pmani);
@@ -213,60 +352,20 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   }
   SF_display("\n");
 
-  double* flat_Mp = NULL;
+  ST_double* flat_Mp = NULL;
   gsl_matrix_view Mp_view;
-  S = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
-  if (S == NULL) {
-    return print_error(MALLOC_ERROR);
-  }
-
   if (pmani_flag == 1) {
-    flat_Mp = malloc(sizeof(ST_double) * count_predict_set * pmani);
+    if (rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp)) {
+      return rc;
+    }
     Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, pmani);
-    Mp = &(Mp_view.matrix);
-
-    smaploc = mani + 5 + pmani + 1;
-    obsi = 0;
-
-    for (i = 0; i < nobs; i++) {
-      if (predict_use[i] == 1.) {
-        obsj = 0;
-        for (j = mani + 5; j < mani + 5 + pmani; j++) {
-          SF_vdata(j + 1, i + 1, &value);
-          gsl_matrix_set(Mp, obsi, obsj, value);
-          if (SF_is_missing(value)) {
-            /* missing value */
-            gsl_matrix_set(Mp, obsi, obsj, MISSING);
-          }
-          obsj++;
-        }
-        S[obsi] = skip_obs[i];
-        obsi++;
-      }
-    }
-
   } else {
-    flat_Mp = malloc(sizeof(ST_double) * count_predict_set * mani);
-    Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, mani);
-    Mp = &(Mp_view.matrix);
-
-    smaploc = mani + 5 + 1;
-    obsi = 0;
-    for (i = 0; i < nobs; i++) {
-      if (predict_use[i] == 1.) {
-        for (j = 0; j < mani; j++) {
-          SF_vdata(j + 1, i + 1, &value);
-          gsl_matrix_set(Mp, obsi, j, value);
-          if (SF_is_missing(value)) {
-            /* missing value */
-            gsl_matrix_set(Mp, obsi, j, MISSING);
-          }
-        }
-        S[obsi] = skip_obs[i];
-        obsi++;
-      }
+    if (rc = predict_manifold(predict_use, count_predict_set, mani, &flat_Mp)) {
+      return rc;
     }
+    Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, mani);
   }
+  Mp = &(Mp_view.matrix);
 
   l = atoi(argv[1]); /* contains l */
   if (l <= 0) {
@@ -357,26 +456,9 @@ DLL ST_retcode stata_call(int argc, char* argv[])
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (rc == SUCCESS) {
-    j = 0;
-    for (i = 0; i < nobs; i++) {
-      if (predict_use[i] == 1) {
-        if (ystar[j] != MISSING) {
-          SF_vstore(mani + 2, i + 1, ystar[j]);
-        } else {
-          /* returning a missing value */
-          SF_vstore(mani + 2, i + 1, SV_missval);
-        }
-        if (save_mode) {
-          for (h = 0; h < varssv; h++) {
-            if (gsl_matrix_get(Bi_map, j, h) != MISSING) {
-              SF_vstore(smaploc + h, i + 1, gsl_matrix_get(Bi_map, j, h));
-            } else {
-              SF_vstore(smaploc + h, i + 1, SV_missval);
-            }
-          }
-        }
-        j++;
-      }
+    write_ystar(predict_use, mani, ystar);
+    if (save_mode) {
+      write_smap_coefficients(predict_use, mani, pmani_flag, pmani, varssv, flat_Bi_map);
     }
   } else {
     print_error(rc);
