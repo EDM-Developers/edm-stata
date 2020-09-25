@@ -18,10 +18,11 @@
 
 #include "stplugin.h"
 #include <gsl/gsl_linalg.h>
+#include <stdbool.h>
 
 DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, gsl_matrix* M,
                             gsl_matrix* Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S, char* algorithm,
-                            ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
+                            bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
                             ST_double* ystar, gsl_matrix* Bi_map);
 
 #endif

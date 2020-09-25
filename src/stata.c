@@ -210,7 +210,7 @@ ST_retcode write_ystar(const ST_double* predict_use, int mani, const double* yst
   return write_stata_column_filtered(predict_use, mani + 2, ystar);
 }
 
-ST_retcode write_smap_coefficients(const ST_double* predict_use, int mani, ST_double pmani_flag, int pmani, int varssv,
+ST_retcode write_smap_coefficients(const ST_double* predict_use, int mani, bool pmani_flag, int pmani, int varssv,
                                    const double* Bi_map)
 {
   ST_int j0 = mani + 5 + 1 + (int)pmani_flag * pmani;
@@ -235,17 +235,15 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 
 DLL ST_retcode stata_call(int argc, char* argv[])
 {
-  ST_int nvars, nobs, first, last, mani, pmani_flag, pmani;
-  ST_int Mpcol, l, vsave_flag, save_mode, varssv;
-
-  ST_double theta, missingdistance, *train_use, *predict_use;
-  gsl_matrix *M, *Mp, *Bi_map;
-  ST_double *y, *S, *ystar;
-  ST_int i, force_compute, nthreads;
-  ST_int count_train_set, count_predict_set;
+  bool force_compute, pmani_flag, save_mode;
+  char temps[500], *algorithm;
   ST_retcode rc;
-
-  char temps[500], algorithm[500];
+  ST_int mani, pmani, l, varssv;
+  ST_int i, nthreads;
+  ST_int count_train_set, count_predict_set, Mpcol;
+  ST_double theta, missingdistance;
+  ST_double *train_use, *predict_use, *y, *S, *ystar;
+  gsl_matrix *M, *Mp, *Bi_map;
 
   /* header of the plugin */
   SF_display("\n");
@@ -254,13 +252,9 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   /* overview of variables and arguments passed and observations in sample */
-  nvars = SF_nvars();
-  nobs = SF_nobs();
-  first = SF_in1();
-  last = SF_in2();
-  sprintf(temps, "number of vars & obs = %i, %i\n", nvars, nobs);
+  sprintf(temps, "number of vars & obs = %i, %i\n", SF_nvars(), SF_nobs());
   SF_display(temps);
-  sprintf(temps, "first and last obs in sample = %i, %i\n", first, last);
+  sprintf(temps, "first and last obs in sample = %i, %i\n", SF_in1(), SF_in2());
   SF_display(temps);
   SF_display("\n");
 
@@ -278,16 +272,13 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   /* allocation of string variable algorithm based on third argument */
-  sprintf(algorithm, "%s", argv[2]);
+  algorithm = argv[2];
   sprintf(temps, "algorithm = %s\n", algorithm);
   SF_display(temps);
   SF_display("\n");
 
   /* allocation of variable force_compute based on fourth argument */
-  if (strcmp(argv[3], "force") == 0)
-    force_compute = 1;
-  else
-    force_compute = 0;
+  force_compute = (strcmp(argv[3], "force") == 0);
   sprintf(temps, "force compute = %i\n", force_compute);
   SF_display(temps);
   SF_display("\n");
@@ -325,7 +316,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display("\n");
 
   /* allocation of matrices M and y */
-  ST_double* flat_M;
+  ST_double* flat_M = NULL;
   if (rc = train_manifold(train_use, count_train_set, mani, &flat_M)) {
     return print_error(rc);
   }
@@ -342,7 +333,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display(temps);
 
   pmani = 0;
-  if (pmani_flag == 1) {
+  if (pmani_flag) {
     pmani = atoi(argv[8]); /* contains the number of columns in p_manifold */
     sprintf(temps, "number of variables in p_manifold = %i \n", pmani);
     SF_display(temps);
@@ -354,7 +345,7 @@ DLL ST_retcode stata_call(int argc, char* argv[])
 
   ST_double* flat_Mp = NULL;
   gsl_matrix_view Mp_view;
-  if (pmani_flag == 1) {
+  if (pmani_flag) {
     if (rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp)) {
       return rc;
     }
@@ -375,14 +366,13 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   SF_display(temps);
   SF_display("\n");
 
-  vsave_flag = atoi(argv[7]); /* contains the flag for vars_save */
+  save_mode = atoi(argv[7]); /* contains the flag for vars_save */
 
   double* flat_Bi_map = NULL;
   gsl_matrix_view Bi_map_view;
   Bi_map = NULL;
 
-  if (vsave_flag == 1) { /* flag savesmap is ON */
-    save_mode = 1;
+  if (save_mode) {          /* flag savesmap is ON */
     varssv = atoi(argv[8]); /* contains the number of columns
                                in smap coefficents */
     flat_Bi_map = malloc(sizeof(ST_double) * count_predict_set * varssv);
@@ -396,7 +386,6 @@ DLL ST_retcode stata_call(int argc, char* argv[])
     SF_display(temps);
 
   } else { /* flag savesmap is OFF */
-    save_mode = 0;
     Bi_map = NULL;
     varssv = 0;
   }
@@ -439,9 +428,9 @@ DLL ST_retcode stata_call(int argc, char* argv[])
     H5LTmake_dataset_double(fid, "S", 1, (hsize_t[]){ count_predict_set }, S);
 
     H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
-    H5LTset_attribute_int(fid, "/", "save_mode", &save_mode, 1);
+    H5LTset_attribute_int(fid, "/", "save_mode", (int*)&save_mode, 1);
+    H5LTset_attribute_int(fid, "/", "force_compute", (int*)&force_compute, 1);
     H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
-    H5LTset_attribute_int(fid, "/", "force_compute", &force_compute, 1);
     H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
     H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[]){ count_predict_set * Mpcol }, flat_Mp);

@@ -121,15 +121,14 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
 
 static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M, const gsl_vector* b,
                                  const ST_double y[], ST_int l, ST_double theta, ST_int skip_obs, char* algorithm,
-                                 ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
+                                 bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
                                  ST_double* ystar, gsl_vector* Bi)
 {
-  ST_double *d, *a, *w;
+  bool missing;
+  ST_int i, j, numind;
   ST_int* ind;
-
   ST_double value, pre_adj_skip_obs, d_base, sumw, r;
-
-  ST_int i, j, numind, boolmiss;
+  ST_double *d, *a, *w;
 
   d = (ST_double*)malloc(sizeof(ST_double) * rowsm);
   a = (ST_double*)malloc(sizeof(ST_double) * colsm);
@@ -140,21 +139,22 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
 
   for (i = 0; i < rowsm; i++) {
     value = 0.;
-    boolmiss = 0;
+    missing = false;
     for (j = 0; j < colsm; j++) {
       if ((gsl_matrix_get(M, i, j) == MISSING) || (gsl_vector_get(b, j) == MISSING)) {
         if (missingdistance != 0) {
           a[j] = missingdistance;
           value = value + a[j] * a[j];
         } else {
-          boolmiss = 1;
+          missing = true;
+          break;
         }
       } else {
         a[j] = gsl_matrix_get(M, i, j) - gsl_vector_get(b, j);
         value = value + a[j] * a[j];
       }
     }
-    if (boolmiss == 1) {
+    if (missing) {
       d[i] = MISSING;
     } else {
       d[i] = value;
@@ -191,7 +191,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
   d_base = d[ind[skip_obs]];
 
   if (numind < l + skip_obs) {
-    if (force_compute == 1) {
+    if (force_compute) {
       l = numind - skip_obs;
       if (l <= 0) {
         return INSUFFICIENT_UNIQUE;
@@ -229,10 +229,10 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
     return SUCCESS;
 
   } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
-
+    bool anyMissing;
     gsl_matrix* X_ls;
     ST_double mean_w, *y_ls, *w_ls;
-    ST_int rowc, bocont;
+    ST_int rowc;
     X_ls = gsl_matrix_alloc(l, colsm);
     y_ls = (ST_double*)malloc(sizeof(ST_double) * l);
     w_ls = (ST_double*)malloc(sizeof(ST_double) * l);
@@ -257,13 +257,14 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       if (y[ind[j]] == MISSING) {
         continue;
       }
-      bocont = 0;
+      anyMissing = false;
       for (i = 0; i < colsm; i++) {
         if (gsl_matrix_get(M, ind[j], i) == MISSING) {
-          bocont = 1;
+          anyMissing = true;
+          break;
         }
       }
-      if (bocont == 1) {
+      if (anyMissing) {
         continue;
       }
       rowc++;
@@ -396,7 +397,7 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
 /* OpenMP routines */
 DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, gsl_matrix* M,
                             gsl_matrix* Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S, char* algorithm,
-                            ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
+                            bool save_mode, ST_int varssv, bool force_compute, ST_double missingdistance,
                             ST_double* ystar, gsl_matrix* Bi_map)
 {
 
@@ -417,7 +418,7 @@ DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST
     gsl_vector_const_view Mpi_view = gsl_matrix_const_row(Mp, i);
     const gsl_vector* Mpi = &Mpi_view.vector;
 
-    rc[i] = mf_smap_single(count_train_set, mani, M, Mpi, y, l, theta, (int) S[i], algorithm, save_mode, varssv,
+    rc[i] = mf_smap_single(count_train_set, mani, M, Mpi, y, l, theta, (int)S[i], algorithm, save_mode, varssv,
                            force_compute, missingdistance, &(ystar[i]), Bi);
   }
 
