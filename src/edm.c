@@ -311,37 +311,48 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       /* llr algorithm is not needed at this stage */
       return NOT_IMPLEMENTED;
     } else {
-      gsl_matrix* V = gsl_matrix_alloc(colsm + 1, colsm + 1);
-      gsl_vector* Esse = gsl_vector_alloc(colsm + 1);
       gsl_vector* ics = gsl_vector_alloc(colsm + 1);
-      if ((V == NULL) || (Esse == NULL) || (ics == NULL)) {
-        return MALLOC_ERROR;
-      }
 
       /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
-      if (rowc + 1 < colsm + 1) {
-        /* GSL's SVD crashes for one kind of rectangular matrices */
-        return NOT_IMPLEMENTED;
-      }
+      if (X_ls_cj->size1 >= X_ls_cj->size2) {
+        gsl_matrix* V = gsl_matrix_alloc(colsm + 1, colsm + 1);
+        gsl_vector* Esse = gsl_vector_alloc(colsm + 1);
 
-      /* TO BE ADDED: benchmark which one of the following methods work best*/
-      /*Golub-Reinsch SVD algorithm*/
-      /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
+        /* TO BE ADDED: benchmark which one of the following methods work best*/
+        /*Golub-Reinsch SVD algorithm*/
+        /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
 
-      /* one-sided Jacobi orthogonalization method */
-      gsl_linalg_SV_decomp_jacobi(X_ls_cj, V, Esse);
+        /* one-sided Jacobi orthogonalization method */
+        gsl_linalg_SV_decomp_jacobi(X_ls_cj, V, Esse);
 
-      /* setting to zero extremely small values of Esse to avoid
-         underflow errors */
-      for (j = 0; j < colsm + 1; j++) {
-        if (gsl_vector_get(Esse, j) < 1.0e-12) {
-          gsl_vector_set(Esse, j, 0.);
+        /* setting to zero extremely small values of Esse to avoid
+        underflow errors */
+        for (j = 0; j < colsm + 1; j++) {
+          if (gsl_vector_get(Esse, j) < 1.0e-12) {
+            gsl_vector_set(Esse, j, 0.);
+          }
         }
-      }
 
-      /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
-         using gsl libraries */
-      gsl_linalg_SV_solve(X_ls_cj, V, Esse, y_ls_cj, ics);
+        /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
+               using gsl libraries */
+        gsl_linalg_SV_solve(X_ls_cj, V, Esse, y_ls_cj, ics);
+
+        gsl_matrix_free(V);
+        gsl_vector_free(Esse);
+      } else {
+        // X_ls_cj is underdetermined (less rows than columns) so find the
+        // least-squares solution using an LQ decomposition.
+        gsl_vector* tau = gsl_vector_alloc(X_ls_cj->size1);
+
+        // First, find the LQ decomposition of X_ls_cj in-place.
+        gsl_linalg_LQ_decomp(X_ls_cj, tau);
+
+        gsl_vector* residuals = gsl_vector_alloc(y_ls_cj->size);
+        gsl_linalg_LQ_lssolve(X_ls_cj, tau, y_ls_cj, ics, residuals);
+
+        gsl_vector_free(tau);
+        gsl_vector_free(residuals);
+      }
 
       /* saving ics coefficients if savesmap option enabled */
       if (save_mode) {
@@ -371,8 +382,6 @@ static ST_retcode mf_smap_single(ST_int rowsm, ST_int colsm, const gsl_matrix* M
       gsl_matrix_free(X_ls);
       gsl_matrix_free(X_ls_cj);
       gsl_vector_free(y_ls_cj);
-      gsl_matrix_free(V);
-      gsl_vector_free(Esse);
       gsl_vector_free(ics);
 
       /* save the value of ystar[j] */
