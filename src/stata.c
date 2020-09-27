@@ -234,66 +234,93 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 `vsave_flag'
 */
 
-DLL ST_retcode stata_call(int argc, char* argv[])
+void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
+                      ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
+                      bool pmani_flag, ST_int pmani, ST_int l, bool save_mode, ST_int varssv, ST_int nthreads)
 {
-  bool force_compute, pmani_flag, save_mode;
-  char temps[500], *algorithm;
-  ST_retcode rc;
-  ST_int mani, pmani, Mpcol, l, varssv;
-  ST_int i, nthreads;
-  ST_int count_train_set, count_predict_set;
-  ST_double theta, missingdistance;
-  ST_double *train_use, *predict_use, *y, *S, *ystar;
+  char temps[500];
 
   /* header of the plugin */
-  SF_display("\n");
-  SF_display("====================\n");
-  SF_display("Start of the plugin\n");
-  SF_display("\n");
+  SF_display("\n====================\n");
+  SF_display("Start of the plugin\n\n");
 
   /* overview of variables and arguments passed and observations in sample */
   sprintf(temps, "number of vars & obs = %i, %i\n", SF_nvars(), SF_nobs());
   SF_display(temps);
-  sprintf(temps, "first and last obs in sample = %i, %i\n", SF_in1(), SF_in2());
+  sprintf(temps, "first and last obs in sample = %i, %i\n\n", SF_in1(), SF_in2());
   SF_display(temps);
-  SF_display("\n");
 
-  for (i = 0; i < argc; i++) {
-    sprintf(temps, "arg %i: ", i);
+  for (int i = 0; i < argc; i++) {
+    sprintf(temps, "arg %i: %s\n", i, argv[i]);
     SF_display(temps);
-    SF_display(argv[i]);
-    SF_display("\n");
   }
   SF_display("\n");
 
-  theta = atof(argv[0]); /* contains value of theta = first argument */
-  sprintf(temps, "theta = %6.4f\n", theta);
+  sprintf(temps, "theta = %6.4f\n\n", theta);
   SF_display(temps);
+  sprintf(temps, "algorithm = %s\n\n", algorithm);
+  SF_display(temps);
+  sprintf(temps, "force compute = %i\n\n", force_compute);
+  SF_display(temps);
+  sprintf(temps, "missing distance = %f\n\n", missingdistance);
+  SF_display(temps);
+  sprintf(temps, "number of variables in manifold = %i\n\n", mani);
+  SF_display(temps);
+  sprintf(temps, "train set obs: %i\n", count_train_set);
+  SF_display(temps);
+  sprintf(temps, "predict set obs: %i\n\n", count_predict_set);
+  SF_display(temps);
+  sprintf(temps, "p_manifold flag = %i\n", pmani_flag);
+  SF_display(temps);
+
+  if (pmani_flag) {
+    sprintf(temps, "number of variables in p_manifold = %i\n", pmani);
+    SF_display(temps);
+  }
   SF_display("\n");
+
+  sprintf(temps, "l = %i\n\n", l);
+  SF_display(temps);
+
+  if (save_mode) {
+    sprintf(temps, "columns in smap coefficents = %i\n", varssv);
+    SF_display(temps);
+  }
+
+  sprintf(temps, "save_mode = %i\n\n", save_mode);
+  SF_display(temps);
+
+  sprintf(temps, "Requested %s OpenMP threads\n", argv[9]);
+  SF_display(temps);
+  sprintf(temps, "Using %i OpenMP threads\n\n", nthreads);
+  SF_display(temps);
+}
+
+STDLL stata_call(int argc, char* argv[])
+{
+  bool force_compute, pmani_flag, save_mode;
+  char* algorithm;
+  ST_retcode rc;
+  ST_int mani, pmani, Mpcol, l, varssv, nthreads;
+  ST_int count_train_set, count_predict_set;
+  ST_double theta, missingdistance;
+  ST_double *train_use, *predict_use, *y, *S, *ystar;
+
+  ST_int verbosity = atoi(argv[10]);
+
+  theta = atof(argv[0]); /* contains value of theta = first argument */
 
   /* allocation of string variable algorithm based on third argument */
   algorithm = argv[2];
-  sprintf(temps, "algorithm = %s\n", algorithm);
-  SF_display(temps);
-  SF_display("\n");
 
   /* allocation of variable force_compute based on fourth argument */
   force_compute = (strcmp(argv[3], "force") == 0);
-  sprintf(temps, "force compute = %i\n", force_compute);
-  SF_display(temps);
-  SF_display("\n");
 
   /* allocation of variable missingdistance based on fifth argument */
   missingdistance = atof(argv[4]);
-  sprintf(temps, "missing distance = %f\n", missingdistance);
-  SF_display(temps);
-  SF_display("\n");
 
   /* allocation of number of columns in manifold */
   mani = atoi(argv[5]);
-  sprintf(temps, "number of variables in manifold = %i \n", mani);
-  SF_display(temps);
-  SF_display("\n");
 
   /* allocation of train_use, predict_use and S (prev. skip_obs) variables */
   ST_double sum;
@@ -309,12 +336,6 @@ DLL ST_retcode stata_call(int argc, char* argv[])
     return print_error(rc);
   }
 
-  sprintf(temps, "train set obs: %i\n", count_train_set);
-  SF_display(temps);
-  sprintf(temps, "predict set obs: %i\n", count_predict_set);
-  SF_display(temps);
-  SF_display("\n");
-
   /* allocation of matrices M and y */
   ST_double* flat_M = NULL;
   if (rc = train_manifold(train_use, count_train_set, mani, &flat_M)) {
@@ -326,19 +347,13 @@ DLL ST_retcode stata_call(int argc, char* argv[])
 
   /* allocation of matrices Mp, S, ystar */
   pmani_flag = atoi(argv[6]); /* contains the flag for p_manifold */
-  sprintf(temps, "p_manifold flag = %i \n", pmani_flag);
-  SF_display(temps);
-
   pmani = 0;
   if (pmani_flag) {
     pmani = atoi(argv[8]); /* contains the number of columns in p_manifold */
-    sprintf(temps, "number of variables in p_manifold = %i \n", pmani);
-    SF_display(temps);
     Mpcol = pmani;
   } else {
     Mpcol = mani;
   }
-  SF_display("\n");
 
   ST_double* flat_Mp = NULL;
   if (pmani_flag) {
@@ -357,9 +372,6 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   if (l <= 0) {
     l = mani + 1;
   }
-  sprintf(temps, "l = %i \n", l);
-  SF_display(temps);
-  SF_display("\n");
 
   save_mode = atoi(argv[7]); /* contains the flag for vars_save */
 
@@ -372,17 +384,9 @@ DLL ST_retcode stata_call(int argc, char* argv[])
     if (flat_Bi_map == NULL) {
       return print_error(MALLOC_ERROR);
     }
-
-    sprintf(temps, "columns in smap coefficents = %i \n", varssv);
-    SF_display(temps);
-
   } else { /* flag savesmap is OFF */
     varssv = 0;
   }
-
-  sprintf(temps, "save_mode = %i \n", save_mode);
-  SF_display(temps);
-  SF_display("\n");
 
   ystar = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
   if (ystar == NULL) {
@@ -391,19 +395,19 @@ DLL ST_retcode stata_call(int argc, char* argv[])
 
   /* setting the number of OpenMP threads */
   nthreads = atoi(argv[9]);
-  sprintf(temps, "Requested %i OpenMP threads \n", nthreads);
-  SF_display(temps);
   nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
-  sprintf(temps, "Using %i OpenMP threads \n", nthreads);
-  SF_display(temps);
-  SF_display("\n");
   omp_set_num_threads(nthreads);
+
+  if (verbosity > 0) {
+    print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
+                     count_predict_set, pmani_flag, pmani, l, save_mode, varssv, nthreads);
+  }
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
-  if (argc >= 11) {
-    hid_t fid = H5Fcreate(argv[10], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  if (argc >= 12) {
+    hid_t fid = H5Fcreate(argv[11], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
     H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);
@@ -456,10 +460,10 @@ DLL ST_retcode stata_call(int argc, char* argv[])
   free(ystar);
 
   /* footer of the plugin */
-  SF_display("\n");
-  SF_display("End of the plugin\n");
-  SF_display("====================\n");
-  SF_display("\n");
+  if (verbosity > 0) {
+    SF_display("\nEnd of the plugin\n");
+    SF_display("====================\n\n");
+  }
 
   return rc;
 }

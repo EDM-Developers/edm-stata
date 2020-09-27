@@ -156,7 +156,7 @@ program define edmPluginCheck, rclass
 	}
 end
 program define edmExplore, eclass sortpreserve
-	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)]
+	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -616,7 +616,7 @@ program define edmExplore, eclass sortpreserve
 					unab vars : ``manifold''
 					loc mani `: word count `vars''
 					loc pmani_flag=0
-					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `saveinputs'
+					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 				}
 				qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
 				qui sum `mae'
@@ -665,7 +665,7 @@ program define edmExplore, eclass sortpreserve
 				loc pmani `: word count `vars''
 				loc pmani_flag=1
 				loc vsave_flag=0
-				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `saveinputs'
+				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 			}
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
@@ -747,7 +747,7 @@ program define edmExplore, eclass sortpreserve
 	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
-	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)]
+	syntax anything [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
 	if `seed'!=0 {
 		set seed `seed'
 	}
@@ -1234,7 +1234,7 @@ program define edmXmap, eclass sortpreserve
 							unab vars : ``manifold''
 							loc mani `: word count `vars''
 							loc pmani_flag=0
-							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `saveinputs'
+							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 						}
 						tempvar mae
 						qui gen double `mae'=abs( `x_p' - `x_f' ) if `predict_set'==1
@@ -1306,7 +1306,7 @@ program define edmXmap, eclass sortpreserve
 				loc pmani `: word count `vars''
 				loc pmani_flag=1
 				loc vsave_flag=0
-				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `saveinputs'
+				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 			}
 			qui gen double `copredict'=`co_x_p'
 			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
