@@ -1,13 +1,6 @@
 /* version 2.1, 09 Sep 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
-/* Suppress Windows problems with sprintf etc. functions. */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-#endif
-
 #include "edm.h"
 #include <gsl/gsl_linalg.h>
 #include <math.h>
@@ -17,13 +10,13 @@
 /* internal functions */
 
 /* function that returns the sorted indices of an array */
-static void quicksortind(ST_double A[], ST_int I[], ST_int lo, ST_int hi)
+static void quicksortind(double A[], int I[], int lo, int hi)
 {
   while (lo < hi) {
-    ST_double pivot = A[I[lo + (hi - lo) / 2]];
-    ST_int t;
-    ST_int i = lo - 1;
-    ST_int j = hi + 1;
+    double pivot = A[I[lo + (hi - lo) / 2]];
+    int t;
+    int i = lo - 1;
+    int j = hi + 1;
     while (1) {
       while (A[I[++i]] < pivot) {};
       while (A[I[--j]] > pivot) {};
@@ -48,11 +41,11 @@ static void quicksortind(ST_double A[], ST_int I[], ST_int lo, ST_int hi)
    k minimums of v. The internal function minindex below only returns i +
    the number of k minimums and does not return w, as w is not used in the
    original edm code */
-static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
+static int minindex(int rvect, double vect[], int k, int ind[])
 {
-  ST_int i, j, contin, numind, count_ord, *subind;
+  int i, j, contin, numind, count_ord, *subind;
 
-  ST_double tempval, *temp_ind;
+  double tempval, *temp_ind;
 
   quicksortind(vect, ind, 0, rvect - 1);
 
@@ -67,18 +60,18 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
       if (count_ord > 1) {
         /* here I reorder the indexes from low to high in case of
            repeated values */
-        temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
-        subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
+        temp_ind = (double*)malloc(sizeof(double) * count_ord);
+        subind = (int*)malloc(sizeof(int) * count_ord);
         if ((temp_ind == NULL) || (subind == NULL)) {
           return MALLOC_ERROR;
         }
         for (j = 0; j < count_ord; j++) {
-          temp_ind[j] = (ST_double)ind[i - 1 - j];
+          temp_ind[j] = (double)ind[i - 1 - j];
           subind[j] = j;
         }
         quicksortind(temp_ind, subind, 0, count_ord - 1);
         for (j = 0; j < count_ord; j++) {
-          ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
+          ind[i - 1 - j] = (int)temp_ind[subind[count_ord - 1 - j]];
         }
         free(temp_ind);
         free(subind);
@@ -96,18 +89,18 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
         if (count_ord > 1) {
           /* here I reorder the indexes from low to high in case of
              repeated values */
-          temp_ind = (ST_double*)malloc(sizeof(ST_double) * count_ord);
-          subind = (ST_int*)malloc(sizeof(ST_int) * count_ord);
+          temp_ind = (double*)malloc(sizeof(double) * count_ord);
+          subind = (int*)malloc(sizeof(int) * count_ord);
           if ((temp_ind == NULL) || (subind == NULL)) {
             return MALLOC_ERROR;
           }
           for (j = 0; j < count_ord; j++) {
-            temp_ind[j] = (ST_double)ind[i - 1 - j];
+            temp_ind[j] = (double)ind[i - 1 - j];
             subind[j] = j;
           }
           quicksortind(temp_ind, subind, 0, count_ord - 1);
           for (j = 0; j < count_ord; j++) {
-            ind[i - 1 - j] = (ST_int)temp_ind[subind[count_ord - 1 - j]];
+            ind[i - 1 - j] = (int)temp_ind[subind[count_ord - 1 - j]];
           }
           free(temp_ind);
           free(subind);
@@ -120,19 +113,19 @@ static ST_int minindex(ST_int rvect, ST_double vect[], ST_int k, ST_int ind[])
   return numind;
 }
 
-static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const ST_double y[], ST_int l,
-                                 ST_double theta, ST_int skip_obs, char* algorithm, bool save_mode, ST_int varssv,
-                                 bool force_compute, ST_double missingdistance, ST_double* ystar, gsl_vector* Bi)
+static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[], int l, double theta,
+                              int skip_obs, char* algorithm, bool save_mode, int varssv, bool force_compute,
+                              double missingdistance, double* ystar, gsl_vector* Bi)
 {
   bool missing;
-  ST_int i, j, numind;
-  ST_int* ind;
-  ST_double value, pre_adj_skip_obs, d_base, sumw, r;
-  ST_double *d, *a, *w;
+  int i, j, numind;
+  int* ind;
+  double value, pre_adj_skip_obs, d_base, sumw, r;
+  double *d, *a, *w;
 
-  d = (ST_double*)malloc(sizeof(ST_double) * M->size1);
-  a = (ST_double*)malloc(sizeof(ST_double) * M->size2);
-  ind = (ST_int*)malloc(sizeof(ST_int) * M->size1);
+  d = (double*)malloc(sizeof(double) * M->size1);
+  a = (double*)malloc(sizeof(double) * M->size2);
+  ind = (int*)malloc(sizeof(int) * M->size1);
   if ((d == NULL) || (a == NULL) || (ind == NULL)) {
     return MALLOC_ERROR;
   }
@@ -162,7 +155,7 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
     ind[i] = i;
   }
 
-  numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
+  numind = minindex((int)M->size1, d, l + skip_obs, ind);
 
   pre_adj_skip_obs = skip_obs;
 
@@ -175,7 +168,7 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
   }
 
   if (pre_adj_skip_obs != skip_obs) {
-    numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
+    numind = minindex((int)M->size1, d, l + skip_obs, ind);
   }
 
   if (d[ind[skip_obs]] == 0.) {
@@ -185,7 +178,7 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
       }
     }
     skip_obs = 0;
-    numind = minindex((ST_int)M->size1, d, l + skip_obs, ind);
+    numind = minindex((int)M->size1, d, l + skip_obs, ind);
   }
 
   d_base = d[ind[skip_obs]];
@@ -201,7 +194,7 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
     }
   }
 
-  w = (ST_double*)malloc(sizeof(ST_double) * (l + skip_obs));
+  w = (double*)malloc(sizeof(double) * (l + skip_obs));
   if (w == NULL) {
     return MALLOC_ERROR;
   }
@@ -231,11 +224,11 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
   } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
     bool anyMissing;
     gsl_matrix* X_ls;
-    ST_double mean_w, *y_ls, *w_ls;
-    ST_int rowc;
+    double mean_w, *y_ls, *w_ls;
+    int rowc;
     X_ls = gsl_matrix_alloc(l, M->size2);
-    y_ls = (ST_double*)malloc(sizeof(ST_double) * l);
-    w_ls = (ST_double*)malloc(sizeof(ST_double) * l);
+    y_ls = (double*)malloc(sizeof(double) * l);
+    w_ls = (double*)malloc(sizeof(double) * l);
     if ((y_ls == NULL) || (w_ls == NULL)) {
       return MALLOC_ERROR;
     }
@@ -247,7 +240,7 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
-    mean_w = mean_w / (ST_double)l;
+    mean_w = mean_w / (double)l;
     for (j = skip_obs; j < l + skip_obs; j++) {
       w[j] = exp(-theta * (w[j] / mean_w));
     }
@@ -396,10 +389,9 @@ static ST_retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const
 
 /* OpenMP routines */
 
-DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, ST_int Mpcol,
-                            ST_double* flat_M, ST_double* flat_Mp, ST_double* y, ST_int l, ST_double theta,
-                            ST_double* S, char* algorithm, bool save_mode, ST_int varssv, bool force_compute,
-                            ST_double missingdistance, ST_double* ystar, ST_double* flat_Bi_map)
+DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M,
+                         double* flat_Mp, double* y, int l, double theta, double* S, char* algorithm, bool save_mode,
+                         int varssv, bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map)
 {
   /* Create GSL matrixes which are views of the supplied flattened matrices */
   gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
@@ -412,8 +404,8 @@ DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST
   gsl_matrix* Bi_map = &Bi_map_view.matrix;
 
   /* OpenMP loop with call to mf_smap_single function */
-  ST_retcode* rc = malloc(Mp->size1 * sizeof(ST_retcode));
-  ST_int i;
+  retcode* rc = malloc(Mp->size1 * sizeof(retcode));
+  int i;
 
 #pragma omp parallel for
   for (i = 0; i < Mp->size1; i++) {
@@ -433,7 +425,7 @@ DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST
   }
 
   /* Check if any mf_smap_single call failed, and if so find the most serious error */
-  ST_retcode maxError = 0;
+  retcode maxError = 0;
   for (i = 0; i < Mp->size1; i++) {
     if (rc[i] > maxError) {
       maxError = rc[i];

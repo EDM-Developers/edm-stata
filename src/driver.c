@@ -20,20 +20,20 @@
 typedef struct InputVars
 {
   char algorithm[500];
-  ST_double* y;
-  ST_double* S;
-  ST_double* flat_Mp;
-  ST_double* flat_M;
-  ST_double theta;
-  ST_double missingdistance;
-  ST_int count_train_set;
-  ST_int count_predict_set;
-  ST_int Mpcol;
-  ST_int mani;
-  ST_int l;
-  ST_int save_mode;
-  ST_int varssv;
-  ST_int force_compute;
+  double* y;
+  double* S;
+  double* flat_Mp;
+  double* flat_M;
+  double theta;
+  double missingdistance;
+  int count_train_set;
+  int count_predict_set;
+  int Mpcol;
+  int mani;
+  int l;
+  int save_mode;
+  int varssv;
+  int force_compute;
 } InputVars;
 
 InputVars new_InputVars()
@@ -87,13 +87,13 @@ static void read_dumpfile(const char* fname, InputVars* vars)
   H5LTget_attribute_int(fid, "/", "Mpcol", &(vars->Mpcol));
   H5LTget_attribute_int(fid, "/", "mani", &(vars->mani));
 
-  vars->y = malloc(vars->count_train_set * sizeof(ST_double));
+  vars->y = malloc(vars->count_train_set * sizeof(double));
   H5LTread_dataset_double(fid, "y", vars->y);
 
   H5LTget_attribute_int(fid, "/", "l", &(vars->l));
   H5LTget_attribute_double(fid, "/", "theta", &(vars->theta));
 
-  vars->S = malloc(vars->count_predict_set * sizeof(ST_double));
+  vars->S = malloc(vars->count_predict_set * sizeof(double));
   H5LTread_dataset_double(fid, "S", vars->S);
 
   H5LTget_attribute_string(fid, "/", "algorithm", vars->algorithm);
@@ -103,15 +103,15 @@ static void read_dumpfile(const char* fname, InputVars* vars)
   H5LTget_attribute_int(fid, "/", "force_compute", &(vars->force_compute));
   H5LTget_attribute_double(fid, "/", "missingdistance", &(vars->missingdistance));
 
-  vars->flat_Mp = malloc(vars->count_predict_set * vars->Mpcol * sizeof(ST_double));
+  vars->flat_Mp = malloc(vars->count_predict_set * vars->Mpcol * sizeof(double));
   H5LTread_dataset_double(fid, "flat_Mp", vars->flat_Mp);
-  vars->flat_M = malloc(vars->count_train_set * vars->mani * sizeof(ST_double));
+  vars->flat_M = malloc(vars->count_train_set * vars->mani * sizeof(double));
   H5LTread_dataset_double(fid, "flat_M", vars->flat_M);
 
   H5Fclose(fid);
 }
 
-static void write_results(const char* fname_out, ST_double* ystar, ST_double* flat_Bi_map, const InputVars* vars)
+static void write_results(const char* fname_out, double* ystar, double* flat_Bi_map, const InputVars* vars)
 {
   hid_t fid = H5Fcreate(fname_out, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -150,8 +150,8 @@ int main(int argc, char* argv[])
   read_dumpfile(argv[1], &vars);
 
   char* fname_out = generate_output_fname(argv[1]); // WATCH OUT: fname_out is malloc'd in this function!
-  ST_double* ystar = malloc(sizeof(ST_double) * vars.count_predict_set);
-  ST_double* flat_Bi_map = malloc(sizeof(ST_double) * vars.count_predict_set * vars.varssv);
+  double* ystar = malloc(sizeof(double) * vars.count_predict_set);
+  double* flat_Bi_map = malloc(sizeof(double) * vars.count_predict_set * vars.varssv);
 
   mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.flat_M, vars.flat_Mp, vars.y,
                vars.l, vars.theta, vars.S, (char*)(vars.algorithm), vars.save_mode, vars.varssv, vars.force_compute,

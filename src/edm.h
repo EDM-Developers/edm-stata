@@ -1,5 +1,5 @@
-#ifndef SMAP_BLOCK_MDAP_H
-#define SMAP_BLOCK_MDAP_H
+#ifndef EDM_H
+#define EDM_H
 
 #ifdef _MSC_VER
 #define DLL extern __declspec(dllexport)
@@ -16,12 +16,12 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
-#include "stplugin.h"
 #include <stdbool.h>
 
-DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, ST_int Mpcol,
-                            ST_double* flat_M, ST_double* flat_Mp, ST_double* y, ST_int l, ST_double theta,
-                            ST_double* S, char* algorithm, bool save_mode, ST_int varssv, bool force_compute,
-                            ST_double missingdistance, ST_double* ystar, ST_double* flat_Bi_map);
+typedef int retcode;
+
+DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M,
+                         double* flat_Mp, double* y, int l, double theta, double* S, char* algorithm, bool save_mode,
+                         int varssv, bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map);
 
 #endif
