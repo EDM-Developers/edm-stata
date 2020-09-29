@@ -439,13 +439,16 @@ STDLL stata_call(int argc, char* argv[])
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (rc == SUCCESS) {
-    write_ystar(predict_use, mani, ystar);
-    if (save_mode) {
-      write_smap_coefficients(predict_use, mani, pmani_flag, pmani, varssv, flat_Bi_map);
+    rc = write_ystar(predict_use, mani, ystar);
+
+    if (rc == SUCCESS && save_mode) {
+      rc = write_smap_coefficients(predict_use, mani, pmani_flag, pmani, varssv, flat_Bi_map);
     }
-  } else {
-    print_error(rc);
   }
+
+  // If mf_smap_loop gave an error, or saving the output to Stata gave an error,
+  // then print it out now before the 'end of the plugin' footer.
+  print_error(rc);
 
   /* deallocation of matrices and arrays before exiting the plugin */
   free(train_use);
