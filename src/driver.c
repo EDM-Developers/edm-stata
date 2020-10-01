@@ -2,6 +2,7 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define EMPTY_INT -999
 #define EMPTY_DOUBLE -999.99
@@ -135,6 +136,41 @@ static void call_mf_smap_loop(const InputVars* vars)
   free(flat_Bi_map);
 }
 
+static void write_dumpfile(const InputVars* vars)
+{
+  time_t _time = time(NULL);
+  const struct tm ltm = *localtime(&_time);
+  char fname[32];
+  sprintf(fname, "edm_dump-%04d%02d%02d%02d%02d%02d_%04d.h5", ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday,
+          ltm.tm_hour, ltm.tm_min, ltm.tm_sec, (int)(rand() * 9999));
+
+  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+  H5LTset_attribute_int(fid, "/", "count_train_set", &(vars->count_train_set), 1);
+  H5LTset_attribute_int(fid, "/", "count_predict_set", &(vars->count_predict_set), 1);
+  H5LTset_attribute_int(fid, "/", "Mpcol", &(vars->Mpcol), 1);
+  H5LTset_attribute_int(fid, "/", "mani", &(vars->mani), 1);
+
+  H5LTmake_dataset_double(fid, "y", 1, (hsize_t[1]){ vars->count_train_set }, vars->y);
+
+  H5LTset_attribute_int(fid, "/", "l", &(vars->l), 1);
+  H5LTset_attribute_double(fid, "/", "theta", &(vars->theta), 1);
+
+  H5LTmake_dataset_double(fid, "S", 1, (hsize_t[1]){ vars->count_predict_set }, vars->S);
+
+  H5LTset_attribute_string(fid, "/", "algorithm", vars->algorithm);
+  H5LTset_attribute_int(fid, "/", "save_mode", &(vars->save_mode), 1);
+  H5LTset_attribute_int(fid, "/", "varssv", &(vars->varssv), 1);
+
+  H5LTset_attribute_int(fid, "/", "force_compute", &(vars->force_compute), 1);
+  H5LTset_attribute_double(fid, "/", "missingdistance", &(vars->missingdistance), 1);
+
+  H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[1]){ vars->count_predict_set }, vars->flat_Mp);
+  H5LTmake_dataset_double(fid, "flat_M", 1, (hsize_t[1]){ vars->count_train_set }, vars->flat_M);
+
+  H5Fclose(fid);
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -148,7 +184,7 @@ int main(int argc, char* argv[])
 
   call_mf_smap_loop(&vars);
 
-  // TODO(smutch): dump output
+  write_dumpfile(&vars);
 
   free_InputVars(&vars);
   return 0;
