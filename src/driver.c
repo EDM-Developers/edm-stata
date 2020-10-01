@@ -155,14 +155,10 @@ static char* generate_output_fname(const char* fname_in)
   if (!ext || (ext == fname_in))
     ext = strchr(fname_in, '\0') - 1;
 
-  printf("ext = %s\n", ext);
-
   const size_t fname_out_size = ext - fname_in + 8;
   char* fname_out = malloc(sizeof(char) * fname_out_size);
 
   strncpy(fname_out, fname_in, ext - fname_in);
-
-  printf("before sprintf = %s\n", fname_out);
 
   sprintf(fname_out + (ext - fname_in), "-out.h5");
 
