@@ -145,6 +145,16 @@ program define edmVersion
 	syntax , [test]
 	di "${EDM_VERSION}"
 end
+program define edmPluginCheck, rclass
+	syntax , [mata]
+	if "${EDM_MATA}"=="1"|"`mata'"=="mata" {
+		return scalar mata_mode=1
+	}
+	else {
+		cap smap_block_mdap
+		return scalar mata_mode=_rc==199
+	}
+end
 program define edmExplore, eclass sortpreserve
 	syntax anything [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)]
 	if `seed'!=0 {
@@ -191,6 +201,8 @@ program define edmExplore, eclass sortpreserve
 	loc tdelta=r(tdelta)
 	loc timevar "`=r(timevar)'"
 	loc total_t=int((r(tmax)-r(tmin))/r(tdelta)) + 1
+	edmPluginCheck, `mata'
+	loc mata_mode=r(mata_mode)
 	tempvar x y
 	tokenize "`anything'"
 	loc ori_x "`1'"
@@ -587,8 +599,6 @@ program define edmExplore, eclass sortpreserve
 					loc cmdfootnote="Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 				loc vars_save ""
-				cap smap_block_mdap
-				loc mata_mode=(_rc==199)|("`mata'"=="mata")
 				if `mata_mode'==1 {
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 				}
@@ -735,6 +745,7 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
 	}
+	ereturn local mode=cond(`mata_mode'==1, "mata","plugin")
 	edmDisplay
 end
 program define edmXmap, eclass sortpreserve
@@ -823,6 +834,8 @@ program define edmXmap, eclass sortpreserve
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 	sort `panel_id' `timevar'
+	edmPluginCheck, `mata'
+	loc mata_mode=r(mata_mode)
 	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
@@ -1206,8 +1219,6 @@ program define edmXmap, eclass sortpreserve
 								loc ++counter
 							}
 						}
-						cap smap_block_mdap
-						loc mata_mode=(_rc==199)|("`mata'"=="mata")
 						if `mata_mode'==1 {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
 						}
@@ -1286,8 +1297,6 @@ program define edmXmap, eclass sortpreserve
 			qui replace `co_train_set'=0 if `usable'==0
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
-			cap smap_block_mdap
-			loc mata_mode=(_rc==199)|("`mata'"=="mata")
 			if `mata_mode'==1 {
 				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
@@ -1376,6 +1385,7 @@ program define edmXmap, eclass sortpreserve
 	else {
 		ereturn local extraembed="`parsed_extravars'"
 	}
+	ereturn local mode=cond(`mata_mode'==1, "mata","plugin")
 	edmDisplay
 end
 program define edmDisplay, eclass
