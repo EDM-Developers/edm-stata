@@ -1,4 +1,5 @@
 # Project specific
+compile_commands.json
 vendor/stplugin.[ch]
 stata/*.plugin
 build
