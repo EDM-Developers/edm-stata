@@ -2,7 +2,7 @@
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 
 #define EMPTY_INT -999
 #define EMPTY_DOUBLE -999.99
@@ -115,7 +115,17 @@ static void read_dumpfile(const char* fname, InputVars* vars)
   H5Fclose(fid);
 }
 
-static void call_mf_smap_loop(const InputVars* vars)
+static void write_results(const char* fname_out, ST_double* ystar, ST_double* flat_Bi_map, const InputVars* vars)
+{
+  hid_t fid = H5Fcreate(fname_out, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+  H5LTmake_dataset_double(fid, "ystar", 1, (hsize_t[]){ vars->count_predict_set }, ystar);
+  H5LTmake_dataset_double(fid, "Bi_map", 2, (hsize_t[]){ vars->count_predict_set, vars->varssv }, flat_Bi_map);
+
+  H5Fclose(fid);
+}
+
+static void call_mf_smap_loop(const InputVars* vars, const char* fname_out)
 {
   gsl_matrix_view M_view = gsl_matrix_view_array(vars->flat_M, vars->count_train_set, vars->mani);
   gsl_matrix* M = &(M_view.matrix);
@@ -132,43 +142,31 @@ static void call_mf_smap_loop(const InputVars* vars)
                vars->S, (char*)(vars->algorithm), vars->save_mode, vars->varssv, vars->force_compute,
                vars->missingdistance, ystar, Bi_map);
 
+  write_results(fname_out, ystar, flat_Bi_map, vars);
+
   free(ystar);
   free(flat_Bi_map);
 }
 
-static void write_dumpfile(const InputVars* vars)
+static char* generate_output_fname(const char* fname_in)
 {
-  time_t _time = time(NULL);
-  const struct tm ltm = *localtime(&_time);
-  char fname[32];
-  sprintf(fname, "edm_dump-%04d%02d%02d%02d%02d%02d_%04d.h5", ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday,
-          ltm.tm_hour, ltm.tm_min, ltm.tm_sec, (int)(rand() * 9999));
+  char* ext = strrchr(fname_in, '.');
 
-  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  if (!ext || (ext == fname_in))
+    ext = strchr(fname_in, '\0') - 1;
 
-  H5LTset_attribute_int(fid, "/", "count_train_set", &(vars->count_train_set), 1);
-  H5LTset_attribute_int(fid, "/", "count_predict_set", &(vars->count_predict_set), 1);
-  H5LTset_attribute_int(fid, "/", "Mpcol", &(vars->Mpcol), 1);
-  H5LTset_attribute_int(fid, "/", "mani", &(vars->mani), 1);
+  printf("ext = %s\n", ext);
 
-  H5LTmake_dataset_double(fid, "y", 1, (hsize_t[1]){ vars->count_train_set }, vars->y);
+  const size_t fname_out_size = ext - fname_in + 8;
+  char* fname_out = malloc(sizeof(char) * fname_out_size);
 
-  H5LTset_attribute_int(fid, "/", "l", &(vars->l), 1);
-  H5LTset_attribute_double(fid, "/", "theta", &(vars->theta), 1);
+  strncpy(fname_out, fname_in, ext - fname_in);
 
-  H5LTmake_dataset_double(fid, "S", 1, (hsize_t[1]){ vars->count_predict_set }, vars->S);
+  printf("before sprintf = %s\n", fname_out);
 
-  H5LTset_attribute_string(fid, "/", "algorithm", vars->algorithm);
-  H5LTset_attribute_int(fid, "/", "save_mode", &(vars->save_mode), 1);
-  H5LTset_attribute_int(fid, "/", "varssv", &(vars->varssv), 1);
+  sprintf(fname_out + (ext - fname_in), "-out.h5");
 
-  H5LTset_attribute_int(fid, "/", "force_compute", &(vars->force_compute), 1);
-  H5LTset_attribute_double(fid, "/", "missingdistance", &(vars->missingdistance), 1);
-
-  H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[1]){ vars->count_predict_set }, vars->flat_Mp);
-  H5LTmake_dataset_double(fid, "flat_M", 1, (hsize_t[1]){ vars->count_train_set }, vars->flat_M);
-
-  H5Fclose(fid);
+  return fname_out;
 }
 
 int main(int argc, char* argv[])
@@ -182,10 +180,11 @@ int main(int argc, char* argv[])
   InputVars vars = new_InputVars();
   read_dumpfile(argv[1], &vars);
 
-  call_mf_smap_loop(&vars);
+  char* fname_out = generate_output_fname(argv[1]); // WATCH OUT: fname_out is malloc'd in this function!
 
-  write_dumpfile(&vars);
+  call_mf_smap_loop(&vars, fname_out);
 
+  free(fname_out);
   free_InputVars(&vars);
   return 0;
 }
