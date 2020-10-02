@@ -1,3 +1,10 @@
+/* Suppress Windows problems with sprintf etc. functions. */
+#ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+#endif
+
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
