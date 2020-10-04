@@ -396,7 +396,6 @@ STDLL stata_call(int argc, char* argv[])
   /* setting the number of OpenMP threads */
   nthreads = atoi(argv[9]);
   nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
-  omp_set_num_threads(nthreads);
 
   if (verbosity > 0) {
     print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
@@ -434,8 +433,18 @@ STDLL stata_call(int argc, char* argv[])
   }
 #endif
 
+  // Find the number of threads Stata was already using, so we can reset to this later.
+  int originalNumThreads;
+#pragma omp parallel
+  {
+    originalNumThreads = omp_get_num_threads();
+  }
+  omp_set_num_threads(nthreads);
+
   rc = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, flat_M, flat_Mp, y, l, theta, S, algorithm,
                     save_mode, varssv, force_compute, missingdistance, ystar, flat_Bi_map);
+
+  omp_set_num_threads(originalNumThreads);
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (rc == SUCCESS) {

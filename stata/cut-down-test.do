@@ -90,7 +90,7 @@ qui save `basedata', replace
 * test missing data
 set seed 12345678
 gen double u = runiform()
-// drop if u<0.1
+drop if u<0.1
 replace x = . if u<0.2
 replace t=. if mod(t,19) ==1
 
