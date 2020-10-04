@@ -116,27 +116,23 @@ static void read_dumpfile(const char* fname, InputVars* vars)
 
 static void call_mf_smap_loop(const InputVars* vars)
 {
-  ST_double** M = alloc_matrix(vars->count_train_set, vars->mani);
-  for (int i = 0; i < vars->count_train_set; ++i)
-    for (int j = 0; j < vars->mani; ++j)
-      M[i][j] = vars->flat_M[i * vars->mani + j];
+  gsl_matrix_view M_view = gsl_matrix_view_array(vars->flat_M, vars->count_train_set, vars->mani);
+  gsl_matrix* M = &(M_view.matrix);
 
-  ST_double** Mp = alloc_matrix(vars->count_predict_set, vars->Mpcol);
-  for (int i = 0; i < vars->count_predict_set; ++i)
-    for (int j = 0; j < vars->Mpcol; ++j)
-      Mp[i][j] = vars->flat_Mp[i * vars->Mpcol + j];
+  gsl_matrix_view Mp_view = gsl_matrix_view_array(vars->flat_Mp, vars->count_predict_set, vars->Mpcol);
+  gsl_matrix* Mp = &(Mp_view.matrix);
 
   ST_double* ystar = malloc(sizeof(ST_double) * vars->count_predict_set);
-  ST_double** Bi_map = alloc_matrix(vars->count_predict_set, vars->varssv);
+  ST_double* flat_Bi_map = malloc(sizeof(ST_double) * vars->count_predict_set * vars->varssv);
+  gsl_matrix_view Bi_map_view = gsl_matrix_view_array(flat_Bi_map, vars->count_predict_set, vars->varssv);
+  gsl_matrix* Bi_map = &Bi_map_view.matrix;
 
-  mf_smap_loop(vars->count_predict_set, vars->count_train_set, Bi_map, vars->mani, M, Mp, vars->y, vars->l, vars->theta,
+  mf_smap_loop(vars->count_predict_set, vars->count_train_set, vars->mani, M, Mp, vars->y, vars->l, vars->theta,
                vars->S, (char*)(vars->algorithm), vars->save_mode, vars->varssv, vars->force_compute,
-               vars->missingdistance, ystar);
+               vars->missingdistance, ystar, Bi_map);
 
-  free_matrix(Bi_map, vars->count_predict_set);
   free(ystar);
-  free_matrix(Mp, vars->count_predict_set);
-  free_matrix(M, vars->count_train_set);
+  free(flat_Bi_map);
 }
 
 int main(int argc, char* argv[])

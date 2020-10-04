@@ -7,14 +7,21 @@
 #define DLL
 #endif
 
+#define SUCCESS 0
+#define INVALID_ALGORITHM 400
+#define INSUFFICIENT_UNIQUE 503
+#define NOT_IMPLEMENTED 908
+#define MALLOC_ERROR 909
+
+/* global variable placeholder for missing values */
+#define MISSING 1.0e+100
+
 #include "stplugin.h"
+#include <gsl/gsl_linalg.h>
 
-DLL ST_double** alloc_matrix(ST_int nrow, ST_int ncol);
-DLL void free_matrix(ST_double** M, ST_int nrow);
-
-DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_double** Bi_map, ST_int mani,
-                            ST_double** M, ST_double** Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S,
-                            char* algorithm, ST_int save_mode, ST_int varssv, ST_int force_compute,
-                            ST_double missingdistance, ST_double* ystar);
+DLL ST_retcode mf_smap_loop(ST_int count_predict_set, ST_int count_train_set, ST_int mani, gsl_matrix* M,
+                            gsl_matrix* Mp, ST_double* y, ST_int l, ST_double theta, ST_double* S, char* algorithm,
+                            ST_int save_mode, ST_int varssv, ST_int force_compute, ST_double missingdistance,
+                            ST_double* ystar, gsl_matrix* Bi_map);
 
 #endif
