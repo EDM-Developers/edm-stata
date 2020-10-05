@@ -2,6 +2,7 @@
 compile_commands.json
 vendor/stplugin.[ch]
 stata/*.plugin
+stata/cut-down-test.log
 build
 .clangd
 *.h5

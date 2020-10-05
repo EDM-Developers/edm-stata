@@ -1,6 +1,10 @@
 * cut-down test file
 clear
 
+set linesize 255
+cap log close _all
+log using "cut-down-test-output.log", replace nomsg
+
 set obs 500
 set seed 12345678
 
@@ -176,3 +180,4 @@ ereturn display
 jackknife: edm explore x, e(2)
 ereturn display
 
+cap log close _all
