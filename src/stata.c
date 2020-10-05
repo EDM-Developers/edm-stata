@@ -402,15 +402,6 @@ STDLL stata_call(int argc, char* argv[])
     return print_error(MALLOC_ERROR);
   }
 
-  /* setting the number of OpenMP threads */
-  nthreads = atoi(argv[9]);
-  nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
-
-  if (verbosity > 0) {
-    print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
-                     count_predict_set, pmani_flag, pmani, l, save_mode, varssv, nthreads);
-  }
-
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
@@ -442,6 +433,10 @@ STDLL stata_call(int argc, char* argv[])
   }
 #endif
 
+  /* setting the number of OpenMP threads */
+  nthreads = atoi(argv[9]);
+  nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
+
   // Find the number of threads Stata was already using, so we can reset to this later.
   int originalNumThreads;
 #pragma omp parallel
@@ -449,6 +444,17 @@ STDLL stata_call(int argc, char* argv[])
     originalNumThreads = omp_get_num_threads();
   }
   omp_set_num_threads(nthreads);
+
+  // Ask OpenMP how many threads it's using, in case it ignored our request in the previous line.
+#pragma omp parallel
+  {
+    nthreads = omp_get_num_threads();
+  }
+
+  if (verbosity > 0) {
+    print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
+                     count_predict_set, pmani_flag, pmani, l, save_mode, varssv, nthreads);
+  }
 
   rc = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, flat_M, flat_Mp, y, l, theta, S, algorithm,
                     save_mode, varssv, force_compute, missingdistance, ystar, flat_Bi_map);
