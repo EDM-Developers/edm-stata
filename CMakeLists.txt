@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.1)
+
+if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
+endif()
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
+
 project(edm-mdap)
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # output paths
@@ -9,10 +18,17 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/stata)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # compile flags
-set(SYSTEM "APPLEMAC" CACHE STRING "Stata plugin SYSTEM option")
+if(WIN32)
+  set(SYSTEM "STWIN32" CACHE STRING "Stata plugin SYSTEM option")
+elseif(APPLE)
+  set(SYSTEM "APPLEMAC" CACHE STRING "Stata plugin SYSTEM option")
+else()
+  set(SYSTEM "OPUNIX" CACHE STRING "Stata plugin SYSTEM option")
+endif()
 set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
-set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSYSTEM=${SYSTEM}")
+
+set(DUMP_INPUT TRUE CACHE BOOL "Dump plugin input data to hdf5")
 
 if(WIN32)
   set(CMAKE_C_FLAGS_DEBUG "/MTd /W4 /permissive")
@@ -37,7 +53,7 @@ endforeach()
 # set the default build type if not set by user
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
   if (NOT CMAKE_BUILD_TYPE)
-      set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
   endif()
 endif()
 
@@ -65,10 +81,11 @@ install(TARGETS edm DESTINATION .)
 # driver
 find_package(HDF5 COMPONENTS C HL)
 if (HDF5_FOUND)
-    add_executable(smap_driver src/driver.c)
-    set_target_properties(smap_driver PROPERTIES C_STANDARD 99)
-    target_link_libraries(smap_driver PRIVATE edm)
-    target_include_directories(smap_driver PRIVATE ${CMAKE_SOURCE_DIR}/vendor)
+  add_executable(smap_driver src/driver.c)
+  set_target_properties(smap_driver PROPERTIES C_STANDARD 99)
+  target_link_libraries(smap_driver PRIVATE edm)
+  target_include_directories(smap_driver PRIVATE ${CMAKE_SOURCE_DIR}/vendor)
+  install(TARGETS smap_driver DESTINATION .)
 endif()
 
 # ↓↓↓ third-party code ↓↓↓
@@ -87,17 +104,17 @@ target_link_libraries(edm PRIVATE OpenMP::OpenMP_C)
 
 # HDF5
 if (HDF5_FOUND)
-    target_include_directories(edm PUBLIC ${HDF5_INCLUDE_DIRS})
-    target_link_libraries(edm PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
-    add_definitions(${HDF5_DEFINITIONS})
+  target_include_directories(edm PUBLIC ${HDF5_INCLUDE_DIRS})
+  target_link_libraries(edm PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+  add_definitions(${HDF5_DEFINITIONS})
 else()
-    set(DUMP_INPUT FALSE)
-    message(WARNING "HDF5 library not found. Unable to dump input values.")
+  set(DUMP_INPUT FALSE)
+  message(WARNING "HDF5 library not found. Unable to dump input values.")
 endif()
 
 # we can only assess this after we have checked if HDF5 is available
 if(DUMP_INPUT)
-    add_definitions(-DDUMP_INPUT)
+  add_definitions(-DDUMP_INPUT)
 endif()
 
 # ↓↓↓ formatting with clang-format ↓↓↓
