@@ -90,7 +90,8 @@ static ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltere
     if (SF_ifobs(i)) {                   // Skip rows according to Stata's 'if'
       if (filter == NULL || filter[r]) { // Skip rows given our own filter
         for (ST_int j = j0; j < j0 + numCols; j++) {
-          if (rc = SF_vdata(j, i, &value)) {
+          rc = SF_vdata(j, i, &value);
+          if (rc) {
             free(M);
             return rc;
           }
@@ -140,7 +141,8 @@ static ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j
         for (ST_int j = j0; j < j0 + numCols; j++) {
           // Convert MISSING back to Stata's missing value
           value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
-          if (rc = SF_vstore(j, i, value)) {
+          rc = SF_vstore(j, i, value);
+          if (rc) {
             return rc;
           }
           ind += 1;
@@ -324,24 +326,29 @@ STDLL stata_call(int argc, char* argv[])
 
   /* allocation of train_use, predict_use and S (prev. skip_obs) variables */
   ST_double sum;
-  if (rc = train_set(mani, &train_use, &sum)) {
+  rc = train_set(mani, &train_use, &sum);
+  if (rc) {
     return print_error(rc);
   }
   count_train_set = (int)sum;
-  if (rc = predict_set(mani, &predict_use, &sum)) {
+  rc = predict_set(mani, &predict_use, &sum);
+  if (rc) {
     return print_error(rc);
   }
   count_predict_set = (int)sum;
-  if (rc = skip_set(predict_use, count_predict_set, mani, &S)) {
+  rc = skip_set(predict_use, count_predict_set, mani, &S);
+  if (rc) {
     return print_error(rc);
   }
 
   /* allocation of matrices M and y */
   ST_double* flat_M = NULL;
-  if (rc = train_manifold(train_use, count_train_set, mani, &flat_M)) {
+  rc = train_manifold(train_use, count_train_set, mani, &flat_M);
+  if (rc) {
     return print_error(rc);
   }
-  if (rc = train_y(train_use, count_train_set, mani, &y)) {
+  rc = train_y(train_use, count_train_set, mani, &y);
+  if (rc) {
     return print_error(rc);
   }
 
@@ -358,12 +365,14 @@ STDLL stata_call(int argc, char* argv[])
   ST_double* flat_Mp = NULL;
   if (pmani_flag) {
     Mpcol = pmani;
-    if (rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp)) {
+    rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp);
+    if (rc) {
       return rc;
     }
   } else {
     Mpcol = mani;
-    if (rc = predict_manifold(predict_use, count_predict_set, mani, &flat_Mp)) {
+    rc = predict_manifold(predict_use, count_predict_set, mani, &flat_Mp);
+    if (rc) {
       return rc;
     }
   }
