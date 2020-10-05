@@ -203,6 +203,12 @@ program define edmExplore, eclass sortpreserve
 	loc total_t=int((r(tmax)-r(tmin))/r(tdelta)) + 1
 	edmPluginCheck, `mata'
 	loc mata_mode=r(mata_mode)
+	if "${EDM_VERBOSITY}"!="" {
+		local verbosity=${EDM_VERBOSITY}
+	}
+	if "${EDM_NTHREADS}"!="" {
+		local nthreads=${EDM_NTHREADS}
+	}
 	tempvar x y
 	tokenize "`anything'"
 	loc ori_x "`1'"
@@ -834,6 +840,12 @@ program define edmXmap, eclass sortpreserve
 	sort `panel_id' `timevar'
 	edmPluginCheck, `mata'
 	loc mata_mode=r(mata_mode)
+	if "${VERBOSITY}"!="" {
+		local verbosity=${VERBOSITY}
+	}
+	if "${NTHREADS}"!="" {
+		local nthreads=${NTHREADS}
+	}
 	tokenize "`anything'"
 	loc ori_x "`1'"
 	loc ori_y "`2'"
