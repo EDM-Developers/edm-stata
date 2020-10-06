@@ -1,4 +1,4 @@
-/* Suppress Windows problems with sprintf etc. functions. */
+// Suppress Windows problems with sprintf etc. functions.
 #ifdef _MSC_VER
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -186,11 +186,11 @@ void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, 
 {
   char temps[500];
 
-  /* header of the plugin */
+  // Header of the plugin
   SF_display("\n====================\n");
   SF_display("Start of the plugin\n\n");
 
-  /* overview of variables and arguments passed and observations in sample */
+  // Overview of variables and arguments passed and observations in sample
   sprintf(temps, "number of vars & obs = %i, %i\n", SF_nvars(), SF_nobs());
   SF_display(temps);
   sprintf(temps, "first and last obs in sample = %i, %i\n\n", SF_in1(), SF_in2());
@@ -259,35 +259,30 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 */
 STDLL stata_call(int argc, char* argv[])
 {
-  bool force_compute, pmani_flag, save_mode;
-  char* algorithm;
-  ST_retcode rc;
-  ST_int mani, pmani, Mpcol, l, varssv, nthreads;
-  ST_int count_train_set, count_predict_set;
-  ST_double theta, missingdistance;
-  ST_double *train_use, *predict_use, *y, *S, *ystar;
-
+  ST_double theta = atof(argv[0]);
+  ST_int l = atoi(argv[1]);
+  char* algorithm = argv[2];
+  bool force_compute = (strcmp(argv[3], "force") == 0);
+  ST_double missingdistance = atof(argv[4]);
+  ST_int mani = atoi(argv[5]);     // number of columns in the manifold
+  bool pmani_flag = atoi(argv[6]); // contains the flag for p_manifold
+  bool save_mode = atoi(argv[7]);
+  ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
+  ST_int varssv = atoi(argv[8]); // number of columns in smap coefficents
+  ST_int nthreads = atoi(argv[9]);
   ST_int verbosity = atoi(argv[10]);
 
-  theta = atof(argv[0]); /* contains value of theta = first argument */
+  if (l <= 0) {
+    l = mani + 1;
+  }
 
-  /* allocation of string variable algorithm based on third argument */
-  algorithm = argv[2];
+  // Allocation of train_use, predict_use and S (prev. skip_obs) variables.
+  ST_double *train_use, *predict_use, *S;
+  ST_int count_train_set, count_predict_set;
 
-  /* allocation of variable force_compute based on fourth argument */
-  force_compute = (strcmp(argv[3], "force") == 0);
-
-  /* allocation of variable missingdistance based on fifth argument */
-  missingdistance = atof(argv[4]);
-
-  /* allocation of number of columns in manifold */
-  mani = atoi(argv[5]);
-
-  /* allocation of train_use, predict_use and S (prev. skip_obs) variables */
   ST_double sum;
-
   ST_int stataVarNum = mani + 3;
-  rc = stata_column_and_sum(stataVarNum, &train_use, &sum);
+  ST_retcode rc = stata_column_and_sum(stataVarNum, &train_use, &sum);
   if (rc) {
     return print_error(rc);
   }
@@ -306,9 +301,10 @@ STDLL stata_call(int argc, char* argv[])
     return print_error(rc);
   }
 
-  /* allocation of matrices M and y */
+  // Allocation of matrix M and vector y.
+  ST_double *flat_M, *y;
+
   stataVarNum = 1;
-  ST_double* flat_M = NULL;
   rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M);
   if (rc) {
     return print_error(rc);
@@ -320,17 +316,8 @@ STDLL stata_call(int argc, char* argv[])
     return print_error(rc);
   }
 
-  /* allocation of matrices Mp, S, ystar */
-  pmani_flag = atoi(argv[6]); /* contains the flag for p_manifold */
-  pmani = 0;
-  if (pmani_flag) {
-    pmani = atoi(argv[8]); /* contains the number of columns in p_manifold */
-    Mpcol = pmani;
-  } else {
-    Mpcol = mani;
-  }
-
-  ST_double* flat_Mp = NULL;
+  // Allocation of matrices Mp and Bimap, and vector ystar.
+  ST_int Mpcol;
   if (pmani_flag) {
     Mpcol = pmani;
     stataVarNum = mani + 6;
@@ -338,32 +325,22 @@ STDLL stata_call(int argc, char* argv[])
     Mpcol = mani;
     stataVarNum = 1;
   }
+
+  ST_double* flat_Mp;
   rc = stata_columns_filtered(predict_use, count_predict_set, stataVarNum, Mpcol, &flat_Mp);
   if (rc) {
     return rc;
   }
 
-  l = atoi(argv[1]); /* contains l */
-  if (l <= 0) {
-    l = mani + 1;
-  }
-
-  save_mode = atoi(argv[7]); /* contains the flag for vars_save */
-
-  double* flat_Bi_map = NULL;
-
-  if (save_mode) {          /* flag savesmap is ON */
-    varssv = atoi(argv[8]); /* contains the number of columns
-                               in smap coefficents */
+  ST_double* flat_Bi_map;
+  if (save_mode) {
     flat_Bi_map = malloc(sizeof(ST_double) * count_predict_set * varssv);
     if (flat_Bi_map == NULL) {
       return print_error(MALLOC_ERROR);
     }
-  } else { /* flag savesmap is OFF */
-    varssv = 0;
   }
 
-  ystar = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
+  ST_double* ystar = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
   if (ystar == NULL) {
     return print_error(MALLOC_ERROR);
   }
@@ -399,8 +376,7 @@ STDLL stata_call(int argc, char* argv[])
   }
 #endif
 
-  /* setting the number of OpenMP threads */
-  nthreads = atoi(argv[9]);
+  // Decide on the number of OpenMP threads to use.
   nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
 
   // Find the number of threads Stata was already using, so we can reset to this later.
@@ -427,7 +403,7 @@ STDLL stata_call(int argc, char* argv[])
 
   omp_set_num_threads(originalNumThreads);
 
-  /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
+  // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (rc == SUCCESS) {
     stataVarNum = mani + 2;
     rc = write_stata_column_filtered(predict_use, stataVarNum, ystar);
@@ -442,7 +418,6 @@ STDLL stata_call(int argc, char* argv[])
   // then print it out now before the 'end of the plugin' footer.
   print_error(rc);
 
-  /* deallocation of matrices and arrays before exiting the plugin */
   free(train_use);
   free(predict_use);
   free(S);
@@ -454,7 +429,7 @@ STDLL stata_call(int argc, char* argv[])
   }
   free(ystar);
 
-  /* footer of the plugin */
+  // Print a Footer message for the plugin.
   if (verbosity > 0) {
     SF_display("\nEnd of the plugin\n");
     SF_display("====================\n\n");
