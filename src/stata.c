@@ -171,71 +171,6 @@ static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j,
   return write_stata_columns_filtered(filter, j, 1, toSave);
 }
 
-ST_retcode train_manifold(const ST_double* train_use, int count_train_set, int mani, double** out)
-{
-  return stata_columns_filtered(train_use, count_train_set, 1, mani, out, NULL);
-}
-
-ST_retcode train_y(const ST_double* train_use, int count_train_set, int mani, double** out)
-{
-  return stata_column_filtered(train_use, count_train_set, mani + 1, out, NULL);
-}
-
-ST_retcode predict_manifold(const ST_double* predict_use, int count_predict_set, int mani, double** out)
-{
-  return stata_columns_filtered(predict_use, count_predict_set, 1, mani, out, NULL);
-}
-
-ST_retcode train_set(int mani, ST_double** out, double* count_train_set) // a.k.a. co_train_set
-{
-  return stata_column(mani + 3, out, count_train_set);
-}
-
-ST_retcode predict_set(int mani, ST_double** out, double* count_predict_set) // a.k.a. co_predict_set
-{
-  return stata_column(mani + 4, out, count_predict_set);
-}
-
-ST_retcode skip_set(const ST_double* predict_use, int count_predict_set, int mani, ST_double** out) // a.k.a. overlap
-{
-  return stata_column_filtered(predict_use, count_predict_set, mani + 5, out, NULL);
-}
-
-// a.k.a. co_mapping
-ST_retcode predict_manifold_pmani(const ST_double* predict_use, int count_predict_set, int mani, int pmani,
-                                  double** out)
-{
-  return stata_columns_filtered(predict_use, count_predict_set, mani + 6, pmani, out, NULL);
-}
-
-ST_retcode write_ystar(const ST_double* predict_use, int mani, const double* ystar)
-{
-  return write_stata_column_filtered(predict_use, mani + 2, ystar);
-}
-
-ST_retcode write_smap_coefficients(const ST_double* predict_use, int mani, bool pmani_flag, int pmani, int varssv,
-                                   const double* Bi_map)
-{
-  ST_int j0 = mani + 5 + 1 + (int)pmani_flag * pmani;
-  return write_stata_columns_filtered(predict_use, j0, varssv, Bi_map);
-}
-
-/*
-Example call to the plugin:
-
-local myvars ``manifold'' `co_mapping' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
-
-unab vars : ``manifold''
-local mani `: word count `vars''
-
-local pmani_flag = 0
-
-local vsave_flag = 0
-
-plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag'
-`vsave_flag'
-*/
-
 void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
                       ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
                       bool pmani_flag, ST_int pmani, ST_int l, bool save_mode, ST_int varssv, ST_int nthreads)
@@ -298,6 +233,21 @@ void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, 
   SF_display(temps);
 }
 
+/*
+Example call to the plugin:
+
+local myvars ``manifold'' `co_mapping' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+
+unab vars : ``manifold''
+local mani `: word count `vars''
+
+local pmani_flag = 0
+
+local vsave_flag = 0
+
+plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag'
+`vsave_flag'
+*/
 STDLL stata_call(int argc, char* argv[])
 {
   bool force_compute, pmani_flag, save_mode;
@@ -326,28 +276,37 @@ STDLL stata_call(int argc, char* argv[])
 
   /* allocation of train_use, predict_use and S (prev. skip_obs) variables */
   ST_double sum;
-  rc = train_set(mani, &train_use, &sum);
+
+  ST_int stataVarNum = mani + 3;
+  rc = stata_column(stataVarNum, &train_use, &sum);
   if (rc) {
     return print_error(rc);
   }
   count_train_set = (int)sum;
-  rc = predict_set(mani, &predict_use, &sum);
+
+  stataVarNum = mani + 4;
+  rc = stata_column(stataVarNum, &predict_use, &sum);
   if (rc) {
     return print_error(rc);
   }
   count_predict_set = (int)sum;
-  rc = skip_set(predict_use, count_predict_set, mani, &S);
+
+  stataVarNum = mani + 5;
+  rc = stata_column_filtered(predict_use, count_predict_set, stataVarNum, &S, NULL);
   if (rc) {
     return print_error(rc);
   }
 
   /* allocation of matrices M and y */
+  stataVarNum = 1;
   ST_double* flat_M = NULL;
-  rc = train_manifold(train_use, count_train_set, mani, &flat_M);
+  rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M, NULL);
   if (rc) {
     return print_error(rc);
   }
-  rc = train_y(train_use, count_train_set, mani, &y);
+
+  stataVarNum = mani + 1;
+  rc = stata_column_filtered(train_use, count_train_set, stataVarNum, &y, NULL);
   if (rc) {
     return print_error(rc);
   }
@@ -365,16 +324,14 @@ STDLL stata_call(int argc, char* argv[])
   ST_double* flat_Mp = NULL;
   if (pmani_flag) {
     Mpcol = pmani;
-    rc = predict_manifold_pmani(predict_use, count_predict_set, mani, pmani, &flat_Mp);
-    if (rc) {
-      return rc;
-    }
+    stataVarNum = mani + 6;
   } else {
     Mpcol = mani;
-    rc = predict_manifold(predict_use, count_predict_set, mani, &flat_Mp);
-    if (rc) {
-      return rc;
-    }
+    stataVarNum = 1;
+  }
+  rc = stata_columns_filtered(predict_use, count_predict_set, stataVarNum, Mpcol, &flat_Mp, NULL);
+  if (rc) {
+    return rc;
   }
 
   l = atoi(argv[1]); /* contains l */
@@ -463,10 +420,12 @@ STDLL stata_call(int argc, char* argv[])
 
   /* If there are no errors, return the value of ystar (and smap coefficients) to Stata */
   if (rc == SUCCESS) {
-    rc = write_ystar(predict_use, mani, ystar);
+    stataVarNum = mani + 2;
+    rc = write_stata_column_filtered(predict_use, stataVarNum, ystar);
 
     if (rc == SUCCESS && save_mode) {
-      rc = write_smap_coefficients(predict_use, mani, pmani_flag, pmani, varssv, flat_Bi_map);
+      stataVarNum = mani + 5 + 1 + (int)pmani_flag * pmani;
+      rc = write_stata_columns_filtered(predict_use, stataVarNum, varssv, flat_Bi_map);
     }
   }
 
