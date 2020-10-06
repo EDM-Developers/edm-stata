@@ -67,7 +67,7 @@ edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
 assert testx!=. if _n>2
 
 
-edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y)  direction(oneway)
+edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
 assert testx2 !=. if _n>2
 
 edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
@@ -123,7 +123,7 @@ edm explore x, rep(20) ci(95)
 
 edm xmap x y, lib(50) rep(20) ci(95)
 
-
+use `basedata', clear
 cap drop x_copy
 cap drop x_p
 cap drop xc_p
@@ -137,7 +137,7 @@ cor xc_p f.x
 
 discard
 cap drop x_p xc_p
-edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full  tp(2)
+edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
 sum x_p xc_p
 assert xc_p!=. if x_p!=.
 

@@ -2076,7 +2076,7 @@ Note: The embedding dimension E is 2
 
 . 
 . 
-. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y)  direction(oneway)
+. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -3781,7 +3781,8 @@ Note: Results from 20 replications
 Note: The embedding dimension E is 2
 
 . 
-. 
+. use `basedata', clear
+
 . cap drop x_copy
 
 . cap drop x_p
@@ -3789,15 +3790,14 @@ Note: The embedding dimension E is 2
 . cap drop xc_p
 
 . clonevar x_copy = x
-(22 missing values generated)
 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full
 
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 182
-first and last obs in sample = 1, 182
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
 
 arg 0: 1
 arg 1: 3
@@ -3821,8 +3821,8 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-train set obs: 77
-predict set obs: 77
+train set obs: 199
+predict set obs: 199
 
 p_manifold flag = 0
 
@@ -3841,8 +3841,8 @@ End of the plugin
 ====================
 Start of the plugin
 
-number of vars & obs = 9, 182
-first and last obs in sample = 1, 182
+number of vars & obs = 9, 201
+first and last obs in sample = 1, 201
 
 arg 0: 1
 arg 1: 3
@@ -3866,8 +3866,8 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-train set obs: 77
-predict set obs: 108
+train set obs: 199
+predict set obs: 200
 
 p_manifold flag = 1
 number of variables in p_manifold = 2
@@ -3889,15 +3889,359 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99817          .01013 
+                 2               1          .99939        .0049147 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
 . assert x_p!=. if _n!=1 & _n!=_N
-103 contradictions in 180 observations
-assertion is false
-r(9);
+
+. assert xc_p!=. if _n!=1 & _n!=_N
+
+. assert x_p ==xc_p if x_p!=.
+
+. cor x_p f.x
+(obs=199)
+
+             |                 F.
+             |      x_p        x
+-------------+------------------
+         x_p |   1.0000
+           x |
+         F1. |   0.9994   1.0000
+
+
+. cor xc_p f.x
+(obs=199)
+
+             |                 F.
+             |     xc_p        x
+-------------+------------------
+        xc_p |   1.0000
+           x |
+         F1. |   0.9994   1.0000
+
+
+. 
+. discard
+
+. cap drop x_p xc_p
+
+. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 198
+predict set obs: 198
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 198
+predict set obs: 200
+
+p_manifold flag = 1
+number of variables in p_manifold = 2
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99877        .0078776 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Full sample used for the computation
+
+. sum x_p xc_p
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+         x_p |        198    .6434232    .2159587   .3039276   .8967989
+        xc_p |        200    .6436226    .2154685   .3039276   .8967989
+
+. assert xc_p!=. if x_p!=.
+
+. 
+. 
+. gen y_copy = y
+
+. edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             190          .30665          .15441 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert xmap_y_p !=. if _n>1
+
+. assert xmap_y_p == xmap_y if xmap_y !=.
+
+. 
+. preserve
+
+. drop if mod(t,17)==1
+(12 observations deleted)
+
+. //copredict with dt
+. edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Additional variables in the embedding: (time delta)
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             188          .51527          .13499 
+---------------------------------------------------------------
+Note: The embedding dimension E is 3 (including 1 extra)
+Note: Embedding includes the delta of the time variable with a weight of .88
+
+. assert xmap_y_p_dt !=. if _n>1
+
+. assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=.
+
+. 
+. edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 189
+first and last obs in sample = 1, 189
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 163
+predict set obs: 163
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 189
+first and last obs in sample = 1, 189
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 163
+predict set obs: 176
+
+p_manifold flag = 1
+number of variables in p_manifold = 2
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99928        .0054303 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Full sample used for the computation
+
+. 
+. assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=.
+
+. 
+. restore
+
+. 
+. 
+. edm explore x, copredict(dx2) copredictvar(d.x)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 99
+predict set obs: 100
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+factor-variable and time-series operators not allowed
+r(101);
 
 end of do-file
-r(9);
+r(101);
