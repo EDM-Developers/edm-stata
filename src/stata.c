@@ -70,8 +70,8 @@ static int num_if_in_rows()
  * the 'numFiltered' argument which is the total number of rows which are
  * true in the filter.
  */
-static ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j0, int numCols, double** out,
-                                         double* outSum)
+static ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFiltered, ST_int j0, int numCols,
+                                                 double** out, double* outSum)
 {
   // Allocate space for the matrix of data from Stata
   int numRows = (filter == NULL) ? num_if_in_rows() : numFiltered;
@@ -155,22 +155,31 @@ static ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j
   return SUCCESS;
 }
 
-static ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out,
-                                        double* outSum)
+/* Read some columns from Stata skipping some rows */
+static ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j, int numCols, double** out)
 {
-  return stata_columns_filtered(filter, numFiltered, j, 1, out, outSum);
+  return stata_columns_filtered_and_sum(filter, numFiltered, j, numCols, out, NULL);
 }
 
-static ST_retcode stata_column(ST_int j, double** out, double* outSum)
+/* Read a single column from Stata skipping some rows */
+static ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out)
 {
-  return stata_columns_filtered(NULL, -1, j, 1, out, outSum);
+  return stata_columns_filtered(filter, numFiltered, j, 1, out);
 }
 
+/* Read a single column from Stata and calculate the column sum */
+static ST_retcode stata_column_and_sum(ST_int j, double** out, double* outSum)
+{
+  return stata_columns_filtered_and_sum(NULL, -1, j, 1, out, outSum);
+}
+
+/*  Write a single column to Stata while skipping some rows */
 static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j, const double* toSave)
 {
   return write_stata_columns_filtered(filter, j, 1, toSave);
 }
 
+/* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
                       ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
                       bool pmani_flag, ST_int pmani, ST_int l, bool save_mode, ST_int varssv, ST_int nthreads)
@@ -278,21 +287,21 @@ STDLL stata_call(int argc, char* argv[])
   ST_double sum;
 
   ST_int stataVarNum = mani + 3;
-  rc = stata_column(stataVarNum, &train_use, &sum);
+  rc = stata_column_and_sum(stataVarNum, &train_use, &sum);
   if (rc) {
     return print_error(rc);
   }
   count_train_set = (int)sum;
 
   stataVarNum = mani + 4;
-  rc = stata_column(stataVarNum, &predict_use, &sum);
+  rc = stata_column_and_sum(stataVarNum, &predict_use, &sum);
   if (rc) {
     return print_error(rc);
   }
   count_predict_set = (int)sum;
 
   stataVarNum = mani + 5;
-  rc = stata_column_filtered(predict_use, count_predict_set, stataVarNum, &S, NULL);
+  rc = stata_column_filtered(predict_use, count_predict_set, stataVarNum, &S);
   if (rc) {
     return print_error(rc);
   }
@@ -300,13 +309,13 @@ STDLL stata_call(int argc, char* argv[])
   /* allocation of matrices M and y */
   stataVarNum = 1;
   ST_double* flat_M = NULL;
-  rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M, NULL);
+  rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M);
   if (rc) {
     return print_error(rc);
   }
 
   stataVarNum = mani + 1;
-  rc = stata_column_filtered(train_use, count_train_set, stataVarNum, &y, NULL);
+  rc = stata_column_filtered(train_use, count_train_set, stataVarNum, &y);
   if (rc) {
     return print_error(rc);
   }
@@ -329,7 +338,7 @@ STDLL stata_call(int argc, char* argv[])
     Mpcol = mani;
     stataVarNum = 1;
   }
-  rc = stata_columns_filtered(predict_use, count_predict_set, stataVarNum, Mpcol, &flat_Mp, NULL);
+  rc = stata_columns_filtered(predict_use, count_predict_set, stataVarNum, Mpcol, &flat_Mp);
   if (rc) {
     return rc;
   }
