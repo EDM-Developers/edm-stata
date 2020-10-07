@@ -1048,7 +1048,7 @@ End of the plugin
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 ----------------------------------------------------------------------
-                      --------- rho --------- --------- MAE ---------
+                      --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
         2        1       .99938    .00031664     .0051098     .0013213
@@ -3853,7 +3853,7 @@ Multivariate mapping with x and its lag values
 Additional variables in the embedding: u (+ time delta)
 Missing values are assumed to have a distance of .25 with all values.
 ----------------------------------------------------------------------
-                      --------- rho --------- --------- MAE ---------
+                      --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
         4        1       .62918      .085112       .12219      .020361
@@ -4834,13 +4834,13 @@ End of the plugin
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 ----------------------------------------------------------------------
-                      --------- rho --------- --------- MAE ---------
+                      --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
         2        1       .99571     .0045792      .013297     .0039025
-  Est. mean 95% CI [   .99357,    .99785 ] [   .01147,   .015123 ]
-2.5/97.5 Pc (Est.) [   .98673,    1.0047 ] [ .0056481,   .020946 ]
-2.5/97.5 Pc (Obs.) [   .98346,    .99887 ] [ .0085166,   .024075 ]
+  Est. mean 95% CI   [   .99357,    .99785 ]   [   .01147,   .015123 ]
+2.5/97.5 Pc (Est.)   [   .98673,    1.0047 ]   [ .0056481,   .020946 ]
+2.5/97.5 Pc (Obs.)   [   .98346,    .99887 ]   [ .0085166,   .024075 ]
 ----------------------------------------------------------------------
 Note: Results from 20 runs
 Note: Number of neighbours (k) is set to E+1
@@ -6657,13 +6657,13 @@ Convergent Cross-mapping result for variables x and y
       Mapping        Lib size        Mean rho       Std. Dev.
 ---------------------------------------------------------------
    y ~ y|M(x)              50          .37281         .068293
-  Est. mean 95% CI                  [   .34085,    .40477 ]
-2.5/97.5 Pc (Est.)                  [   .23896,    .50666 ]
-2.5/97.5 Pc (Obs.)                  [   .25678,    .49079 ]
+  Est. mean 95% CI                    [   .34085,    .40477 ]
+2.5/97.5 Pc (Est.)                    [   .23896,    .50666 ]
+2.5/97.5 Pc (Obs.)                    [   .25678,    .49079 ]
    x ~ x|M(y)              50          .86316         .024202
-  Est. mean 95% CI                  [   .85183,    .87448 ]
-2.5/97.5 Pc (Est.)                  [   .81572,    .91059 ]
-2.5/97.5 Pc (Obs.)                  [   .80334,    .89799 ]
+  Est. mean 95% CI                    [   .85183,    .87448 ]
+2.5/97.5 Pc (Est.)                    [   .81572,    .91059 ]
+2.5/97.5 Pc (Obs.)                    [   .80334,    .89799 ]
 ---------------------------------------------------------------
 Note: Results from 20 replications
 Note: The embedding dimension E is 2
