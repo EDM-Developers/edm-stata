@@ -840,11 +840,11 @@ program define edmXmap, eclass sortpreserve
 	sort `panel_id' `timevar'
 	edmPluginCheck, `mata'
 	loc mata_mode=r(mata_mode)
-	if "${VERBOSITY}"!="" {
-		local verbosity=${VERBOSITY}
+	if "${EDM_VERBOSITY}"!="" {
+		local verbosity=${EDM_VERBOSITY}
 	}
-	if "${NTHREADS}"!="" {
-		local nthreads=${NTHREADS}
+	if "${EDM_NTHREADS}"!="" {
+		local nthreads=${EDM_NTHREADS}
 	}
 	tokenize "`anything'"
 	loc ori_x "`1'"

@@ -489,6 +489,96 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, k(5)
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 5
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 5
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 5
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 5
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
@@ -1856,6 +1946,98 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
 
+====================
+Start of the plugin
+
+number of vars & obs = 10, 201
+first and last obs in sample = 1, 201
+
+arg 0: .2
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 1
+arg 8: 3
+arg 9: 4
+arg 10: 1
+
+theta = 0.2000
+
+algorithm = smap
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 4
+
+columns in smap coefficents = 3
+save_mode = 1
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 10, 201
+first and last obs in sample = 1, 201
+
+arg 0: .2
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 1
+arg 8: 3
+arg 9: 4
+arg 10: 1
+
+theta = 0.2000
+
+algorithm = smap
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 4
+
+columns in smap coefficents = 3
+save_mode = 1
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
@@ -1872,6 +2054,51 @@ Note: The embedding dimension E is 2
 . 
 . 
 . edm xmap y x, predict(x2) direction(oneway)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -2051,6 +2278,51 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap y x, tp(10) direction(oneway)
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 190
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
@@ -2062,6 +2334,97 @@ Note: The embedding dimension E is 2
 
 . 
 . edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 190
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 199
+
+p_manifold flag = 1
+number of variables in p_manifold = 2
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -2078,6 +2441,97 @@ Note: The embedding dimension E is 2
 . 
 . edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 190
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 199
+
+p_manifold flag = 1
+number of variables in p_manifold = 2
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
@@ -2091,6 +2545,97 @@ Note: The embedding dimension E is 2
 
 . 
 . edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
+
+====================
+Start of the plugin
+
+number of vars & obs = 8, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 4
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 3
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 3
+
+train set obs: 190
+predict set obs: 190
+
+p_manifold flag = 0
+
+l = 4
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 11, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 4
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 3
+arg 6: 1
+arg 7: 0
+arg 8: 3
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 3
+
+train set obs: 190
+predict set obs: 199
+
+p_manifold flag = 1
+number of variables in p_manifold = 3
+
+l = 4
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -2108,6 +2653,51 @@ Note: The embedding dimension E is 3 (including 1 extra)
 . * check explore / xmap consistency
 . 
 . edm xmap l.x x, direction(oneway)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 199
+predict set obs: 199
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables l.x and x
@@ -2187,6 +2777,96 @@ Note: Full sample used for the computation
 . 
 . edm xmap x y
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
@@ -2200,6 +2880,96 @@ Note: The embedding dimension E is 2
 . mat xmap1 = e(b)
 
 . edm xmap y x
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 200
+predict set obs: 200
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -2474,6 +3244,96 @@ Note: Random 50/50 split for training and validation data
 
 . edm xmap x l.x, allowmissing
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: .247341863143735
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.247342
+
+number of variables in manifold = 2
+
+train set obs: 124
+predict set obs: 124
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: .247341863143735
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.247342
+
+number of variables in manifold = 2
+
+train set obs: 118
+predict set obs: 118
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l.x
 Missing values are assumed to have a distance of .25 with all values.
@@ -2486,6 +3346,96 @@ Missing values are assumed to have a distance of .25 with all values.
 Note: The embedding dimension E is 2
 
 . edm xmap x l.x, missingdistance(2)
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 2
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 2.000000
+
+number of variables in manifold = 2
+
+train set obs: 124
+predict set obs: 124
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 2
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 2.000000
+
+number of variables in manifold = 2
+
+train set obs: 118
+predict set obs: 118
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l.x
@@ -2502,6 +3452,98 @@ Note: The embedding dimension E is 2
 . 
 . edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
 
+====================
+Start of the plugin
+
+number of vars & obs = 26, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 9
+arg 2: smap
+arg 3: 
+arg 4: .247341863143735
+arg 5: 10
+arg 6: 0
+arg 7: 1
+arg 8: 11
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = 0
+
+missing distance = 0.247342
+
+number of variables in manifold = 10
+
+train set obs: 124
+predict set obs: 124
+
+p_manifold flag = 0
+
+l = 9
+
+columns in smap coefficents = 11
+save_mode = 1
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 26, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 9
+arg 2: smap
+arg 3: 
+arg 4: .247341863143735
+arg 5: 10
+arg 6: 0
+arg 7: 1
+arg 8: 11
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = 0
+
+missing distance = 0.247342
+
+number of variables in manifold = 10
+
+train set obs: 150
+predict set obs: 150
+
+p_manifold flag = 0
+
+l = 9
+
+columns in smap coefficents = 11
+save_mode = 1
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l.x
 Additional variables in the embedding: u (+ time delta)
@@ -2517,6 +3559,52 @@ Note: Embedding includes the delta of the time variable with a weight of .55 and
 
 . 
 . edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
+
+====================
+Start of the plugin
+
+number of vars & obs = 26, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 9
+arg 2: smap
+arg 3: 
+arg 4: .247341863143735
+arg 5: 10
+arg 6: 0
+arg 7: 1
+arg 8: 11
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = 0
+
+missing distance = 0.247342
+
+number of variables in manifold = 10
+
+train set obs: 123
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 9
+
+columns in smap coefficents = 11
+save_mode = 1
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l3.x
@@ -3761,7 +4849,1807 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, lib(50) rep(20) ci(95)
 Replication progress (40 in total)
-........................................
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 108
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
+====================
+Start of the plugin
+
+number of vars & obs = 7, 182
+first and last obs in sample = 1, 182
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 50
+predict set obs: 123
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+.
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -4045,6 +6933,97 @@ Note: Full sample used for the computation
 
 . edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
 
+====================
+Start of the plugin
+
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 190
+
+p_manifold flag = 0
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 201
+first and last obs in sample = 1, 201
+
+arg 0: 1
+arg 1: 3
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+train set obs: 190
+predict set obs: 200
+
+p_manifold flag = 1
+number of variables in p_manifold = 2
+
+l = 3
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
@@ -4066,6 +7045,97 @@ Note: The embedding dimension E is 2
 
 . //copredict with dt
 . edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
+
+====================
+Start of the plugin
+
+number of vars & obs = 8, 189
+first and last obs in sample = 1, 189
+
+arg 0: 1
+arg 1: 4
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 3
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 3
+
+train set obs: 188
+predict set obs: 188
+
+p_manifold flag = 0
+
+l = 4
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 11, 189
+first and last obs in sample = 1, 189
+
+arg 0: 1
+arg 1: 4
+arg 2: simplex
+arg 3: 
+arg 4: 0
+arg 5: 3
+arg 6: 1
+arg 7: 0
+arg 8: 3
+arg 9: 4
+arg 10: 1
+
+theta = 1.0000
+
+algorithm = simplex
+
+force compute = 0
+
+missing distance = 0.000000
+
+number of variables in manifold = 3
+
+train set obs: 188
+predict set obs: 188
+
+p_manifold flag = 1
+number of variables in p_manifold = 3
+
+l = 4
+
+save_mode = 0
+
+Requested 4 OpenMP threads
+Using 4 OpenMP threads
+
+
+End of the plugin
+====================
+
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
