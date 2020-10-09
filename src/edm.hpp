@@ -1,5 +1,4 @@
-#ifndef EDM_H
-#define EDM_H
+#pragma once
 
 #ifdef _MSC_VER
 #define DLL extern __declspec(dllexport)
@@ -23,5 +22,3 @@ typedef int retcode;
 DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M,
                          double* flat_Mp, double* y, int l, double theta, double* S, char* algorithm, bool save_mode,
                          int varssv, bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map);
-
-#endif

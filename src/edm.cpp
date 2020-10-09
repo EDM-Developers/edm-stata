@@ -7,135 +7,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm> // std::partial_sort
+#include <numeric>   // std::iota
+#include <vector>
+
+using namespace std;
+
 /* internal functions */
 
-/* function that returns the sorted indices of an array */
-static void quicksortind(double A[], int I[], int lo, int hi)
+/* minindex(v,k) returns the indices of the k minimums of v.  */
+static std::vector<size_t> minindex(const vector<double>& v, int k)
 {
-  while (lo < hi) {
-    double pivot = A[I[lo + (hi - lo) / 2]];
-    int t;
-    int i = lo - 1;
-    int j = hi + 1;
-    while (1) {
-      while (A[I[++i]] < pivot) {};
-      while (A[I[--j]] > pivot) {};
-      if (i >= j)
-        break;
-      t = I[i];
-      I[i] = I[j];
-      I[j] = t;
-    }
-    /* avoid stack overflow */
-    if ((j - lo) < (hi - j)) {
-      quicksortind(A, I, lo, j);
-      lo = j + 1;
-    } else {
-      quicksortind(A, I, j + 1, hi);
-      hi = j;
-    }
-  }
-}
+  // initialize original index locations
+  vector<size_t> idx(v.size());
+  iota(idx.begin(), idx.end(), 0);
 
-/* NOTE: in mata, minindex(v,k,i,w) returns in i and w the indices of the
-   k minimums of v. The internal function minindex below only returns i +
-   the number of k minimums and does not return w, as w is not used in the
-   original edm code */
-static int minindex(int rvect, double vect[], int k, int ind[])
-{
-  int i, j, contin, numind, count_ord, *subind;
+  partial_sort(idx.begin(), idx.begin() + k, idx.end(), [&v](size_t i1, size_t i2) { return v[i1] < v[i2]; });
 
-  double tempval, *temp_ind;
-
-  quicksortind(vect, ind, 0, rvect - 1);
-
-  tempval = vect[ind[0]];
-  contin = 1;
-  numind = 1;
-  count_ord = 1;
-  i = 1;
-  while ((contin < k) && (i < rvect)) {
-    if (vect[ind[i]] != tempval) {
-      tempval = vect[ind[i]];
-      if (count_ord > 1) {
-        /* here I reorder the indexes from low to high in case of
-           repeated values */
-        temp_ind = (double*)malloc(sizeof(double) * count_ord);
-        subind = (int*)malloc(sizeof(int) * count_ord);
-        if ((temp_ind == NULL) || (subind == NULL)) {
-          return MALLOC_ERROR;
-        }
-        for (j = 0; j < count_ord; j++) {
-          temp_ind[j] = (double)ind[i - 1 - j];
-          subind[j] = j;
-        }
-        quicksortind(temp_ind, subind, 0, count_ord - 1);
-        for (j = 0; j < count_ord; j++) {
-          ind[i - 1 - j] = (int)temp_ind[subind[count_ord - 1 - j]];
-        }
-        free(temp_ind);
-        free(subind);
-        count_ord = 1;
-      }
-      contin++;
-      numind++;
-      i++;
-      /* check specific case where two values of vect are repeated and
-         greater than all the other values */
-      if ((contin == k) && (i == rvect - 1) && (vect[ind[i]] == vect[ind[i - 1]])) {
-        numind++;
-        count_ord++;
-        if (count_ord > 1) {
-          /* here I reorder the indexes from low to high in case of
-             repeated values */
-          temp_ind = (double*)malloc(sizeof(double) * count_ord);
-          subind = (int*)malloc(sizeof(int) * count_ord);
-          if ((temp_ind == NULL) || (subind == NULL)) {
-            return MALLOC_ERROR;
-          }
-          for (j = 0; j < count_ord; j++) {
-            temp_ind[j] = (double)ind[i - j];
-            subind[j] = j;
-          }
-          quicksortind(temp_ind, subind, 0, count_ord - 1);
-          for (j = 0; j < count_ord; j++) {
-            ind[i - j] = (int)temp_ind[subind[count_ord - 1 - j]];
-          }
-          free(temp_ind);
-          free(subind);
-        }
-      }
-    } else {
-      numind++;
-      count_ord++;
-      i++;
-      if (i == rvect) {
-        /* here I check whether I reached the end of the array */
-        if (count_ord > 1) {
-          /* here I reorder the indexes from low to high in case of
-             repeated values */
-          temp_ind = (double*)malloc(sizeof(double) * count_ord);
-          subind = (int*)malloc(sizeof(int) * count_ord);
-          if ((temp_ind == NULL) || (subind == NULL)) {
-            return MALLOC_ERROR;
-          }
-          for (j = 0; j < count_ord; j++) {
-            temp_ind[j] = (double)ind[i - 1 - j];
-            subind[j] = j;
-          }
-          quicksortind(temp_ind, subind, 0, count_ord - 1);
-          for (j = 0; j < count_ord; j++) {
-            ind[i - 1 - j] = (int)temp_ind[subind[count_ord - 1 - j]];
-          }
-          free(temp_ind);
-          free(subind);
-        }
-      }
-    }
-  }
-
-  /* returning the number of k minimums (and indices via ind) */
-  return numind;
+  return idx;
 }
 
 static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[], int l, double theta,
@@ -143,33 +32,28 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
                               double missingdistance, double* ystar, gsl_vector* Bi)
 {
   bool missing;
-  int i, j, numind;
-  int* ind;
+  int i, j;
   double value, pre_adj_skip_obs, d_base, sumw, r;
-  double *d, *a, *w;
+  double* w;
 
-  d = (double*)malloc(sizeof(double) * M->size1);
-  a = (double*)malloc(sizeof(double) * M->size2);
-  ind = (int*)malloc(sizeof(int) * M->size1);
-  if ((d == NULL) || (a == NULL) || (ind == NULL)) {
-    return MALLOC_ERROR;
-  }
+  auto d = vector<double>(M->size1, 0.0);
 
+  double diff;
   for (i = 0; i < M->size1; i++) {
     value = 0.;
     missing = false;
     for (j = 0; j < M->size2; j++) {
       if ((gsl_matrix_get(M, i, j) == MISSING) || (gsl_vector_get(b, j) == MISSING)) {
         if (missingdistance != 0) {
-          a[j] = missingdistance;
-          value = value + a[j] * a[j];
+          diff = missingdistance;
+          value = value + diff * diff;
         } else {
           missing = true;
           break;
         }
       } else {
-        a[j] = gsl_matrix_get(M, i, j) - gsl_vector_get(b, j);
-        value = value + a[j] * a[j];
+        diff = gsl_matrix_get(M, i, j) - gsl_vector_get(b, j);
+        value = value + diff * diff;
       }
     }
     if (missing) {
@@ -177,10 +61,9 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
     } else {
       d[i] = value;
     }
-    ind[i] = i;
   }
 
-  numind = minindex((int)M->size1, d, l + skip_obs, ind);
+  vector<size_t> ind = minindex(d, l + skip_obs);
 
   pre_adj_skip_obs = skip_obs;
 
@@ -193,7 +76,7 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
   }
 
   if (pre_adj_skip_obs != skip_obs) {
-    numind = minindex((int)M->size1, d, l + skip_obs, ind);
+    ind = minindex(d, l + skip_obs);
   }
 
   if (d[ind[skip_obs]] == 0.) {
@@ -203,21 +86,21 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       }
     }
     skip_obs = 0;
-    numind = minindex((int)M->size1, d, l + skip_obs, ind);
+    ind = minindex(d, l + skip_obs);
   }
 
   d_base = d[ind[skip_obs]];
 
-  if (numind < l + skip_obs) {
-    if (force_compute) {
-      l = numind - skip_obs;
-      if (l <= 0) {
-        return INSUFFICIENT_UNIQUE;
-      }
-    } else {
-      return INSUFFICIENT_UNIQUE;
-    }
-  }
+  // if (numind < l + skip_obs) {
+  //   if (force_compute) {
+  //     l = numind - skip_obs;
+  //     if (l <= 0) {
+  //       return INSUFFICIENT_UNIQUE;
+  //     }
+  //   } else {
+  //     return INSUFFICIENT_UNIQUE;
+  //   }
+  // }
 
   w = (double*)malloc(sizeof(double) * (l + skip_obs));
   if (w == NULL) {
@@ -237,9 +120,6 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       r = r + y[ind[j]] * (w[j] / sumw);
     }
     /* deallocation of matrices and arrays before exiting the function */
-    free(d);
-    free(a);
-    free(ind);
     free(w);
 
     /* save the value of ystar[j] */
@@ -300,9 +180,6 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
     }
     if (rowc == -1) {
       /* deallocation of matrices and arrays before exiting the function */
-      free(d);
-      free(a);
-      free(ind);
       free(w);
       free(y_ls);
       free(w_ls);
@@ -401,9 +278,6 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       }
 
       /* deallocation of matrices and arrays before exiting the function */
-      free(d);
-      free(a);
-      free(ind);
       free(w);
       free(y_ls);
       free(w_ls);
