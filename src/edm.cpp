@@ -1,7 +1,7 @@
 /* version 2.1, 09 Sep 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
-#include "edm.h"
+#include "edm.hpp"
 #include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <stdlib.h>
@@ -422,9 +422,9 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
 
 /* OpenMP routines */
 
-DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M,
-                         double* flat_Mp, double* y, int l, double theta, double* S, char* algorithm, bool save_mode,
-                         int varssv, bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map)
+retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M, double* flat_Mp,
+                     double* y, int l, double theta, double* S, char* algorithm, bool save_mode, int varssv,
+                     bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map)
 {
   /* Create GSL matrixes which are views of the supplied flattened matrices */
   gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
@@ -437,7 +437,7 @@ DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, i
   gsl_matrix* Bi_map = &Bi_map_view.matrix;
 
   /* OpenMP loop with call to mf_smap_single function */
-  retcode* rc = malloc(Mp->size1 * sizeof(retcode));
+  retcode* rc = (retcode*)malloc(Mp->size1 * sizeof(retcode));
   int i;
 
 #pragma omp parallel for

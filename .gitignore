@@ -1,6 +1,6 @@
 # Project specific
 compile_commands.json
-vendor/stplugin.[ch]
+vendor/stplugin.*
 stata/*.plugin
 stata/cut-down-test.log
 build

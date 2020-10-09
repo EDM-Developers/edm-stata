@@ -5,8 +5,8 @@
 #endif
 #endif
 
-#include "edm.h"
-#include "stplugin.h"
+#include "edm.hpp"
+#include "stplugin.hpp"
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -332,9 +332,9 @@ STDLL stata_call(int argc, char* argv[])
     return rc;
   }
 
-  ST_double* flat_Bi_map;
+  ST_double* flat_Bi_map = NULL;
   if (save_mode) {
-    flat_Bi_map = malloc(sizeof(ST_double) * count_predict_set * varssv);
+    flat_Bi_map = (ST_double*)malloc(sizeof(ST_double) * count_predict_set * varssv);
     if (flat_Bi_map == NULL) {
       return print_error(MALLOC_ERROR);
     }
@@ -356,12 +356,14 @@ STDLL stata_call(int argc, char* argv[])
     H5LTset_attribute_int(fid, "/", "Mpcol", &Mpcol, 1);
     H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
 
-    H5LTmake_dataset_double(fid, "y", 1, (hsize_t[]){ count_train_set }, y);
+    hsize_t yLen[] = { (hsize_t)count_train_set };
+    H5LTmake_dataset_double(fid, "y", 1, yLen, y);
 
     H5LTset_attribute_int(fid, "/", "l", &l, 1);
     H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
 
-    H5LTmake_dataset_double(fid, "S", 1, (hsize_t[]){ count_predict_set }, S);
+    hsize_t SLen[] = { (hsize_t)count_predict_set };
+    H5LTmake_dataset_double(fid, "S", 1, SLen, S);
 
     H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
     H5LTset_attribute_int(fid, "/", "save_mode", (int*)&save_mode, 1);
@@ -369,8 +371,10 @@ STDLL stata_call(int argc, char* argv[])
     H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
     H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
-    H5LTmake_dataset_double(fid, "flat_Mp", 1, (hsize_t[]){ count_predict_set * Mpcol }, flat_Mp);
-    H5LTmake_dataset_double(fid, "flat_M", 1, (hsize_t[]){ count_train_set * mani }, flat_M);
+    hsize_t MpLen[] = { (hsize_t)(count_predict_set * Mpcol) };
+    H5LTmake_dataset_double(fid, "flat_Mp", 1, MpLen, flat_Mp);
+    hsize_t MLen[] = { (hsize_t)(count_train_set * mani) };
+    H5LTmake_dataset_double(fid, "flat_M", 1, MLen, flat_M);
 
     H5Fclose(fid);
   }
