@@ -22,7 +22,11 @@ static std::vector<size_t> minindex(const vector<double>& v, int k)
   vector<size_t> idx(v.size());
   iota(idx.begin(), idx.end(), 0);
 
-  partial_sort(idx.begin(), idx.begin() + k, idx.end(), [&v](size_t i1, size_t i2) { return v[i1] < v[i2]; });
+  if (k >= (int)v.size()) {
+    k = (int)v.size();
+  }
+
+  std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), [&v](size_t i1, size_t i2) { return v[i1] < v[i2]; });
 
   return idx;
 }
@@ -31,78 +35,61 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
                               int skip_obs, char* algorithm, bool save_mode, int varssv, bool force_compute,
                               double missingdistance, double* ystar, gsl_vector* Bi)
 {
-  bool missing;
-  int i, j;
-  double value, pre_adj_skip_obs, d_base, sumw, r;
-  double* w;
 
+  int i, j;
+  double d_base, sumw, r;
+  double* w;
   auto d = vector<double>(M->size1, 0.0);
 
   double diff;
+  int validDistances = 0;
   for (i = 0; i < M->size1; i++) {
-    value = 0.;
-    missing = false;
+    double dist = 0.;
+    bool missing = false;
+    int numMissingDims = 0;
     for (j = 0; j < M->size2; j++) {
       if ((gsl_matrix_get(M, i, j) == MISSING) || (gsl_vector_get(b, j) == MISSING)) {
-        if (missingdistance != 0) {
-          diff = missingdistance;
-          value = value + diff * diff;
-        } else {
+        if (missingdistance == 0) {
           missing = true;
           break;
         }
+        numMissingDims += 1;
       } else {
         diff = gsl_matrix_get(M, i, j) - gsl_vector_get(b, j);
-        value = value + diff * diff;
+        dist = dist + diff * diff;
       }
     }
-    if (missing) {
+    // If the distance between M_i and b is 0 before handling missing values,
+    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
+    if (dist != 0) {
+      dist += numMissingDims * missingdistance * missingdistance;
+    }
+
+    if (missing || dist == 0.) {
       d[i] = MISSING;
     } else {
-      d[i] = value;
+      d[i] = dist;
+      validDistances += 1;
     }
   }
 
-  vector<size_t> ind = minindex(d, l + skip_obs);
-
-  pre_adj_skip_obs = skip_obs;
-
-  for (j = 0; j < l; j++) {
-    if (d[ind[j + skip_obs]] == 0.) {
-      skip_obs++;
-    } else {
-      break;
-    }
-  }
-
-  if (pre_adj_skip_obs != skip_obs) {
-    ind = minindex(d, l + skip_obs);
-  }
-
-  if (d[ind[skip_obs]] == 0.) {
-    for (i = 0; i < M->size1; i++) {
-      if (d[i] == 0.) {
-        d[i] = MISSING;
+  // If we only look at distances which are non-zero and non-missing,
+  // do we have enough of them to find 'l' neighbours?
+  if (l > validDistances) {
+    if (force_compute) {
+      l = validDistances;
+      if (l == 0) {
+        return INSUFFICIENT_UNIQUE;
       }
+    } else {
+      return INSUFFICIENT_UNIQUE;
     }
-    skip_obs = 0;
-    ind = minindex(d, l + skip_obs);
   }
 
-  d_base = d[ind[skip_obs]];
+  vector<size_t> ind = minindex(d, l);
 
-  // if (numind < l + skip_obs) {
-  //   if (force_compute) {
-  //     l = numind - skip_obs;
-  //     if (l <= 0) {
-  //       return INSUFFICIENT_UNIQUE;
-  //     }
-  //   } else {
-  //     return INSUFFICIENT_UNIQUE;
-  //   }
-  // }
-
-  w = (double*)malloc(sizeof(double) * (l + skip_obs));
+  d_base = d[ind[0]];
+  w = (double*)malloc(sizeof(double) * l);
   if (w == NULL) {
     return MALLOC_ERROR;
   }
@@ -110,13 +97,13 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
   sumw = 0.;
   r = 0.;
   if ((strcmp(algorithm, "") == 0) || (strcmp(algorithm, "simplex") == 0)) {
-    for (j = skip_obs; j < l + skip_obs; j++) {
+    for (j = 0; j < l; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
       w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
-    for (j = skip_obs; j < l + skip_obs; j++) {
+    for (j = 0; j < l; j++) {
       r = r + y[ind[j]] * (w[j] / sumw);
     }
     /* deallocation of matrices and arrays before exiting the function */
@@ -139,19 +126,19 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
     }
 
     mean_w = 0.;
-    for (j = skip_obs; j < l + skip_obs; j++) {
+    for (j = 0; j < l; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = pow(d[ind[j]],0.5); */
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
     mean_w = mean_w / (double)l;
-    for (j = skip_obs; j < l + skip_obs; j++) {
+    for (j = 0; j < l; j++) {
       w[j] = exp(-theta * (w[j] / mean_w));
     }
 
     rowc = -1;
-    for (j = skip_obs; j < l + skip_obs; j++) {
+    for (j = 0; j < l; j++) {
       if (y[ind[j]] == MISSING) {
         continue;
       }
