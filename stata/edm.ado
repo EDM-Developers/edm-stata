@@ -786,7 +786,7 @@ program define edmExplore, eclass sortpreserve
 	 
 	numlist "`e'"
 	local e_size = wordcount("`=r(numlist)'")
-	numlist `theta'
+	numlist "`theta'"
 	local theta_size = wordcount("`=r(numlist)'")
 
 	mat r = J(`=`round'*`theta_size'*`e_size'',4,.)
@@ -1686,9 +1686,9 @@ program define edmXmap, eclass sortpreserve
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
-		numlist `theta'
+		numlist "`theta'"
 		local theta_size = wordcount("`=r(numlist)'")
-		numlist `l'
+		numlist "`l'"
 		local l_size = wordcount("`=r(numlist)'")
 
 		mat r`round' = J(`=`replicate'*`theta_size'*`e_size'*`l_size'',4,.)
