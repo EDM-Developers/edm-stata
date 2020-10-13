@@ -342,14 +342,14 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
         // First, find the LQ decomposition of X_ls_cj in-place.
         gsl_linalg_LQ_decomp(X_ls_cj, tau);
 
-	/* setting to zero extremely small values of tau to avoid
+        /* setting to zero extremely small values of tau to avoid
         underflow errors */
-	for (j = 0; j < tau->size; j++) {
+        for (j = 0; j < tau->size; j++) {
           if (gsl_vector_get(tau, j) < 1.0e-12) {
             gsl_vector_set(tau, j, 0.);
-	  }
-	}
-	
+          }
+        }
+
         gsl_vector* residuals = gsl_vector_alloc(y_ls_cj->size);
         gsl_linalg_LQ_lssolve(X_ls_cj, tau, y_ls_cj, ics, residuals);
 
