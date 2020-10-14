@@ -98,6 +98,10 @@ target_include_directories(edm PRIVATE vendor)
 find_package(GSL REQUIRED)
 target_link_libraries(edm PRIVATE GSL::gsl GSL::gslcblas)
 
+# EIGEN3
+find_package(EIGEN3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 # OPENMP
 find_package(OpenMP)
 target_link_libraries(edm PRIVATE OpenMP::OpenMP_CXX)

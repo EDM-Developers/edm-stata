@@ -7,19 +7,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <numeric>   // std::iota
 #include <vector>
 
-using namespace std;
-
 /* internal functions */
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
-static std::vector<size_t> minindex(const vector<double>& v, int k)
+static std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
   // initialize original index locations
-  vector<size_t> idx(v.size());
+  std::vector<size_t> idx(v.size());
   iota(idx.begin(), idx.end(), 0);
 
   if (k >= (int)v.size()) {
@@ -39,7 +38,7 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
   int i, j;
   double d_base, sumw, r;
   double* w;
-  auto d = vector<double>(M->size1, 0.0);
+  auto d = std::vector<double>(M->size1, 0.0);
 
   double diff;
   int validDistances = 0;
@@ -86,7 +85,7 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
     }
   }
 
-  vector<size_t> ind = minindex(d, l);
+  std::vector<size_t> ind = minindex(d, l);
 
   d_base = d[ind[0]];
   w = (double*)malloc(sizeof(double) * l);
@@ -177,17 +176,17 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       return SUCCESS;
     }
 
-    // Pull out the first 'rowc+1' elements of the y_ls vector
-    gsl_vector_const_view y_ls_cj_view = gsl_vector_const_view_array(y_ls, rowc + 1);
-    const gsl_vector* y_ls_cj = &y_ls_cj_view.vector;
-
-    // Concatenate the column vector 'w' with 'X_ls', keeping only
+    // Pull out the first 'rowc+1' elements of the y_ls vector and
+    // concatenate the column vector 'w' with 'X_ls', keeping only
     // the first 'rowc+1' rows.
-    gsl_matrix* X_ls_cj = gsl_matrix_alloc(rowc + 1, M->size2 + 1);
+    Eigen::VectorXd y_ls_cj(rowc + 1);
+    Eigen::MatrixXd X_ls_cj(rowc + 1, M->size2 + 1);
+
     for (i = 0; i < rowc + 1; i++) {
-      gsl_matrix_set(X_ls_cj, i, 0, w_ls[i]);
+      y_ls_cj(i) = y_ls[i];
+      X_ls_cj(i, 0) = w_ls[i];
       for (j = 1; j < X_ls->size2 + 1; j++) {
-        gsl_matrix_set(X_ls_cj, i, j, gsl_matrix_get(X_ls, i, j - 1));
+        X_ls_cj(i, j) = gsl_matrix_get(X_ls, i, j - 1);
       }
     }
 
@@ -195,72 +194,24 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       /* llr algorithm is not needed at this stage */
       return NOT_IMPLEMENTED;
     } else {
-      gsl_vector* ics = gsl_vector_alloc(M->size2 + 1);
-
-      /* singular value decomposition (SVD) of X_ls_cj, using gsl libraries */
-      if (X_ls_cj->size1 >= X_ls_cj->size2) {
-        gsl_matrix* V = gsl_matrix_alloc(M->size2 + 1, M->size2 + 1);
-        gsl_vector* Esse = gsl_vector_alloc(M->size2 + 1);
-
-        /* TO BE ADDED: benchmark which one of the following methods work best*/
-        /*Golub-Reinsch SVD algorithm*/
-        /*gsl_linalg_SV_decomp(X_ls_cj,V,Esse,ics);*/
-
-        /* one-sided Jacobi orthogonalization method */
-        gsl_linalg_SV_decomp_jacobi(X_ls_cj, V, Esse);
-
-        /* setting to zero extremely small values of Esse to avoid
-        underflow errors */
-        for (j = 0; j < Esse->size; j++) {
-          if (gsl_vector_get(Esse, j) < 1.0e-12) {
-            gsl_vector_set(Esse, j, 0.);
-          }
-        }
-
-        /* function to solve X_ls_cj * ics = y_ls_cj and return ics,
-               using gsl libraries */
-        gsl_linalg_SV_solve(X_ls_cj, V, Esse, y_ls_cj, ics);
-
-        gsl_matrix_free(V);
-        gsl_vector_free(Esse);
-      } else {
-        // X_ls_cj is underdetermined (less rows than columns) so find the
-        // least-squares solution using an LQ decomposition.
-        gsl_vector* tau = gsl_vector_alloc(X_ls_cj->size1);
-
-        // First, find the LQ decomposition of X_ls_cj in-place.
-        gsl_linalg_LQ_decomp(X_ls_cj, tau);
-
-        /* setting to zero extremely small values of tau to avoid
-        underflow errors */
-        for (j = 0; j < tau->size; j++) {
-          if (gsl_vector_get(tau, j) < 1.0e-12) {
-            gsl_vector_set(tau, j, 0.);
-          }
-        }
-
-        gsl_vector* residuals = gsl_vector_alloc(y_ls_cj->size);
-        gsl_linalg_LQ_lssolve(X_ls_cj, tau, y_ls_cj, ics, residuals);
-
-        gsl_vector_free(tau);
-        gsl_vector_free(residuals);
-      }
+      Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      Eigen::VectorXd ics = svd.solve(y_ls_cj);
 
       /* saving ics coefficients if savesmap option enabled */
       if (save_mode) {
         for (j = 0; j < varssv; j++) {
-          if (gsl_vector_get(ics, j) == 0.) {
+          if (ics(j) == 0.) {
             gsl_vector_set(Bi, j, MISSING);
           } else {
-            gsl_vector_set(Bi, j, gsl_vector_get(ics, j));
+            gsl_vector_set(Bi, j, ics(j));
           }
         }
       }
 
-      r = gsl_vector_get(ics, 0);
+      r = ics(0);
       for (j = 1; j < M->size2 + 1; j++) {
         if (gsl_vector_get(b, j - 1) != MISSING) {
-          r += gsl_vector_get(b, j - 1) * gsl_vector_get(ics, j);
+          r += gsl_vector_get(b, j - 1) * ics(j);
         }
       }
 
@@ -269,8 +220,6 @@ static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const do
       free(y_ls);
       free(w_ls);
       gsl_matrix_free(X_ls);
-      gsl_matrix_free(X_ls_cj);
-      gsl_vector_free(ics);
 
       /* save the value of ystar[j] */
       *ystar = r;
