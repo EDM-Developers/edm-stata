@@ -50,8 +50,8 @@ static int minindex(int rvect, double vect[], int k, int ind[])
   quicksortind(vect, ind, 0, rvect - 1);
 
   tempval = vect[ind[0]];
-  contin = 0;
-  numind = 0;
+  contin = 1;
+  numind = 1;
   count_ord = 1;
   i = 1;
   while ((contin < k) && (i < rvect)) {
@@ -108,7 +108,6 @@ static int minindex(int rvect, double vect[], int k, int ind[])
       }
     }
   }
-  if (k == rvect) numind++;
   
   /* returning the number of k minimums (and indices via ind) */
   return numind;
