@@ -7,7 +7,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project(edm-mdap CXX C)
+project(edm-mdap CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -61,7 +61,7 @@ set(SRC
     src/edm.hpp
     src/stata.cpp
     vendor/stplugin.cpp
-    vendor/stplugin.hpp
+    vendor/stplugin.h
     )
 
 # plugin build and installation
@@ -99,7 +99,7 @@ find_package(GSL REQUIRED)
 target_link_libraries(edm PRIVATE GSL::gsl GSL::gslcblas)
 
 # EIGEN3
-find_package(EIGEN3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # OPENMP

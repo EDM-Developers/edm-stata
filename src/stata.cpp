@@ -6,7 +6,7 @@
 #endif
 
 #include "edm.hpp"
-#include "stplugin.hpp"
+#include "stplugin.h"
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
