@@ -44,6 +44,8 @@ edm explore x, e(2/10) saveinputs(test1.h5)
 
 edm xmap x y, k(5)
 
+edm xmap x y, e(6) lib(8) 
+
 edm explore x, k(5) crossfold(10)
 
 edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
