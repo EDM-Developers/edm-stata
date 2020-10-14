@@ -108,7 +108,8 @@ static int minindex(int rvect, double vect[], int k, int ind[])
       }
     }
   }
-
+  if (k == rvect) numind++;
+  
   /* returning the number of k minimums (and indices via ind) */
   return numind;
 }
