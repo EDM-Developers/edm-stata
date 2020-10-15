@@ -82,10 +82,10 @@ static int minindex(int rvect, double vect[], int k, int ind[])
       i++;
       /* check specific case where two values of vect are repeated and
          greater than all the other values */
-      if ((contin == k) && (i == rvect-1) && (vect[ind[i]] == vect[ind[i-1]])) {
-	numind++;
+      if ((contin == k) && (i == rvect - 1) && (vect[ind[i]] == vect[ind[i - 1]])) {
+        numind++;
         count_ord++;
-	if (count_ord > 1) {
+        if (count_ord > 1) {
           /* here I reorder the indexes from low to high in case of
              repeated values */
           temp_ind = (double*)malloc(sizeof(double) * count_ord);
