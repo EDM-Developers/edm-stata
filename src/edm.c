@@ -80,6 +80,31 @@ static int minindex(int rvect, double vect[], int k, int ind[])
       contin++;
       numind++;
       i++;
+      /* check specific case where two values of vect are repeated and
+         greater than all the other values */
+      if ((contin == k) && (i == rvect-1) && (vect[ind[i]] == vect[ind[i-1]])) {
+	numind++;
+        count_ord++;
+	if (count_ord > 1) {
+          /* here I reorder the indexes from low to high in case of
+             repeated values */
+          temp_ind = (double*)malloc(sizeof(double) * count_ord);
+          subind = (int*)malloc(sizeof(int) * count_ord);
+          if ((temp_ind == NULL) || (subind == NULL)) {
+            return MALLOC_ERROR;
+          }
+          for (j = 0; j < count_ord; j++) {
+            temp_ind[j] = (double)ind[i - j];
+            subind[j] = j;
+          }
+          quicksortind(temp_ind, subind, 0, count_ord - 1);
+          for (j = 0; j < count_ord; j++) {
+            ind[i - j] = (int)temp_ind[subind[count_ord - 1 - j]];
+          }
+          free(temp_ind);
+          free(subind);
+        }
+      }
     } else {
       numind++;
       count_ord++;
