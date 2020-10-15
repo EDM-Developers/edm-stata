@@ -179,6 +179,16 @@ static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j,
   return write_stata_columns_filtered(filter, j, 1, toSave);
 }
 
+void display(char* s)
+{
+  SF_display(s);
+}
+
+void display(const char* s)
+{
+  SF_display((char*)s);
+}
+
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
                       ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
@@ -187,59 +197,59 @@ void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, 
   char temps[500];
 
   // Header of the plugin
-  SF_display("\n====================\n");
-  SF_display("Start of the plugin\n\n");
+  display("\n====================\n");
+  display("Start of the plugin\n\n");
 
   // Overview of variables and arguments passed and observations in sample
   sprintf(temps, "number of vars & obs = %i, %i\n", SF_nvars(), SF_nobs());
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "first and last obs in sample = %i, %i\n\n", SF_in1(), SF_in2());
-  SF_display(temps);
+  display(temps);
 
   for (int i = 0; i < argc; i++) {
     sprintf(temps, "arg %i: %s\n", i, argv[i]);
-    SF_display(temps);
+    display(temps);
   }
-  SF_display("\n");
+  display("\n");
 
   sprintf(temps, "theta = %6.4f\n\n", theta);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "algorithm = %s\n\n", algorithm);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "force compute = %i\n\n", force_compute);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "missing distance = %f\n\n", missingdistance);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "number of variables in manifold = %i\n\n", mani);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "train set obs: %i\n", count_train_set);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "predict set obs: %i\n\n", count_predict_set);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "p_manifold flag = %i\n", pmani_flag);
-  SF_display(temps);
+  display(temps);
 
   if (pmani_flag) {
     sprintf(temps, "number of variables in p_manifold = %i\n", pmani);
-    SF_display(temps);
+    display(temps);
   }
-  SF_display("\n");
+  display("\n");
 
   sprintf(temps, "l = %i\n\n", l);
-  SF_display(temps);
+  display(temps);
 
   if (save_mode) {
     sprintf(temps, "columns in smap coefficents = %i\n", varssv);
-    SF_display(temps);
+    display(temps);
   }
 
   sprintf(temps, "save_mode = %i\n\n", save_mode);
-  SF_display(temps);
+  display(temps);
 
   sprintf(temps, "Requested %s OpenMP threads\n", argv[9]);
-  SF_display(temps);
+  display(temps);
   sprintf(temps, "Using %i OpenMP threads\n\n", nthreads);
-  SF_display(temps);
+  display(temps);
 }
 
 /*
@@ -435,8 +445,8 @@ STDLL stata_call(int argc, char* argv[])
 
   // Print a Footer message for the plugin.
   if (verbosity > 0) {
-    SF_display("\nEnd of the plugin\n");
-    SF_display("====================\n\n");
+    display("\nEnd of the plugin\n");
+    display("====================\n\n");
   }
 
   return rc;
