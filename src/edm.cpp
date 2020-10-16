@@ -15,7 +15,7 @@
 /* internal functions */
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
-static std::vector<size_t> minindex(const std::vector<double>& v, int k)
+std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
   // initialize original index locations
   std::vector<size_t> idx(v.size());
@@ -30,9 +30,9 @@ static std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-static retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[], int l, double theta,
-                              int skip_obs, char* algorithm, bool save_mode, int varssv, bool force_compute,
-                              double missingdistance, double* ystar, gsl_vector* Bi)
+retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[], int l, double theta, int skip_obs,
+                       char* algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
+                       double* ystar, gsl_vector* Bi)
 {
 
   int i, j;

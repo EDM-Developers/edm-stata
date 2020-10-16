@@ -62,7 +62,7 @@ void print_error(ST_retcode rc)
  * Count the number of rows that aren't being filtered out
  * by Stata's 'if' or 'in' expressions.
  */
-static int num_if_in_rows()
+int num_if_in_rows()
 {
   int num = 0;
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
@@ -84,8 +84,8 @@ static int num_if_in_rows()
  * the 'numFiltered' argument which is the total number of rows which are
  * true in the filter.
  */
-static ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFiltered, ST_int j0, int numCols,
-                                                 double** out, double* outSum)
+ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFiltered, ST_int j0, int numCols,
+                                          double** out, double* outSum)
 {
   // Allocate space for the matrix of data from Stata
   int numRows = (filter == NULL) ? num_if_in_rows() : numFiltered;
@@ -142,7 +142,7 @@ static ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int nu
  * If 'filter' is not NULL, we consider each row 'i' only if 'filter[i]'
  * evaluates to true.
  */
-static ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j0, int numCols, const double* toSave)
+ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j0, int numCols, const double* toSave)
 {
   int ind = 0; // Index of y vector
   ST_retcode rc = 0;
@@ -170,25 +170,25 @@ static ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j
 }
 
 /* Read some columns from Stata skipping some rows */
-static ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j, int numCols, double** out)
+ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j, int numCols, double** out)
 {
   return stata_columns_filtered_and_sum(filter, numFiltered, j, numCols, out, NULL);
 }
 
 /* Read a single column from Stata skipping some rows */
-static ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out)
+ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out)
 {
   return stata_columns_filtered(filter, numFiltered, j, 1, out);
 }
 
 /* Read a single column from Stata and calculate the column sum */
-static ST_retcode stata_column_and_sum(ST_int j, double** out, double* outSum)
+ST_retcode stata_column_and_sum(ST_int j, double** out, double* outSum)
 {
   return stata_columns_filtered_and_sum(NULL, -1, j, 1, out, outSum);
 }
 
 /*  Write a single column to Stata while skipping some rows */
-static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j, const double* toSave)
+ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j, const double* toSave)
 {
   return write_stata_columns_filtered(filter, j, 1, toSave);
 }

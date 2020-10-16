@@ -78,7 +78,7 @@ void free_InputVars(InputVars* vars)
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-static void read_dumpfile(const char* fname, InputVars* vars)
+void read_dumpfile(const char* fname, InputVars* vars)
 {
   hid_t fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
 
@@ -111,7 +111,7 @@ static void read_dumpfile(const char* fname, InputVars* vars)
   H5Fclose(fid);
 }
 
-static void write_results(const char* fname_out, double* ystar, double* flat_Bi_map, const InputVars* vars)
+void write_results(const char* fname_out, double* ystar, double* flat_Bi_map, const InputVars* vars)
 {
   hid_t fid = H5Fcreate(fname_out, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -123,7 +123,7 @@ static void write_results(const char* fname_out, double* ystar, double* flat_Bi_
   H5Fclose(fid);
 }
 
-static char* generate_output_fname(const char* fname_in)
+char* generate_output_fname(const char* fname_in)
 {
   const char* ext = strrchr(fname_in, '.');
 
