@@ -66,7 +66,7 @@ set(SRC
 
 # plugin build and installation
 add_library(edm SHARED ${SRC})
-set_target_properties(edm PROPERTIES CXX_STANDARD 11 PREFIX "")
+set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
 
 if(WIN32)
   set_target_properties(edm PROPERTIES SUFFIX _Windows_x64.plugin)
@@ -93,10 +93,6 @@ endif()
 # grab vendored files
 include(vendor/CMakeLists.txt)
 target_include_directories(edm PRIVATE vendor)
-
-# GSL
-find_package(GSL REQUIRED)
-target_link_libraries(edm PRIVATE GSL::gsl GSL::gslcblas)
 
 # EIGEN3
 find_package(Eigen3 REQUIRED)

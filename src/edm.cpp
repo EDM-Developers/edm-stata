@@ -2,7 +2,6 @@
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
 #include "edm.h"
-#include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,9 +9,11 @@
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <numeric>   // std::iota
+#include <optional>
 #include <vector>
 
 /* internal functions */
+typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
@@ -30,32 +31,31 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[], int l, double theta, int skip_obs,
-                       char* algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
-                       double* ystar, gsl_vector* Bi)
+retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varssv, bool force_compute,
+                       double missingdistance, const MatrixView& M, const MatrixView& Mp, const double* y,
+                       double* ystar, std::optional<MatrixView>& Bi_map)
 {
 
   int i, j;
   double d_base, sumw, r;
   double* w;
-  auto d = std::vector<double>(M->size1, 0.0);
+  auto d = std::vector<double>(M.rows());
+  auto b = Mp.row(Mp_i);
 
-  double diff;
   int validDistances = 0;
-  for (i = 0; i < M->size1; i++) {
+  for (i = 0; i < M.rows(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (j = 0; j < M->size2; j++) {
-      if ((gsl_matrix_get(M, i, j) == MISSING) || (gsl_vector_get(b, j) == MISSING)) {
+    for (j = 0; j < M.cols(); j++) {
+      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
         if (missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        diff = gsl_matrix_get(M, i, j) - gsl_vector_get(b, j);
-        dist = dist + diff * diff;
+        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -109,15 +109,14 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
     free(w);
 
     /* save the value of ystar[j] */
-    *ystar = r;
+    ystar[Mp_i] = r;
     return SUCCESS;
 
   } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
     bool anyMissing;
-    gsl_matrix* X_ls;
     double mean_w, *y_ls, *w_ls;
     int rowc;
-    X_ls = gsl_matrix_alloc(l, M->size2);
+    Eigen::MatrixXd X_ls(l, M.cols());
     y_ls = (double*)malloc(sizeof(double) * l);
     w_ls = (double*)malloc(sizeof(double) * l);
     if ((y_ls == NULL) || (w_ls == NULL)) {
@@ -142,8 +141,8 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
         continue;
       }
       anyMissing = false;
-      for (i = 0; i < M->size2; i++) {
-        if (gsl_matrix_get(M, ind[j], i) == MISSING) {
+      for (i = 0; i < M.cols(); i++) {
+        if (M(ind[j], i) == MISSING) {
           anyMissing = true;
           break;
         }
@@ -159,8 +158,8 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
       } else if (strcmp(algorithm, "smap") == 0) {
         y_ls[rowc] = y[ind[j]] * w[j];
         w_ls[rowc] = w[j];
-        for (i = 0; i < M->size2; i++) {
-          gsl_matrix_set(X_ls, rowc, i, gsl_matrix_get(M, ind[j], i) * w[j]);
+        for (i = 0; i < M.cols(); i++) {
+          X_ls(rowc, i) = M(ind[j], i) * w[j];
         }
       }
     }
@@ -169,10 +168,9 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
       free(w);
       free(y_ls);
       free(w_ls);
-      gsl_matrix_free(X_ls);
 
       /* save the missing value flag to ystar[j] */
-      *ystar = MISSING;
+      ystar[Mp_i] = MISSING;
       return SUCCESS;
     }
 
@@ -180,13 +178,13 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
     // concatenate the column vector 'w' with 'X_ls', keeping only
     // the first 'rowc+1' rows.
     Eigen::VectorXd y_ls_cj(rowc + 1);
-    Eigen::MatrixXd X_ls_cj(rowc + 1, M->size2 + 1);
+    Eigen::MatrixXd X_ls_cj(rowc + 1, M.cols() + 1);
 
     for (i = 0; i < rowc + 1; i++) {
       y_ls_cj(i) = y_ls[i];
       X_ls_cj(i, 0) = w_ls[i];
-      for (j = 1; j < X_ls->size2 + 1; j++) {
-        X_ls_cj(i, j) = gsl_matrix_get(X_ls, i, j - 1);
+      for (j = 1; j < X_ls.cols() + 1; j++) {
+        X_ls_cj(i, j) = X_ls(i, j - 1);
       }
     }
 
@@ -197,21 +195,21 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
       Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
       Eigen::VectorXd ics = svd.solve(y_ls_cj);
 
-      /* saving ics coefficients if savesmap option enabled */
-      if (save_mode) {
-        for (j = 0; j < varssv; j++) {
-          if (ics(j) == 0.) {
-            gsl_vector_set(Bi, j, MISSING);
-          } else {
-            gsl_vector_set(Bi, j, ics(j));
-          }
+      r = ics(0);
+      for (j = 1; j < M.cols() + 1; j++) {
+        if (b(j - 1) != MISSING) {
+          r += b(j - 1) * ics(j);
         }
       }
 
-      r = ics(0);
-      for (j = 1; j < M->size2 + 1; j++) {
-        if (gsl_vector_get(b, j - 1) != MISSING) {
-          r += gsl_vector_get(b, j - 1) * ics(j);
+      /* saving ics coefficients if savesmap option enabled */
+      if (Bi_map.has_value()) {
+        for (j = 0; j < varssv; j++) {
+          if (ics(j) == 0.) {
+            (*Bi_map)(Mp_i, j) = MISSING;
+          } else {
+            (*Bi_map)(Mp_i, j) = ics(j);
+          }
         }
       }
 
@@ -219,10 +217,9 @@ retcode mf_smap_single(const gsl_matrix* M, const gsl_vector* b, const double y[
       free(w);
       free(y_ls);
       free(w_ls);
-      gsl_matrix_free(X_ls);
 
       /* save the value of ystar[j] */
-      *ystar = r;
+      ystar[Mp_i] = r;
       return SUCCESS;
     }
   }
@@ -236,40 +233,26 @@ retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int M
                      double* y, int l, double theta, double* S, char* algorithm, bool save_mode, int varssv,
                      bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map)
 {
-  /* Create GSL matrixes which are views of the supplied flattened matrices */
-  gsl_matrix_view M_view = gsl_matrix_view_array(flat_M, count_train_set, mani);
-  gsl_matrix* M = &(M_view.matrix);
+  /* Create Eigen matrixes which are views of the supplied flattened matrices */
+  MatrixView M((double*)flat_M, count_train_set, mani);
+  MatrixView Mp((double*)flat_Mp, count_predict_set, mani);
 
-  gsl_matrix_view Mp_view = gsl_matrix_view_array(flat_Mp, count_predict_set, Mpcol);
-  gsl_matrix* Mp = &(Mp_view.matrix);
-
-  gsl_matrix_view Bi_map_view = gsl_matrix_view_array(flat_Bi_map, count_predict_set, varssv);
-  gsl_matrix* Bi_map = &Bi_map_view.matrix;
+  std::optional<MatrixView> Bi_map = std::nullopt;
+  if (save_mode) {
+    Bi_map = MatrixView(flat_Bi_map, count_predict_set, varssv);
+  }
 
   /* OpenMP loop with call to mf_smap_single function */
-  retcode* rc = (retcode*)malloc(Mp->size1 * sizeof(retcode));
+  retcode* rc = (retcode*)malloc(Mp.rows() * sizeof(retcode));
   int i;
-
 #pragma omp parallel for
-  for (i = 0; i < Mp->size1; i++) {
-
-    gsl_vector_view Bi_view;
-    gsl_vector* Bi = NULL;
-    if (save_mode) {
-      Bi_view = gsl_matrix_row(Bi_map, i);
-      Bi = &Bi_view.vector;
-    }
-
-    gsl_vector_const_view Mpi_view = gsl_matrix_const_row(Mp, i);
-    const gsl_vector* Mpi = &Mpi_view.vector;
-
-    rc[i] = mf_smap_single(M, Mpi, y, l, theta, (int)S[i], algorithm, save_mode, varssv, force_compute, missingdistance,
-                           &(ystar[i]), Bi);
+  for (i = 0; i < Mp.rows(); i++) {
+    rc[i] = mf_smap_single(i, l, theta, algorithm, varssv, force_compute, missingdistance, M, Mp, y, ystar, Bi_map);
   }
 
   /* Check if any mf_smap_single call failed, and if so find the most serious error */
   retcode maxError = 0;
-  for (i = 0; i < Mp->size1; i++) {
+  for (i = 0; i < Mp.rows(); i++) {
     if (rc[i] > maxError) {
       maxError = rc[i];
     }
