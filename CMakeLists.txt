@@ -58,7 +58,7 @@ endif()
 # source list
 set(SRC
     src/edm.cpp
-    src/edm.hpp
+    src/edm.h
     src/stata.cpp
     vendor/stplugin.cpp
     vendor/stplugin.h
@@ -125,7 +125,7 @@ endif()
 include(ClangFormat)
 clangformat_setup(
   src/edm.cpp
-  src/edm.hpp
+  src/edm.h
   src/driver.cpp
   src/stata.cpp
 )

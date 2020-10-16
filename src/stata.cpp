@@ -5,7 +5,7 @@
 #endif
 #endif
 
-#include "edm.hpp"
+#include "edm.h"
 #include "stplugin.h"
 #include <omp.h>
 #include <stdexcept>

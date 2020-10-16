@@ -5,7 +5,7 @@
 #endif
 #endif
 
-#include "edm.hpp"
+#include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 /* version 2.1, 09 Sep 2020, Edoardo Tescari, Melbourne Data Analytics Platform,
    The University of Melbourne, e.tescari@unimelb.edu.au */
 
-#include "edm.hpp"
+#include "edm.h"
 #include <gsl/gsl_linalg.h>
 #include <math.h>
 #include <stdlib.h>
