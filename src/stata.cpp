@@ -8,6 +8,7 @@
 #include "edm.hpp"
 #include "stplugin.h"
 #include <omp.h>
+#include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,31 +18,44 @@
 #include <hdf5_hl.h>
 #endif
 
-ST_retcode print_error(ST_retcode rc)
+void display(char* s)
 {
-  char temps[500];
+  SF_display(s);
+}
 
+void display(const char* s)
+{
+  SF_display((char*)s);
+}
+
+void error(const char* s)
+{
+  SF_error((char*)s);
+}
+
+void print_error(ST_retcode rc)
+{
   switch (rc) {
+    case TOO_FEW_VARIABLES:
+      error("edm plugin call requires 11 or 12 arguments\n");
+      break;
+    case TOO_MANY_VARIABLES:
+      error("edm plugin call requires 11 or 12 arguments\n");
+      break;
     case MALLOC_ERROR:
-      sprintf(temps, "Insufficient memory\n");
+      error("Insufficient memory\n");
       break;
     case NOT_IMPLEMENTED:
-      sprintf(temps, "Method is not yet implemented\n");
+      error("Method is not yet implemented\n");
       break;
     case INSUFFICIENT_UNIQUE:
-      sprintf(temps, "Insufficient number of unique observations, consider "
-                     "tweaking the values of E, k or use -force- option\n");
+      error("Insufficient number of unique observations, consider "
+            "tweaking the values of E, k or use -force- option\n");
       break;
     case INVALID_ALGORITHM:
-      sprintf(temps, "Invalid algorithm argument\n");
+      error("Invalid algorithm argument\n");
       break;
   }
-
-  if (rc != SUCCESS) {
-    SF_error(temps);
-  }
-
-  return rc;
 }
 
 /*
@@ -77,7 +91,7 @@ static ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int nu
   int numRows = (filter == NULL) ? num_if_in_rows() : numFiltered;
   double* M = (double*)malloc(sizeof(double) * numRows * numCols);
   if (M == NULL) {
-    return print_error(MALLOC_ERROR);
+    return MALLOC_ERROR;
   }
 
   int ind = 0; // Flattened index of M matrix
@@ -179,16 +193,6 @@ static ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j,
   return write_stata_columns_filtered(filter, j, 1, toSave);
 }
 
-void display(char* s)
-{
-  SF_display(s);
-}
-
-void display(const char* s)
-{
-  SF_display((char*)s);
-}
-
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
                       ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
@@ -267,8 +271,15 @@ local vsave_flag = 0
 plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag'
 `vsave_flag'
 */
-STDLL stata_call(int argc, char* argv[])
+ST_retcode edm(int argc, char* argv[])
 {
+  if (argc < 11) {
+    return TOO_FEW_VARIABLES;
+  }
+  if (argc > 12) {
+    return TOO_MANY_VARIABLES;
+  }
+
   ST_double theta = atof(argv[0]);
   ST_int l = atoi(argv[1]);
   char* algorithm = argv[2];
@@ -282,8 +293,14 @@ STDLL stata_call(int argc, char* argv[])
   ST_int nthreads = atoi(argv[9]);
   ST_int verbosity = atoi(argv[10]);
 
+  // Default number of neighbours is E + 1
   if (l <= 0) {
     l = mani + 1;
+  }
+
+  // Default number of threads is the number of cores available
+  if (nthreads <= 0) {
+    nthreads = omp_get_num_procs();
   }
 
   // Allocation of train_use, predict_use and S (prev. skip_obs) variables.
@@ -294,21 +311,21 @@ STDLL stata_call(int argc, char* argv[])
   ST_int stataVarNum = mani + 3;
   ST_retcode rc = stata_column_and_sum(stataVarNum, &train_use, &sum);
   if (rc) {
-    return print_error(rc);
+    return rc;
   }
   count_train_set = (int)sum;
 
   stataVarNum = mani + 4;
   rc = stata_column_and_sum(stataVarNum, &predict_use, &sum);
   if (rc) {
-    return print_error(rc);
+    return rc;
   }
   count_predict_set = (int)sum;
 
   stataVarNum = mani + 5;
   rc = stata_column_filtered(predict_use, count_predict_set, stataVarNum, &S);
   if (rc) {
-    return print_error(rc);
+    return rc;
   }
 
   // Allocation of matrix M and vector y.
@@ -317,13 +334,13 @@ STDLL stata_call(int argc, char* argv[])
   stataVarNum = 1;
   rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M);
   if (rc) {
-    return print_error(rc);
+    return rc;
   }
 
   stataVarNum = mani + 1;
   rc = stata_column_filtered(train_use, count_train_set, stataVarNum, &y);
   if (rc) {
-    return print_error(rc);
+    return rc;
   }
 
   // Allocation of matrices Mp and Bimap, and vector ystar.
@@ -346,13 +363,13 @@ STDLL stata_call(int argc, char* argv[])
   if (save_mode) {
     flat_Bi_map = (ST_double*)malloc(sizeof(ST_double) * count_predict_set * varssv);
     if (flat_Bi_map == NULL) {
-      return print_error(MALLOC_ERROR);
+      return MALLOC_ERROR;
     }
   }
 
   ST_double* ystar = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
   if (ystar == NULL) {
-    return print_error(MALLOC_ERROR);
+    return MALLOC_ERROR;
   }
 
 #ifdef DUMP_INPUT
@@ -390,9 +407,6 @@ STDLL stata_call(int argc, char* argv[])
   }
 #endif
 
-  // Decide on the number of OpenMP threads to use.
-  nthreads = nthreads <= 0 ? omp_get_num_procs() : nthreads;
-
   // Find the number of threads Stata was already using, so we can reset to this later.
   int originalNumThreads;
 #pragma omp parallel
@@ -428,10 +442,6 @@ STDLL stata_call(int argc, char* argv[])
     }
   }
 
-  // If mf_smap_loop gave an error, or saving the output to Stata gave an error,
-  // then print it out now before the 'end of the plugin' footer.
-  print_error(rc);
-
   free(train_use);
   free(predict_use);
   free(S);
@@ -450,4 +460,19 @@ STDLL stata_call(int argc, char* argv[])
   }
 
   return rc;
+}
+
+STDLL stata_call(int argc, char* argv[])
+{
+  try {
+    ST_retcode rc = edm(argc, argv);
+    print_error(rc);
+    return rc;
+  } catch (const std::exception& e) {
+    error(e.what());
+    error("\n");
+  } catch (...) {
+    error("Unknown error in edm plugin\n");
+  }
+  return UNKNOWN_ERROR;
 }

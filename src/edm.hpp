@@ -7,10 +7,13 @@
 #endif
 
 #define SUCCESS 0
+#define TOO_FEW_VARIABLES 102
+#define TOO_MANY_VARIABLES 103
 #define INVALID_ALGORITHM 400
 #define INSUFFICIENT_UNIQUE 503
 #define NOT_IMPLEMENTED 908
 #define MALLOC_ERROR 909
+#define UNKNOWN_ERROR 8000
 
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
