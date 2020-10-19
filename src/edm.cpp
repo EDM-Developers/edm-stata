@@ -4,7 +4,6 @@
 #include "edm.h"
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
@@ -31,7 +30,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varssv, bool force_compute,
+retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int varssv, bool force_compute,
                        double missingdistance, const MatrixView& M, const MatrixView& Mp, const std::vector<double>& y,
                        std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
 {
@@ -95,7 +94,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
 
   sumw = 0.;
   r = 0.;
-  if ((strcmp(algorithm, "") == 0) || (strcmp(algorithm, "simplex") == 0)) {
+  if (algorithm == "" || algorithm == "simplex") {
     for (j = 0; j < l; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
@@ -112,7 +111,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
     ystar[Mp_i] = r;
     return SUCCESS;
 
-  } else if ((strcmp(algorithm, "smap") == 0) || (strcmp(algorithm, "llr") == 0)) {
+  } else if (algorithm == "smap" || algorithm == "llr") {
     bool anyMissing;
     double mean_w, *y_ls, *w_ls;
     int rowc;
@@ -151,11 +150,11 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
         continue;
       }
       rowc++;
-      if (strcmp(algorithm, "llr") == 0) {
+      if (algorithm == "llr") {
         /* llr algorithm is not needed at this stage */
         return NOT_IMPLEMENTED;
 
-      } else if (strcmp(algorithm, "smap") == 0) {
+      } else if (algorithm == "smap") {
         y_ls[rowc] = y[ind[j]] * w[j];
         w_ls[rowc] = w[j];
         for (i = 0; i < M.cols(); i++) {
@@ -188,7 +187,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
       }
     }
 
-    if (strcmp(algorithm, "llr") == 0) {
+    if (algorithm == "llr") {
       /* llr algorithm is not needed at this stage */
       return NOT_IMPLEMENTED;
     } else {
@@ -229,7 +228,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
 
 /* OpenMP routines */
 smap_res_t mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, int l, double theta,
-                        char* algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
+                        std::string algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
                         const std::vector<double>& y, const std::vector<double>& S, const std::vector<double>& flat_M,
                         const std::vector<double>& flat_Mp)
 {

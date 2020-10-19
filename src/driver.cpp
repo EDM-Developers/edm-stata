@@ -43,11 +43,11 @@ typedef struct InputVars
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-InputVars read_dumpfile(const char* fname)
+InputVars read_dumpfile(std::string fname_in)
 {
   InputVars vars;
 
-  hid_t fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
+  hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
   H5LTget_attribute_int(fid, "/", "count_train_set", &(vars.count_train_set));
   H5LTget_attribute_int(fid, "/", "count_predict_set", &(vars.count_predict_set));
@@ -86,9 +86,9 @@ InputVars read_dumpfile(const char* fname)
   return vars;
 }
 
-void write_results(const char* fname_out, const smap_res_t& smap_res, const InputVars& vars)
+void write_results(std::string fname_out, const smap_res_t& smap_res, const InputVars& vars)
 {
-  hid_t fid = H5Fcreate(fname_out, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
 
@@ -103,23 +103,6 @@ void write_results(const char* fname_out, const smap_res_t& smap_res, const Inpu
   H5Fclose(fid);
 }
 
-char* generate_output_fname(const char* fname_in)
-{
-  const char* ext = strrchr(fname_in, '.');
-
-  if (!ext || (ext == fname_in))
-    ext = strchr(fname_in, '\0') - 1;
-
-  const size_t fname_out_size = ext - fname_in + 8;
-  char* fname_out = (char*)malloc(sizeof(char) * fname_out_size);
-
-  strncpy(fname_out, fname_in, ext - fname_in);
-
-  sprintf(fname_out + (ext - fname_in), "-out.h5");
-
-  return fname_out;
-}
-
 int main(int argc, char* argv[])
 {
 
@@ -128,17 +111,19 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  InputVars vars = read_dumpfile(argv[1]);
+  std::string fname_in(argv[1]);
 
-  char* fname_out = generate_output_fname(argv[1]); // WATCH OUT: fname_out is malloc'd in this function!
+  InputVars vars = read_dumpfile(fname_in);
 
   smap_res_t smap_res = mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.l,
                                      vars.theta, vars.algorithm, vars.save_mode, vars.varssv, vars.force_compute,
                                      vars.missingdistance, vars.y, vars.S, vars.flat_M, vars.flat_Mp);
 
+  std::size_t ext = fname_in.find_last_of(".");
+  fname_in = fname_in.substr(0, ext);
+  std::string fname_out = fname_in + "-out.h5";
+
   write_results(fname_out, smap_res, vars);
 
-  free(fname_out);
-
-  return 0;
+  return smap_res.rc;
 }

@@ -155,7 +155,7 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, bool force_compute,
+void print_debug_info(int argc, char* argv[], ST_double theta, std::string algorithm, bool force_compute,
                       ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
                       bool pmani_flag, ST_int pmani, ST_int l, bool save_mode, ST_int varssv, ST_int nthreads)
 {
@@ -179,7 +179,7 @@ void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, 
 
   sprintf(temps, "theta = %6.4f\n\n", theta);
   display(temps);
-  sprintf(temps, "algorithm = %s\n\n", algorithm);
+  sprintf(temps, "algorithm = %s\n\n", algorithm.c_str());
   display(temps);
   sprintf(temps, "force compute = %i\n\n", force_compute);
   display(temps);
@@ -243,7 +243,7 @@ ST_retcode edm(int argc, char* argv[])
 
   ST_double theta = atof(argv[0]);
   ST_int l = atoi(argv[1]);
-  char* algorithm = argv[2];
+  std::string algorithm(argv[2]);
   bool force_compute = (strcmp(argv[3], "force") == 0);
   ST_double missingdistance = atof(argv[4]);
   ST_int mani = atoi(argv[5]);     // number of columns in the manifold
@@ -317,7 +317,7 @@ ST_retcode edm(int argc, char* argv[])
     hsize_t SLen[] = { (hsize_t)count_predict_set };
     H5LTmake_dataset_double(fid, "S", 1, SLen, S.data());
 
-    H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
+    H5LTset_attribute_string(fid, "/", "algorithm", algorithm.c_str());
     char bool_var = (char)save_mode;
     H5LTset_attribute_char(fid, "/", "save_mode", &bool_var, 1);
     bool_var = (char)force_compute;
