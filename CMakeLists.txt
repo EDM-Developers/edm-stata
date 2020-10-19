@@ -84,7 +84,6 @@ if (HDF5_FOUND)
   add_executable(smap_driver src/driver.cpp)
   set_target_properties(smap_driver PROPERTIES CXX_STANDARD 17)
   target_link_libraries(smap_driver PRIVATE edm)
-  target_include_directories(smap_driver PRIVATE ${CMAKE_SOURCE_DIR}/vendor)
   install(TARGETS smap_driver DESTINATION .)
 endif()
 
