@@ -18,10 +18,20 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
+#include <optional>
 #include <stdbool.h>
+#include <vector>
 
 typedef int retcode;
 
-DLL retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M,
-                         double* flat_Mp, double* y, int l, double theta, double* S, char* algorithm, bool save_mode,
-                         int varssv, bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map);
+typedef struct
+{
+  retcode rc;
+  std::vector<double> ystar;
+  std::optional<std::vector<double>> flat_Bi_map;
+} smap_res_t;
+
+DLL smap_res_t mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, int l, double theta,
+                            char* algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
+                            const std::vector<double>& y, const std::vector<double>& S,
+                            const std::vector<double>& flat_M, const std::vector<double>& flat_Mp);

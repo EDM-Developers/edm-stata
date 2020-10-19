@@ -8,9 +8,13 @@
 #include "edm.h"
 #include "stplugin.h"
 #include <omp.h>
-#include <stdexcept>
 #include <stdio.h>
 #include <string.h>
+
+#include <numeric> // for std::accumulate
+#include <optional>
+#include <stdexcept>
+#include <vector>
 
 #ifdef DUMP_INPUT
 #include <hdf5.h>
@@ -72,50 +76,42 @@ int num_if_in_rows()
   return num;
 }
 
+typedef struct
+{
+  std::vector<bool> useRow;
+  int numRows;
+} row_filter_t;
+
 /*
  * Read in columns from Stata (i.e. what Stata calls variables).
- *
  * Starting from column number 'j0', read in 'numCols' of columns.
- * The result is stored in the 'out' variable, and the column sum in 'outSum'.
- *
- * If 'filter' is not NULL, we consider each row 'i' only if 'filter[i]'
- * evaluates to true. To allocate properly the correct amount, pass in
- * the 'numFiltered' argument which is the total number of rows which are
- * true in the filter.
- */
-ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFiltered, ST_int j0, int numCols,
-                                          double** out, double* outSum)
+ * If 'filter' is supplied, we consider each row 'i' only if 'filter[i]'
+ * evaluates to true. */
+template<typename T>
+std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row_filter_t>& filter = std::nullopt)
 {
   // Allocate space for the matrix of data from Stata
-  int numRows = (filter == NULL) ? num_if_in_rows() : numFiltered;
-  double* M = (double*)malloc(sizeof(double) * numRows * numCols);
-  if (M == NULL) {
-    return MALLOC_ERROR;
-  }
-
+  int numRows = filter.has_value() ? filter->numRows : num_if_in_rows();
+  std::vector<T> M(numRows * numCols);
   int ind = 0; // Flattened index of M matrix
-  ST_retcode rc = 0;
-  ST_double value = 0;
-  ST_double sum = 0;
-
-  int r = 0; // Count each row that isn't filtered by Stata 'if'
+  int r = 0;   // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
-    if (SF_ifobs(i)) {                   // Skip rows according to Stata's 'if'
-      if (filter == NULL || filter[r]) { // Skip rows given our own filter
+    if (SF_ifobs(i)) {                                // Skip rows according to Stata's 'if'
+      if (!filter.has_value() || filter->useRow[r]) { // Skip rows given our own filter
         for (ST_int j = j0; j < j0 + numCols; j++) {
-          rc = SF_vdata(j, i, &value);
+          ST_double value;
+          ST_retcode rc = SF_vdata(j, i, &value);
           if (rc) {
-            free(M);
-            return rc;
+            throw std::runtime_error("Cannot read variables from Stata");
           }
-
-          // Set missing values to MISSING
-          if (!SF_is_missing(value)) {
-            M[ind] = value;
-            sum += value;
-          } else {
-            M[ind] = MISSING;
+          if (SF_is_missing(value)) {
+            if (std::is_floating_point<T>::value) {
+              value = MISSING;
+            } else {
+              value = 0;
+            }
           }
+          M[ind] = (T)value;
           ind += 1;
         }
       }
@@ -123,12 +119,7 @@ ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFilter
     }
   }
 
-  *out = M;
-  if (outSum != NULL) {
-    *outSum = sum;
-  }
-
-  return SUCCESS;
+  return M;
 }
 
 /*
@@ -138,25 +129,22 @@ ST_retcode stata_columns_filtered_and_sum(const ST_double* filter, int numFilter
  * The data being written is in the 'toSave' parameter, which is a
  * flattened row-major array.
  *
- * If 'filter' is not NULL, we consider each row 'i' only if 'filter[i]'
- * evaluates to true.
+ * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
  */
-ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j0, int numCols, const double* toSave)
+void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols = 1,
+                         const std::optional<row_filter_t>& filter = std::nullopt)
 {
   int ind = 0; // Index of y vector
-  ST_retcode rc = 0;
-  ST_double value = 0;
-
-  int r = 0; // Count each row that isn't filtered by Stata 'if'
+  int r = 0;   // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
-    if (SF_ifobs(i)) {                   // Skip rows according to Stata's 'if'
-      if (filter == NULL || filter[r]) { // Skip rows given our own filter
+    if (SF_ifobs(i)) {                                // Skip rows according to Stata's 'if'
+      if (!filter.has_value() || filter->useRow[r]) { // Skip rows given our own filter
         for (ST_int j = j0; j < j0 + numCols; j++) {
           // Convert MISSING back to Stata's missing value
-          value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
-          rc = SF_vstore(j, i, value);
+          ST_double value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
+          ST_retcode rc = SF_vstore(j, i, value);
           if (rc) {
-            return rc;
+            throw std::runtime_error("Cannot write variables to Stata");
           }
           ind += 1;
         }
@@ -164,32 +152,6 @@ ST_retcode write_stata_columns_filtered(const ST_double* filter, ST_int j0, int 
       r += 1;
     }
   }
-
-  return SUCCESS;
-}
-
-/* Read some columns from Stata skipping some rows */
-ST_retcode stata_columns_filtered(const ST_double* filter, int numFiltered, ST_int j, int numCols, double** out)
-{
-  return stata_columns_filtered_and_sum(filter, numFiltered, j, numCols, out, NULL);
-}
-
-/* Read a single column from Stata skipping some rows */
-ST_retcode stata_column_filtered(const ST_double* filter, int numFiltered, ST_int j, double** out)
-{
-  return stata_columns_filtered(filter, numFiltered, j, 1, out);
-}
-
-/* Read a single column from Stata and calculate the column sum */
-ST_retcode stata_column_and_sum(ST_int j, double** out, double* outSum)
-{
-  return stata_columns_filtered_and_sum(NULL, -1, j, 1, out, outSum);
-}
-
-/*  Write a single column to Stata while skipping some rows */
-ST_retcode write_stata_column_filtered(const ST_double* filter, ST_int j, const double* toSave)
-{
-  return write_stata_columns_filtered(filter, j, 1, toSave);
 }
 
 /* Print to the Stata console the inputs to the plugin  */
@@ -303,44 +265,25 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Allocation of train_use, predict_use and S (prev. skip_obs) variables.
-  ST_double *train_use, *predict_use, *S;
-  ST_int count_train_set, count_predict_set;
-
-  ST_double sum;
   ST_int stataVarNum = mani + 3;
-  ST_retcode rc = stata_column_and_sum(stataVarNum, &train_use, &sum);
-  if (rc) {
-    return rc;
-  }
-  count_train_set = (int)sum;
+  std::vector<bool> train_use = stata_columns<bool>(stataVarNum);
+  int count_train_set = std::accumulate(train_use.begin(), train_use.end(), 0);
+  row_filter_t train_filter = { train_use, count_train_set };
 
   stataVarNum = mani + 4;
-  rc = stata_column_and_sum(stataVarNum, &predict_use, &sum);
-  if (rc) {
-    return rc;
-  }
-  count_predict_set = (int)sum;
+  std::vector<bool> predict_use = stata_columns<bool>(stataVarNum);
+  int count_predict_set = std::accumulate(predict_use.begin(), predict_use.end(), 0);
+  row_filter_t predict_filter = { predict_use, count_predict_set };
 
   stataVarNum = mani + 5;
-  rc = stata_column_filtered(predict_use, count_predict_set, stataVarNum, &S);
-  if (rc) {
-    return rc;
-  }
+  std::vector<ST_double> S = stata_columns<ST_double>(stataVarNum, 1, predict_filter);
 
   // Allocation of matrix M and vector y.
-  ST_double *flat_M, *y;
-
   stataVarNum = 1;
-  rc = stata_columns_filtered(train_use, count_train_set, stataVarNum, mani, &flat_M);
-  if (rc) {
-    return rc;
-  }
+  std::vector<ST_double> flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
 
   stataVarNum = mani + 1;
-  rc = stata_column_filtered(train_use, count_train_set, stataVarNum, &y);
-  if (rc) {
-    return rc;
-  }
+  std::vector<ST_double> y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
 
   // Allocation of matrices Mp and Bimap, and vector ystar.
   ST_int Mpcol;
@@ -352,24 +295,7 @@ ST_retcode edm(int argc, char* argv[])
     stataVarNum = 1;
   }
 
-  ST_double* flat_Mp;
-  rc = stata_columns_filtered(predict_use, count_predict_set, stataVarNum, Mpcol, &flat_Mp);
-  if (rc) {
-    return rc;
-  }
-
-  ST_double* flat_Bi_map = NULL;
-  if (save_mode) {
-    flat_Bi_map = (ST_double*)malloc(sizeof(ST_double) * count_predict_set * varssv);
-    if (flat_Bi_map == NULL) {
-      return MALLOC_ERROR;
-    }
-  }
-
-  ST_double* ystar = (ST_double*)malloc(sizeof(ST_double) * count_predict_set);
-  if (ystar == NULL) {
-    return MALLOC_ERROR;
-  }
+  std::vector<ST_double> flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
@@ -383,24 +309,26 @@ ST_retcode edm(int argc, char* argv[])
     H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
 
     hsize_t yLen[] = { (hsize_t)count_train_set };
-    H5LTmake_dataset_double(fid, "y", 1, yLen, y);
+    H5LTmake_dataset_double(fid, "y", 1, yLen, y.data());
 
     H5LTset_attribute_int(fid, "/", "l", &l, 1);
     H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
 
     hsize_t SLen[] = { (hsize_t)count_predict_set };
-    H5LTmake_dataset_double(fid, "S", 1, SLen, S);
+    H5LTmake_dataset_double(fid, "S", 1, SLen, S.data());
 
     H5LTset_attribute_string(fid, "/", "algorithm", algorithm);
-    H5LTset_attribute_int(fid, "/", "save_mode", (int*)&save_mode, 1);
-    H5LTset_attribute_int(fid, "/", "force_compute", (int*)&force_compute, 1);
+    char bool_var = (char)save_mode;
+    H5LTset_attribute_char(fid, "/", "save_mode", &bool_var, 1);
+    bool_var = (char)force_compute;
+    H5LTset_attribute_char(fid, "/", "force_compute", &bool_var, 1);
     H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
     H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
     hsize_t MpLen[] = { (hsize_t)(count_predict_set * Mpcol) };
-    H5LTmake_dataset_double(fid, "flat_Mp", 1, MpLen, flat_Mp);
+    H5LTmake_dataset_double(fid, "flat_Mp", 1, MpLen, flat_Mp.data());
     hsize_t MLen[] = { (hsize_t)(count_train_set * mani) };
-    H5LTmake_dataset_double(fid, "flat_M", 1, MLen, flat_M);
+    H5LTmake_dataset_double(fid, "flat_M", 1, MLen, flat_M.data());
 
     H5Fclose(fid);
   }
@@ -425,32 +353,21 @@ ST_retcode edm(int argc, char* argv[])
                      count_predict_set, pmani_flag, pmani, l, save_mode, varssv, nthreads);
   }
 
-  rc = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, flat_M, flat_Mp, y, l, theta, S, algorithm,
-                    save_mode, varssv, force_compute, missingdistance, ystar, flat_Bi_map);
+  smap_res_t smap_res = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, l, theta, algorithm, save_mode,
+                                     varssv, force_compute, missingdistance, y, S, flat_M, flat_Mp);
 
   omp_set_num_threads(originalNumThreads);
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
-  if (rc == SUCCESS) {
+  if (smap_res.rc == SUCCESS) {
     stataVarNum = mani + 2;
-    rc = write_stata_column_filtered(predict_use, stataVarNum, ystar);
+    write_stata_columns(smap_res.ystar, stataVarNum, 1, predict_filter);
 
-    if (rc == SUCCESS && save_mode) {
+    if (save_mode) {
       stataVarNum = mani + 5 + 1 + (int)pmani_flag * pmani;
-      rc = write_stata_columns_filtered(predict_use, stataVarNum, varssv, flat_Bi_map);
+      write_stata_columns(*(smap_res.flat_Bi_map), stataVarNum, varssv, predict_filter);
     }
   }
-
-  free(train_use);
-  free(predict_use);
-  free(S);
-  free(flat_M);
-  free(y);
-  free(flat_Mp);
-  if (save_mode) {
-    free(flat_Bi_map);
-  }
-  free(ystar);
 
   // Print a Footer message for the plugin.
   if (verbosity > 0) {
@@ -458,7 +375,7 @@ ST_retcode edm(int argc, char* argv[])
     display("====================\n\n");
   }
 
-  return rc;
+  return smap_res.rc;
 }
 
 STDLL stata_call(int argc, char* argv[])

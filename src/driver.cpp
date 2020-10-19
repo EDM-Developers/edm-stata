@@ -20,10 +20,10 @@
 typedef struct InputVars
 {
   char algorithm[500];
-  double* y;
-  double* S;
-  double* flat_Mp;
-  double* flat_M;
+  std::vector<double> y;
+  std::vector<double> S;
+  std::vector<double> flat_Mp;
+  std::vector<double> flat_M;
   double theta;
   double missingdistance;
   int count_train_set;
@@ -31,45 +31,10 @@ typedef struct InputVars
   int Mpcol;
   int mani;
   int l;
-  int save_mode;
+  bool save_mode;
   int varssv;
-  int force_compute;
+  bool force_compute;
 } InputVars;
-
-InputVars new_InputVars()
-{
-  InputVars vars;
-
-  vars.y = NULL;
-  vars.S = NULL;
-  vars.flat_Mp = NULL;
-  vars.flat_M = NULL;
-  vars.theta = EMPTY_DOUBLE;
-  vars.missingdistance = EMPTY_DOUBLE;
-
-  vars.count_train_set = EMPTY_INT;
-  vars.count_predict_set = EMPTY_INT;
-  vars.Mpcol = EMPTY_INT;
-  vars.mani = EMPTY_INT;
-  vars.l = EMPTY_INT;
-  vars.save_mode = EMPTY_INT;
-  vars.varssv = EMPTY_INT;
-  vars.force_compute = EMPTY_INT;
-
-  return vars;
-}
-
-void free_InputVars(InputVars* vars)
-{
-  if (vars->flat_M != NULL)
-    free(vars->flat_M);
-  if (vars->flat_Mp != NULL)
-    free(vars->flat_Mp);
-  if (vars->S != NULL)
-    free(vars->S);
-  if (vars->y != NULL)
-    free(vars->y);
-}
 
 /*! \brief Read in a dump file.
  *
@@ -78,47 +43,62 @@ void free_InputVars(InputVars* vars)
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-void read_dumpfile(const char* fname, InputVars* vars)
+InputVars read_dumpfile(const char* fname)
 {
+  InputVars vars;
+
   hid_t fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
 
-  H5LTget_attribute_int(fid, "/", "count_train_set", &(vars->count_train_set));
-  H5LTget_attribute_int(fid, "/", "count_predict_set", &(vars->count_predict_set));
-  H5LTget_attribute_int(fid, "/", "Mpcol", &(vars->Mpcol));
-  H5LTget_attribute_int(fid, "/", "mani", &(vars->mani));
+  H5LTget_attribute_int(fid, "/", "count_train_set", &(vars.count_train_set));
+  H5LTget_attribute_int(fid, "/", "count_predict_set", &(vars.count_predict_set));
+  H5LTget_attribute_int(fid, "/", "Mpcol", &(vars.Mpcol));
+  H5LTget_attribute_int(fid, "/", "mani", &(vars.mani));
 
-  vars->y = (double*)malloc(vars->count_train_set * sizeof(double));
-  H5LTread_dataset_double(fid, "y", vars->y);
+  vars.y = std::vector<double>(vars.count_train_set);
+  H5LTread_dataset_double(fid, "y", vars.y.data());
 
-  H5LTget_attribute_int(fid, "/", "l", &(vars->l));
-  H5LTget_attribute_double(fid, "/", "theta", &(vars->theta));
+  H5LTget_attribute_int(fid, "/", "l", &(vars.l));
+  H5LTget_attribute_double(fid, "/", "theta", &(vars.theta));
 
-  vars->S = (double*)malloc(vars->count_predict_set * sizeof(double));
-  H5LTread_dataset_double(fid, "S", vars->S);
+  vars.S = std::vector<double>(vars.count_predict_set);
+  H5LTread_dataset_double(fid, "S", vars.S.data());
 
-  H5LTget_attribute_string(fid, "/", "algorithm", vars->algorithm);
-  H5LTget_attribute_int(fid, "/", "save_mode", &(vars->save_mode));
-  H5LTget_attribute_int(fid, "/", "varssv", &(vars->varssv));
+  H5LTget_attribute_string(fid, "/", "algorithm", vars.algorithm);
 
-  H5LTget_attribute_int(fid, "/", "force_compute", &(vars->force_compute));
-  H5LTget_attribute_double(fid, "/", "missingdistance", &(vars->missingdistance));
+  char bool_var;
+  H5LTget_attribute_char(fid, "/", "save_mode", &bool_var);
+  vars.save_mode = (bool)bool_var;
+  H5LTget_attribute_char(fid, "/", "force_compute", &bool_var);
+  vars.force_compute = (bool)bool_var;
 
-  vars->flat_Mp = (double*)malloc(vars->count_predict_set * vars->Mpcol * sizeof(double));
-  H5LTread_dataset_double(fid, "flat_Mp", vars->flat_Mp);
-  vars->flat_M = (double*)malloc(vars->count_train_set * vars->mani * sizeof(double));
-  H5LTread_dataset_double(fid, "flat_M", vars->flat_M);
+  H5LTget_attribute_int(fid, "/", "varssv", &(vars.varssv));
+
+  H5LTget_attribute_double(fid, "/", "missingdistance", &(vars.missingdistance));
+
+  vars.flat_Mp = std::vector<double>(vars.count_predict_set * vars.Mpcol);
+  H5LTread_dataset_double(fid, "flat_Mp", vars.flat_Mp.data());
+
+  vars.flat_M = std::vector<double>(vars.count_train_set * vars.mani);
+  H5LTread_dataset_double(fid, "flat_M", vars.flat_M.data());
 
   H5Fclose(fid);
+
+  return vars;
 }
 
-void write_results(const char* fname_out, double* ystar, double* flat_Bi_map, const InputVars* vars)
+void write_results(const char* fname_out, const smap_res_t& smap_res, const InputVars& vars)
 {
   hid_t fid = H5Fcreate(fname_out, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-  hsize_t ystarLen[] = { (hsize_t)vars->count_predict_set };
-  hsize_t Bi_mapLen[] = { (hsize_t)vars->count_predict_set, (hsize_t)vars->varssv };
-  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, ystar);
-  H5LTmake_dataset_double(fid, "Bi_map", 2, Bi_mapLen, flat_Bi_map);
+  H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
+
+  hsize_t ystarLen[] = { (hsize_t)vars.count_predict_set };
+  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, smap_res.ystar.data());
+
+  if (smap_res.flat_Bi_map.has_value()) {
+    hsize_t Bi_mapLen[] = { (hsize_t)vars.count_predict_set, (hsize_t)vars.varssv };
+    H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, smap_res.flat_Bi_map->data());
+  }
 
   H5Fclose(fid);
 }
@@ -148,23 +128,17 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  InputVars vars = new_InputVars();
-  read_dumpfile(argv[1], &vars);
+  InputVars vars = read_dumpfile(argv[1]);
 
   char* fname_out = generate_output_fname(argv[1]); // WATCH OUT: fname_out is malloc'd in this function!
-  double* ystar = (double*)malloc(sizeof(double) * vars.count_predict_set);
-  double* flat_Bi_map = (double*)malloc(sizeof(double) * vars.count_predict_set * vars.varssv);
 
-  mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.flat_M, vars.flat_Mp, vars.y,
-               vars.l, vars.theta, vars.S, (char*)(vars.algorithm), vars.save_mode, vars.varssv, vars.force_compute,
-               vars.missingdistance, ystar, flat_Bi_map);
+  smap_res_t smap_res = mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.l,
+                                     vars.theta, vars.algorithm, vars.save_mode, vars.varssv, vars.force_compute,
+                                     vars.missingdistance, vars.y, vars.S, vars.flat_M, vars.flat_Mp);
 
-  write_results(fname_out, ystar, flat_Bi_map, &vars);
+  write_results(fname_out, smap_res, vars);
 
   free(fname_out);
-  free(ystar);
-  free(flat_Bi_map);
 
-  free_InputVars(&vars);
   return 0;
 }

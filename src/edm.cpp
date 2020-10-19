@@ -32,8 +32,8 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
 }
 
 retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varssv, bool force_compute,
-                       double missingdistance, const MatrixView& M, const MatrixView& Mp, const double* y,
-                       double* ystar, std::optional<MatrixView>& Bi_map)
+                       double missingdistance, const MatrixView& M, const MatrixView& Mp, const std::vector<double>& y,
+                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
 {
 
   int i, j;
@@ -228,23 +228,27 @@ retcode mf_smap_single(int Mp_i, int l, double theta, char* algorithm, int varss
 }
 
 /* OpenMP routines */
-
-retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, double* flat_M, double* flat_Mp,
-                     double* y, int l, double theta, double* S, char* algorithm, bool save_mode, int varssv,
-                     bool force_compute, double missingdistance, double* ystar, double* flat_Bi_map)
+smap_res_t mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, int l, double theta,
+                        char* algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
+                        const std::vector<double>& y, const std::vector<double>& S, const std::vector<double>& flat_M,
+                        const std::vector<double>& flat_Mp)
 {
   /* Create Eigen matrixes which are views of the supplied flattened matrices */
-  MatrixView M((double*)flat_M, count_train_set, mani);
-  MatrixView Mp((double*)flat_Mp, count_predict_set, mani);
+  MatrixView M((double*)flat_M.data(), count_train_set, mani);
+  MatrixView Mp((double*)flat_Mp.data(), count_predict_set, mani);
 
+  std::optional<std::vector<double>> flat_Bi_map = std::nullopt;
   std::optional<MatrixView> Bi_map = std::nullopt;
   if (save_mode) {
-    Bi_map = MatrixView(flat_Bi_map, count_predict_set, varssv);
+    flat_Bi_map = std::vector<double>(count_predict_set * varssv);
+    Bi_map = MatrixView(flat_Bi_map->data(), count_predict_set, varssv);
   }
 
   /* OpenMP loop with call to mf_smap_single function */
   retcode* rc = (retcode*)malloc(Mp.rows() * sizeof(retcode));
   int i;
+  std::vector<double> ystar(count_predict_set);
+
 #pragma omp parallel for
   for (i = 0; i < Mp.rows(); i++) {
     rc[i] = mf_smap_single(i, l, theta, algorithm, varssv, force_compute, missingdistance, M, Mp, y, ystar, Bi_map);
@@ -260,5 +264,5 @@ retcode mf_smap_loop(int count_predict_set, int count_train_set, int mani, int M
 
   free(rc);
 
-  return maxError;
+  return smap_res_t{ maxError, ystar, flat_Bi_map };
 }
