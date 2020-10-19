@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fmt/core.h>
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>
@@ -31,6 +32,11 @@ void display(const char* s)
   SF_display((char*)s);
 }
 
+void display(std::string s)
+{
+  SF_display((char*)s.c_str());
+}
+
 void error(const char* s)
 {
   SF_error((char*)s);
@@ -44,9 +50,6 @@ void print_error(ST_retcode rc)
       break;
     case TOO_MANY_VARIABLES:
       error("edm plugin call requires 11 or 12 arguments\n");
-      break;
-    case MALLOC_ERROR:
-      error("Insufficient memory\n");
       break;
     case NOT_IMPLEMENTED:
       error("Method is not yet implemented\n");
@@ -155,66 +158,46 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], ST_double theta, std::string algorithm, bool force_compute,
-                      ST_double missingdistance, ST_int mani, ST_int count_train_set, ST_int count_predict_set,
-                      bool pmani_flag, ST_int pmani, ST_int l, bool save_mode, ST_int varssv, ST_int nthreads)
+void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
+                      bool pmani_flag, ST_int pmani, ST_int nthreads)
 {
-  char temps[500];
-
   // Header of the plugin
   display("\n====================\n");
   display("Start of the plugin\n\n");
 
   // Overview of variables and arguments passed and observations in sample
-  sprintf(temps, "number of vars & obs = %i, %i\n", SF_nvars(), SF_nobs());
-  display(temps);
-  sprintf(temps, "first and last obs in sample = %i, %i\n\n", SF_in1(), SF_in2());
-  display(temps);
+  display(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
+  display(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
 
   for (int i = 0; i < argc; i++) {
-    sprintf(temps, "arg %i: %s\n", i, argv[i]);
-    display(temps);
+    display(fmt::format("arg {}: {}\n", i, argv[i]));
   }
   display("\n");
 
-  sprintf(temps, "theta = %6.4f\n\n", theta);
-  display(temps);
-  sprintf(temps, "algorithm = %s\n\n", algorithm.c_str());
-  display(temps);
-  sprintf(temps, "force compute = %i\n\n", force_compute);
-  display(temps);
-  sprintf(temps, "missing distance = %f\n\n", missingdistance);
-  display(temps);
-  sprintf(temps, "number of variables in manifold = %i\n\n", mani);
-  display(temps);
-  sprintf(temps, "train set obs: %i\n", count_train_set);
-  display(temps);
-  sprintf(temps, "predict set obs: %i\n\n", count_predict_set);
-  display(temps);
-  sprintf(temps, "p_manifold flag = %i\n", pmani_flag);
-  display(temps);
+  display(fmt::format("theta = {:6.4f}\n\n", opts.theta));
+  display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
+  display(fmt::format("force compute = {}\n\n", opts.force_compute));
+  display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
+  display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
+  display(fmt::format("train set obs: {}\n", M.rows));
+  display(fmt::format("predict set obs: {}\n\n", Mp.rows));
+  display(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
   if (pmani_flag) {
-    sprintf(temps, "number of variables in p_manifold = %i\n", pmani);
-    display(temps);
+    display(fmt::format("number of variables in p_manifold = {}\n", pmani));
   }
   display("\n");
 
-  sprintf(temps, "l = %i\n\n", l);
-  display(temps);
+  display(fmt::format("l = {}\n\n", opts.l));
 
-  if (save_mode) {
-    sprintf(temps, "columns in smap coefficents = %i\n", varssv);
-    display(temps);
+  if (opts.save_mode) {
+    display(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
   }
 
-  sprintf(temps, "save_mode = %i\n\n", save_mode);
-  display(temps);
+  display(fmt::format("save_mode = {}\n\n", opts.save_mode));
 
-  sprintf(temps, "Requested %s OpenMP threads\n", argv[9]);
-  display(temps);
-  sprintf(temps, "Using %i OpenMP threads\n\n", nthreads);
-  display(temps);
+  display(fmt::format("Requested {} OpenMP threads\n", argv[9]));
+  display(fmt::format("Using {} OpenMP threads\n\n", nthreads));
 }
 
 /*
@@ -250,7 +233,7 @@ ST_retcode edm(int argc, char* argv[])
   bool pmani_flag = atoi(argv[6]); // contains the flag for p_manifold
   bool save_mode = atoi(argv[7]);
   ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
-  ST_int varssv = atoi(argv[8]); // number of columns in smap coefficents
+  ST_int varssv = atoi(argv[8]); // number of columns in smap coefficients
   ST_int nthreads = atoi(argv[9]);
   ST_int verbosity = atoi(argv[10]);
 
@@ -259,33 +242,35 @@ ST_retcode edm(int argc, char* argv[])
     l = mani + 1;
   }
 
+  smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
+
   // Default number of threads is the number of cores available
   if (nthreads <= 0) {
     nthreads = omp_get_num_procs();
   }
 
-  // Allocation of train_use, predict_use and S (prev. skip_obs) variables.
+  // Find which Stata rows contain the main manifold & for the y vector
   ST_int stataVarNum = mani + 3;
-  std::vector<bool> train_use = stata_columns<bool>(stataVarNum);
+  auto train_use = stata_columns<bool>(stataVarNum);
   int count_train_set = std::accumulate(train_use.begin(), train_use.end(), 0);
   row_filter_t train_filter = { train_use, count_train_set };
 
+  // Read in the y vector from Stata
+  stataVarNum = mani + 1;
+  auto y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
+
+  // Read in the main manifold from Stata
+  stataVarNum = 1;
+  auto _flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
+  manifold_t M = { std::move(_flat_M), count_train_set, mani };
+
+  // Find which Stata rows contain the second manifold
   stataVarNum = mani + 4;
-  std::vector<bool> predict_use = stata_columns<bool>(stataVarNum);
+  auto predict_use = stata_columns<bool>(stataVarNum);
   int count_predict_set = std::accumulate(predict_use.begin(), predict_use.end(), 0);
   row_filter_t predict_filter = { predict_use, count_predict_set };
 
-  stataVarNum = mani + 5;
-  std::vector<ST_double> S = stata_columns<ST_double>(stataVarNum, 1, predict_filter);
-
-  // Allocation of matrix M and vector y.
-  stataVarNum = 1;
-  std::vector<ST_double> flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
-
-  stataVarNum = mani + 1;
-  std::vector<ST_double> y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
-
-  // Allocation of matrices Mp and Bimap, and vector ystar.
+  // Find which Stata columns contain the second manifold
   ST_int Mpcol;
   if (pmani_flag) {
     Mpcol = pmani;
@@ -295,7 +280,9 @@ ST_retcode edm(int argc, char* argv[])
     stataVarNum = 1;
   }
 
-  std::vector<ST_double> flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
+  // Read in the second manifold from Stata
+  auto _flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
+  manifold_t Mp{ std::move(_flat_Mp), count_predict_set, Mpcol };
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
@@ -308,14 +295,11 @@ ST_retcode edm(int argc, char* argv[])
     H5LTset_attribute_int(fid, "/", "Mpcol", &Mpcol, 1);
     H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
 
-    hsize_t yLen[] = { (hsize_t)count_train_set };
-    H5LTmake_dataset_double(fid, "y", 1, yLen, y.data());
+    hsize_t yLen = y.size();
+    H5LTmake_dataset_double(fid, "y", 1, &yLen, y.data());
 
     H5LTset_attribute_int(fid, "/", "l", &l, 1);
     H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
-
-    hsize_t SLen[] = { (hsize_t)count_predict_set };
-    H5LTmake_dataset_double(fid, "S", 1, SLen, S.data());
 
     H5LTset_attribute_string(fid, "/", "algorithm", algorithm.c_str());
     char bool_var = (char)save_mode;
@@ -325,10 +309,10 @@ ST_retcode edm(int argc, char* argv[])
     H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
     H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
 
-    hsize_t MpLen[] = { (hsize_t)(count_predict_set * Mpcol) };
-    H5LTmake_dataset_double(fid, "flat_Mp", 1, MpLen, flat_Mp.data());
-    hsize_t MLen[] = { (hsize_t)(count_train_set * mani) };
-    H5LTmake_dataset_double(fid, "flat_M", 1, MLen, flat_M.data());
+    hsize_t MLen = M.flat.size();
+    H5LTmake_dataset_double(fid, "flat_M", 1, &MLen, M.flat.data());
+    hsize_t MpLen = Mp.flat.size();
+    H5LTmake_dataset_double(fid, "flat_Mp", 1, &MpLen, Mp.flat.data());
 
     H5Fclose(fid);
   }
@@ -349,12 +333,10 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   if (verbosity > 0) {
-    print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
-                     count_predict_set, pmani_flag, pmani, l, save_mode, varssv, nthreads);
+    print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
   }
 
-  smap_res_t smap_res = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, l, theta, algorithm, save_mode,
-                                     varssv, force_compute, missingdistance, y, S, flat_M, flat_Mp);
+  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp);
 
   omp_set_num_threads(originalNumThreads);
 

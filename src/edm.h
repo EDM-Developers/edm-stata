@@ -12,7 +12,6 @@
 #define INVALID_ALGORITHM 400
 #define INSUFFICIENT_UNIQUE 503
 #define NOT_IMPLEMENTED 908
-#define MALLOC_ERROR 909
 #define UNKNOWN_ERROR 8000
 
 /* global variable placeholder for missing values */
@@ -28,12 +27,23 @@ typedef int retcode;
 
 typedef struct
 {
+  std::vector<double> flat;
+  int rows, cols;
+} manifold_t;
+
+typedef struct
+{
+  bool force_compute, save_mode;
+  int l, varssv;
+  double theta, missingdistance;
+  std::string algorithm;
+} smap_opts_t;
+
+typedef struct
+{
   retcode rc;
   std::vector<double> ystar;
   std::optional<std::vector<double>> flat_Bi_map;
 } smap_res_t;
 
-DLL smap_res_t mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, int l, double theta,
-                            std::string algorithm, bool save_mode, int varssv, bool force_compute,
-                            double missingdistance, const std::vector<double>& y, const std::vector<double>& S,
-                            const std::vector<double>& flat_M, const std::vector<double>& flat_Mp);
+DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp);

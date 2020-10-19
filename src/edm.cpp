@@ -35,9 +35,8 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int varssv, bool force_compute,
-                       double missingdistance, const MatrixView& M, const MatrixView& Mp, const std::vector<double>& y,
-                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
+retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
+                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
 {
   int validDistances = 0;
   std::vector<double> d(M.rows());
@@ -49,7 +48,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
     int numMissingDims = 0;
     for (int j = 0; j < M.cols(); j++) {
       if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-        if (missingdistance == 0) {
+        if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
@@ -61,7 +60,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
     // If the distance between M_i and b is 0 before handling missing values,
     // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
     if (dist != 0) {
-      dist += numMissingDims * missingdistance * missingdistance;
+      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
     }
 
     if (missing || dist == 0.) {
@@ -74,8 +73,9 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
 
   // If we only look at distances which are non-zero and non-missing,
   // do we have enough of them to find 'l' neighbours?
+  int l = opts.l;
   if (l > validDistances) {
-    if (force_compute) {
+    if (opts.force_compute) {
       l = validDistances;
       if (l == 0) {
         return INSUFFICIENT_UNIQUE;
@@ -91,11 +91,11 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
   std::vector<double> w(l);
 
   double sumw = 0., r = 0.;
-  if (algorithm == "" || algorithm == "simplex") {
+  if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int j = 0; j < l; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
+      w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
     for (int j = 0; j < l; j++) {
@@ -105,7 +105,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
     ystar[Mp_i] = r;
     return SUCCESS;
 
-  } else if (algorithm == "smap" || algorithm == "llr") {
+  } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
 
     Eigen::MatrixXd X_ls(l, M.cols());
     std::vector<double> y_ls(l), w_ls(l);
@@ -119,7 +119,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
     }
     mean_w = mean_w / (double)l;
     for (int j = 0; j < l; j++) {
-      w[j] = exp(-theta * (w[j] / mean_w));
+      w[j] = exp(-opts.theta * (w[j] / mean_w));
     }
 
     int rowc = -1;
@@ -138,11 +138,11 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
         continue;
       }
       rowc++;
-      if (algorithm == "llr") {
+      if (opts.algorithm == "llr") {
         // llr algorithm is not needed at this stage
         return NOT_IMPLEMENTED;
 
-      } else if (algorithm == "smap") {
+      } else if (opts.algorithm == "smap") {
         y_ls[rowc] = y[ind[j]] * w[j];
         w_ls[rowc] = w[j];
         for (int i = 0; i < M.cols(); i++) {
@@ -169,7 +169,7 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
       }
     }
 
-    if (algorithm == "llr") {
+    if (opts.algorithm == "llr") {
       // llr algorithm is not needed at this stage
       return NOT_IMPLEMENTED;
     } else {
@@ -184,8 +184,8 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
       }
 
       // saving ics coefficients if savesmap option enabled
-      if (Bi_map.has_value()) {
-        for (int j = 0; j < varssv; j++) {
+      if (opts.save_mode) {
+        for (int j = 0; j < opts.varssv; j++) {
           if (ics(j) == 0.) {
             (*Bi_map)(Mp_i, j) = MISSING;
           } else {
@@ -202,30 +202,27 @@ retcode mf_smap_single(int Mp_i, int l, double theta, std::string algorithm, int
   return INVALID_ALGORITHM;
 }
 
-smap_res_t mf_smap_loop(int count_predict_set, int count_train_set, int mani, int Mpcol, int l, double theta,
-                        std::string algorithm, bool save_mode, int varssv, bool force_compute, double missingdistance,
-                        const std::vector<double>& y, const std::vector<double>& S, const std::vector<double>& flat_M,
-                        const std::vector<double>& flat_Mp)
+smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp)
 {
   // Create Eigen matrixes which are views of the supplied flattened matrices
-  MatrixView M((double*)flat_M.data(), count_train_set, mani);
-  MatrixView Mp((double*)flat_Mp.data(), count_predict_set, mani);
+  MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
+  MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
 
-  std::optional<std::vector<double>> flat_Bi_map = std::nullopt;
-  std::optional<MatrixView> Bi_map = std::nullopt;
-  if (save_mode) {
-    flat_Bi_map = std::vector<double>(count_predict_set * varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), count_predict_set, varssv);
+  std::optional<std::vector<double>> flat_Bi_map{};
+  std::optional<MatrixView> Bi_map{};
+  if (opts.save_mode) {
+    flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
+    Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
   }
 
   // OpenMP loop with call to mf_smap_single function
-  int i;
-  std::vector<retcode> rc(Mp.rows());
-  std::vector<double> ystar(count_predict_set);
+  std::vector<retcode> rc(Mp.rows);
+  std::vector<double> ystar(Mp.rows);
 
+  int i;
 #pragma omp parallel for
-  for (i = 0; i < Mp.rows(); i++) {
-    rc[i] = mf_smap_single(i, l, theta, algorithm, varssv, force_compute, missingdistance, M, Mp, y, ystar, Bi_map);
+  for (i = 0; i < Mp.rows; i++) {
+    rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error

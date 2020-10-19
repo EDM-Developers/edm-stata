@@ -11,30 +11,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EMPTY_INT -999
-#define EMPTY_DOUBLE -999.99
-
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
  */
-typedef struct InputVars
+typedef struct
 {
-  char algorithm[500];
+  smap_opts_t opts;
   std::vector<double> y;
-  std::vector<double> S;
-  std::vector<double> flat_Mp;
-  std::vector<double> flat_M;
-  double theta;
-  double missingdistance;
-  int count_train_set;
-  int count_predict_set;
-  int Mpcol;
-  int mani;
-  int l;
-  bool save_mode;
-  int varssv;
-  bool force_compute;
-} InputVars;
+  manifold_t M, Mp;
+} edm_inputs_t;
 
 /*! \brief Read in a dump file.
  *
@@ -43,60 +28,61 @@ typedef struct InputVars
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-InputVars read_dumpfile(std::string fname_in)
+edm_inputs_t read_dumpfile(std::string fname_in)
 {
-  InputVars vars;
-
   hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
-  H5LTget_attribute_int(fid, "/", "count_train_set", &(vars.count_train_set));
-  H5LTget_attribute_int(fid, "/", "count_predict_set", &(vars.count_predict_set));
-  H5LTget_attribute_int(fid, "/", "Mpcol", &(vars.Mpcol));
-  H5LTget_attribute_int(fid, "/", "mani", &(vars.mani));
-
-  vars.y = std::vector<double>(vars.count_train_set);
-  H5LTread_dataset_double(fid, "y", vars.y.data());
-
-  H5LTget_attribute_int(fid, "/", "l", &(vars.l));
-  H5LTget_attribute_double(fid, "/", "theta", &(vars.theta));
-
-  vars.S = std::vector<double>(vars.count_predict_set);
-  H5LTread_dataset_double(fid, "S", vars.S.data());
-
-  H5LTget_attribute_string(fid, "/", "algorithm", vars.algorithm);
+  smap_opts_t opts;
 
   char bool_var;
   H5LTget_attribute_char(fid, "/", "save_mode", &bool_var);
-  vars.save_mode = (bool)bool_var;
+  opts.save_mode = (bool)bool_var;
   H5LTget_attribute_char(fid, "/", "force_compute", &bool_var);
-  vars.force_compute = (bool)bool_var;
+  opts.force_compute = (bool)bool_var;
 
-  H5LTget_attribute_int(fid, "/", "varssv", &(vars.varssv));
+  H5LTget_attribute_int(fid, "/", "l", &(opts.l));
+  H5LTget_attribute_int(fid, "/", "varssv", &(opts.varssv));
 
-  H5LTget_attribute_double(fid, "/", "missingdistance", &(vars.missingdistance));
+  H5LTget_attribute_double(fid, "/", "theta", &(opts.theta));
+  H5LTget_attribute_double(fid, "/", "missingdistance", &(opts.missingdistance));
 
-  vars.flat_Mp = std::vector<double>(vars.count_predict_set * vars.Mpcol);
-  H5LTread_dataset_double(fid, "flat_Mp", vars.flat_Mp.data());
+  char temps[100];
+  H5LTget_attribute_string(fid, "/", "algorithm", temps);
+  opts.algorithm = std::string(temps);
 
-  vars.flat_M = std::vector<double>(vars.count_train_set * vars.mani);
-  H5LTread_dataset_double(fid, "flat_M", vars.flat_M.data());
+  manifold_t M, Mp;
+
+  H5LTget_attribute_int(fid, "/", "count_train_set", &(M.rows));
+  H5LTget_attribute_int(fid, "/", "mani", &(M.cols));
+
+  M.flat = std::vector<double>(M.rows * M.cols);
+  H5LTread_dataset_double(fid, "flat_M", M.flat.data());
+
+  H5LTget_attribute_int(fid, "/", "count_predict_set", &(Mp.rows));
+  H5LTget_attribute_int(fid, "/", "Mpcol", &(Mp.cols));
+
+  Mp.flat = std::vector<double>(Mp.rows * Mp.cols);
+  H5LTread_dataset_double(fid, "flat_Mp", Mp.flat.data());
+
+  std::vector<double> y(M.rows);
+  H5LTread_dataset_double(fid, "y", y.data());
 
   H5Fclose(fid);
 
-  return vars;
+  return { opts, y, M, Mp };
 }
 
-void write_results(std::string fname_out, const smap_res_t& smap_res, const InputVars& vars)
+void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv)
 {
   hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
 
-  hsize_t ystarLen[] = { (hsize_t)vars.count_predict_set };
+  hsize_t ystarLen[] = { (hsize_t)smap_res.ystar.size() };
   H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, smap_res.ystar.data());
 
   if (smap_res.flat_Bi_map.has_value()) {
-    hsize_t Bi_mapLen[] = { (hsize_t)vars.count_predict_set, (hsize_t)vars.varssv };
+    hsize_t Bi_mapLen[] = { (hsize_t)(smap_res.flat_Bi_map->size() / varssv), (hsize_t)varssv };
     H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, smap_res.flat_Bi_map->data());
   }
 
@@ -113,17 +99,15 @@ int main(int argc, char* argv[])
 
   std::string fname_in(argv[1]);
 
-  InputVars vars = read_dumpfile(fname_in);
+  edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.count_predict_set, vars.count_train_set, vars.mani, vars.Mpcol, vars.l,
-                                     vars.theta, vars.algorithm, vars.save_mode, vars.varssv, vars.force_compute,
-                                     vars.missingdistance, vars.y, vars.S, vars.flat_M, vars.flat_Mp);
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);
   std::string fname_out = fname_in + "-out.h5";
 
-  write_results(fname_out, smap_res, vars);
+  write_results(fname_out, smap_res, vars.opts.varssv);
 
   return smap_res.rc;
 }

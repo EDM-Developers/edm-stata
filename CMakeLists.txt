@@ -97,6 +97,10 @@ target_include_directories(edm PRIVATE vendor)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+# FMT
+find_package(fmt CONFIG REQUIRED)
+target_link_libraries(edm PRIVATE fmt::fmt)
+
 # OPENMP
 find_package(OpenMP)
 target_link_libraries(edm PRIVATE OpenMP::OpenMP_CXX)
