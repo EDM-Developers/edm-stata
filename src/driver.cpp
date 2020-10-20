@@ -8,6 +8,7 @@
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 
@@ -95,23 +96,30 @@ void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv
 
 int main(int argc, char* argv[])
 {
-
+  std::cout << "Starting driver!" << std::endl;
   if (argc != 2) {
     fprintf(stderr, "Usage: ./driver <fname>\n");
     return -1;
   }
 
   std::string fname_in(argv[1]);
-
+  std::cout << "Loading " << argv[1] << std::endl;
   edm_inputs_t vars = read_dumpfile(fname_in);
 
+  std::cout << "Starting mf_smap_loop " << std::endl;
   smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
+  std::cout << "Done; got rc " << smap_res.rc << std::endl;
+
+  for (int i = 0; i < 5; i++) {
+    std::cout << smap_res.ystar[i] << " ";
+  }
+  std::cout << std::endl;
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);
   std::string fname_out = fname_in + "-out.h5";
-
+  std::cout << "Writing output to " << fname_out << std::endl;
   write_results(fname_out, smap_res, vars.opts.varssv);
-
+  std::cout << "Finished!" << std::endl;
   return smap_res.rc;
 }

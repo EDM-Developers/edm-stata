@@ -1,27 +1,41 @@
-image: python:3.8-slim-buster
+# use the official gcc image, based on debian
+# can use verions as well, like gcc:5.2
+# see https://hub.docker.com/_/gcc/
+image: gcc
 
-stages:
-  - docs
-  - deploy static pages
+# Cache vcpkg in between jobs
 
-build docs:
-  stage: docs
+build:
+  stage: build
+  # instead of calling g++ directly you can also use some build toolkit like make
+  # install the necessary build tools when needed
+  before_script:
+    - apt update && apt -y install make cmake
+    - export VCPKG_ROOT="`pwd`/vcpkg/"
+    - echo $VCPKG_ROOT
+    - git clone https://github.com/microsoft/vcpkg
+    - ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
   script:
-    - pip install mkdocs
-    - mkdocs build
-
+    - cmake -B build -S .
+    - cmake --build build --config release
+    - cmake --build build --config release --target install
   artifacts:
     paths:
-      - site/
+      - stata/smap_driver
+      - stata/edm_Unix_x64.plugin
+      - stata/test1.h5
 
-pages:
-  stage: deploy static pages
+# run tests using the binary built before
+test:
+  stage: test
   dependencies:
-    - build docs
-  script: 
-    - mkdir -p public/docs
-    - cp -R site/* public/docs
-
-  artifacts:
-    paths:
-      - public/
+    - build
+  before_script:
+    - cd stata
+    - ldd edm_Unix_x64.plugin
+    - ldd -v edm_Unix_x64.plugin
+    - ldd -u edm_Unix_x64.plugin
+    - export LD_LIBRARY_PATH=`pwd`
+  script:
+    - ./smap_driver test1.h5
+    - echo $?

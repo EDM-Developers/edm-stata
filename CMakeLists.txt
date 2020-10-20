@@ -125,12 +125,3 @@ endif()
 if(DUMP_INPUT)
   add_definitions(-DDUMP_INPUT)
 endif()
-
-# ↓↓↓ formatting with clang-format ↓↓↓
-include(ClangFormat)
-clangformat_setup(
-  src/edm.cpp
-  src/edm.h
-  src/driver.cpp
-  src/stata.cpp
-)
