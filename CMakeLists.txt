@@ -26,7 +26,7 @@ endif()
 set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 
-set(DUMP_INPUT TRUE CACHE BOOL "Dump plugin input data to hdf5")
+set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
 
 if(WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive")
