@@ -24,6 +24,8 @@ build:
       - stata/smap_driver
       - stata/edm_Unix_x64.plugin
       - stata/test1.h5
+  tags:
+    - ubuntu-docker
 
 # run tests using the binary built before
 test:
@@ -39,3 +41,5 @@ test:
   script:
     - ./smap_driver test1.h5
     - echo $?
+  tags:
+    - ubuntu-docker
