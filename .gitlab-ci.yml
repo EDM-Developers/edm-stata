@@ -1,20 +1,9 @@
-# use the official gcc image, based on debian
-# can use verions as well, like gcc:5.2
-# see https://hub.docker.com/_/gcc/
-image: gcc
-
-# Cache vcpkg in between jobs
+image: curoky/vcpkg:debian10
 
 build:
   stage: build
-  # instead of calling g++ directly you can also use some build toolkit like make
-  # install the necessary build tools when needed
   before_script:
     - apt update && apt -y install make cmake
-    - export VCPKG_ROOT="`pwd`/vcpkg/"
-    - echo $VCPKG_ROOT
-    - git clone https://github.com/microsoft/vcpkg
-    - ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
   script:
     - cmake -B build -S .
     - cmake --build build --config release
