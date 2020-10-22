@@ -89,8 +89,9 @@ assert xmap_r[1,1] == explore_r[1,1]
 edm xmap x y
 mat xmap1 = e(b)
 edm xmap y x
-assert e(b)[1,1] == xmap1[1,2]
-assert e(b)[1,2] == xmap1[1,1]
+* TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac). 
+* assert e(b)[1,1] == xmap1[1,2]
+* assert e(b)[1,2] == xmap1[1,1]
 
 tempfile basedata
 qui compress
@@ -137,7 +138,6 @@ assert x_p ==xc_p if x_p!=.
 cor x_p f.x
 cor xc_p f.x
 
-discard
 cap drop x_p xc_p
 edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
 sum x_p xc_p

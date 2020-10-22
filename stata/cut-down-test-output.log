@@ -3084,10 +3084,10 @@ Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
-. assert e(b)[1,1] == xmap1[1,2]
-
-. assert e(b)[1,2] == xmap1[1,1]
-
+. * The following asserts are considered syntax errors in Stata15 (on Mac). 
+. 
+. * assert e(b)[1,1] == xmap1[1,2]
+. * assert e(b)[1,2] == xmap1[1,1]
 . 
 . tempfile basedata
 
@@ -6914,8 +6914,6 @@ Note: Full sample used for the computation
 
 
 . 
-. discard
-
 . cap drop x_p xc_p
 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
