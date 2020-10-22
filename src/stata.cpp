@@ -465,10 +465,9 @@ ST_retcode edm(int argc, char* argv[])
 STDLL stata_call(int argc, char* argv[])
 {
   try {
-    // On Mac, it may complain that we use multiple OpenMP
-    // runtimes; just power on for now rather than crashing.
+    // On Mac, stop crash when multiple OpenMP runtimes detected.
 #ifndef _MSC_VER
-    putenv((char*)"KMP_DUPLICATE_LIB_OK=TRUE");
+    putenv("KMP_DUPLICATE_LIB_OK=TRUE");
 #endif
 
     ST_retcode rc = edm(argc, argv);

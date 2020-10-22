@@ -226,6 +226,12 @@ program define edmPluginCheck, rclass
 	}
 	else {
 		cap smap_block_mdap
+		if _rc == 199 {
+			di as text "Warning: Using slow edm implementation (failed to load the compiled version)"
+			/* if "`c(os)'" == "MacOSX" {
+				di as text "Perhaps try to 'brew install libomp'"
+			} */
+		}
 		return scalar mata_mode = _rc==199
 	}
 end
