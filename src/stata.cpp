@@ -7,10 +7,10 @@
 
 #include "edm.h"
 #include "stplugin.h"
+#include <cstdlib>
 #include <omp.h>
 #include <stdexcept>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #ifdef DUMP_INPUT
@@ -465,6 +465,10 @@ ST_retcode edm(int argc, char* argv[])
 STDLL stata_call(int argc, char* argv[])
 {
   try {
+    // On Mac, it may complain that we use multiple OpenMP
+    // runtimes; just power on for now rather than crashing.
+    _putenv("KMP_DUPLICATE_LIB_OK=TRUE");
+
     ST_retcode rc = edm(argc, argv);
     print_error(rc);
     return rc;
