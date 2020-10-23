@@ -89,7 +89,7 @@ assert xmap_r[1,1] == explore_r[1,1]
 edm xmap x y
 mat xmap1 = e(b)
 edm xmap y x
-* TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac). 
+* TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac).
 * assert e(b)[1,1] == xmap1[1,2]
 * assert e(b)[1,2] == xmap1[1,1]
 

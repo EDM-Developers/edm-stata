@@ -3084,8 +3084,7 @@ Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
-. * The following asserts are considered syntax errors in Stata15 (on Mac). 
-. 
+. * TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac).
 . * assert e(b)[1,1] == xmap1[1,2]
 . * assert e(b)[1,2] == xmap1[1,1]
 . 

@@ -250,10 +250,12 @@ void print_debug_info(int argc, char* argv[], ST_double theta, char* algorithm, 
   sprintf(temps, "save_mode = %i\n\n", save_mode);
   display(temps);
 
+#ifndef __APPLE__
   sprintf(temps, "Requested %s OpenMP threads\n", argv[9]);
   display(temps);
   sprintf(temps, "Using %i OpenMP threads\n\n", nthreads);
   display(temps);
+#endif
 }
 
 /*
@@ -299,9 +301,11 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Default number of threads is the number of cores available
+#ifndef __APPLE__
   if (nthreads <= 0) {
     nthreads = omp_get_num_procs();
   }
+#endif
 
   // Allocation of train_use, predict_use and S (prev. skip_obs) variables.
   ST_double *train_use, *predict_use, *S;
@@ -407,6 +411,7 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
+#ifndef __APPLE__
   // Find the number of threads Stata was already using, so we can reset to this later.
   int originalNumThreads;
 #pragma omp parallel
@@ -420,6 +425,7 @@ ST_retcode edm(int argc, char* argv[])
   {
     nthreads = omp_get_num_threads();
   }
+#endif
 
   if (verbosity > 0) {
     print_debug_info(argc, argv, theta, algorithm, force_compute, missingdistance, mani, count_train_set,
@@ -429,7 +435,9 @@ ST_retcode edm(int argc, char* argv[])
   rc = mf_smap_loop(count_predict_set, count_train_set, mani, Mpcol, flat_M, flat_Mp, y, l, theta, S, algorithm,
                     save_mode, varssv, force_compute, missingdistance, ystar, flat_Bi_map);
 
+#ifndef __APPLE__
   omp_set_num_threads(originalNumThreads);
+#endif
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (rc == SUCCESS) {
@@ -466,8 +474,8 @@ STDLL stata_call(int argc, char* argv[])
 {
   try {
     // On Mac, stop crash when multiple OpenMP runtimes detected.
-#ifndef _MSC_VER
-    putenv("KMP_DUPLICATE_LIB_OK=TRUE");
+#ifdef __APPLE__
+    putenv((char*)"KMP_DUPLICATE_LIB_OK=TRUE");
 #endif
 
     ST_retcode rc = edm(argc, argv);
