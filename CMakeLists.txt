@@ -98,16 +98,9 @@ target_include_directories(edm PRIVATE vendor)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-# OPENMP (statically link against it on Mac)
+# OPENMP
 find_package(OpenMP)
-if(APPLE)
-string(REGEX REPLACE "[.]dylib$" ".a" OpenMP_libomp_LIBRARY ${OpenMP_libomp_LIBRARY})
-target_link_libraries(edm PRIVATE ${OpenMP_libomp_LIBRARY})
-target_include_directories(edm PRIVATE ${OpenMP_CXX_INCLUDE_DIRS})
-target_compile_options(edm PRIVATE ${OpenMP_CXX_FLAGS})
-else()
 target_link_libraries(edm PRIVATE OpenMP::OpenMP_CXX)
-endif()
 
 # HDF5
 if (HDF5_FOUND)
