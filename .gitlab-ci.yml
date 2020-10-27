@@ -1,5 +1,35 @@
+build-mac:
+  stage: build
+  before_script:
+    - export VCPKG_ROOT=~/vcpkg/
+    - export PATH="/Users/user175910/bin:$PATH"
+  script:
+    - cmake -B build -S .
+    - cmake --build build --config release
+    - cmake --build build --config release --target install
+  artifacts:
+    paths:
+      - stata/edm_Unix_x64.plugin
+  tags:
+    - mac-runner
+
+test-mac:
+  stage: test
+  dependencies:
+    - build-mac
+  before_script:
+    - cd stata
+    - mv cut-down-test-output.log reference.log
+  script:
+    - ~/Stata/StataMP.app/Contents/MacOS/StataMP -b cut-down-test.do
+    - cmp -s reference.log cut-down-test-output.log
+  tags:
+    - mac-runner
+
 build-ubuntu:
   stage: build
+  before_script:
+    - export VCPKG_ROOT=~/vcpkg/
   script:
     - cmake -B build -S .
     - cmake --build build --config release
