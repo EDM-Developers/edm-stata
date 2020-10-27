@@ -11,10 +11,9 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "ThreadPool.h"
-
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
+#include <execution> // for std::execution::par_unseq
 #include <numeric>   // std::iota
 #include <optional>
 
@@ -26,7 +25,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
   // initialize original index locations
   std::vector<size_t> idx(v.size());
-  iota(idx.begin(), idx.end(), 0);
+  std::iota(idx.begin(), idx.end(), 0);
 
   if (k >= (int)v.size()) {
     k = (int)v.size();
@@ -222,18 +221,11 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
 
-  if (nthreads <= 1) {
-    for (int i = 0; i < Mp.rows; i++) {
-      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
-    }
-  } else {
-    ThreadPool pool(nthreads);
-    std::vector<std::future<void>> results;
+  std::vector<int> inds(Mp.rows);
+  std::iota(inds.begin(), inds.end(), 0);
 
-    for (int i = 0; i < Mp.rows; i++) {
-      results.emplace_back(pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); }));
-    }
-  }
+  std::transform(std::execution::par_unseq, inds.begin(), inds.end(), rc.begin(),
+                 [&](int i) { return mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());

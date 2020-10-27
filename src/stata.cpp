@@ -289,7 +289,7 @@ ST_retcode edm(int argc, char* argv[])
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
-  if (argc >= 12) {
+  if (argc == 12) {
     hid_t fid = H5Fcreate(argv[11], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);

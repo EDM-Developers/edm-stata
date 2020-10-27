@@ -60,8 +60,6 @@ set(SRC
     src/edm.cpp
     src/edm.h
     src/stata.cpp
-    src/ThreadPool.h
-    src/ThreadPool.cpp
     vendor/stplugin.cpp
     vendor/stplugin.h
     )
@@ -103,10 +101,15 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 find_package(fmt CONFIG REQUIRED)
 target_link_libraries(edm PRIVATE fmt::fmt)
 
-# Add native multithreading libraries
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(edm PRIVATE Threads::Threads)
+# Intel Thread Building Blocks
+if (NOT WIN32)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads REQUIRED)
+  target_link_libraries(edm PRIVATE Threads::Threads)
+
+  find_package(TBB CONFIG REQUIRED)
+  target_link_libraries(edm PRIVATE TBB::tbb)
+endif()
 
 # HDF5
 if (HDF5_FOUND)
