@@ -1,27 +1,24 @@
-image: python:3.8-slim-buster
-
-stages:
-  - docs
-  - deploy static pages
-
-build docs:
-  stage: docs
+build-ubuntu:
+  stage: build
   script:
-    - pip install mkdocs
-    - mkdocs build
-
+    - cmake -B build -S .
+    - cmake --build build --config release
+    - cmake --build build --config release --target install
   artifacts:
     paths:
-      - site/
+      - stata/edm_Unix_x64.plugin
+  tags:
+    - ubuntu-stata-runner
 
-pages:
-  stage: deploy static pages
+test-ubuntu:
+  stage: test
   dependencies:
-    - build docs
-  script: 
-    - mkdir -p public/docs
-    - cp -R site/* public/docs
-
-  artifacts:
-    paths:
-      - public/
+    - build-ubuntu
+  before_script:
+    - cd stata
+    - mv cut-down-test-output.log reference.log
+  script:
+    - stata -b cut-down-test.do
+    - cmp -s reference.log cut-down-test-output.log
+  tags:
+    - ubuntu-stata-runner
