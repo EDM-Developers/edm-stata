@@ -11,6 +11,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "ThreadPool.h"
+
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <numeric>   // std::iota
@@ -202,7 +204,8 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   return INVALID_ALGORITHM;
 }
 
-smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp)
+smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+                        int nthreads)
 {
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
@@ -219,10 +222,17 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
 
-  int i;
-#pragma omp parallel for
-  for (i = 0; i < Mp.rows; i++) {
-    rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
+  if (nthreads <= 1) {
+    for (int i = 0; i < Mp.rows; i++) {
+      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
+    }
+  } else {
+    ThreadPool pool(nthreads);
+    std::vector<std::future<void>> results;
+
+    for (int i = 0; i < Mp.rows; i++) {
+      results.emplace_back(pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); }));
+    }
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error

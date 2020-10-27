@@ -60,6 +60,8 @@ set(SRC
     src/edm.cpp
     src/edm.h
     src/stata.cpp
+    src/ThreadPool.h
+    src/ThreadPool.cpp
     vendor/stplugin.cpp
     vendor/stplugin.h
     )
@@ -101,9 +103,10 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 find_package(fmt CONFIG REQUIRED)
 target_link_libraries(edm PRIVATE fmt::fmt)
 
-# OPENMP
-find_package(OpenMP)
-target_link_libraries(edm PRIVATE OpenMP::OpenMP_CXX)
+# Add native multithreading libraries
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(edm PRIVATE Threads::Threads)
 
 # HDF5
 if (HDF5_FOUND)

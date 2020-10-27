@@ -2,7 +2,7 @@
 clear
 
 if c(MP) {
-	set processor 1
+	qui set processor 1
 }
 
 set obs 50000

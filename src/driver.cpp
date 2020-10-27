@@ -19,6 +19,7 @@ typedef struct
   smap_opts_t opts;
   std::vector<double> y;
   manifold_t M, Mp;
+  int nthreads;
 } edm_inputs_t;
 
 /*! \brief Read in a dump file.
@@ -67,9 +68,12 @@ edm_inputs_t read_dumpfile(std::string fname_in)
   std::vector<double> y(M.rows);
   H5LTread_dataset_double(fid, "y", y.data());
 
+  int nthreads;
+  H5LTget_attribute_int(fid, "/", "nthreads", &nthreads);
+
   H5Fclose(fid);
 
-  return { opts, y, M, Mp };
+  return { opts, y, M, Mp, nthreads };
 }
 
 void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv)
@@ -101,7 +105,7 @@ int main(int argc, char* argv[])
 
   edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp);
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);

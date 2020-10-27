@@ -5,6 +5,10 @@ number of observations (_N) was 0, now 500
 
 . set seed 12345678
 
+. if c(MP) {
+.     qui set processor 1
+. }
+
 . 
 . global EDM_VERBOSITY=1
 
@@ -92,8 +96,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -138,8 +142,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -184,8 +188,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -230,8 +234,8 @@ l = 6
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -276,8 +280,8 @@ l = 7
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -322,8 +326,8 @@ l = 8
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -368,8 +372,8 @@ l = 9
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -414,8 +418,8 @@ l = 10
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -460,8 +464,8 @@ l = 11
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -526,8 +530,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -571,8 +575,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -630,8 +634,8 @@ l = 7
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -675,8 +679,8 @@ l = 7
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -734,8 +738,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -779,8 +783,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -824,8 +828,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -869,8 +873,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -914,8 +918,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -959,8 +963,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1004,8 +1008,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1049,8 +1053,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1094,8 +1098,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1139,8 +1143,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1200,8 +1204,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1245,8 +1249,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1290,8 +1294,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1335,8 +1339,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1380,8 +1384,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1425,8 +1429,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1470,8 +1474,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1515,8 +1519,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1560,8 +1564,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1605,8 +1609,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1650,8 +1654,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1695,8 +1699,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1740,8 +1744,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1785,8 +1789,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1830,8 +1834,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1875,8 +1879,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1920,8 +1924,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -1965,8 +1969,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2010,8 +2014,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2087,8 +2091,8 @@ l = 4
 columns in smap coefficients = 3
 save_mode = true
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2133,8 +2137,8 @@ l = 4
 columns in smap coefficients = 3
 save_mode = true
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2195,8 +2199,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2254,8 +2258,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2300,8 +2304,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2360,8 +2364,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2418,8 +2422,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2475,8 +2479,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2521,8 +2525,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2581,8 +2585,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2627,8 +2631,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2686,8 +2690,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2732,8 +2736,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2794,8 +2798,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2852,8 +2856,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2917,8 +2921,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -2962,8 +2966,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3021,8 +3025,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3066,8 +3070,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3149,8 +3153,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3206,8 +3210,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3267,8 +3271,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3325,8 +3329,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3383,8 +3387,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3428,8 +3432,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3486,8 +3490,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3531,8 +3535,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3592,8 +3596,8 @@ l = 9
 columns in smap coefficients = 11
 save_mode = true
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3638,8 +3642,8 @@ l = 9
 columns in smap coefficients = 11
 save_mode = true
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3700,8 +3704,8 @@ l = 9
 columns in smap coefficients = 11
 save_mode = true
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3761,8 +3765,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3806,8 +3810,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3851,8 +3855,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3896,8 +3900,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -3941,8 +3945,8 @@ l = 5
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4006,8 +4010,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4069,8 +4073,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4114,8 +4118,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4159,8 +4163,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4204,8 +4208,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4249,8 +4253,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4294,8 +4298,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4339,8 +4343,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4384,8 +4388,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4429,8 +4433,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4474,8 +4478,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4519,8 +4523,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4564,8 +4568,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4609,8 +4613,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4654,8 +4658,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4699,8 +4703,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4744,8 +4748,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4789,8 +4793,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4834,8 +4838,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4879,8 +4883,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4924,8 +4928,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -4989,8 +4993,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5034,8 +5038,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5079,8 +5083,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5124,8 +5128,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5169,8 +5173,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5214,8 +5218,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5259,8 +5263,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5304,8 +5308,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5349,8 +5353,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5394,8 +5398,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5439,8 +5443,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5484,8 +5488,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5529,8 +5533,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5574,8 +5578,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5619,8 +5623,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5664,8 +5668,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5709,8 +5713,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5754,8 +5758,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5799,8 +5803,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5844,8 +5848,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5889,8 +5893,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5934,8 +5938,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -5979,8 +5983,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6024,8 +6028,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6069,8 +6073,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6114,8 +6118,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6159,8 +6163,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6204,8 +6208,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6249,8 +6253,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6294,8 +6298,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6339,8 +6343,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6384,8 +6388,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6429,8 +6433,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6474,8 +6478,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6519,8 +6523,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6564,8 +6568,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6609,8 +6613,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6654,8 +6658,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6699,8 +6703,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6744,8 +6748,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6820,8 +6824,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6866,8 +6870,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -6954,8 +6958,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7000,8 +7004,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7070,8 +7074,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7116,8 +7120,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7183,8 +7187,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7229,8 +7233,8 @@ l = 4
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7292,8 +7296,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7338,8 +7342,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7403,8 +7407,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7449,8 +7453,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7507,8 +7511,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7553,8 +7557,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin
@@ -7610,8 +7614,8 @@ l = 3
 
 save_mode = false
 
-Requested 4 OpenMP threads
-Using 4 OpenMP threads
+Requested 4 threads
+Using 4 threads
 
 
 End of the plugin

@@ -7,7 +7,6 @@
 
 #include "edm.h"
 #include "stplugin.h"
-#include <omp.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -15,6 +14,7 @@
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 #ifdef DUMP_INPUT
@@ -196,8 +196,10 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
 
   display(fmt::format("save_mode = {}\n\n", opts.save_mode));
 
-  display(fmt::format("Requested {} OpenMP threads\n", argv[9]));
-  display(fmt::format("Using {} OpenMP threads\n\n", nthreads));
+  display(fmt::format("Requested {} threads\n", argv[9]));
+  display(fmt::format("Using {} threads\n\n", nthreads));
+
+  _stata_->spoutflush();
 }
 
 /*
@@ -246,7 +248,7 @@ ST_retcode edm(int argc, char* argv[])
 
   // Default number of threads is the number of cores available
   if (nthreads <= 0) {
-    nthreads = omp_get_num_procs();
+    nthreads = std::thread::hardware_concurrency();
   }
 
   // Find which Stata rows contain the main manifold & for the y vector
@@ -314,31 +316,17 @@ ST_retcode edm(int argc, char* argv[])
     hsize_t MpLen = Mp.flat.size();
     H5LTmake_dataset_double(fid, "flat_Mp", 1, &MpLen, Mp.flat.data());
 
+    H5LTset_attribute_int(fid, "/", "nthreads", &nthreads, 1);
+
     H5Fclose(fid);
   }
 #endif
-
-  // Find the number of threads Stata was already using, so we can reset to this later.
-  int originalNumThreads;
-#pragma omp parallel
-  {
-    originalNumThreads = omp_get_num_threads();
-  }
-  omp_set_num_threads(nthreads);
-
-  // Ask OpenMP how many threads it's using, in case it ignored our request in the previous line.
-#pragma omp parallel
-  {
-    nthreads = omp_get_num_threads();
-  }
 
   if (verbosity > 0) {
     print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
   }
 
-  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp);
-
-  omp_set_num_threads(originalNumThreads);
+  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp, nthreads);
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (smap_res.rc == SUCCESS) {

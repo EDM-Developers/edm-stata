@@ -46,4 +46,5 @@ typedef struct
   std::optional<std::vector<double>> flat_Bi_map;
 } smap_res_t;
 
-DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp);
+DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+                            int nthreads);
