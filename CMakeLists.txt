@@ -33,7 +33,7 @@ if(WIN32)
   set(CMAKE_CXX_FLAGS_RELEASE "/MT")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
   set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fsanitize=undefined" "-fno-common" "-fno-omit-frame-pointer")
 endif()
 
