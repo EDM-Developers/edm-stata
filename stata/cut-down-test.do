@@ -7,6 +7,9 @@ log using "cut-down-test-output.log", replace nomsg
 
 set obs 500
 set seed 12345678
+if c(MP) {
+    set processor 1
+}
 
 global EDM_VERBOSITY=1
 global EDM_NTHREADS=4
