@@ -1,10 +1,6 @@
-* cut-down test file
 clear
 
 set linesize 255
-cap log close _all
-log using "cut-down-test-output.log", replace nomsg
-
 set obs 500
 set seed 12345678
 if c(MP) {
@@ -37,12 +33,9 @@ qui {
 * burn the first 300 observations
 keep in 300/500
 
-
-
 * Determining the complexity of the system
 
 * identify optimal E
-
 edm explore x, e(2/10) saveinputs(test1.h5)
 
 edm xmap x y, k(5)
@@ -55,8 +48,6 @@ edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
 
 edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
 assert beta1_b2_rep1 !=. if _n>1
-
-
 
 edm xmap y x, predict(x2) direction(oneway)
 assert x2 !=. if _n>1
@@ -71,7 +62,6 @@ edm xmap y x, tp(10) direction(oneway)
 edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
 assert testx!=. if _n>2
 
-
 edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
 assert testx2 !=. if _n>2
 
@@ -85,7 +75,6 @@ mat xmap_r=e(b)
 edm explore x, full
 mat explore_r =e(b)
 assert xmap_r[1,1] == explore_r[1,1]
-
 
 * check xmap reverse consistency
 
@@ -106,7 +95,6 @@ drop if u<0.1
 replace x = . if u<0.2
 replace t=. if mod(t,19) ==1
 
-
 edm explore x
 edm explore x, dt
 
@@ -115,7 +103,6 @@ edm explore x, missingdistance(2)
 edm xmap x l.x, allowmissing
 edm xmap x l.x, missingdistance(2)
 
-
 edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
 
 edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
@@ -123,7 +110,6 @@ edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) one
 edm explore x, extraembed(u) allowmissing dt crossfold(5)
 
 edm explore d.x, dt
-
 
 edm explore x, rep(20) ci(95)
 
@@ -146,7 +132,6 @@ edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
 sum x_p xc_p
 assert xc_p!=. if x_p!=.
 
-
 gen y_copy = y
 edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
 assert xmap_y_p !=. if _n>1
@@ -164,7 +149,6 @@ edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictv
 assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=.
 
 restore
-
 
 edm explore x, copredict(dx2) copredictvar(d.x)
 
@@ -184,5 +168,3 @@ ereturn display
 
 jackknife: edm explore x, e(2)
 ereturn display
-
-cap log close _all

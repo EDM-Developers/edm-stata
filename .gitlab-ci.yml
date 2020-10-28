@@ -19,10 +19,10 @@ test-mac:
     - build-mac
   before_script:
     - cd stata
-    - mv cut-down-test-output.log reference.log
+    - mv cut-down-test.log reference.log
   script:
-    - ~/Stata/StataMP.app/Contents/MacOS/StataMP -e cut-down-test.do
-    - cmp -s reference.log cut-down-test-output.log
+    - ~/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
+    - cmp -s reference.log cut-down-test.log
   tags:
     - mac-runner
 
@@ -40,7 +40,6 @@ build-ubuntu:
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
-      - stata/edm.ado
   tags:
     - ubuntu-stata-runner
 
@@ -50,9 +49,9 @@ test-ubuntu:
     - build-ubuntu
   before_script:
     - cd stata
-    - mv cut-down-test-output.log reference.log
+    - mv cut-down-test.log reference.log
   script:
-    - stata -e cut-down-test.do
-    - cmp -s reference.log cut-down-test-output.log
+    - stata -e -q cut-down-test.do
+    - cmp -s reference.log cut-down-test.log
   tags:
     - ubuntu-stata-runner

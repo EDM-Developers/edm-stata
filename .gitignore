@@ -3,7 +3,6 @@ compile_commands.json
 vendor/stplugin.*
 stata/*.plugin
 stata/smap_driver*
-stata/cut-down-test.log
 build
 .clangd
 *.h5
