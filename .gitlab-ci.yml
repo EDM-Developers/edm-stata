@@ -9,7 +9,7 @@ build-mac:
     - cmake --build build --config release --target install
   artifacts:
     paths:
-      - stata/edm_Unix_x64.plugin
+      - stata/edm_MacOSX_x64.plugin
   tags:
     - mac-runner
 
@@ -31,12 +31,16 @@ build-ubuntu:
   before_script:
     - export VCPKG_ROOT=~/vcpkg/
   script:
-    - cmake -B build -S .
+    - mkdir build
+    - cd build
+    - cmake ..
+    - cd ..
     - cmake --build build --config release
     - cmake --build build --config release --target install
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
+      - stata/edm.ado
   tags:
     - ubuntu-stata-runner
 
