@@ -8,11 +8,8 @@
  */
 
 #include "edm.h"
-#include <math.h>
-#include <stdlib.h>
-
 #include "ThreadPool.h"
-
+#include <cmath>
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <numeric>   // std::iota

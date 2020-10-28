@@ -16,10 +16,10 @@ test-windows:
     - build-windows
   before_script:
     - cd stata
-    - rename cut-down-test.log reference.log
+    - move-item -force cut-down-test.log reference.log
   script:
-    - \"C:\\Program Files\\Stata16\\StataMP-64.exe\" -e -q cut-down-test.do
-    - fc /W reference.log cut-down-test.log
+    - cmd.exe /c "C:\Program Files\Stata16\StataMP-64.exe" -e -q cut-down-test.do
+    - cmd.exe /c "fc /W reference.log cut-down-test.log"
   tags:
     - windows-runner
 

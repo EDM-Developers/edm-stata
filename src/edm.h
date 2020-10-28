@@ -17,8 +17,6 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
-#include <stdbool.h>
-
 #include <optional>
 #include <string>
 #include <vector>

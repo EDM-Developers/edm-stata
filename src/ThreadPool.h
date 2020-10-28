@@ -1,6 +1,5 @@
 // From https://github.com/jhasse/ThreadPool/blob/master/ThreadPool.hpp
-#ifndef THREAD_POOL_HPP
-#define THREAD_POOL_HPP
+#pragma once
 
 #include <functional>
 #include <future>
@@ -70,5 +69,3 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args)
   condition.notify_one();
   return res;
 }
-
-#endif
