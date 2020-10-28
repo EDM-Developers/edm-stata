@@ -7,10 +7,12 @@
 
 #include "edm.h"
 #include "stplugin.h"
-#include <stdio.h>
-#include <string.h>
 
-#include <fmt/core.h>
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>

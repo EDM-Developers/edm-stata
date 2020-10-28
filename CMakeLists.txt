@@ -101,7 +101,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 # FMT
 find_package(fmt CONFIG REQUIRED)
-target_link_libraries(edm PRIVATE fmt::fmt)
+target_link_libraries(edm PRIVATE fmt::fmt-header-only)
 
 # Add native multithreading libraries
 set(THREADS_PREFER_PTHREAD_FLAG ON)

@@ -1,3 +1,28 @@
+build-windows:
+  stage: build
+  script:
+    - cmake -B build -S .
+    - cmake --build build --config release
+    - cmake --build build --config release --target install
+  artifacts:
+    paths:
+    - stata/edm_Windows_x64.plugin
+  tags:
+    - windows-runner
+
+test-windows:
+  stage: test
+  dependencies:
+    - build-windows
+  before_script:
+    - cd stata
+    - rename cut-down-test.log reference.log
+  script:
+    - \"C:\\Program Files\\Stata16\\StataMP-64.exe\" -e -q cut-down-test.do
+    - fc /W reference.log cut-down-test.log
+  tags:
+    - windows-runner
+
 build-mac:
   stage: build
   before_script:
