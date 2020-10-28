@@ -22,7 +22,7 @@ test-mac:
     - mv cut-down-test.log reference.log
   script:
     - ~/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
-    - cmp -s reference.log cut-down-test.log
+    - diff -B reference.log cut-down-test.log
   tags:
     - mac-runner
 
@@ -52,6 +52,6 @@ test-ubuntu:
     - mv cut-down-test.log reference.log
   script:
     - stata -e -q cut-down-test.do
-    - cmp -s reference.log cut-down-test.log
+    - diff -B reference.log cut-down-test.log
   tags:
     - ubuntu-stata-runner
