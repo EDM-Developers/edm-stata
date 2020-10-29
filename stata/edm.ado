@@ -1,10 +1,11 @@
-*! version 1.4.0, 15Sep2020, Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra <jinjing.li@canberra.edu.au>
-*by Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick Laub and MDAP
+*! version 1.4.1, 29Oct2020, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick Laub
+*! conact: <jinjing.li@canberra.edu.au>
 
-global EDM_VERSION = "1.4.0dev"
+global EDM_VERSION = "1.4.1"
 /* Empirical dynamic modelling
 
 Version history:
+* 29/10/2020: suppress some debug information and fix a bug on copredict with dt
 * 13/10/2020: speed improvement on matrix copying
 * 15/9/2020: add plugin support
 * 15/8/2020: fix a bug in the default number of k in smap and labelling
@@ -227,7 +228,7 @@ program define edmPluginCheck, rclass
 	else {
 		cap smap_block_mdap
 		if _rc == 199 {
-			di as text "Warning: Using slow edm implementation (failed to load the compiled version)"
+			di as text "Warning: Using slow (mata) edm implementation (failed to load the compiled plugin)"
 		}
 		return scalar mata_mode = _rc==199
 	}
@@ -416,6 +417,7 @@ program define edmExplore, eclass sortpreserve
 
 			// update copredict mainfold
 			if "`copredictvar'" != "" {
+
 				preserve
 				keep if `touse' ==1
 				// this part is for filtering only
@@ -430,29 +432,34 @@ program define edmExplore, eclass sortpreserve
 						}
 						else {
 							if "`co_`v''" !="" {
-								gen `co_`v'_new' = `=`co_`v''' if `touse' ==1
+								gen `co_`v'_new' = `co_`v'' if `touse' ==1
 							}
 							else {
 								continue
 							}
 
 						}
+						/* noi di "`co_x'"
+						noi sum `co_x' `co_x_new' */
+						
 						keep if `co_`v'_new' !=.
 					}
 				}
+				
 				tempvar newt_co
 				sort `original_id' `original_t'
 				`byori' gen `newt_co' = _n
 				if "`original_id'" != ""{
-					xtset `original_id' `newt_co'
+					qui xtset `original_id' `newt_co'
 				}
 				else {
-					tsset `newt_co'
+					qui tsset `newt_co'
 				}
 
 				tempvar dt_value_co
 				gen double `dt_value_co' = d.`original_t'
 				/* sum `dt_value_co' */
+
 				keep `original_id' `original_t' `newt_co' `dt_value_co'
 				tempfile updatedt_co
 				save `updatedt_co'
@@ -468,10 +475,10 @@ program define edmExplore, eclass sortpreserve
 			/* sum `original_t' `newt' */
 			sort `original_id' `newt'
 			if "`original_id'" != ""{
-				xtset `original_id' `newt'
+				qui xtset `original_id' `newt'
 			}
 			else {
-				tsset `newt'
+				qui tsset `newt'
 			}
 			if !inlist("`parsed_dtsave'","",".") {
 				clonevar `parsed_dtsave' = `dt_value'
@@ -714,10 +721,10 @@ program define edmExplore, eclass sortpreserve
 		//restore t
 		if `parsed_dt' == 1 {
 			if "`original_id'" != ""{
-				xtset `original_id' `newt'
+				qui xtset `original_id' `newt'
 			}
 			else {
-				tsset `newt'
+				qui tsset `newt'
 			}
 		}
 	}
@@ -1319,10 +1326,10 @@ program define edmXmap, eclass sortpreserve
 				sort `original_id' `original_t'
 				`byori' gen `newt' = _n
 				if "`original_id'" != ""{
-					xtset `original_id' `newt'
+					qui xtset `original_id' `newt'
 				}
 				else {
-					tsset `newt'
+					qui tsset `newt'
 				}
 
 				tempvar dt_value
@@ -1348,7 +1355,7 @@ program define edmXmap, eclass sortpreserve
 							}
 							else {
 								if "`co_`v''" !="" {
-									gen `co_`v'_new' = `=`co_`v''' if `touse' ==1
+									gen `co_`v'_new' = `co_`v'' if `touse' ==1
 								}
 								else {
 									continue
@@ -1361,10 +1368,10 @@ program define edmXmap, eclass sortpreserve
 					sort `original_id' `original_t'
 					`byori' gen `newt_co' = _n
 					if "`original_id'" != ""{
-						xtset `original_id' `newt_co'
+						qui xtset `original_id' `newt_co'
 					}
 					else {
-						tsset `newt_co'
+						qui tsset `newt_co'
 					}
 
 					tempvar dt_value_co
@@ -1405,10 +1412,10 @@ program define edmXmap, eclass sortpreserve
 				sum `original_t' `newt'
 				sort `original_id' `newt'
 				if "`original_id'" != ""{
-					xtset `original_id' `newt'
+					qui xtset `original_id' `newt'
 				}
 				else {
-					tsset `newt'
+					qui tsset `newt'
 				}
 				if !inlist("`parsed_dtsave'","",".") {
 					clonevar `parsed_dtsave' = `dt_value'
@@ -1547,10 +1554,10 @@ program define edmXmap, eclass sortpreserve
 			if `parsed_dt' == 1 {
 				qui {
 					if "`original_id'" != ""{
-						xtset `original_id' `newt_co'
+						qui xtset `original_id' `newt_co'
 					}
 					else {
-						tsset `newt_co'
+						qui tsset `newt_co'
 					}
 				}
 			}
@@ -2674,6 +2681,7 @@ end
 
 //smap block C implementation
 cap program smap_block_mdap, plugin using(edm_`=c(os)'_x`=c(bit)'.plugin)
+
 
 /*
 capture mata mata drop matlist()
