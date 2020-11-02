@@ -9,9 +9,9 @@
 
 #include "edm.h"
 #include "ThreadPool.h"
-#include <cmath>
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
+#include <cmath>
 #include <iostream>
 #include <numeric> // std::iota
 #include <optional>
@@ -36,7 +36,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-auto get_distances(const MatrixView& M, const MatrixRowView& b, double missingdistance)
+std::pair<std::vector<double>, int> get_distances(const MatrixView& M, const MatrixRowView& b, double missingdistance)
 {
   int validDistances = 0;
   std::vector<double> d(M.rows());
@@ -69,27 +69,14 @@ auto get_distances(const MatrixView& M, const MatrixRowView& b, double missingdi
       validDistances += 1;
     }
   }
-  return std::make_pair(d, validDistances);
+  return { d, validDistances };
 }
 
-double simplex(double theta, const std::vector<double>& y, const std::vector<double>& d, const std::vector<size_t>& ind,
-               int l)
+double simplex(double theta, const Eigen::ArrayXd& y, const Eigen::ArrayXd& d)
 {
-  std::vector<double> w(l);
-  double d_base = d[ind[0]];
-  double sumw = 0., r = 0.;
-
-  for (int j = 0; j < l; j++) {
-    /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-    /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-    w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
-    sumw = sumw + w[j];
-  }
-  for (int j = 0; j < l; j++) {
-    r = r + y[ind[j]] * (w[j] / sumw);
-  }
-
-  return r;
+  Eigen::ArrayXd w = Eigen::exp(-theta * Eigen::sqrt(d / d[0]));
+  w /= w.sum();
+  return (y * w).sum();
 }
 
 std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vector<double>& y,
@@ -102,14 +89,7 @@ std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vect
       continue;
     }
 
-    bool anyMissing = false;
-    for (int i = 0; i < M.cols(); i++) {
-      if (M(ind[j], i) == MISSING) {
-        anyMissing = true;
-        break;
-      }
-    }
-
+    bool anyMissing = (M.row(ind[j]).array() == MISSING).any();
     if (!anyMissing) {
       neighbourInds.push_back(j);
     }
@@ -118,9 +98,10 @@ std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vect
   return neighbourInds;
 }
 
-auto setup_smap_llr(double theta, std::string algorithm, const std::vector<double>& y, const MatrixView& M,
-                    const std::vector<double>& d, const std::vector<size_t>& ind, int l,
-                    const std::vector<size_t>& neighbourInds)
+std::pair<Eigen::MatrixXd, Eigen::VectorXd> setup_smap_llr(double theta, std::string algorithm,
+                                                           const std::vector<double>& y, const MatrixView& M,
+                                                           const std::vector<double>& d, const std::vector<size_t>& ind,
+                                                           int l, const std::vector<size_t>& neighbourInds)
 {
   std::vector<double> w(l);
   Eigen::MatrixXd X_ls(l, M.cols());
@@ -165,10 +146,11 @@ auto setup_smap_llr(double theta, std::string algorithm, const std::vector<doubl
     }
   }
 
-  return std::make_tuple(X_ls_cj, y_ls_cj);
+  return { X_ls_cj, y_ls_cj };
 }
 
-auto smap(const Eigen::MatrixXd& X_ls_cj, const Eigen::VectorXd y_ls_cj, const MatrixRowView& b)
+std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Eigen::VectorXd y_ls_cj,
+                                        const MatrixRowView& b)
 {
   Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
   Eigen::VectorXd ics = svd.solve(y_ls_cj);
@@ -180,17 +162,12 @@ auto smap(const Eigen::MatrixXd& X_ls_cj, const Eigen::VectorXd y_ls_cj, const M
     }
   }
 
-  return std::make_pair(r, ics);
+  return { r, ics };
 }
 
 retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
                        const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
 {
-  if (opts.algorithm == "llr") {
-    // llr algorithm is not needed at this stage
-    return NOT_IMPLEMENTED;
-  }
-
   MatrixRowView b = Mp.row(Mp_i);
 
   auto [d, validDistances] = get_distances(M, b, opts.missingdistance);
@@ -207,9 +184,14 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   }
 
   std::vector<size_t> ind = minindex(d, l);
+  Eigen::ArrayXd dNear(l), yNear(l);
+  for (int i = 0; i < l; i++) {
+    dNear[i] = d[ind[i]];
+    yNear[i] = y[ind[i]];
+  }
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
-    ystar[Mp_i] = simplex(opts.theta, y, d, ind, l);
+    ystar[Mp_i] = simplex(opts.theta, yNear, dNear);
     return SUCCESS;
 
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
@@ -250,6 +232,11 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
                         int nthreads)
 {
+  if (opts.algorithm == "llr") {
+    // llr algorithm is not needed at this stage
+    return { NOT_IMPLEMENTED, std::vector<double>{}, std::nullopt };
+  }
+
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
@@ -281,5 +268,5 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
 
-  return smap_res_t{ maxError, ystar, flat_Bi_map };
+  return { maxError, ystar, flat_Bi_map };
 }

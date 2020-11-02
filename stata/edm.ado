@@ -137,7 +137,7 @@ end
 
 program define edmParser, eclass
 
-	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending)] [theta(numlist ascending)] [manifold(string)] [converge] */
+	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending) theta(numlist ascending) manifold(string) converge] */
 
 	* identify subcommand
 	local subcommand "`1'"
@@ -199,7 +199,7 @@ program define edmParser, eclass
 end
 
 program define edmUpdate
-	syntax , [DEVELOPment] [replace]
+	syntax , [DEVELOPment replace]
 	if "`development'" == "development" {
 		di "Updating edm from the development channel"
 		net install edm, from("https://jinjingli.github.io/edm/") `replace'
@@ -235,12 +235,12 @@ end
 
 /*
 program define edmCoremap, eclass
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
+	syntax anything  [if], [e(integer 2) theta(real 1) k(integer 0) library(integer 0) seed(integer 0) ALGorithm(string) tau(integer 1) DETails Predict(name) tp(integer 1) COPredict(name) copredictvar(string) full force EXTRAembed(string) ALLOWMISSing MISSINGdistance(real 0)] trainset(string) predictset(string)
  */
 
 
 program define edmExplore, eclass sortpreserve
-	syntax anything  [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything [if], [e(numlist ascending) theta(numlist ascending) k(integer 0) REPlicate(integer 1) seed(integer 0) ALGorithm(string) tau(integer 1) DETails Predict(name) CROSSfold(integer 0) CI(integer 0) tp(integer 1) COPredict(name) copredictvar(string) full force EXTRAembed(string) ALLOWMISSing MISSINGdistance(real 0) dt DTWeight(real 0) DTSave(name) reportrawe CODTWeight(real 0) dot(integer 1) mata nthreads(integer 0) saveinputs(string) verbosity(integer 0)]
 
 	* set seed
 	if `seed' != 0 {
@@ -1110,7 +1110,7 @@ end
 
 
 program define edmXmap, eclass sortpreserve
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything [if], [e(integer 2) theta(real 1) Library(numlist) seed(integer 0) k(integer 0) ALGorithm(string) tau(integer 1) REPlicate(integer 1) SAVEsmap(string) DETails DIrection(string) Predict(name) CI(integer 0) tp(integer 0) COPredict(name) copredictvar(string) force EXTRAembed(string) ALLOWMISSing MISSINGdistance(real 0) dt DTWeight(real 0) DTSave(name) oneway savemanifold(name) CODTWeight(real 0) dot(integer 1) mata nthreads(integer 0) saveinputs(string) verbosity(integer 0)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1144,12 +1144,6 @@ program define edmXmap, eclass sortpreserve
 
 
 	* default values
-	if "`e'" =="" {
-		local e = "2"
-	}
-	if "`theta'" == ""{
-		local theta = 1
-	}
 	local l_ori "`library'"
 	if "`library'" == "" {
 		local l = 0
