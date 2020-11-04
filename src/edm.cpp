@@ -11,10 +11,9 @@
 #include "ThreadPool.h"
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
-#include <cmath>
-#include <iostream>
+#include <array>
 #include <numeric> // std::iota
-#include <optional>
+#include <string>
 
 /* internal functions */
 typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
@@ -165,8 +164,15 @@ std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Ei
   return { r, ics };
 }
 
-retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
+struct Prediction
+{
+  retcode rc;
+  double y;
+  Eigen::VectorXd coeffs;
+};
+
+Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
+                          const MatrixView& Mp)
 {
   MatrixRowView b = Mp.row(Mp_i);
 
@@ -179,7 +185,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
     if (opts.force_compute && validDistances > 0) {
       l = validDistances;
     } else {
-      return INSUFFICIENT_UNIQUE;
+      return { INSUFFICIENT_UNIQUE, {}, {} };
     }
   }
 
@@ -191,82 +197,75 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   }
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
-    ystar[Mp_i] = simplex(opts.theta, yNear, dNear);
-    return SUCCESS;
+    return { SUCCESS, simplex(opts.theta, yNear, dNear), {} };
 
-  } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
+  } else {
 
     auto neighbourInds = valid_neighbour_indices(M, y, ind, l);
 
     if (neighbourInds.size() == 0) {
-      ystar[Mp_i] = MISSING;
-      return SUCCESS;
+      return { SUCCESS, MISSING, {} };
     }
 
     auto [X_ls_cj, y_ls_cj] = setup_smap_llr(opts.theta, opts.algorithm, y, M, d, ind, l, neighbourInds);
-
-    if (opts.algorithm == "llr") {
-      // llr algorithm is not needed at this stage
-    } else {
-      auto [r, ics] = smap(X_ls_cj, y_ls_cj, b);
-      ystar[Mp_i] = r;
-
-      // saving ics coefficients if savesmap option enabled
-      if (opts.save_mode) {
-        for (int j = 0; j < opts.varssv; j++) {
-          if (ics(j) == 0.) {
-            (*Bi_map)(Mp_i, j) = MISSING;
-          } else {
-            (*Bi_map)(Mp_i, j) = ics(j);
-          }
-        }
-      }
-
-      return SUCCESS;
-    }
+    auto [r, ics] = smap(X_ls_cj, y_ls_cj, b);
+    return { SUCCESS, r, ics };
   }
-
-  return INVALID_ALGORITHM;
 }
 
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
                         int nthreads)
 {
+  const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
+
+  if (std::find(validAlgs.begin(), validAlgs.end(), opts.algorithm) == validAlgs.end()) {
+    return { INVALID_ALGORITHM, {}, {} };
+  }
+
   if (opts.algorithm == "llr") {
-    // llr algorithm is not needed at this stage
-    return { NOT_IMPLEMENTED, std::vector<double>{}, std::nullopt };
+    return { NOT_IMPLEMENTED, {}, {} };
   }
 
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
 
-  std::optional<std::vector<double>> flat_Bi_map{};
-  std::optional<MatrixView> Bi_map{};
-  if (opts.save_mode) {
-    flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
-  }
-
-  // OpenMP loop with call to mf_smap_single function
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
 
-  if (nthreads <= 1) {
-    for (int i = 0; i < Mp.rows; i++) {
-      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
-    }
-  } else {
-    ThreadPool pool(nthreads);
-    std::vector<std::future<void>> results;
+  ThreadPool pool(nthreads);
+  std::vector<std::future<Prediction>> results;
 
-    for (int i = 0; i < Mp.rows; i++) {
-      results.emplace_back(pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); }));
-    }
+  for (int i = 0; i < Mp.rows; i++) {
+    results.emplace_back(pool.enqueue(mf_smap_single, i, opts, y, M_mat, Mp_mat));
+  }
+
+  for (int i = 0; i < Mp.rows; i++) {
+    Prediction pred = results[i].get();
+    rc[i] = pred.rc;
+    ystar[i] = pred.y;
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
+
+  // saving ics coefficients if savesmap option enabled
+  std::vector<double> flat_Bi_map;
+  if (opts.save_mode) {
+    flat_Bi_map.resize(Mp.rows * opts.varssv);
+    MatrixView Bi_map(flat_Bi_map.data(), Mp.rows, opts.varssv);
+
+    for (int i = 0; i < Mp.rows; i++) {
+      auto ics = results[i].get().coeffs;
+      for (int j = 0; j < opts.varssv; j++) {
+        if (ics.size() == 0 || ics(j) == 0.) {
+          Bi_map(i, j) = MISSING;
+        } else {
+          Bi_map(i, j) = ics(j);
+        }
+      }
+    }
+  }
 
   return { maxError, ystar, flat_Bi_map };
 }
