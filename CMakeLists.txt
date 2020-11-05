@@ -60,8 +60,7 @@ set(SRC
     src/edm.cpp
     src/edm.h
     src/stata.cpp
-    src/ThreadPool.h
-    src/ThreadPool.cpp
+    src/ctpl_stl.h
     vendor/stplugin.cpp
     vendor/stplugin.h
     )

@@ -8,12 +8,23 @@
  */
 
 #include "edm.h"
-#include "ThreadPool.h"
+#include "ctpl_stl.h"
+
+#define EIGEN_DONT_PARALLELIZE
+#include <Eigen/Core>
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <array>
 #include <numeric> // std::iota
 #include <string>
+
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
+#include <chrono>
+using namespace std::chrono_literals;
 
 /* internal functions */
 typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
@@ -35,8 +46,10 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-std::pair<std::vector<double>, int> get_distances(const MatrixView& M, const MatrixRowView& b, double missingdistance)
+std::pair<std::vector<double>, int> get_distances(int Mp_i, const MatrixView& M, const MatrixView& Mp,
+                                                  double missingdistance)
 {
+  MatrixRowView b = Mp.row(Mp_i);
   int validDistances = 0;
   std::vector<double> d(M.rows());
 
@@ -172,22 +185,9 @@ struct Prediction
 };
 
 Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                          const MatrixView& Mp)
+                          const MatrixView& Mp, const std::vector<double>& d, int l)
 {
   MatrixRowView b = Mp.row(Mp_i);
-
-  auto [d, validDistances] = get_distances(M, b, opts.missingdistance);
-
-  // If we only look at distances which are non-zero and non-missing,
-  // do we have enough of them to find 'l' neighbours?
-  int l = opts.l;
-  if (l > validDistances) {
-    if (opts.force_compute && validDistances > 0) {
-      l = validDistances;
-    } else {
-      return { INSUFFICIENT_UNIQUE, {}, {} };
-    }
-  }
 
   std::vector<size_t> ind = minindex(d, l);
   Eigen::ArrayXd dNear(l), yNear(l);
@@ -213,9 +213,17 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
   }
 }
 
+bool eigenParallelInitialised = false;
+ctpl::thread_pool pool;
+
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                        int nthreads)
+                        int nthreads, void display(char*), void flush())
 {
+  if (!eigenParallelInitialised) {
+    Eigen::initParallel();
+    eigenParallelInitialised = true;
+  }
+
   const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
 
   if (std::find(validAlgs.begin(), validAlgs.end(), opts.algorithm) == validAlgs.end()) {
@@ -230,33 +238,110 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
 
+  auto println = [display, flush](char* s, bool callflush = true, bool endl = true) {
+    display(s);
+    if (endl) {
+      display("\n");
+    }
+    if (callflush) {
+      flush();
+      ;
+    }
+  };
+
+  println((char*)fmt::format("Eigen has {} threads", Eigen::nbThreads()).c_str());
+
+  if (nthreads != pool.size()) {
+    println((char*)fmt::format("Resizing thread pool from {} to {} threads", pool.size(), nthreads).c_str());
+    pool.resize(nthreads);
+  }
+
+  println("Calculating distances");
+  auto start = std::chrono::high_resolution_clock::now();
+
+  std::vector<std::future<std::pair<std::vector<double>, int>>> distancePairs(Mp.rows);
+  for (int i = 0; i < Mp.rows; i++) {
+    distancePairs[i] = pool.push([&, i](int) { return get_distances(i, M_mat, Mp_mat, opts.missingdistance); });
+  }
+
+  std::vector<std::vector<double>> distances(Mp.rows);
+  std::vector<int> validDistances(Mp.rows);
+
+  for (int i = 0; i < Mp.rows; i++) {
+    auto [d, v] = distancePairs[i].get();
+    if (i % (Mp.rows / 10) == 0) {
+      println(".", true, false);
+    }
+
+    distances[i] = d;
+    validDistances[i] = v;
+  }
+  auto end = std::chrono::high_resolution_clock::now();
+
+  println("");
+  println("Distances calculated");
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+  println((char*)fmt::format("Waited {} ms", elapsed.count()).c_str());
+
+  // If we only look at distances which are non-zero and non-missing,
+  // do we have enough of them to find 'l' neighbours?
+  std::vector<int> numNeighbours(Mp.rows);
+  for (int i = 0; i < Mp.rows; i++) {
+    numNeighbours[i] = opts.l;
+
+    if (numNeighbours[i] > validDistances[i]) {
+      if (opts.force_compute && validDistances[i] > 0) {
+        numNeighbours[i] = validDistances[i];
+      } else {
+        return { INSUFFICIENT_UNIQUE, std::vector<double>{}, std::nullopt };
+      }
+    }
+  }
+
+  println("Making predictions");
+  start = std::chrono::high_resolution_clock::now();
+  std::vector<std::future<Prediction>> futurePredictions(Mp.rows);
+  for (int i = 0; i < Mp.rows; i++) {
+    futurePredictions[i] =
+      pool.push([&, i](int) { return mf_smap_single(i, opts, y, M_mat, Mp_mat, distances[i], numNeighbours[i]); });
+  }
+
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
-
-  ThreadPool pool(nthreads);
-  std::vector<std::future<Prediction>> results;
+  std::vector<Eigen::VectorXd> coeffs(Mp.rows);
 
   for (int i = 0; i < Mp.rows; i++) {
-    results.emplace_back(pool.enqueue(mf_smap_single, i, opts, y, M_mat, Mp_mat));
-  }
-
-  for (int i = 0; i < Mp.rows; i++) {
-    Prediction pred = results[i].get();
+    Prediction pred = futurePredictions[i].get();
+    if (i % (Mp.rows / 10) == 0) {
+      println(".", true, false);
+    }
     rc[i] = pred.rc;
     ystar[i] = pred.y;
+    if (opts.save_mode) {
+      coeffs[i] = pred.coeffs;
+    }
   }
+  end = std::chrono::high_resolution_clock::now();
 
-  // Check if any mf_smap_single call failed, and if so find the most serious error
+  println("");
+  println("Predictions made");
+  elapsed = end - start;
+  println((char*)fmt::format("Waited {} ms", elapsed.count()).c_str());
+
+  println("Saving predictions");
+
+  // If any mf_smap_single call failed, find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
 
   // saving ics coefficients if savesmap option enabled
   std::vector<double> flat_Bi_map;
+
   if (opts.save_mode) {
     flat_Bi_map.resize(Mp.rows * opts.varssv);
     MatrixView Bi_map(flat_Bi_map.data(), Mp.rows, opts.varssv);
 
     for (int i = 0; i < Mp.rows; i++) {
-      auto ics = results[i].get().coeffs;
+      Eigen::VectorXd ics = coeffs[i];
       for (int j = 0; j < opts.varssv; j++) {
         if (ics.size() == 0 || ics(j) == 0.) {
           Bi_map(i, j) = MISSING;

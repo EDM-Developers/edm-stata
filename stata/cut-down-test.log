@@ -101,6 +101,17 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Resizing thread pool from 0 to 4 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3079 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2639 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -147,6 +158,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1931 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2645 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -193,6 +214,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2843 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2435 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -239,6 +270,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2622 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2922 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -285,6 +326,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3421 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2348 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -331,6 +382,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2667 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3153 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -377,6 +438,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.348 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2753 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -423,6 +494,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3256 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2836 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -469,6 +550,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3545 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2062 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -535,6 +626,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.5897 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2377 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -580,6 +681,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3732 ms
+Making predictions
+..........
+Predictions made
+Waited 0.4011 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -639,6 +750,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3899 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2459 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -684,6 +805,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4476 ms
+Making predictions
+...........
+Predictions made
+Waited 0.4412 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -743,6 +874,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...................
+Distances calculated
+Waited 0.3103 ms
+Making predictions
+...................
+Predictions made
+Waited 0.1153 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -788,6 +929,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1002 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1039 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -833,6 +984,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1142 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1076 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -878,6 +1039,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1881 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1008 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -923,6 +1094,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1125 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1187 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -968,6 +1149,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1244 ms
+Making predictions
+..........
+Predictions made
+Waited 0.0892 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1013,6 +1204,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1282 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1006 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1058,6 +1259,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1097 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1146 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1103,6 +1314,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.0857 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1203 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1148,6 +1369,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1075 ms
+Making predictions
+..........
+Predictions made
+Waited 0.0763 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1209,6 +1440,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.2456 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1875 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1254,6 +1495,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.2086 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3613 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1299,6 +1550,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1745 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3701 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1344,6 +1605,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1706 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3306 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1389,6 +1660,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.17 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2594 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1434,6 +1715,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1849 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3352 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1479,6 +1770,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1682 ms
+Making predictions
+..........
+Predictions made
+Waited 0.316 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1524,6 +1825,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.2844 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3058 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1569,6 +1880,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1899 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2335 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1614,6 +1935,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1969 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3118 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1659,6 +1990,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1782 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2097 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1704,6 +2045,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.169 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2201 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1749,6 +2100,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1697 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3255 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1794,6 +2155,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.189 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2594 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1839,6 +2210,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1701 ms
+Making predictions
+..........
+Predictions made
+Waited 0.34 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1884,6 +2265,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1781 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2764 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1929,6 +2320,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1831 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2851 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -1974,6 +2375,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1925 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2588 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2019,6 +2430,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1787 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3228 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2029,25 +2450,25 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2              .2          .99945        .0041219 
-                 2              .3          .99946        .0040956 
-                 2              .4          .99946        .0040696 
-                 2              .5          .99947        .0040449 
-                 2              .6          .99947        .0040294 
-                 2              .7          .99947        .0040157 
-                 2              .8          .99948        .0040043 
-                 2              .9          .99948        .0039953 
-                 2               1          .99948        .0039876 
-                 2             1.1          .99948        .0039823 
-                 2             1.2          .99948        .0039795 
-                 2             1.3          .99948        .0039776 
-                 2             1.4          .99948        .0039776 
-                 2             1.5          .99948        .0039776 
-                 2             1.6          .99948        .0039773 
-                 2             1.7          .99947        .0039766 
-                 2             1.8          .99947        .0039761 
-                 2             1.9          .99946        .0039839 
-                 2               2          .99946        .0039918 
+                 2              .2         -.21253           1.633 
+                 2              .3         -.21253           1.633 
+                 2              .4         -.21253           1.633 
+                 2              .5         -.21253           1.633 
+                 2              .6         -.21253           1.633 
+                 2              .7         -.21253           1.633 
+                 2              .8         -.21253           1.633 
+                 2              .9         -.21253           1.633 
+                 2               1         -.21253           1.633 
+                 2             1.1         -.21253           1.633 
+                 2             1.2         -.21253           1.633 
+                 2             1.3         -.21253           1.633 
+                 2             1.4         -.21253           1.633 
+                 2             1.5         -.21253           1.633 
+                 2             1.6         -.21253           1.633 
+                 2             1.7         -.21253           1.633 
+                 2             1.8         -.21253           1.633 
+                 2             1.9         -.21253           1.633 
+                 2               2         -.21253           1.633 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
@@ -2096,6 +2517,16 @@ save_mode = true
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4163 ms
+Making predictions
+..........
+Predictions made
+Waited 0.4818 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2142,6 +2573,16 @@ save_mode = true
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4048 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3899 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2152,8 +2593,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             200          .66867          .11052 
-   x ~ x|M(y)             200          .98487         .018655 
+   y ~ y|M(x)             200         -.12941          1.6812 
+   x ~ x|M(y)             200        -.018766          1.5675 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -2202,6 +2643,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.5376 ms
+Making predictions
+..........
+Predictions made
+Waited 0.6642 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2261,6 +2712,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.2168 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1602 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2307,6 +2768,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4756 ms
+Making predictions
+..........
+Predictions made
+Waited 0.4016 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2367,6 +2838,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2326 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2425,6 +2906,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4707 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1984 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2482,6 +2973,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4319 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3728 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2528,6 +3029,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3695 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3689 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2587,6 +3098,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3887 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3576 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2633,6 +3154,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3756 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2745 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2692,6 +3223,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4484 ms
+Making predictions
+..........
+Predictions made
+Waited 0.314 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2738,6 +3279,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4855 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2832 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2800,6 +3351,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5759 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2847 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2858,6 +3419,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4695 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3517 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2922,6 +3493,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4733 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2713 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -2967,6 +3548,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4433 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2131 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3026,6 +3617,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4103 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2737 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3071,6 +3672,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3846 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2275 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3153,6 +3764,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1659 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2771 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3210,6 +3831,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2657 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1462 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3271,6 +3902,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+............
+Distances calculated
+Waited 0.1804 ms
+Making predictions
+............
+Predictions made
+Waited 0.1372 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3329,6 +3970,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+............
+Distances calculated
+Waited 0.1487 ms
+Making predictions
+............
+Predictions made
+Waited 0.1548 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3387,6 +4038,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3609 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2883 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3432,6 +4093,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.259 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2804 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3490,6 +4161,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.212 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2512 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3535,6 +4216,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1913 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2698 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3595,6 +4286,16 @@ save_mode = true
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5439 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3486 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3641,6 +4342,16 @@ save_mode = true
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.9527 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3184 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3653,8 +4364,8 @@ Missing values are assumed to have a distance of .25 with all values.
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124          .88581         .056787 
-     x ~ x|M(l.x)             150          .22176          .30935 
+   l.x ~ l.x|M(x)             124        -.064178          6.2268 
+     x ~ x|M(l.x)             150        -.073966          5.6921 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55 and .54
@@ -3703,6 +4414,16 @@ save_mode = true
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5442 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3468 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3715,7 +4436,7 @@ Missing values are assumed to have a distance of .25 with all values.
 ---------------------------------------------------------------------
             Mapping    Library size             rho             MAE
 ---------------------------------------------------------------------
-   l3.x ~ l3.x|M(x)             123          .69907         .075825 
+   l3.x ~ l3.x|M(x)             123        -.052477          6.2964 
 ---------------------------------------------------------------------
 Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55
@@ -3764,6 +4485,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...............
+Distances calculated
+Waited 0.1587 ms
+Making predictions
+...............
+Predictions made
+Waited 0.1313 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3809,6 +4540,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.202 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1778 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3854,6 +4595,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.138 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2297 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3899,6 +4650,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.127 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2667 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -3944,6 +4705,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1236 ms
+Making predictions
+..........
+Predictions made
+Waited 0.137 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4009,6 +4780,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.454 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1218 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4071,6 +4852,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1043 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2538 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4116,6 +4907,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1064 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2483 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4161,6 +4962,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.102 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2259 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4206,6 +5017,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1006 ms
+Making predictions
+.............
+Predictions made
+Waited 0.0935 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4251,6 +5072,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1058 ms
+Making predictions
+.............
+Predictions made
+Waited 0.0952 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4296,6 +5127,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1037 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2536 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4341,6 +5182,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1198 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1855 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4386,6 +5237,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1251 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1229 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4431,6 +5292,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.0964 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1326 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4476,6 +5347,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1441 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1143 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4521,6 +5402,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1087 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1366 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4566,6 +5457,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1116 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1311 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4611,6 +5512,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1005 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1168 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4656,6 +5567,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.0941 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1841 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4701,6 +5622,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1109 ms
+Making predictions
+.............
+Predictions made
+Waited 0.0848 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4746,6 +5677,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1242 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1485 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4791,6 +5732,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.2643 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1117 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4836,6 +5787,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.3499 ms
+Making predictions
+.............
+Predictions made
+Waited 0.1716 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4881,6 +5842,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1068 ms
+Making predictions
+.............
+Predictions made
+Waited 0.3361 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4926,6 +5897,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+.............
+Distances calculated
+Waited 0.1066 ms
+Making predictions
+.............
+Predictions made
+Waited 0.2569 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -4991,6 +5972,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2129 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2742 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5036,6 +6027,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3326 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1455 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5081,6 +6082,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1741 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1609 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5126,6 +6137,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1717 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1532 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5171,6 +6192,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2258 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1587 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5216,6 +6247,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1972 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2636 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5261,6 +6302,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1828 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1716 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5306,6 +6357,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2653 ms
+Making predictions
+...........
+Predictions made
+Waited 0.171 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5351,6 +6412,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1612 ms
+Making predictions
+...........
+Predictions made
+Waited 0.255 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5396,6 +6467,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1888 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3165 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5441,6 +6522,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1648 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2365 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5486,6 +6577,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2718 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1818 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5531,6 +6632,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3355 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2497 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5576,6 +6687,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.171 ms
+Making predictions
+...........
+Predictions made
+Waited 0.246 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5621,6 +6742,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1623 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2532 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5666,6 +6797,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2204 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2407 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5711,6 +6852,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1593 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1638 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5756,6 +6907,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2015 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2192 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5801,6 +6962,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2318 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2571 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5846,6 +7017,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2285 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1717 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5891,6 +7072,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.259 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2666 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5936,6 +7127,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1918 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2684 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -5981,6 +7182,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2353 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2577 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6026,6 +7237,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2532 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1835 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6071,6 +7292,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1937 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2709 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6116,6 +7347,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.185 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1675 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6161,6 +7402,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1846 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2345 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6206,6 +7457,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1812 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2112 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6251,6 +7512,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1676 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2509 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6296,6 +7567,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2076 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1896 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6341,6 +7622,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2174 ms
+Making predictions
+...........
+Predictions made
+Waited 0.4465 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6386,6 +7677,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1921 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1998 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6431,6 +7732,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1805 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2564 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6476,6 +7787,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2106 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2167 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6521,6 +7842,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4627 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2192 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6566,6 +7897,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2201 ms
+Making predictions
+...........
+Predictions made
+Waited 0.1807 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6611,6 +7952,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1744 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6656,6 +8007,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.211 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2522 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6701,6 +8062,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.2079 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2465 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6746,6 +8117,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.1957 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2168 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6822,6 +8203,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5682 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2637 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6868,6 +8259,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3687 ms
+Making predictions
+..........
+Predictions made
+Waited 0.3636 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -6956,6 +8357,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4975 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2569 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7002,6 +8413,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.404 ms
+Making predictions
+..........
+Predictions made
+Waited 0.4278 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7071,6 +8492,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.4666 ms
+Making predictions
+..........
+Predictions made
+Waited 0.2392 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7117,6 +8548,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3782 ms
+Making predictions
+..........
+Predictions made
+Waited 0.558 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7184,6 +8625,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4558 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2848 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7230,6 +8681,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.4342 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2591 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7293,6 +8754,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3698 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3698 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7339,6 +8810,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3051 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3587 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7403,6 +8884,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.1843 ms
+Making predictions
+..........
+Predictions made
+Waited 0.1568 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7449,6 +8940,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3538 ms
+Making predictions
+...........
+Predictions made
+Waited 0.2637 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7507,6 +9008,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.3949 ms
+Making predictions
+...........
+Predictions made
+Waited 0.3597 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7553,6 +9064,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+..........
+Distances calculated
+Waited 0.3881 ms
+Making predictions
+..........
+Predictions made
+Waited 0.4379 ms
+Saving predictions
 
 End of the plugin
 ====================
@@ -7610,6 +9131,16 @@ save_mode = false
 Requested 4 threads
 Using 4 threads
 
+Eigen has 1 threads
+Calculating distances
+...........
+Distances calculated
+Waited 0.5656 ms
+Making predictions
+...........
+Predictions made
+Waited 0.6899 ms
+Saving predictions
 
 End of the plugin
 ====================

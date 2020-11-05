@@ -8,6 +8,7 @@
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
+#include <iostream>
 
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
@@ -91,6 +92,16 @@ void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv
   H5Fclose(fid);
 }
 
+void display(char* s)
+{
+  std::cout << s;
+}
+
+void flush()
+{
+  fflush(stdout);
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -103,7 +114,7 @@ int main(int argc, char* argv[])
 
   edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display, flush);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);
