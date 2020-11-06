@@ -130,4 +130,6 @@ clangformat_setup(
   src/edm.h
   src/driver.cpp
   src/stata.cpp
+  src/ThreadPool.cpp
+  src/ThreadPool.h
 )

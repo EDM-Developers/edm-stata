@@ -15,7 +15,13 @@
 #include <numeric> // std::iota
 #include <string>
 
-/* internal functions */
+struct Prediction
+{
+  retcode rc;
+  double y;
+  Eigen::VectorXd coeffs;
+};
+
 typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
 typedef Eigen::Block<const MatrixView, 1, -1, true> MatrixRowView;
 
@@ -164,13 +170,6 @@ std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Ei
   return { r, ics };
 }
 
-struct Prediction
-{
-  retcode rc;
-  double y;
-  Eigen::VectorXd coeffs;
-};
-
 Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
                           const MatrixView& Mp)
 {
@@ -198,7 +197,6 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     return { SUCCESS, simplex(opts.theta, yNear, dNear), {} };
-
   } else {
 
     auto neighbourInds = valid_neighbour_indices(M, y, ind, l);
@@ -232,18 +230,20 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
 
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
+  std::vector<Eigen::VectorXd> coeffs(Mp.rows);
+  std::vector<std::future<Prediction>> futures(Mp.rows);
 
   ThreadPool pool(nthreads);
-  std::vector<std::future<Prediction>> results;
 
   for (int i = 0; i < Mp.rows; i++) {
-    results.emplace_back(pool.enqueue(mf_smap_single, i, opts, y, M_mat, Mp_mat));
+    futures[i] = pool.enqueue([&, i] { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
   }
 
   for (int i = 0; i < Mp.rows; i++) {
-    Prediction pred = results[i].get();
+    Prediction pred = futures[i].get();
     rc[i] = pred.rc;
     ystar[i] = pred.y;
+    coeffs[i] = pred.coeffs;
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
@@ -256,7 +256,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     MatrixView Bi_map(flat_Bi_map.data(), Mp.rows, opts.varssv);
 
     for (int i = 0; i < Mp.rows; i++) {
-      auto ics = results[i].get().coeffs;
+      Eigen::VectorXd ics = coeffs[i];
       for (int j = 0; j < opts.varssv; j++) {
         if (ics.size() == 0 || ics(j) == 0.) {
           Bi_map(i, j) = MISSING;
