@@ -233,6 +233,8 @@ ST_retcode edm(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
+  auto start = std::chrono::high_resolution_clock::now();
+
   ST_double theta = atof(argv[0]);
   ST_int l = atoi(argv[1]);
   std::string algorithm(argv[2]);
@@ -350,6 +352,12 @@ ST_retcode edm(int argc, char* argv[])
   if (verbosity > 0) {
     display("\nEnd of the plugin\n");
     display("====================\n\n");
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
+  if (verbosity > 1) {
+    display((char*)fmt::format("Plugin took {} secs\n", elapsed.count()).c_str());
   }
 
   return smap_res.rc;

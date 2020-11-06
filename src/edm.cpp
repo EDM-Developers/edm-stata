@@ -20,6 +20,9 @@
 #endif
 #include <fmt/format.h>
 
+#include <chrono>
+using namespace std::chrono_literals;
+
 struct Prediction
 {
   retcode rc;
@@ -27,8 +30,9 @@ struct Prediction
   Eigen::VectorXd coeffs;
 };
 
-typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
-typedef Eigen::Block<const MatrixView, 1, -1, true> MatrixRowView;
+using MatrixView = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
+using MatrixRowView = Eigen::Block<const MatrixView, 1, -1, true>;
+using Distances = std::pair<std::vector<double>, int>;
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
@@ -46,8 +50,9 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-std::pair<std::vector<double>, int> get_distances(const MatrixView& M, const MatrixRowView& b, double missingdistance)
+Distances get_distances(int Mp_i, const MatrixView& M, const MatrixView& Mp, double missingdistance)
 {
+  MatrixRowView b = Mp.row(Mp_i);
   int validDistances = 0;
   std::vector<double> d(M.rows());
 
@@ -176,23 +181,8 @@ std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Ei
 }
 
 Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                          const MatrixView& Mp)
+                          const MatrixView& Mp, const std::vector<double>& d, int l)
 {
-  MatrixRowView b = Mp.row(Mp_i);
-
-  auto [d, validDistances] = get_distances(M, b, opts.missingdistance);
-
-  // If we only look at distances which are non-zero and non-missing,
-  // do we have enough of them to find 'l' neighbours?
-  int l = opts.l;
-  if (l > validDistances) {
-    if (opts.force_compute && validDistances > 0) {
-      l = validDistances;
-    } else {
-      return { INSUFFICIENT_UNIQUE, {}, {} };
-    }
-  }
-
   std::vector<size_t> ind = minindex(d, l);
   Eigen::ArrayXd dNear(l), yNear(l);
   for (int i = 0; i < l; i++) {
@@ -209,7 +199,7 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
     if (neighbourInds.size() == 0) {
       return { SUCCESS, MISSING, {} };
     }
-
+    MatrixRowView b = Mp.row(Mp_i);
     auto [X_ls_cj, y_ls_cj] = setup_smap_llr(opts.theta, opts.algorithm, y, M, d, ind, l, neighbourInds);
     auto [r, ics] = smap(X_ls_cj, y_ls_cj, b);
     return { SUCCESS, r, ics };
@@ -246,22 +236,76 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
 
-  std::vector<retcode> rc(Mp.rows);
-  std::vector<double> ystar(Mp.rows);
-  std::vector<Eigen::VectorXd> coeffs(Mp.rows);
-  std::vector<std::future<Prediction>> futures(Mp.rows);
-
   ThreadPool pool(nthreads);
 
+  println("Calculating distances");
+
+  std::vector<Distances> distances(Mp.rows);
+  std::vector<std::future<Distances>> futureDistances(Mp.rows);
+
+  auto start = std::chrono::high_resolution_clock::now();
+
   for (int i = 0; i < Mp.rows; i++) {
-    futures[i] = pool.enqueue([&, i] { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
+    futureDistances[i] = pool.enqueue([&, i] { return get_distances(i, M_mat, Mp_mat, opts.missingdistance); });
   }
 
   for (int i = 0; i < Mp.rows; i++) {
-    Prediction pred = futures[i].get();
-    rc[i] = pred.rc;
-    ystar[i] = pred.y;
-    coeffs[i] = pred.coeffs;
+    distances[i] = futureDistances[i].get();
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+  println("Distances calculated");
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+  println((char*)fmt::format("Waited {} ms", elapsed.count()).c_str());
+
+  // If we only look at distances which are non-zero and non-missing,
+  // do we have enough of them to find 'l' neighbours?
+  std::vector<int> numNeighbours(Mp.rows);
+  for (int i = 0; i < Mp.rows; i++) {
+    numNeighbours[i] = opts.l;
+    int validDistances = std::get<1>(distances[i]);
+    if (numNeighbours[i] > validDistances) {
+      if (opts.force_compute && validDistances > 0) {
+        numNeighbours[i] = validDistances;
+      } else {
+        return { INSUFFICIENT_UNIQUE, std::vector<double>{}, std::nullopt };
+      }
+    }
+  }
+
+  println("Making predictions");
+
+  std::vector<Prediction> predictions(Mp.rows);
+  std::vector<std::future<Prediction>> futurePredictions(Mp.rows);
+
+  start = std::chrono::high_resolution_clock::now();
+
+  for (int i = 0; i < Mp.rows; i++) {
+    futurePredictions[i] = pool.enqueue(
+      [&, i] { return mf_smap_single(i, opts, y, M_mat, Mp_mat, std::get<0>(distances[i]), numNeighbours[i]); });
+  }
+
+  for (int i = 0; i < Mp.rows; i++) {
+    predictions[i] = futurePredictions[i].get();
+  }
+
+  end = std::chrono::high_resolution_clock::now();
+
+  println("Predictions made");
+  elapsed = end - start;
+  println((char*)fmt::format("Waited {} ms", elapsed.count()).c_str());
+
+  println("Saving predictions");
+
+  std::vector<retcode> rc(Mp.rows);
+  std::vector<double> ystar(Mp.rows);
+  std::vector<Eigen::VectorXd> coeffs(Mp.rows);
+
+  for (int i = 0; i < Mp.rows; i++) {
+    rc[i] = predictions[i].rc;
+    ystar[i] = predictions[i].y;
+    coeffs[i] = predictions[i].coeffs;
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
