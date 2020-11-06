@@ -8,12 +8,14 @@
  */
 
 #include "edm.h"
-#include "ThreadPool.h"
-#include <Eigen/SVD>
+
 #include <algorithm> // std::partial_sort
 #include <array>
 #include <numeric> // std::iota
 #include <string>
+
+#include <Eigen/SVD>
+#include <tbb/parallel_for.h>
 
 #ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY
@@ -249,20 +251,15 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
   std::vector<Eigen::VectorXd> coeffs(Mp.rows);
-  std::vector<std::future<Prediction>> futures(Mp.rows);
 
-  ThreadPool pool(nthreads);
-
-  for (int i = 0; i < Mp.rows; i++) {
-    futures[i] = pool.enqueue([&, i] { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
-  }
-
-  for (int i = 0; i < Mp.rows; i++) {
-    Prediction pred = futures[i].get();
-    rc[i] = pred.rc;
-    ystar[i] = pred.y;
-    coeffs[i] = pred.coeffs;
-  }
+  tbb::parallel_for(tbb::blocked_range<int>(0, Mp.rows), [&](tbb::blocked_range<int> r) {
+    for (int i = r.begin(); i < r.end(); ++i) {
+      Prediction pred = mf_smap_single(i, opts, y, M_mat, Mp_mat);
+      rc[i] = pred.rc;
+      ystar[i] = pred.y;
+      coeffs[i] = pred.coeffs;
+    }
+  });
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
