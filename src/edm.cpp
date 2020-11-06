@@ -8,17 +8,22 @@
  */
 
 #include "edm.h"
-#include "ThreadPool.h"
+#include "ctpl_stl.h"
+
+#define EIGEN_DONT_PARALLELIZE
+#include <Eigen/Core>
 #include <Eigen/SVD>
-#include <algorithm> // std::partial_sort
-#include <array>
-#include <numeric> // std::iota
-#include <string>
 
 #ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY
 #endif
 #include <fmt/format.h>
+
+#include <algorithm> // std::partial_sort
+#include <array>
+#include <chrono>
+#include <numeric> // std::iota
+#include <string>
 
 struct Prediction
 {
@@ -27,8 +32,8 @@ struct Prediction
   Eigen::VectorXd coeffs;
 };
 
-typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
-typedef Eigen::Block<const MatrixView, 1, -1, true> MatrixRowView;
+using MatrixView = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
+using MatrixRowView = Eigen::Block<const MatrixView, 1, -1, true>;
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
@@ -216,9 +221,17 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
   }
 }
 
+bool eigenParallelInitialised = false;
+ctpl::thread_pool pool;
+
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
                         int nthreads, void display(char*), void flush(), int verbosity)
 {
+  if (!eigenParallelInitialised) {
+    Eigen::initParallel();
+    eigenParallelInitialised = true;
+  }
+
   const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
 
   if (std::find(validAlgs.begin(), validAlgs.end(), opts.algorithm) == validAlgs.end()) {
@@ -237,7 +250,6 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
       }
       if (callflush) {
         flush();
-        ;
       }
     }
   };
@@ -246,15 +258,20 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
 
+  if (nthreads != pool.size()) {
+    println((char*)fmt::format("Resizing thread pool from {} to {} threads", pool.size(), nthreads).c_str());
+    pool.resize(nthreads);
+  }
+
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
   std::vector<Eigen::VectorXd> coeffs(Mp.rows);
   std::vector<std::future<Prediction>> futures(Mp.rows);
 
-  ThreadPool pool(nthreads);
+  auto start = std::chrono::high_resolution_clock::now();
 
   for (int i = 0; i < Mp.rows; i++) {
-    futures[i] = pool.enqueue([&, i] { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
+    futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
   }
 
   for (int i = 0; i < Mp.rows; i++) {
@@ -263,6 +280,10 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     ystar[i] = pred.y;
     coeffs[i] = pred.coeffs;
   }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
+  println((char*)fmt::format("EDM plugin took {} seconds to make predictions", elapsed.count()).c_str());
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
