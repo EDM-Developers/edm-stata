@@ -45,4 +45,4 @@ typedef struct
 } smap_res_t;
 
 DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                            int nthreads);
+                            int nthreads, void display(char*), void flush(), int verbosity);

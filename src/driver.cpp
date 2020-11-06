@@ -8,6 +8,8 @@
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
+#include <iostream>
+#include <limits>
 
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
@@ -19,6 +21,16 @@ typedef struct
   manifold_t M, Mp;
   int nthreads;
 } edm_inputs_t;
+
+void display(char* s)
+{
+  std::cout << s;
+}
+
+void flush()
+{
+  fflush(stdout);
+}
 
 /*! \brief Read in a dump file.
  *
@@ -103,7 +115,8 @@ int main(int argc, char* argv[])
 
   edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
+  int VERBOSITY = std::numeric_limits<int>::max();
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display, flush, VERBOSITY);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);

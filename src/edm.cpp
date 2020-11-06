@@ -15,6 +15,11 @@
 #include <numeric> // std::iota
 #include <string>
 
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
 struct Prediction
 {
   retcode rc;
@@ -212,7 +217,7 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
 }
 
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                        int nthreads)
+                        int nthreads, void display(char*), void flush(), int verbosity)
 {
   const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
 
@@ -223,6 +228,19 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   if (opts.algorithm == "llr") {
     return { NOT_IMPLEMENTED, {}, {} };
   }
+
+  auto println = [display, flush, verbosity](char* s, bool callflush = true, bool endl = true) {
+    if (verbosity > 1) {
+      display(s);
+      if (endl) {
+        display("\n");
+      }
+      if (callflush) {
+        flush();
+        ;
+      }
+    }
+  };
 
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani

@@ -44,6 +44,11 @@ void error(const char* s)
   SF_error((char*)s);
 }
 
+void flush()
+{
+  _stata_->spoutflush();
+}
+
 void print_error(ST_retcode rc)
 {
   switch (rc) {
@@ -201,7 +206,7 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
   display(fmt::format("Requested {} threads\n", argv[9]));
   display(fmt::format("Using {} threads\n\n", nthreads));
 
-  _stata_->spoutflush();
+  flush();
 }
 
 /*
@@ -328,7 +333,7 @@ ST_retcode edm(int argc, char* argv[])
     print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
   }
 
-  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp, nthreads);
+  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp, nthreads, display, flush, verbosity);
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (smap_res.rc == SUCCESS) {
