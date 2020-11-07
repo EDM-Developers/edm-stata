@@ -10,6 +10,7 @@
 #include "edm.h"
 #include "ctpl_stl.h"
 
+#define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -32,9 +33,6 @@ struct Prediction
   Eigen::VectorXd coeffs;
 };
 
-using MatrixView = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
-using MatrixRowView = Eigen::Block<const MatrixView, 1, -1, true>;
-
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
@@ -51,7 +49,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-std::pair<std::vector<double>, int> get_distances(const MatrixView& M, const MatrixRowView& b, double missingdistance)
+std::pair<std::vector<double>, int> get_distances(const Manifold& M, const Observation& b, double missingdistance)
 {
   int validDistances = 0;
   std::vector<double> d(M.rows());
@@ -61,14 +59,16 @@ std::pair<std::vector<double>, int> get_distances(const MatrixView& M, const Mat
     bool missing = false;
     int numMissingDims = 0;
     for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+      double M_ij = M(i, j);
+      double b_j = b(j);
+      if ((M_ij == MISSING) || (b_j == MISSING)) {
         if (missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M_ij - b_j) * (M_ij - b_j);
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -94,7 +94,7 @@ double simplex(double theta, const Eigen::ArrayXd& y, const Eigen::ArrayXd& d)
   return (y * w).sum();
 }
 
-std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vector<double>& y,
+std::vector<size_t> valid_neighbour_indices(const Manifold& M, const std::vector<double>& y,
                                             const std::vector<size_t>& ind, int l)
 {
   std::vector<size_t> neighbourInds;
@@ -104,7 +104,7 @@ std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vect
       continue;
     }
 
-    bool anyMissing = (M.row(ind[j]).array() == MISSING).any();
+    bool anyMissing = M.get_observation(ind[j]).any_missing();
     if (!anyMissing) {
       neighbourInds.push_back(j);
     }
@@ -114,7 +114,7 @@ std::vector<size_t> valid_neighbour_indices(const MatrixView& M, const std::vect
 }
 
 std::pair<Eigen::MatrixXd, Eigen::VectorXd> setup_smap_llr(double theta, std::string algorithm,
-                                                           const std::vector<double>& y, const MatrixView& M,
+                                                           const std::vector<double>& y, const Manifold& M,
                                                            const std::vector<double>& d, const std::vector<size_t>& ind,
                                                            int l, const std::vector<size_t>& neighbourInds)
 {
@@ -165,7 +165,7 @@ std::pair<Eigen::MatrixXd, Eigen::VectorXd> setup_smap_llr(double theta, std::st
 }
 
 std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Eigen::VectorXd y_ls_cj,
-                                        const MatrixRowView& b)
+                                        const Observation& b)
 {
   Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
   Eigen::VectorXd ics = svd.solve(y_ls_cj);
@@ -180,10 +180,10 @@ std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Ei
   return { r, ics };
 }
 
-Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                          const MatrixView& Mp)
+Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const Manifold& M,
+                          const Manifold& Mp)
 {
-  MatrixRowView b = Mp.row(Mp_i);
+  Observation b = Mp.get_observation(Mp_i);
 
   auto [d, validDistances] = get_distances(M, b, opts.missingdistance);
 
@@ -224,7 +224,7 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
 bool eigenParallelInitialised = false;
 ctpl::thread_pool pool;
 
-smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                         int nthreads, void display(char*), void flush(), int verbosity)
 {
   if (!eigenParallelInitialised) {
@@ -246,7 +246,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     if (verbosity > 1) {
       display(s);
       if (endl) {
-        display("\n");
+        display((char*)"\n");
       }
       if (callflush) {
         flush();
@@ -254,27 +254,23 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     }
   };
 
-  // Create Eigen matrixes which are views of the supplied flattened matrices
-  MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-  MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
-
   if (nthreads != pool.size()) {
     println((char*)fmt::format("Resizing thread pool from {} to {} threads", pool.size(), nthreads).c_str());
     pool.resize(nthreads);
   }
 
-  std::vector<retcode> rc(Mp.rows);
-  std::vector<double> ystar(Mp.rows);
-  std::vector<Eigen::VectorXd> coeffs(Mp.rows);
-  std::vector<std::future<Prediction>> futures(Mp.rows);
+  std::vector<retcode> rc(Mp.rows());
+  std::vector<double> ystar(Mp.rows());
+  std::vector<Eigen::VectorXd> coeffs(Mp.rows());
+  std::vector<std::future<Prediction>> futures(Mp.rows());
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  for (int i = 0; i < Mp.rows; i++) {
-    futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M_mat, Mp_mat); });
+  for (int i = 0; i < Mp.rows(); i++) {
+    futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M, Mp); });
   }
 
-  for (int i = 0; i < Mp.rows; i++) {
+  for (int i = 0; i < Mp.rows(); i++) {
     Prediction pred = futures[i].get();
     rc[i] = pred.rc;
     ystar[i] = pred.y;
@@ -291,10 +287,10 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   // saving ics coefficients if savesmap option enabled
   std::vector<double> flat_Bi_map;
   if (opts.save_mode) {
-    flat_Bi_map.resize(Mp.rows * opts.varssv);
-    MatrixView Bi_map(flat_Bi_map.data(), Mp.rows, opts.varssv);
+    flat_Bi_map.resize(Mp.rows() * opts.varssv);
+    Eigen::Map<Eigen::MatrixXd> Bi_map(flat_Bi_map.data(), Mp.rows(), opts.varssv);
 
-    for (int i = 0; i < Mp.rows; i++) {
+    for (int i = 0; i < Mp.rows(); i++) {
       Eigen::VectorXd ics = coeffs[i];
       for (int j = 0; j < opts.varssv; j++) {
         if (ics.size() == 0 || ics(j) == 0.) {

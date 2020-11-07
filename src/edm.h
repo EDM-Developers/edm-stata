@@ -23,11 +23,42 @@
 
 typedef int retcode;
 
-typedef struct
+struct Observation
+{
+  const double* data;
+  size_t E;
+
+  double operator()(size_t j) const { return data[j]; }
+
+  bool any_missing() const
+  {
+    bool missing = false;
+    for (size_t i = 0; i < E; i++) {
+      if (data[i] == MISSING) {
+        missing = true;
+        break;
+      }
+    }
+    return missing;
+  }
+};
+
+struct Manifold
 {
   std::vector<double> flat;
-  int rows, cols;
-} manifold_t;
+  size_t _rows, _cols;
+
+  double operator()(size_t i, size_t j) const { return flat[i * _cols + j]; }
+
+  size_t rows() const { return _rows; }
+  size_t cols() const { return _cols; }
+
+  Observation get_observation(size_t i) const
+  {
+    Observation obs{ &(flat[i * _cols]), _cols };
+    return obs;
+  }
+};
 
 typedef struct
 {
@@ -44,5 +75,5 @@ typedef struct
   std::optional<std::vector<double>> flat_Bi_map;
 } smap_res_t;
 
-DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                             int nthreads, void display(char*), void flush(), int verbosity);

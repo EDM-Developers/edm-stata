@@ -165,8 +165,8 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
-                      bool pmani_flag, ST_int pmani, ST_int nthreads)
+void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
+                      ST_int pmani, ST_int nthreads)
 {
   // Header of the plugin
   display("\n====================\n");
@@ -185,9 +185,9 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
   display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
   display(fmt::format("force compute = {}\n\n", opts.force_compute));
   display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-  display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
-  display(fmt::format("train set obs: {}\n", M.rows));
-  display(fmt::format("predict set obs: {}\n\n", Mp.rows));
+  display(fmt::format("number of variables in manifold = {}\n\n", M.cols()));
+  display(fmt::format("train set obs: {}\n", M.rows()));
+  display(fmt::format("predict set obs: {}\n\n", Mp.rows()));
   display(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
   if (pmani_flag) {
@@ -270,8 +270,7 @@ ST_retcode edm(int argc, char* argv[])
 
   // Read in the main manifold from Stata
   stataVarNum = 1;
-  auto _flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
-  manifold_t M = { std::move(_flat_M), count_train_set, mani };
+  Manifold M = { stata_columns<ST_double>(stataVarNum, mani, train_filter), (size_t)count_train_set, (size_t)mani };
 
   // Find which Stata rows contain the second manifold
   stataVarNum = mani + 4;
@@ -290,8 +289,7 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Read in the second manifold from Stata
-  auto _flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
-  manifold_t Mp{ std::move(_flat_Mp), count_predict_set, Mpcol };
+  Manifold Mp{ stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter), (size_t)count_predict_set, (size_t)Mpcol };
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for

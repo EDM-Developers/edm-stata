@@ -18,7 +18,7 @@ typedef struct
 {
   smap_opts_t opts;
   std::vector<double> y;
-  manifold_t M, Mp;
+  Manifold M, Mp;
   int nthreads;
 } edm_inputs_t;
 
@@ -61,21 +61,26 @@ edm_inputs_t read_dumpfile(std::string fname_in)
   H5LTget_attribute_string(fid, "/", "algorithm", temps);
   opts.algorithm = std::string(temps);
 
-  manifold_t M, Mp;
+  Manifold M, Mp;
 
-  H5LTget_attribute_int(fid, "/", "count_train_set", &(M.rows));
-  H5LTget_attribute_int(fid, "/", "mani", &(M.cols));
+  int dim;
+  H5LTget_attribute_int(fid, "/", "count_train_set", &dim);
+  M._rows = dim;
+  H5LTget_attribute_int(fid, "/", "mani", &dim);
+  M._cols = dim;
 
-  M.flat = std::vector<double>(M.rows * M.cols);
+  M.flat = std::vector<double>(M.rows() * M.cols());
   H5LTread_dataset_double(fid, "flat_M", M.flat.data());
 
-  H5LTget_attribute_int(fid, "/", "count_predict_set", &(Mp.rows));
-  H5LTget_attribute_int(fid, "/", "Mpcol", &(Mp.cols));
+  H5LTget_attribute_int(fid, "/", "count_predict_set", &dim);
+  Mp._rows = dim;
+  H5LTget_attribute_int(fid, "/", "Mpcol", &dim);
+  Mp._cols = dim;
 
-  Mp.flat = std::vector<double>(Mp.rows * Mp.cols);
+  Mp.flat = std::vector<double>(Mp.rows() * Mp.cols());
   H5LTread_dataset_double(fid, "flat_Mp", Mp.flat.data());
 
-  std::vector<double> y(M.rows);
+  std::vector<double> y(M.rows());
   H5LTread_dataset_double(fid, "y", y.data());
 
   int nthreads;
