@@ -909,9 +909,14 @@ program define edmExplore, eclass sortpreserve
 					local pmani_flag = 0
 					// display "pmani_flag: " `pmani_flag'
 
+					scalar edm_save_prediction = ("`predict'" != "")
+					scalar edm_running = 1
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
+					while edm_running {
+						sleep 10
+						plugin call smap_block_mdap `myvars' if `predict_set' == 1 
+					}
 				}
-
 
 				/* ==== END CODE FOR C PLUGIN ==== */
 
@@ -1016,7 +1021,14 @@ program define edmExplore, eclass sortpreserve
 				local vsave_flag = 0
 				/* display "vsave_flag: " `vsave_flag' */
 
+				scalar edm_save_prediction = ("`predict'" != "")
+				scalar edm_running = 1
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
+
+				while edm_running {
+					sleep 10
+					plugin call smap_block_mdap `myvars' if `co_predict_set' == 1
+				}
 			}
 
 
@@ -1818,7 +1830,14 @@ program define edmXmap, eclass sortpreserve
 							local pmani_flag = 0
 							// display "pmani_flag: " `pmani_flag'
 
+							scalar edm_save_prediction = ("`predict'" != "")
+							scalar edm_running = 1
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
+							
+							while edm_running {
+								sleep 10
+								plugin call smap_block_mdap `myvars' if `predict_set' == 1
+							}
 						}
 
 						/* ==== END CODE FOR C PLUGIN ==== */
@@ -1936,7 +1955,13 @@ program define edmXmap, eclass sortpreserve
 				// display "pmani_flag: " `pmani_flag'
 				local vsave_flag = 0
 				// display "vsave_flag: " `vsave_flag'
+				scalar edm_save_prediction = ("`predict'" != "")
+				scalar edm_running = 1
 				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
+				while edm_running {
+					sleep 10
+					plugin call smap_block_mdap `myvars'  if `co_predict_set' == 1
+				}
 			}
 
 			/* ==== END CODE FOR C PLUGIN ==== */

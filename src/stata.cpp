@@ -13,6 +13,7 @@
 #endif
 #include <fmt/format.h>
 
+#include <future>
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>
@@ -86,11 +87,11 @@ int num_if_in_rows()
   return num;
 }
 
-typedef struct
+struct RowFilter
 {
   std::vector<bool> useRow;
   int numRows;
-} row_filter_t;
+};
 
 /*
  * Read in columns from Stata (i.e. what Stata calls variables).
@@ -98,7 +99,7 @@ typedef struct
  * If 'filter' is supplied, we consider each row 'i' only if 'filter[i]'
  * evaluates to true. */
 template<typename T>
-std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row_filter_t>& filter = std::nullopt)
+std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<RowFilter>& filter = std::nullopt)
 {
   // Allocate space for the matrix of data from Stata
   int numRows = filter.has_value() ? filter->numRows : num_if_in_rows();
@@ -142,7 +143,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row
  * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
  */
 void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols = 1,
-                         const std::optional<row_filter_t>& filter = std::nullopt)
+                         const std::optional<RowFilter>& filter = std::nullopt)
 {
   int ind = 0; // Index of y vector
   int r = 0;   // Count each row that isn't filtered by Stata 'if'
@@ -165,7 +166,7 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
+void print_debug_info(int argc, char* argv[], EdmOptions opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
                       ST_int pmani, ST_int nthreads)
 {
   // Header of the plugin
@@ -209,6 +210,9 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& 
   flush();
 }
 
+ST_int mani;
+std::future<EdmResult> future;
+ST_int smap_coeffs_column;
 /*
 Example call to the plugin:
 
@@ -238,7 +242,7 @@ ST_retcode edm(int argc, char* argv[])
   std::string algorithm(argv[2]);
   bool force_compute = (strcmp(argv[3], "force") == 0);
   ST_double missingdistance = atof(argv[4]);
-  ST_int mani = atoi(argv[5]);     // number of columns in the manifold
+  mani = atoi(argv[5]);            // number of columns in the manifold
   bool pmani_flag = atoi(argv[6]); // contains the flag for p_manifold
   bool save_mode = atoi(argv[7]);
   ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
@@ -251,7 +255,7 @@ ST_retcode edm(int argc, char* argv[])
     l = mani + 1;
   }
 
-  smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
+  EdmOptions opts = { force_compute, save_mode, l, varssv, verbosity, theta, missingdistance, algorithm };
 
   // Default number of threads is the number of cores available
   if (nthreads <= 0) {
@@ -262,11 +266,11 @@ ST_retcode edm(int argc, char* argv[])
   ST_int stataVarNum = mani + 3;
   auto train_use = stata_columns<bool>(stataVarNum);
   int count_train_set = std::accumulate(train_use.begin(), train_use.end(), 0);
-  row_filter_t train_filter = { train_use, count_train_set };
+  RowFilter train_filter = { train_use, count_train_set };
 
   // Read in the y vector from Stata
   stataVarNum = mani + 1;
-  auto y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
+  std::vector<double> y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
 
   // Read in the main manifold from Stata
   stataVarNum = 1;
@@ -276,7 +280,7 @@ ST_retcode edm(int argc, char* argv[])
   stataVarNum = mani + 4;
   auto predict_use = stata_columns<bool>(stataVarNum);
   int count_predict_set = std::accumulate(predict_use.begin(), predict_use.end(), 0);
-  row_filter_t predict_filter = { predict_use, count_predict_set };
+  RowFilter predict_filter = { predict_use, count_predict_set };
 
   // Find which Stata columns contain the second manifold
   ST_int Mpcol;
@@ -289,7 +293,8 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Read in the second manifold from Stata
-  Manifold Mp{ stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter), (size_t)count_predict_set, (size_t)Mpcol };
+  Manifold Mp = { stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter), (size_t)count_predict_set,
+                  (size_t)Mpcol };
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
@@ -327,43 +332,85 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  if (verbosity > 0) {
+  if (verbosity > 3) {
     print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
   }
+  
+  smap_coeffs_column = mani + 5 + 1 + (int)pmani_flag * pmani;
 
-  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp, nthreads, display, flush, verbosity);
+  IO io = { display, error, flush };
+  future = std::async(mf_smap_loop, opts, y, M, Mp, nthreads, io);
+  return SUCCESS;
+}
 
-  // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
-  if (smap_res.rc == SUCCESS) {
-    stataVarNum = mani + 2;
-    write_stata_columns(smap_res.ystar, stataVarNum, 1, predict_filter);
+template<typename R>
+bool is_ready(std::future<R> const& f)
+{
+  return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
 
-    if (save_mode) {
-      stataVarNum = mani + 5 + 1 + (int)pmani_flag * pmani;
-      write_stata_columns(*(smap_res.flat_Bi_map), stataVarNum, varssv, predict_filter);
+ST_retcode save_results()
+{
+  if (is_ready(future)) {
+
+    EdmResult res = future.get();
+
+    ST_retcode rc = SF_scal_save("edm_mae", res.mae);
+    if (rc) {
+      throw std::runtime_error("Cannot read 'edm_save_prediction' scalar from Stata");
     }
-  }
 
-  // Print a Footer message for the plugin.
-  if (verbosity > 0) {
-    display("\nEnd of the plugin\n");
-    display("====================\n\n");
-  }
+    rc = SF_scal_save("edm_rho", res.rho);
+    if (rc) {
+      throw std::runtime_error("Cannot read 'edm_save_prediction' scalar from Stata");
+    }
 
-  return smap_res.rc;
+    // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
+    if (res.rc == SUCCESS) {
+
+      ST_int stataVarNum = mani + 2;
+      write_stata_columns(res.ystar, stataVarNum);
+
+      if (res.opts.save_mode) {
+        write_stata_columns(res.flat_Bi_map, smap_coeffs_column, res.opts.varssv);
+      }
+    }
+
+    // Print a Footer message for the plugin.
+    if (res.opts.verbosity > 0) {
+      display("\nEnd of the plugin\n");
+      display("====================\n\n");
+    }
+
+    SF_scal_save("edm_running", 0.0);
+
+    return res.rc;
+
+  } else {
+    return SUCCESS;
+  }
 }
 
 STDLL stata_call(int argc, char* argv[])
 {
   try {
-    ST_retcode rc = edm(argc, argv);
-    print_error(rc);
-    return rc;
+    if (argc > 0) {
+      ST_retcode rc = edm(argc, argv);
+      print_error(rc);
+      return rc;
+
+    } else {
+      ST_retcode rc = save_results();
+      print_error(rc);
+      return rc;
+    }
+
   } catch (const std::exception& e) {
     error(e.what());
     error("\n");
   } catch (...) {
     error("Unknown error in edm plugin\n");
   }
+
   return UNKNOWN_ERROR;
 }

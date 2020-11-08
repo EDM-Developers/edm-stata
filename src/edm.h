@@ -17,7 +17,6 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,20 +59,28 @@ struct Manifold
   }
 };
 
-typedef struct
+struct IO
+{
+  void (*out)(const char*);
+  void (*error)(const char*);
+  void (*flush)();
+};
+
+struct EdmOptions
 {
   bool force_compute, save_mode;
-  int l, varssv;
+  int l, varssv, verbosity;
   double theta, missingdistance;
   std::string algorithm;
-} smap_opts_t;
+};
 
-typedef struct
+struct EdmResult
 {
   retcode rc;
+  double mae, rho;
   std::vector<double> ystar;
-  std::optional<std::vector<double>> flat_Bi_map;
-} smap_res_t;
+  std::vector<double> flat_Bi_map;
+  EdmOptions opts;
+};
 
-DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                            int nthreads, void display(char*), void flush(), int verbosity);
+DLL EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, Manifold Mp, int nthreads, IO io);

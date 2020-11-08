@@ -162,9 +162,9 @@ assert r(rho)>0.99
 cor f.y predicted_y_from_mx
 assert r(rho)>0.7
 
-* Obtaining CI of the xmap
+/* * Obtaining CI of the xmap
 jackknife: edm xmap x y, e(2)
 ereturn display
 
 jackknife: edm explore x, e(2)
-ereturn display
+ereturn display */

@@ -24,6 +24,7 @@
 #include <array>
 #include <chrono>
 #include <numeric> // std::iota
+#include <stdexcept>
 #include <string>
 
 struct Prediction
@@ -180,7 +181,7 @@ std::pair<double, Eigen::VectorXd> smap(const Eigen::MatrixXd& X_ls_cj, const Ei
   return { r, ics };
 }
 
-Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const Manifold& M,
+Prediction mf_smap_single(int Mp_i, EdmOptions opts, const std::vector<double>& y, const Manifold& M,
                           const Manifold& Mp)
 {
   Observation b = Mp.get_observation(Mp_i);
@@ -221,86 +222,96 @@ Prediction mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>&
   }
 }
 
-bool eigenParallelInitialised = false;
 ctpl::thread_pool pool;
 
-smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                        int nthreads, void display(char*), void flush(), int verbosity)
+EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, Manifold Mp, int nthreads, IO io)
 {
-  if (!eigenParallelInitialised) {
-    Eigen::initParallel();
-    eigenParallelInitialised = true;
-  }
+  try {
+    const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
 
-  const std::array<std::string, 4> validAlgs = { "", "llr", "simplex", "smap" };
-
-  if (std::find(validAlgs.begin(), validAlgs.end(), opts.algorithm) == validAlgs.end()) {
-    return { INVALID_ALGORITHM, {}, {} };
-  }
-
-  if (opts.algorithm == "llr") {
-    return { NOT_IMPLEMENTED, {}, {} };
-  }
-
-  auto println = [display, flush, verbosity](char* s, bool callflush = true, bool endl = true) {
-    if (verbosity > 1) {
-      display(s);
-      if (endl) {
-        display((char*)"\n");
-      }
-      if (callflush) {
-        flush();
-      }
+    if (std::find(validAlgs.begin(), validAlgs.end(), opts.algorithm) == validAlgs.end()) {
+      return { INVALID_ALGORITHM, {}, {} };
     }
-  };
 
-  if (nthreads != pool.size()) {
-    println((char*)fmt::format("Resizing thread pool from {} to {} threads", pool.size(), nthreads).c_str());
-    pool.resize(nthreads);
-  }
+    if (opts.algorithm == "llr") {
+      return { NOT_IMPLEMENTED, {}, {} };
+    }
 
-  std::vector<retcode> rc(Mp.rows());
-  std::vector<double> ystar(Mp.rows());
-  std::vector<Eigen::VectorXd> coeffs(Mp.rows());
-  std::vector<std::future<Prediction>> futures(Mp.rows());
+    auto println = [io, opts](char* s, bool callflush = true, bool endl = true) {
+      if (opts.verbosity > 1) {
+        io.out(s);
+        if (endl) {
+          io.out((char*)"\n");
+        }
+        if (callflush) {
+          io.flush();
+        }
+      }
+    };
 
-  auto start = std::chrono::high_resolution_clock::now();
+    if (nthreads != pool.size()) {
+      println((char*)fmt::format("Resizing thread pool from {} to {} threads", pool.size(), nthreads).c_str());
+      pool.resize(nthreads);
+    }
 
-  for (int i = 0; i < Mp.rows(); i++) {
-    futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M, Mp); });
-  }
+    std::vector<retcode> rc(Mp.rows());
+    std::vector<double> ystar(Mp.rows());
+    std::vector<Eigen::VectorXd> coeffs(Mp.rows());
+    std::vector<std::future<Prediction>> futures(Mp.rows());
 
-  for (int i = 0; i < Mp.rows(); i++) {
-    Prediction pred = futures[i].get();
-    rc[i] = pred.rc;
-    ystar[i] = pred.y;
-    coeffs[i] = pred.coeffs;
-  }
-
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = end - start;
-  println((char*)fmt::format("EDM plugin took {} seconds to make predictions", elapsed.count()).c_str());
-
-  // Check if any mf_smap_single call failed, and if so find the most serious error
-  retcode maxError = *std::max_element(rc.begin(), rc.end());
-
-  // saving ics coefficients if savesmap option enabled
-  std::vector<double> flat_Bi_map;
-  if (opts.save_mode) {
-    flat_Bi_map.resize(Mp.rows() * opts.varssv);
-    Eigen::Map<Eigen::MatrixXd> Bi_map(flat_Bi_map.data(), Mp.rows(), opts.varssv);
+    auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < Mp.rows(); i++) {
-      Eigen::VectorXd ics = coeffs[i];
-      for (int j = 0; j < opts.varssv; j++) {
-        if (ics.size() == 0 || ics(j) == 0.) {
-          Bi_map(i, j) = MISSING;
-        } else {
-          Bi_map(i, j) = ics(j);
+      futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M, Mp); });
+    }
+
+    for (int i = 0; i < Mp.rows(); i++) {
+      Prediction pred = futures[i].get();
+      if (opts.verbosity > 2 && i % (Mp.rows() / 10) == 0) {
+        io.out(".");
+        io.flush();
+      }
+      rc[i] = pred.rc;
+      ystar[i] = pred.y;
+      coeffs[i] = pred.coeffs;
+    }
+    println("");
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    println((char*)fmt::format("EDM plugin took {} seconds to make predictions", elapsed.count()).c_str());
+
+    double rho = 0.0, mae = 0.0;
+
+    // Check if any mf_smap_single call failed, and if so find the most serious error
+    retcode maxError = *std::max_element(rc.begin(), rc.end());
+
+    // saving ics coefficients if savesmap option enabled
+    std::vector<double> flat_Bi_map{};
+    if (opts.save_mode) {
+      flat_Bi_map.resize(Mp.rows() * opts.varssv);
+      Eigen::Map<Eigen::MatrixXd> Bi_map(flat_Bi_map.data(), Mp.rows(), opts.varssv);
+
+      for (int i = 0; i < Mp.rows(); i++) {
+        Eigen::VectorXd ics = coeffs[i];
+        for (int j = 0; j < opts.varssv; j++) {
+          if (ics.size() == 0 || ics(j) == 0.) {
+            Bi_map(i, j) = MISSING;
+          } else {
+            Bi_map(i, j) = ics(j);
+          }
         }
       }
     }
+
+    return { maxError, mae, rho, ystar, flat_Bi_map, opts };
+
+  } catch (const std::exception& e) {
+    io.error(e.what());
+    io.error("\n");
+  } catch (...) {
+    io.error("Unknown error in edm plugin\n");
   }
 
-  return { maxError, ystar, flat_Bi_map };
+  return { UNKNOWN_ERROR, {}, {}, {}, {}, {} };
 }

@@ -14,17 +14,22 @@
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
  */
-typedef struct
+struct EdmInputs
 {
-  smap_opts_t opts;
+  EdmOptions opts;
   std::vector<double> y;
   Manifold M, Mp;
   int nthreads;
-} edm_inputs_t;
+};
 
-void display(char* s)
+void display(const char* s)
 {
   std::cout << s;
+}
+
+void error(const char* s)
+{
+  std::cerr << s;
 }
 
 void flush()
@@ -39,11 +44,13 @@ void flush()
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-edm_inputs_t read_dumpfile(std::string fname_in)
+EdmInputs read_dumpfile(std::string fname_in)
 {
   hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
-  smap_opts_t opts;
+  EdmOptions opts;
+
+  opts.verbosity = std::numeric_limits<int>::max();
 
   char bool_var;
   H5LTget_attribute_char(fid, "/", "save_mode", &bool_var);
@@ -91,18 +98,18 @@ edm_inputs_t read_dumpfile(std::string fname_in)
   return { opts, y, M, Mp, nthreads };
 }
 
-void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv)
+void write_results(std::string fname_out, const EdmResult& res, bool save_mode, int varssv)
 {
   hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-  H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
+  H5LTset_attribute_int(fid, "/", "rc", &(res.rc), 1);
 
-  hsize_t ystarLen[] = { (hsize_t)smap_res.ystar.size() };
-  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, smap_res.ystar.data());
+  hsize_t ystarLen[] = { (hsize_t)res.ystar.size() };
+  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, res.ystar.data());
 
-  if (smap_res.flat_Bi_map.has_value()) {
-    hsize_t Bi_mapLen[] = { (hsize_t)(smap_res.flat_Bi_map->size() / varssv), (hsize_t)varssv };
-    H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, smap_res.flat_Bi_map->data());
+  if (save_mode) {
+    hsize_t Bi_mapLen[] = { (hsize_t)(res.flat_Bi_map.size() / varssv), (hsize_t)varssv };
+    H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, res.flat_Bi_map.data());
   }
 
   H5Fclose(fid);
@@ -118,16 +125,15 @@ int main(int argc, char* argv[])
 
   std::string fname_in(argv[1]);
 
-  edm_inputs_t vars = read_dumpfile(fname_in);
-
-  int VERBOSITY = std::numeric_limits<int>::max();
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display, flush, VERBOSITY);
+  EdmInputs vars = read_dumpfile(fname_in);
+  IO io = { display, error, flush };
+  EdmResult res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);
   std::string fname_out = fname_in + "-out.h5";
 
-  write_results(fname_out, smap_res, vars.opts.varssv);
+  write_results(fname_out, res, vars.opts.save_mode, vars.opts.varssv);
 
-  return smap_res.rc;
+  return res.rc;
 }

@@ -34,7 +34,7 @@ keep in 300/50000
 timer clear
 timer on 1
 
-edm xmap x y, theta(0.2) algorithm(smap) saveinputs(perfinput.h5) verbosity(1)
+edm xmap x y, theta(0.2) algorithm(smap) saveinputs(perfinput.h5) verbosity(3)
 
 timer off 1
 timer list
