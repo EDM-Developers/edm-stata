@@ -7,6 +7,8 @@ build-windows:
   artifacts:
     paths:
     - stata/edm_Windows_x64.plugin
+    - stata/gbench.exe
+    - build/Release/*.dll
   tags:
     - windows-runner
 
@@ -23,6 +25,18 @@ test-windows:
   tags:
     - windows-runner
 
+perf-windows:
+  stage: deploy
+  dependencies:
+    - build-windows
+  before_script:
+    - cp build/Release/*.dll stata
+    - cd stata
+  script:
+    - ./gbench.exe
+  tags:
+    - windows-runner
+
 build-mac:
   stage: build
   before_script:
@@ -35,6 +49,7 @@ build-mac:
   artifacts:
     paths:
       - stata/edm_MacOSX_x64.plugin
+      - stata/gbench
   tags:
     - mac-runner
 
@@ -48,6 +63,17 @@ test-mac:
   script:
     - ~/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
     - diff -B reference.log cut-down-test.log
+  tags:
+    - mac-runner
+
+perf-mac:
+  stage: deploy
+  dependencies:
+    - build-mac
+  before_script:
+    - cd stata
+  script:
+    - ./gbench
   tags:
     - mac-runner
 
@@ -65,6 +91,7 @@ build-ubuntu:
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
+      - stata/gbench
   tags:
     - ubuntu-stata-runner
 
@@ -78,5 +105,16 @@ test-ubuntu:
   script:
     - stata -e -q cut-down-test.do
     - diff -B reference.log cut-down-test.log
+  tags:
+    - ubuntu-stata-runner
+
+perf-ubuntu:
+  stage: deploy
+  dependencies:
+    - build-ubuntu
+  before_script:
+    - cd stata
+  script:
+    - ./gbench
   tags:
     - ubuntu-stata-runner
