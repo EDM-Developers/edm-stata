@@ -29,8 +29,7 @@
 #include <exception>
 #include <future>
 #include <mutex>
-#include <queue>
-
+#include <boost/circular_buffer.hpp>
 
 
 // thread pool to run user's functors with signature
@@ -47,7 +46,7 @@ namespace ctpl {
         public:
             bool push(T const & value) {
                 std::unique_lock<std::mutex> lock(this->mutex);
-                this->q.push(value);
+              this->q.push_back(value);
                 return true;
             }
             // deletes the retrieved element, do not use for non integral types
@@ -56,15 +55,17 @@ namespace ctpl {
                 if (this->q.empty())
                     return false;
                 v = this->q.front();
-                this->q.pop();
+                this->q.pop_front();
                 return true;
             }
             bool empty() {
                 std::unique_lock<std::mutex> lock(this->mutex);
                 return this->q.empty();
             }
+            void resize(size_t nitems) { this->q.set_capacity(nitems);
+            }
         private:
-            std::queue<T> q;
+            boost::circular_buffer<T> q;
             std::mutex mutex;
         };
     }
@@ -83,6 +84,11 @@ namespace ctpl {
 
         // get the number of running threads in the pool
         int size() { return static_cast<int>(this->threads.size()); }
+
+        // allocate space in the queue
+        void alloc_queue(size_t nitems) { 
+            this->q.resize(nitems); 
+        }
 
         // number of idle threads
         int n_idle() { return this->nWaiting; }

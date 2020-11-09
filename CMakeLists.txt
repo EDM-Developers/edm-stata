@@ -94,6 +94,9 @@ endif()
 include(vendor/CMakeLists.txt)
 target_include_directories(edm PRIVATE vendor)
 
+find_path(BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS "boost/circular_buffer.hpp")
+target_include_directories(edm PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
+
 # EIGEN3
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})

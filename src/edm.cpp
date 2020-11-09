@@ -261,6 +261,8 @@ EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, Manif
 
     auto start = std::chrono::high_resolution_clock::now();
 
+    pool.alloc_queue(Mp.rows());
+
     for (int i = 0; i < Mp.rows(); i++) {
       futures[i] = pool.push([&, i](int) { return mf_smap_single(i, opts, y, M, Mp); });
     }
