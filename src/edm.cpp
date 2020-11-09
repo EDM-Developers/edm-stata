@@ -27,13 +27,6 @@
 #include <stdexcept>
 #include <string>
 
-struct Prediction
-{
-  retcode rc;
-  double y;
-  Eigen::VectorXd coeffs;
-};
-
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {

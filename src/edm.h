@@ -94,3 +94,13 @@ DLL EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, M
 #include <Eigen/Core>
 
 double simplex(double theta, const Eigen::ArrayXd& y, const Eigen::ArrayXd& d);
+
+struct Prediction
+{
+  retcode rc;
+  double y;
+  Eigen::VectorXd coeffs;
+};
+
+Prediction mf_smap_single(int Mp_i, EdmOptions opts, const std::vector<double>& y, const Manifold& M,
+                          const Manifold& Mp);
