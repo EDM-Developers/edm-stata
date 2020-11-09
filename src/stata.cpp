@@ -335,7 +335,7 @@ ST_retcode edm(int argc, char* argv[])
   if (verbosity > 3) {
     print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
   }
-  
+
   smap_coeffs_column = mani + 5 + 1 + (int)pmani_flag * pmani;
 
   IO io = { display, error, flush };

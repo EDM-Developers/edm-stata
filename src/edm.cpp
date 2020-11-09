@@ -283,6 +283,25 @@ EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, Manif
     std::chrono::duration<double> elapsed = end - start;
     println((char*)fmt::format("EDM plugin took {} seconds to make predictions", elapsed.count()).c_str());
 
+    // // Calculate the MAE & Pearson's rho sample correlation
+    // Eigen::Map<const Eigen::VectorXd> y_vec(y.data(), y.size());
+    // Eigen::Map<Eigen::VectorXd> ystar_vec(ystar.data(), ystar.size());
+
+    // auto x_f = y_vec.array();
+    // auto x_p = ystar_vec.array();
+
+    // double mae = (x_f - x_p).abs().mean();
+
+    // println((char*)fmt::format("MAE is {}", mae).c_str());
+
+    // auto x_f_cent = x_f - x_f.mean();
+    // auto x_p_cent = x_p - x_p.mean();
+
+    // double rho =
+    //   (x_f_cent * x_p_cent).sum() / (std::sqrt((x_f_cent * x_f_cent).sum()) * std::sqrt((x_p_cent *
+    //   x_p_cent).sum()));
+
+    // println((char*)fmt::format("rho is {}", rho).c_str());
     double rho = 0.0, mae = 0.0;
 
     // Check if any mf_smap_single call failed, and if so find the most serious error

@@ -29,8 +29,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
 
 if(WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive")
-  set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+  set(CMAKE_CXX_FLAGS_DEBUG "/MD /W4 /permissive")
+  set(CMAKE_CXX_FLAGS_RELEASE "/MD")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
@@ -97,6 +97,19 @@ target_include_directories(edm PRIVATE vendor)
 find_path(BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS "boost/circular_buffer.hpp")
 target_include_directories(edm PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
 
+# Google Benchmarks
+add_executable(gbench src/test-benchmark.cpp src/driver.h src/edm.cpp src/edm.h src/ctpl_stl.h)
+set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+
+find_package(benchmark CONFIG REQUIRED)
+target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+
+target_include_directories(gbench PUBLIC ${HDF5_INCLUDE_DIRS})
+  target_link_libraries(gbench PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+  add_definitions(${HDF5_DEFINITIONS})
+
+install(TARGETS gbench DESTINATION .)
+
 # EIGEN3
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -132,4 +145,5 @@ clangformat_setup(
   src/edm.h
   src/driver.cpp
   src/stata.cpp
+  src/test-benchmark.cpp
 )

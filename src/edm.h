@@ -83,4 +83,14 @@ struct EdmResult
   EdmOptions opts;
 };
 
+std::vector<size_t> minindex(const std::vector<double>& v, int k);
+
+std::pair<std::vector<double>, int> get_distances(const Manifold& M, const Observation& b, double missingdistance);
+
 DLL EdmResult mf_smap_loop(EdmOptions opts, std::vector<double> y, Manifold M, Manifold Mp, int nthreads, IO io);
+
+#define EIGEN_NO_DEBUG
+#define EIGEN_DONT_PARALLELIZE
+#include <Eigen/Core>
+
+double simplex(double theta, const Eigen::ArrayXd& y, const Eigen::ArrayXd& d);
