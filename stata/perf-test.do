@@ -59,3 +59,11 @@ timer on 1
 edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall.h5) 
 timer off 1
 timer list 1
+
+keep in 1/5000
+
+timer clear 1
+timer on 1
+edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige.h5)
+timer off 1
+timer list 1
