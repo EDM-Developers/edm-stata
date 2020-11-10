@@ -28,13 +28,34 @@ qui {
     }
 }
 
-* burn the first 300 observations
 keep in 300/50000
 
 timer clear
 timer on 1
 
-edm xmap x y, theta(0.2) algorithm(smap) saveinputs(perfinput.h5) verbosity(1)
+edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge.h5) verbosity(1)
 
 timer off 1
 timer list
+
+keep in 1/5000
+
+timer clear
+timer on 1
+
+edm explore x, e(10) saveinputs(logmapsmall.h5)
+
+timer off 1
+timer list
+
+clear
+
+use "FEEL_S1_MERGED_V3_DATE_tc.DTA"
+
+keep in 1/5000
+
+timer clear 1
+timer on 1
+edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall.h5) 
+timer off 1
+timer list 1

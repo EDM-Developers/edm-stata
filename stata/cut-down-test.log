@@ -58,7 +58,7 @@ number of observations (_N) was 0, now 500
 . * Determining the complexity of the system
 . 
 . * identify optimal E
-. edm explore x, e(2/10) saveinputs(test1.h5)
+. edm explore x, e(2/10)
 
 ====================
 Start of the plugin
@@ -77,7 +77,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -123,7 +122,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -169,7 +167,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -215,7 +212,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -261,7 +257,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -307,7 +302,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -353,7 +347,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -399,7 +392,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 
@@ -445,7 +437,6 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: test1.h5
 
 theta = 1.0000
 

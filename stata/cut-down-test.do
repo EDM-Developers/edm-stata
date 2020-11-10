@@ -36,7 +36,7 @@ keep in 300/500
 * Determining the complexity of the system
 
 * identify optimal E
-edm explore x, e(2/10) saveinputs(test1.h5)
+edm explore x, e(2/10)
 
 edm xmap x y, k(5)
 

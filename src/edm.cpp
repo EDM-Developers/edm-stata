@@ -9,10 +9,10 @@
 
 #include "edm.h"
 #include "ThreadPool.h"
-#include <cmath>
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
-#include <numeric>   // std::iota
+#include <cmath>
+#include <numeric> // std::iota
 #include <optional>
 
 /* internal functions */
