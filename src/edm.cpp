@@ -9,6 +9,9 @@
 
 #include "edm.h"
 #include "ThreadPool.h"
+
+#define EIGEN_NO_DEBUG
+#define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <cmath>

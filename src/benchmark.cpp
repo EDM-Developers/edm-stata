@@ -6,6 +6,8 @@
 #include "driver.h"
 #include "edm.h"
 
+#define EIGEN_NO_DEBUG
+#define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
 
