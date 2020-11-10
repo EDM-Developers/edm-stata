@@ -111,6 +111,10 @@ target_include_directories(gbench PUBLIC ${HDF5_INCLUDE_DIRS})
 
 install(TARGETS gbench DESTINATION .)
 
+# Boost's circular buffer (for thread pool queue)
+find_path(BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS "boost/circular_buffer.hpp")
+target_include_directories(edm PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
+
 # EIGEN3
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -148,4 +152,6 @@ clangformat_setup(
   src/driver.h
   src/stata.cpp
   src/benchmark.cpp
+  src/ThreadPool.h
+  src/ThreadPool.cpp
 )

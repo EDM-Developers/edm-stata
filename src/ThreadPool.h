@@ -1,14 +1,15 @@
-// From https://github.com/jhasse/ThreadPool/blob/master/ThreadPool.hpp
+// Adapted from https://github.com/jhasse/ThreadPool/blob/master/ThreadPool.hpp
 #pragma once
 
+#include <boost/circular_buffer.hpp>
 #include <functional>
 #include <future>
-#include <queue>
+#include <vector>
 
 class ThreadPool
 {
 public:
-  explicit ThreadPool(size_t);
+  explicit ThreadPool(size_t, size_t);
   template<class F, class... Args>
   decltype(auto) enqueue(F&& f, Args&&... args);
   ~ThreadPool();
@@ -17,7 +18,7 @@ private:
   // need to keep track of threads so we can join them
   std::vector<std::thread> workers;
   // the task queue
-  std::queue<std::packaged_task<void()>> tasks;
+  boost::circular_buffer<std::packaged_task<void()>> tasks;
 
   // synchronization
   std::mutex queue_mutex;
@@ -26,9 +27,11 @@ private:
 };
 
 // the constructor just launches some amount of workers
-inline ThreadPool::ThreadPool(size_t threads)
+inline ThreadPool::ThreadPool(size_t threads, size_t numtasks)
   : stop(false)
 {
+  tasks.set_capacity(numtasks);
+
   for (size_t i = 0; i < threads; ++i)
     workers.emplace_back([this] {
       for (;;) {
@@ -40,7 +43,7 @@ inline ThreadPool::ThreadPool(size_t threads)
           if (this->stop && this->tasks.empty())
             return;
           task = std::move(this->tasks.front());
-          this->tasks.pop();
+          this->tasks.pop_front();
         }
 
         task();
@@ -64,7 +67,7 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args)
     if (stop)
       throw std::runtime_error("enqueue on stopped ThreadPool");
 
-    tasks.emplace(std::move(task));
+    tasks.push_back(std::move(task));
   }
   condition.notify_one();
   return res;
