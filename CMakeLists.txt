@@ -109,6 +109,11 @@ target_include_directories(gbench PUBLIC ${HDF5_INCLUDE_DIRS})
   target_link_libraries(gbench PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
   add_definitions(${HDF5_DEFINITIONS})
 
+if(WIN32)
+  find_package(OpenMP)
+  target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 install(TARGETS gbench DESTINATION .)
 
 # Boost's circular buffer (for thread pool queue)
