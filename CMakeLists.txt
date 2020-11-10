@@ -30,7 +30,7 @@ set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
 
 if(WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive")
-  set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+  set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
