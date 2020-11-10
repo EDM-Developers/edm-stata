@@ -225,10 +225,10 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     }
   } else {
     ThreadPool pool(nthreads);
-    std::vector<std::future<void>> results;
+    std::vector<std::future<void>> results(Mp.rows);
 
     for (int i = 0; i < Mp.rows; i++) {
-      results.emplace_back(pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); }));
+      results[i] = pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
     }
   }
 
