@@ -1,5 +1,8 @@
 clear
 
+cap log close _all
+log using "cut-down-test.log", replace nomsg
+
 set linesize 255
 set obs 500
 set seed 12345678
@@ -40,7 +43,7 @@ edm explore x, e(2/10) saveinputs(test1.h5)
 
 edm xmap x y, k(5)
 
-edm xmap x y, e(6) lib(8) 
+edm xmap x y, e(6) lib(8)
 
 edm explore x, k(5) crossfold(10)
 
@@ -168,3 +171,5 @@ ereturn display
 
 jackknife: edm explore x, e(2)
 ereturn display
+
+cap log close _all

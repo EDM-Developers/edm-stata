@@ -180,13 +180,15 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
   display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
   display(fmt::format("force compute = {}\n\n", opts.force_compute));
   display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-  display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
+  display(fmt::format("number of observations in manifold = {}\n\n", M.cols));
+  display(fmt::format("manifold metric = {}\n\n", opts.mani_metric.c_str()));
   display(fmt::format("train set obs: {}\n", M.rows));
   display(fmt::format("predict set obs: {}\n\n", Mp.rows));
   display(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
   if (pmani_flag) {
-    display(fmt::format("number of variables in p_manifold = {}\n", pmani));
+    display(fmt::format("number of observations in p_manifold = {}\n", pmani));
+    display(fmt::format("p_manifold metric = {}\n\n", opts.pmani_metric.c_str()));
   }
   display("\n");
 
@@ -221,10 +223,10 @@ plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `mi
 */
 ST_retcode edm(int argc, char* argv[])
 {
-  if (argc < 11) {
+  if (argc < 13) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 12) {
+  if (argc > 14) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -240,13 +242,15 @@ ST_retcode edm(int argc, char* argv[])
   ST_int varssv = atoi(argv[8]); // number of columns in smap coefficients
   ST_int nthreads = atoi(argv[9]);
   ST_int verbosity = atoi(argv[10]);
+  std::string mani_metric(argv[11]);
+  std::string pmani_metric(argv[12]);
 
   // Default number of neighbours is E + 1
   if (l <= 0) {
     l = mani + 1;
   }
 
-  smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
+  smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm,  mani_metric, pmani_metric };
 
   // Default number of threads is the number of cores available
   if (nthreads <= 0) {
@@ -291,8 +295,8 @@ ST_retcode edm(int argc, char* argv[])
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
-  if (argc >= 12) {
-    hid_t fid = H5Fcreate(argv[11], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  if (argc >= 14) {
+    hid_t fid = H5Fcreate(argv[13], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
     H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);

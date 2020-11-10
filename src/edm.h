@@ -35,6 +35,8 @@ typedef struct
   int l, varssv;
   double theta, missingdistance;
   std::string algorithm;
+  std::string mani_metric;
+  std:: string pmani_metric;
 } smap_opts_t;
 
 typedef struct

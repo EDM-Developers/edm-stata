@@ -441,11 +441,11 @@ program define edmExplore, eclass sortpreserve
 						}
 						/* noi di "`co_x'"
 						noi sum `co_x' `co_x_new' */
-						
+
 						keep if `co_`v'_new' !=.
 					}
 				}
-				
+
 				tempvar newt_co
 				sort `original_id' `original_t'
 				`byori' gen `newt_co' = _n
@@ -913,10 +913,30 @@ program define edmExplore, eclass sortpreserve
 					unab vars : ``manifold''
 					local mani `: word count `vars''
 
+          qui {
+            levelsof x
+          }
+          local level_mani = r(r)
+          display "levels of mani: " `level_mani'
+
 					local pmani_flag = 0
 					// display "pmani_flag: " `pmani_flag'
 
-					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
+          if (`level_mani' == 2) {
+            local mani_metric "binary"
+          }
+          else {
+            local mani_metric "euclidean"
+          }
+          
+					// local mani_metric "euclidean"
+					//local mani_metric "binary"
+					//display "mani metric selected: " "`mani_metric'"
+
+					local pmani_metric = "`mani_metric'"
+					display "pmani metric selected: " "`pmani_metric'"
+
+					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' "`mani_metric'" "`pmani_metric'" `saveinputs'
 				}
 
 
@@ -2722,7 +2742,3 @@ void matlist(
 		strofreal((wd+1)*cols(X)+1) + "}{c BRC}\n")
 }
 end  */
-
-
-
-

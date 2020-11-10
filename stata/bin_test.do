@@ -1,7 +1,7 @@
 clear
 
-cap log close _all
-log using "bin_test.log", replace nomsg
+//cap log close _all
+//log using "bin_test.log", replace nomsg
 
 set linesize 255
 set obs 500
@@ -34,11 +34,25 @@ qui {
 }
 
 * Create binary variables
-replace x=1 if abs(x) > 0.5
-replace x=0 if abs(x) <= 0.5
+//replace x=1 if abs(x) > 0.5
+//replace x=0 if abs(x) <= 0.5
 
 replace y=1 if abs(y) > 0.65
 replace y=0 if abs(y) <= 0.65
+
+codebook x, compact
+
+quietly {
+    log using x.txt, text replace
+    noisily codebook x, compact
+    log close
+}
+
+type x.txt
+
+levelsof x
+
+display r(r)
 
 
 * burn the first 300 observations
@@ -46,6 +60,8 @@ keep in 300/500
 
 * Determining the complexity of the system
 
-edm xmap x y
+edm explore x, algorithm(smap)
 
-cap log close _all
+//edm xmap x y
+
+//cap log close _all

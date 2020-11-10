@@ -41,32 +41,72 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   std::vector<double> d(M.rows());
   auto b = Mp.row(Mp_i);
 
-  for (int i = 0; i < M.rows(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
+  if (opts.mani_metric == "euclidean" || opts.mani_metric == "") {
+    for (int i = 0; i < M.rows(); i++) {
+      double dist = 0.;
+      bool missing = false;
+      int numMissingDims = 0;
+      for (int j = 0; j < M.cols(); j++) {
+        if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+          if (opts.missingdistance == 0) {
+            missing = true;
+            break;
+          }
+          numMissingDims += 1;
+        } else {
+          /* Euclidean squared distance */
+          dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
         }
-        numMissingDims += 1;
+      }
+      // If the distance between M_i and b is 0 before handling missing values,
+      // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
+      if (dist != 0) {
+        /* Euclidean squared distance */
+        dist += numMissingDims * opts.missingdistance * opts.missingdistance;
+      }
+
+      /* Euclidean distance */
+      dist = sqrt(dist);
+
+      if (missing || dist == 0.) {
+        d[i] = MISSING;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        d[i] = dist;
+        validDistances += 1;
       }
     }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
+  }
 
-    if (missing || dist == 0.) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
-      validDistances += 1;
+  if (opts.mani_metric == "binary") {
+    for (int i = 0; i < M.rows(); i++) {
+      double dist = 0.;
+      bool missing = false;
+      int numMissingDims = 0;
+      for (int j = 0; j < M.cols(); j++) {
+        if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+          if (opts.missingdistance == 0) {
+            missing = true;
+            break;
+          }
+          numMissingDims += 1;
+        } else {
+          /* MAE binary distance */
+          dist += abs((M(i, j) - b(j)));
+        }
+      }
+      // If the distance between M_i and b is 0 before handling missing values,
+      // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
+      if (dist != 0) {
+        /* TO BE CHECKED: ensure the correct binary missingdistance is passed */
+        dist += numMissingDims * opts.missingdistance;
+      }
+
+      if (missing || dist == 0.) {
+        d[i] = MISSING;
+      } else {
+        d[i] = dist;
+        validDistances += 1;
+      }
     }
   }
 
@@ -92,9 +132,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   double sumw = 0., r = 0.;
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int j = 0; j < l; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
+      w[j] = exp(-opts.theta * (d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
     for (int j = 0; j < l; j++) {
@@ -111,9 +149,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
     double mean_w = 0.;
     for (int j = 0; j < l; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = pow(d[ind[j]],0.5); */
-      w[j] = sqrt(d[ind[j]]);
+      w[j] = d[ind[j]];
       mean_w = mean_w + w[j];
     }
     mean_w = mean_w / (double)l;
