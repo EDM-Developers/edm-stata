@@ -10,6 +10,11 @@
 #include "edm.h"
 #include "ThreadPool.h"
 
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
 #define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
@@ -209,7 +214,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 }
 
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                        int nthreads, void display(const char*), bool keep_going(), void finished())
+                        int nthreads, IO io, bool keep_going(), void finished())
 {
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
@@ -226,6 +231,10 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
 
+#ifdef _MSC_VER
+  auto start = std::chrono::high_resolution_clock::now();
+#endif
+
   if (nthreads <= 1) {
     for (int i = 0; i < Mp.rows; i++) {
       if (keep_going != nullptr && keep_going() == false) {
@@ -241,7 +250,33 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
       results[i] =
         pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, keep_going); });
     }
+
+    for (int i = 0; i < Mp.rows; i++) {
+      results[i].get();
+#ifdef _MSC_VER
+      if (io.verbosity > 0 && i % (Mp.rows / 10) == 0) {
+        io.out(".");
+        io.flush();
+      }
+#endif
+    }
+
+#ifdef _MSC_VER
+    if (io.verbosity > 0) {
+      io.out("\n");
+      io.flush();
+    }
+#endif
   }
+
+#ifdef _MSC_VER
+  if (io.verbosity > 0) {
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    io.out((char*)fmt::format("edm plugin took {} secs to make predictions\n", elapsed.count()).c_str());
+    io.flush();
+  }
+#endif
 
   if (keep_going != nullptr && keep_going() == false) {
     return { UNKNOWN_ERROR, {}, {} };

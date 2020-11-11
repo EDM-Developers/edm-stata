@@ -169,7 +169,7 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
                       bool pmani_flag, ST_int pmani, ST_int nthreads, int verbosity)
 {
-  if (verbosity > 0) {
+  if (verbosity > 1) {
     // Header of the plugin
     display("\n====================\n");
     display("Start of the plugin\n\n");
@@ -205,10 +205,9 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
 
     display(fmt::format("save_mode = {}\n\n", opts.save_mode));
 
-    if (verbosity > 1) {
-      display(fmt::format("Requested {} threads\n", argv[9]));
-      display(fmt::format("Using {} threads\n\n", nthreads));
-    }
+    display(fmt::format("Requested {} threads\n", argv[9]));
+    display(fmt::format("Using {} threads\n\n", nthreads));
+
     flush();
   }
 }
@@ -361,7 +360,8 @@ ST_retcode edm(int argc, char* argv[])
   coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
   coeffsWidth = varssv;
 
-  std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, out, keep_going, finished));
+  IO io = { display, error, flush, verbosity };
+  std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, io, keep_going, finished));
   predictions = task.get_future();
 
   std::thread master(std::move(task));
@@ -384,7 +384,7 @@ ST_retcode save_results()
   }
 
   // Print a Footer message for the plugin.
-  if (verbosity > 0) {
+  if (verbosity > 1) {
     display("\nEnd of the plugin\n");
     display("====================\n\n");
   }

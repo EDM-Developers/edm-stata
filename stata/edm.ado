@@ -920,7 +920,7 @@ program define edmExplore, eclass sortpreserve
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 					nobreak {
 						while edm_running {
-							capture break sleep 10
+							capture noi break sleep 10
 							if _rc {
 								di "Aborting edm run"
 								scalar edm_running = 0
@@ -1040,7 +1040,7 @@ program define edmExplore, eclass sortpreserve
 				nobreak {
 					capture
 					while edm_running {
-						capture break sleep 10
+						capture noi break sleep 10
 						if _rc {
 							di "Aborting edm run"
 							scalar edm_running = 0
@@ -1860,7 +1860,7 @@ program define edmXmap, eclass sortpreserve
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 							nobreak {
 								while edm_running {
-									capture break sleep 10
+									capture noi break sleep 10
 									if _rc {
 										di "Aborting edm run"
 										scalar edm_running = 0
@@ -1990,7 +1990,7 @@ program define edmXmap, eclass sortpreserve
 				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 				nobreak {
 					while edm_running {
-						capture break sleep 10
+						capture noi break sleep 10
 						if _rc {
 							di "Aborting edm run"
 							scalar edm_running = 0

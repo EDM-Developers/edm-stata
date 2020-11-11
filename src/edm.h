@@ -39,11 +39,18 @@ typedef struct
 
 typedef struct
 {
+  void (*out)(const char*);
+  void (*error)(const char*);
+  void (*flush)();
+  int verbosity;
+} IO;
+
+typedef struct
+{
   retcode rc;
   std::vector<double> ystar;
   std::optional<std::vector<double>> flat_Bi_map;
 } smap_res_t;
 
 DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                            int nthreads, void display(const char*), bool keep_going() = nullptr,
-                            void finished() = nullptr);
+                            int nthreads, IO io, bool keep_going() = nullptr, void finished() = nullptr);

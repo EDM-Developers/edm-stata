@@ -6,6 +6,16 @@ void display(const char* s)
   std::cout << s;
 }
 
+void error(const char* s)
+{
+  std::cerr << s;
+}
+
+void flush()
+{
+  fflush(stdout);
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -18,7 +28,8 @@ int main(int argc, char* argv[])
 
   edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display);
+  IO io = { display, error, flush, std::numeric_limits<int>::max() };
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);
