@@ -6,6 +6,7 @@ stata/smap_driver*
 build
 .clangd
 *.h5
+vcpkg_installed
 
 # Prerequisites
 *.d
