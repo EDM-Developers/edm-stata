@@ -13,6 +13,7 @@
 #define INSUFFICIENT_UNIQUE 503
 #define NOT_IMPLEMENTED 908
 #define UNKNOWN_ERROR 8000
+#define INVALID_METRIC 666
 
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100

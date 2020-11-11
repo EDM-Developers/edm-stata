@@ -4,7 +4,7 @@ cap log close _all
 log using "bin_test.log", replace nomsg
 
 set linesize 255
-set obs 15 //500
+set obs 500
 set seed 12345678
 if c(MP) {
     qui set processor 1
@@ -35,8 +35,8 @@ qui {
 
 
 * Create binary variables
-//replace x=1 if abs(x) > 0.5
-//replace x=0 if abs(x) <= 0.5
+replace x=1 if abs(x) > 0.5
+replace x=0 if abs(x) <= 0.5
 
 //replace y=1 if abs(y) > 0.65
 //replace y=0 if abs(y) <= 0.65
@@ -48,7 +48,7 @@ qui {
 //display "Distinct values in x: " r(r)
 
 * burn the first 300 observations
-//keep in 300/500
+keep in 300/500
 
 * Determining the complexity of the system
 

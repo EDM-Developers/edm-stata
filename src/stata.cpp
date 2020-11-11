@@ -63,6 +63,9 @@ void print_error(ST_retcode rc)
     case INVALID_ALGORITHM:
       error("Invalid algorithm argument\n");
       break;
+    case INVALID_METRIC:
+      error("Invalid metric\n");
+      break;
   }
 }
 

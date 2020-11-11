@@ -34,13 +34,6 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-int selected_metric(std::string s_metric)
-{
-  if (s_metric == "euclidean" || s_metric == "") return 1;
-  if (s_metric == "binary") return 2;
-  return 0;
-}
-
 retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
                        const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
 {
@@ -48,78 +41,73 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   std::vector<double> d(M.rows());
   auto b = Mp.row(Mp_i);
 
-  int int_metric = selected_metric(opts.mani_metric);
-
-  switch (int_metric) {
-    case 0: /* invalid metric */
-      return INVALID_METRIC;
-    case 1: /* Euclidean metric */
-      for (int i = 0; i < M.rows(); i++) {
-        double dist = 0.;
-        bool missing = false;
-        int numMissingDims = 0;
-        for (int j = 0; j < M.cols(); j++) {
-          if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-            if (opts.missingdistance == 0) {
-              missing = true;
-              break;
-            }
-            numMissingDims += 1;
-          } else {
-            /* Euclidean squared distance */
-            dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+  if (opts.mani_metric == "euclidean" || opts.mani_metric == "") {
+    for (int i = 0; i < M.rows(); i++) {
+      double dist = 0.;
+      bool missing = false;
+      int numMissingDims = 0;
+      for (int j = 0; j < M.cols(); j++) {
+        if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+          if (opts.missingdistance == 0) {
+            missing = true;
+            break;
           }
-        }
-        // If the distance between M_i and b is 0 before handling missing values,
-        // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-        if (dist != 0) {
+          numMissingDims += 1;
+        } else {
           /* Euclidean squared distance */
-          dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-        }
-
-        /* Euclidean distance */
-        dist = sqrt(dist);
-
-        if (missing || dist == 0.) {
-          d[i] = MISSING;
-        } else {
-          d[i] = dist;
-          validDistances += 1;
+          dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
         }
       }
-      break;
-    case 2: /* Binary metric */
-      for (int i = 0; i < M.rows(); i++) {
-        double dist = 0.;
-        bool missing = false;
-        int numMissingDims = 0;
-        for (int j = 0; j < M.cols(); j++) {
-          if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-            if (opts.missingdistance == 0) {
-              missing = true;
-              break;
-            }
-            numMissingDims += 1;
-          } else {
-            /* MAE binary distance */
-            dist += abs((M(i, j) - b(j)));
+      // If the distance between M_i and b is 0 before handling missing values,
+      // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
+      if (dist != 0) {
+        /* Euclidean squared distance */
+        dist += numMissingDims * opts.missingdistance * opts.missingdistance;
+      }
+
+      /* Euclidean distance */
+      dist = sqrt(dist);
+
+      if (missing || dist == 0.) {
+        d[i] = MISSING;
+      } else {
+        d[i] = dist;
+        validDistances += 1;
+      }
+    }
+  }
+
+  if (opts.mani_metric == "binary") {
+    for (int i = 0; i < M.rows(); i++) {
+      double dist = 0.;
+      bool missing = false;
+      int numMissingDims = 0;
+      for (int j = 0; j < M.cols(); j++) {
+        if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+          if (opts.missingdistance == 0) {
+            missing = true;
+            break;
           }
-        }
-        // If the distance between M_i and b is 0 before handling missing values,
-        // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-        if (dist != 0) {
-          /* TO BE CHECKED: ensure the correct binary missingdistance is passed */
-          dist += numMissingDims * opts.missingdistance;
-        }
-
-        if (missing || dist == 0.) {
-          d[i] = MISSING;
+          numMissingDims += 1;
         } else {
-          d[i] = dist;
-          validDistances += 1;
+          /* MAE binary distance */
+          dist += abs((M(i, j) - b(j)));
         }
       }
-      break;
+      // If the distance between M_i and b is 0 before handling missing values,
+      // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
+      if (dist != 0) {
+        /* TO BE CHECKED: ensure the correct binary missingdistance is passed */
+        dist += numMissingDims * opts.missingdistance;
+      }
+
+      if (missing || dist == 0.) {
+        d[i] = MISSING;
+      } else {
+        d[i] = dist;
+        validDistances += 1;
+      }
+    }
   }
 
   // If we only look at distances which are non-zero and non-missing,

@@ -2,8 +2,8 @@
 . 
 . set linesize 255
 
-. set obs 15 //500
-number of observations (_N) was 0, now 15
+. set obs 500
+number of observations (_N) was 0, now 500
 
 . set seed 12345678
 
@@ -20,15 +20,15 @@ number of observations (_N) was 0, now 15
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 15
+        time variable:  t, 1 to 500
                 delta:  1 unit
 
 . 
 . gen double x = 0.2 if _n==1
-(14 missing values generated)
+(499 missing values generated)
 
 . gen double y = 0.4 if _n==1
-(14 missing values generated)
+(499 missing values generated)
 
 . 
 . * Create a dynamic system
@@ -49,8 +49,12 @@ number of observations (_N) was 0, now 15
 . 
 . 
 . * Create binary variables
-. //replace x=1 if abs(x) > 0.5
-. //replace x=0 if abs(x) <= 0.5
+. replace x=1 if abs(x) > 0.5
+(343 real changes made)
+
+. replace x=0 if abs(x) <= 0.5
+(157 real changes made)
+
 . 
 . //replace y=1 if abs(y) > 0.65
 . //replace y=0 if abs(y) <= 0.65
@@ -62,20 +66,22 @@ number of observations (_N) was 0, now 15
 . //display "Distinct values in x: " r(r)
 . 
 . * burn the first 300 observations
-. //keep in 300/500
+. keep in 300/500
+(299 observations deleted)
+
 . 
 . * Determining the complexity of the system
 . 
 . edm explore x, algorithm(smap)
 
-Number of distinct values in manifold: 15
-Manifold metric: euclidean
+Number of distinct values in manifold: 2
+Manifold metric: binary
 
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 15
-first and last obs in sample = 1, 15
+number of vars & obs = 7, 201
+first and last obs in sample = 1, 201
 
 arg 0: 1
 arg 1: 4
@@ -88,8 +94,8 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: euclidean
-arg 12: euclidean
+arg 11: binary
+arg 12: binary
 
 theta = 1.0000
 
@@ -101,10 +107,10 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-manifold metric = euclidean
+manifold metric = binary
 
-train set obs: 6
-predict set obs: 7
+train set obs: 99
+predict set obs: 100
 
 p_manifold flag = false
 
@@ -125,7 +131,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .92673         .085518 
+                 2               1         -.25504          .55333 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
