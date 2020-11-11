@@ -895,6 +895,7 @@ program define edmExplore, eclass sortpreserve
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 				}
 				else {
+          di ""
 					// di "Plugin Mode"
 					if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 						local vsave_flag = 1
@@ -914,27 +915,25 @@ program define edmExplore, eclass sortpreserve
 					local mani `: word count `vars''
 
           qui {
-            levelsof x
+            /* TO CHECK: IS THERE A BETTER WAY OF DOING THIS? */
+            levelsof __000001
           }
           local level_mani = r(r)
-          display "levels of mani: " `level_mani'
+          display "Number of distinct values in manifold: " `level_mani'
 
-					local pmani_flag = 0
-					// display "pmani_flag: " `pmani_flag'
-
-          if (`level_mani' == 2) {
+          if (`level_mani' <= 2) {
             local mani_metric "binary"
           }
           else {
             local mani_metric "euclidean"
           }
-          
-					// local mani_metric "euclidean"
-					//local mani_metric "binary"
-					//display "mani metric selected: " "`mani_metric'"
+					display "Manifold metric: " "`mani_metric'"
+
+          local pmani_flag = 0
+					// display "pmani_flag: " `pmani_flag'
 
 					local pmani_metric = "`mani_metric'"
-					display "pmani metric selected: " "`pmani_metric'"
+					//display "P_manifold metric: " "`pmani_metric'"
 
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' "`mani_metric'" "`pmani_metric'" `saveinputs'
 				}

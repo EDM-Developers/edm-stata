@@ -180,14 +180,14 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
   display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
   display(fmt::format("force compute = {}\n\n", opts.force_compute));
   display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-  display(fmt::format("number of observations in manifold = {}\n\n", M.cols));
+  display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
   display(fmt::format("manifold metric = {}\n\n", opts.mani_metric.c_str()));
   display(fmt::format("train set obs: {}\n", M.rows));
   display(fmt::format("predict set obs: {}\n\n", Mp.rows));
   display(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
   if (pmani_flag) {
-    display(fmt::format("number of observations in p_manifold = {}\n", pmani));
+    display(fmt::format("number of variables in p_manifold = {}\n", pmani));
     display(fmt::format("p_manifold metric = {}\n\n", opts.pmani_metric.c_str()));
   }
   display("\n");

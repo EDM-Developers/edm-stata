@@ -2,8 +2,8 @@
 . 
 . set linesize 255
 
-. set obs 500
-number of observations (_N) was 0, now 500
+. set obs 15 //500
+number of observations (_N) was 0, now 15
 
 . set seed 12345678
 
@@ -20,15 +20,15 @@ number of observations (_N) was 0, now 500
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 500
+        time variable:  t, 1 to 15
                 delta:  1 unit
 
 . 
 . gen double x = 0.2 if _n==1
-(499 missing values generated)
+(14 missing values generated)
 
 . gen double y = 0.4 if _n==1
-(499 missing values generated)
+(14 missing values generated)
 
 . 
 . * Create a dynamic system
@@ -47,217 +47,90 @@ number of observations (_N) was 0, now 500
 . qui {
 
 . 
-. * Create binary variables
-. replace x=1 if abs(x) > 0.5
-(343 real changes made)
-
-. replace x=0 if abs(x) <= 0.5
-(157 real changes made)
-
-. 
-. replace y=1 if abs(y) > 0.65
-(244 real changes made)
-
-. replace y=0 if abs(y) <= 0.65
-(256 real changes made)
-
-. 
-. codebook x, compact
-
-Variable   Obs Unique  Mean  Min  Max  Label
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-x          500      2  .686    0    1  
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-. 
-. return list
-
-. 
-. matrix list e
-matrix e not found
-r(111);
-
-end of do-file
-
-r(111);
-
-. do bin_test.do
-
-. clear
-
-. 
-. //cap log close _all
-. //log using "bin_test.log", replace nomsg
-. 
-. set linesize 255
-
-. set obs 500
-number of observations (_N) was 0, now 500
-
-. set seed 12345678
-
-. if c(MP) {
-.     qui set processor 1
-. }
-
-. 
-. global EDM_VERBOSITY=1
-
-. global EDM_NTHREADS=4
-
-. 
-. gen t = _n
-
-. tsset t
-        time variable:  t, 1 to 500
-                delta:  1 unit
-
-. 
-. gen double x = 0.2 if _n==1
-(499 missing values generated)
-
-. gen double y = 0.4 if _n==1
-(499 missing values generated)
-
-. 
-. * Create a dynamic system
-. local r_x 3.625
-
-. local r_y 3.77
-
-. local beta_xy = 0.05
-
-. local beta_yx=0.4
-
-. local tau = 1
-
-. drawnorm double u1 u2
-
-. qui {
-
 . 
 . * Create binary variables
-. replace x=1 if abs(x) > 0.5
-(343 real changes made)
+. //replace x=1 if abs(x) > 0.5
+. //replace x=0 if abs(x) <= 0.5
+. 
+. //replace y=1 if abs(y) > 0.65
+. //replace y=0 if abs(y) <= 0.65
+. 
+. //qui {
+. //  levelsof x
+. //}
+. 
+. //display "Distinct values in x: " r(r)
+. 
+. * burn the first 300 observations
+. //keep in 300/500
+. 
+. * Determining the complexity of the system
+. 
+. edm explore x, algorithm(smap)
 
-. replace x=0 if abs(x) <= 0.5
-(157 real changes made)
+Number of distinct values in manifold: 15
+Manifold metric: euclidean
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 15
+first and last obs in sample = 1, 15
+
+arg 0: 1
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+arg 11: euclidean
+arg 12: euclidean
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = false
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+manifold metric = euclidean
+
+train set obs: 6
+predict set obs: 7
+
+p_manifold flag = false
+
+l = 4
+
+save_mode = false
+
+Requested 4 threads
+Using 4 threads
+
+
+End of the plugin
+====================
+
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .92673         .085518 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+2
+Note: Random 50/50 split for training and validation data
 
 . 
-. replace y=1 if abs(y) > 0.65
-(244 real changes made)
-
-. replace y=0 if abs(y) <= 0.65
-(256 real changes made)
-
+. //edm xmap x y
 . 
-. codebook x, compact
-
-Variable   Obs Unique  Mean  Min  Max  Label
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-x          500      2  .686    0    1  
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-. 
-. quietly {
-log file already open
-r(604);
-
-end of do-file
-
-r(604);
-
-. discard
-
-. clear
-
-. prog drop edm
-program edm not found
-r(111);
-
-. do bin_test.do
-
-. clear
-
-. 
-. //cap log close _all
-. //log using "bin_test.log", replace nomsg
-. 
-. set linesize 255
-
-. set obs 500
-number of observations (_N) was 0, now 500
-
-. set seed 12345678
-
-. if c(MP) {
-.     qui set processor 1
-. }
-
-. 
-. global EDM_VERBOSITY=1
-
-. global EDM_NTHREADS=4
-
-. 
-. gen t = _n
-
-. tsset t
-        time variable:  t, 1 to 500
-                delta:  1 unit
-
-. 
-. gen double x = 0.2 if _n==1
-(499 missing values generated)
-
-. gen double y = 0.4 if _n==1
-(499 missing values generated)
-
-. 
-. * Create a dynamic system
-. local r_x 3.625
-
-. local r_y 3.77
-
-. local beta_xy = 0.05
-
-. local beta_yx=0.4
-
-. local tau = 1
-
-. drawnorm double u1 u2
-
-. qui {
-
-. 
-. * Create binary variables
-. replace x=1 if abs(x) > 0.5
-(343 real changes made)
-
-. replace x=0 if abs(x) <= 0.5
-(157 real changes made)
-
-. 
-. replace y=1 if abs(y) > 0.65
-(244 real changes made)
-
-. replace y=0 if abs(y) <= 0.65
-(256 real changes made)
-
-. 
-. codebook x, compact
-
-Variable   Obs Unique  Mean  Min  Max  Label
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-x          500      2  .686    0    1  
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-. 
-. quietly {
-log file already open
-r(604);
-
-end of do-file
-
-r(604);
-
+. cap log close _all
