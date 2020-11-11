@@ -26,7 +26,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
   // initialize original index locations
   std::vector<size_t> idx(v.size());
-  iota(idx.begin(), idx.end(), 0);
+  std::iota(idx.begin(), idx.end(), 0);
 
   if (k >= (int)v.size()) {
     k = (int)v.size();
@@ -38,8 +38,12 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
 }
 
 retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map)
+                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map,
+                       bool keep_going() = nullptr)
 {
+  if (keep_going != nullptr && keep_going() == false) {
+    return UNKNOWN_ERROR;
+  }
   int validDistances = 0;
   std::vector<double> d(M.rows());
   auto b = Mp.row(Mp_i);
@@ -205,7 +209,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 }
 
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                        int nthreads)
+                        int nthreads, void display(const char*), bool keep_going(), void finished())
 {
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
@@ -224,19 +228,31 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
 
   if (nthreads <= 1) {
     for (int i = 0; i < Mp.rows; i++) {
-      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
+      if (keep_going != nullptr && keep_going() == false) {
+        break;
+      }
+      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, nullptr);
     }
   } else {
     ThreadPool pool(nthreads, Mp.rows);
     std::vector<std::future<void>> results(Mp.rows);
 
     for (int i = 0; i < Mp.rows; i++) {
-      results[i] = pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
+      results[i] =
+        pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, keep_going); });
     }
+  }
+
+  if (keep_going != nullptr && keep_going() == false) {
+    return { UNKNOWN_ERROR, {}, {} };
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.begin(), rc.end());
 
-  return smap_res_t{ maxError, ystar, flat_Bi_map };
+  if (finished != nullptr) {
+    finished();
+  }
+
+  return { maxError, ystar, flat_Bi_map };
 }

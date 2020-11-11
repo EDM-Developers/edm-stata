@@ -1,5 +1,14 @@
 #include <benchmark/benchmark.h>
 
+#ifdef _WIN32
+#pragma comment(lib, "Shlwapi.lib")
+#ifdef _DEBUG
+#pragma comment(lib, "benchmarkd.lib")
+#else
+#pragma comment(lib, "benchmark.lib")
+#endif
+#endif
+
 #define FMT_HEADER_ONLY
 #include <fmt/format.h>
 
@@ -614,6 +623,8 @@ BENCHMARK(bm_smap)->DenseRange(0, tests.size() - 1);
 // Compare the threading libraries against each other on mf_smap_loop
 std::array<int, 4> nthreads = { 1, 2, 4, 8 };
 
+void display(const char* s) {}
+
 static void bm_mf_smap_loop(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)nthreads.size());
@@ -627,7 +638,7 @@ static void bm_mf_smap_loop(benchmark::State& state)
   vars.nthreads = threads;
 
   for (auto _ : state)
-    smap_res_t res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
+    smap_res_t res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display);
 }
 
 BENCHMARK(bm_mf_smap_loop)
@@ -636,7 +647,8 @@ BENCHMARK(bm_mf_smap_loop)
   ->Unit(benchmark::kMillisecond);
 
 retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map);
+                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map,
+                       bool keep_going() = nullptr);
 
 #ifdef _MSC_VER
 #include <omp.h>
@@ -841,5 +853,15 @@ BENCHMARK(bm_mf_smap_loop_cpp17_par_unseq)
   ->Unit(benchmark::kMillisecond);
 
 #endif
+
+static void bm_mf_smap_loop_again(benchmark::State& state)
+{
+  bm_mf_smap_loop(state);
+}
+
+BENCHMARK(bm_mf_smap_loop_again)
+  ->DenseRange(0, tests.size() * nthreads.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

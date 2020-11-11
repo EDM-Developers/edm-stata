@@ -1,6 +1,11 @@
 #include "driver.h"
 #include <iostream>
 
+void display(const char* s)
+{
+  std::cout << s;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -13,7 +18,7 @@ int main(int argc, char* argv[])
 
   edm_inputs_t vars = read_dumpfile(fname_in);
 
-  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
+  smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, display);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);

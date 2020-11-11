@@ -13,6 +13,7 @@
 #endif
 #include <fmt/format.h>
 
+#include <future>
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>
@@ -42,6 +43,11 @@ void display(std::string s)
 void error(const char* s)
 {
   SF_error((char*)s);
+}
+
+void flush()
+{
+  _stata_->spoutflush();
 }
 
 void print_error(ST_retcode rc)
@@ -161,49 +167,72 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
-                      bool pmani_flag, ST_int pmani, ST_int nthreads)
+                      bool pmani_flag, ST_int pmani, ST_int nthreads, int verbosity)
 {
-  // Header of the plugin
-  display("\n====================\n");
-  display("Start of the plugin\n\n");
+  if (verbosity > 0) {
+    // Header of the plugin
+    display("\n====================\n");
+    display("Start of the plugin\n\n");
 
-  // Overview of variables and arguments passed and observations in sample
-  display(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
-  display(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
+    // Overview of variables and arguments passed and observations in sample
+    display(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
+    display(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
 
-  for (int i = 0; i < argc; i++) {
-    display(fmt::format("arg {}: {}\n", i, argv[i]));
+    for (int i = 0; i < argc; i++) {
+      display(fmt::format("arg {}: {}\n", i, argv[i]));
+    }
+    display("\n");
+
+    display(fmt::format("theta = {:6.4f}\n\n", opts.theta));
+    display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
+    display(fmt::format("force compute = {}\n\n", opts.force_compute));
+    display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
+    display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
+    display(fmt::format("train set obs: {}\n", M.rows));
+    display(fmt::format("predict set obs: {}\n\n", Mp.rows));
+    display(fmt::format("p_manifold flag = {}\n", pmani_flag));
+
+    if (pmani_flag) {
+      display(fmt::format("number of variables in p_manifold = {}\n", pmani));
+    }
+    display("\n");
+
+    display(fmt::format("l = {}\n\n", opts.l));
+
+    if (opts.save_mode) {
+      display(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
+    }
+
+    display(fmt::format("save_mode = {}\n\n", opts.save_mode));
+
+    if (verbosity > 1) {
+      display(fmt::format("Requested {} threads\n", argv[9]));
+      display(fmt::format("Using {} threads\n\n", nthreads));
+    }
+    flush();
   }
-  display("\n");
-
-  display(fmt::format("theta = {:6.4f}\n\n", opts.theta));
-  display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
-  display(fmt::format("force compute = {}\n\n", opts.force_compute));
-  display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-  display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
-  display(fmt::format("train set obs: {}\n", M.rows));
-  display(fmt::format("predict set obs: {}\n\n", Mp.rows));
-  display(fmt::format("p_manifold flag = {}\n", pmani_flag));
-
-  if (pmani_flag) {
-    display(fmt::format("number of variables in p_manifold = {}\n", pmani));
-  }
-  display("\n");
-
-  display(fmt::format("l = {}\n\n", opts.l));
-
-  if (opts.save_mode) {
-    display(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
-  }
-
-  display(fmt::format("save_mode = {}\n\n", opts.save_mode));
-
-  display(fmt::format("Requested {} threads\n", argv[9]));
-  display(fmt::format("Using {} threads\n\n", nthreads));
-
-  _stata_->spoutflush();
 }
 
+void out(const char* s)
+{
+  SF_display((char*)s);
+}
+
+bool keep_going()
+{
+  double edm_running;
+  SF_scal_use("edm_running", &edm_running);
+  return (bool)edm_running;
+}
+
+void finished()
+{
+  SF_scal_save("edm_running", 0.0);
+}
+
+std::future<smap_res_t> predictions;
+ST_int predCol, coeffsCol, coeffsWidth;
+ST_int verbosity;
 /*
 Example call to the plugin:
 
@@ -239,7 +268,7 @@ ST_retcode edm(int argc, char* argv[])
   ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
   ST_int varssv = atoi(argv[8]); // number of columns in smap coefficients
   ST_int nthreads = atoi(argv[9]);
-  ST_int verbosity = atoi(argv[10]);
+  verbosity = atoi(argv[10]);
 
   // Default number of neighbours is E + 1
   if (l <= 0) {
@@ -249,8 +278,10 @@ ST_retcode edm(int argc, char* argv[])
   smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
 
   // Default number of threads is the number of cores available
-  if (nthreads <= 0) {
-    nthreads = std::thread::hardware_concurrency();
+  int ncores = std::thread::hardware_concurrency();
+
+  if (nthreads <= 0 || nthreads > ncores) {
+    nthreads = ncores >= 8 ? ncores / 2 : ncores;
   }
 
   // Find which Stata rows contain the main manifold & for the y vector
@@ -324,20 +355,31 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  if (verbosity > 0) {
-    print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
-  }
+  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads, verbosity);
 
-  smap_res_t smap_res = mf_smap_loop(opts, y, M, Mp, nthreads);
+  predCol = mani + 2;
+  coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
+  coeffsWidth = varssv;
+
+  std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, out, keep_going, finished));
+  predictions = task.get_future();
+
+  std::thread master(std::move(task));
+  master.detach();
+
+  return SUCCESS;
+}
+
+ST_retcode save_results()
+{
+  smap_res_t res = predictions.get();
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
-  if (smap_res.rc == SUCCESS) {
-    stataVarNum = mani + 2;
-    write_stata_columns(smap_res.ystar, stataVarNum, 1, predict_filter);
+  if (res.rc == SUCCESS) {
+    write_stata_columns(res.ystar, predCol);
 
-    if (save_mode) {
-      stataVarNum = mani + 5 + 1 + (int)pmani_flag * pmani;
-      write_stata_columns(*(smap_res.flat_Bi_map), stataVarNum, varssv, predict_filter);
+    if (res.flat_Bi_map.has_value()) {
+      write_stata_columns(*res.flat_Bi_map, coeffsCol, coeffsWidth);
     }
   }
 
@@ -347,15 +389,21 @@ ST_retcode edm(int argc, char* argv[])
     display("====================\n\n");
   }
 
-  return smap_res.rc;
+  finished();
+
+  return res.rc;
 }
 
 STDLL stata_call(int argc, char* argv[])
 {
   try {
-    ST_retcode rc = edm(argc, argv);
-    print_error(rc);
-    return rc;
+    if (argc > 0) {
+      return edm(argc, argv);
+    } else {
+      ST_retcode rc = save_results();
+      print_error(rc);
+      return rc;
+    }
   } catch (const std::exception& e) {
     error(e.what());
     error("\n");
