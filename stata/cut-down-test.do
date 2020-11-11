@@ -7,7 +7,7 @@ if c(MP) {
     qui set processor 1
 }
 
-global EDM_VERBOSITY=1
+global EDM_VERBOSITY=0
 global EDM_NTHREADS=4
 
 gen t = _n
