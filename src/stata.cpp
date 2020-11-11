@@ -48,10 +48,10 @@ void print_error(ST_retcode rc)
 {
   switch (rc) {
     case TOO_FEW_VARIABLES:
-      error("edm plugin call requires 11 or 12 arguments\n");
+      error("edm plugin call requires 13 or 14 arguments\n");
       break;
     case TOO_MANY_VARIABLES:
-      error("edm plugin call requires 11 or 12 arguments\n");
+      error("edm plugin call requires 13 or 14 arguments\n");
       break;
     case NOT_IMPLEMENTED:
       error("Method is not yet implemented\n");
