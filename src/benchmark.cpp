@@ -36,6 +36,8 @@ std::array<std::string, 4> tests = {
   "affectbige.h5"   // "edm xmap PA NA, dt e(150) k(20) force alg(smap)" on ~5k obs of affect data
 };
 
+ConsoleIO io(0);
+
 static void bm_sqrt(benchmark::State& state)
 {
   state.SetLabel("'sqrt' function");
@@ -632,10 +634,6 @@ BENCHMARK(bm_smap)->DenseRange(0, tests.size() - 1);
 // Compare the threading libraries against each other on mf_smap_loop
 std::array<int, 4> nthreads = { 1, 2, 4, 8 };
 
-void display(const char* s) {}
-void error(const char* s) {}
-void flush() {}
-
 static void bm_mf_smap_loop(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)nthreads.size());
@@ -645,7 +643,7 @@ static void bm_mf_smap_loop(benchmark::State& state)
   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
 
   edm_inputs_t vars = read_dumpfile(input);
-  IO io = { display, error, flush, 0 };
+
   vars.nthreads = threads;
 
   for (auto _ : state)

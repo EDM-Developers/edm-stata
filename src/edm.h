@@ -37,13 +37,31 @@ typedef struct
   std::string algorithm;
 } smap_opts_t;
 
-typedef struct
+class IO
 {
-  void (*out)(const char*);
-  void (*error)(const char*);
-  void (*flush)();
-  int verbosity;
-} IO;
+public:
+  int verbosity = 0;
+
+  virtual void print(std::string s) const
+  {
+    if (verbosity > 0) {
+      out(s.c_str());
+    }
+  }
+
+  virtual void print_async(std::string s) const
+  {
+    if (verbosity > 0) {
+      out_async(s.c_str());
+    }
+  }
+
+  // Actual implementation of IO functions are in the subclasses
+  virtual void out(const char*) const = 0;
+  virtual void out_async(const char*) const = 0;
+  virtual void error(const char*) const = 0;
+  virtual void flush() const = 0;
+};
 
 typedef struct
 {
@@ -53,4 +71,4 @@ typedef struct
 } smap_res_t;
 
 DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                            int nthreads, IO io, bool keep_going() = nullptr, void finished() = nullptr);
+                            int nthreads, const IO& io, bool keep_going() = nullptr, void finished() = nullptr);

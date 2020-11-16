@@ -214,7 +214,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 }
 
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
-                        int nthreads, IO io, bool keep_going(), void finished())
+                        int nthreads, const IO& io, bool keep_going(), void finished())
 {
   // Create Eigen matrixes which are views of the supplied flattened matrices
   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
@@ -231,9 +231,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   std::vector<retcode> rc(Mp.rows);
   std::vector<double> ystar(Mp.rows);
 
-#ifdef _MSC_VER
   auto start = std::chrono::high_resolution_clock::now();
-#endif
 
   if (nthreads <= 1) {
     for (int i = 0; i < Mp.rows; i++) {
@@ -246,37 +244,34 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     ThreadPool pool(nthreads, Mp.rows);
     std::vector<std::future<void>> results(Mp.rows);
 
+    io.print_async("Percent complete: 0");
+
     for (int i = 0; i < Mp.rows; i++) {
       results[i] =
         pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, keep_going); });
     }
 
+    double nextMessage = 1.0 / 40;
+    int dots = 0;
     for (int i = 0; i < Mp.rows; i++) {
       results[i].get();
-#ifdef _MSC_VER
-      if (io.verbosity > 0 && i % (Mp.rows / 10) == 0) {
-        io.out(".");
-        io.flush();
+
+      double progress = i / ((double)Mp.rows);
+      if (progress >= nextMessage) {
+        if (dots < 3) {
+          io.print_async(".");
+          dots += 1;
+        } else {
+          io.print_async(fmt::format(FMT_STRING("{:.0f}"), progress * 100));
+          dots = 0;
+        }
+        nextMessage += 1.0 / 40;
       }
-#endif
     }
-
-#ifdef _MSC_VER
-    if (io.verbosity > 0) {
-      io.out("\n");
-      io.flush();
-    }
-#endif
   }
 
-#ifdef _MSC_VER
-  if (io.verbosity > 0) {
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    io.out((char*)fmt::format("edm plugin took {} secs to make predictions\n", elapsed.count()).c_str());
-    io.flush();
-  }
-#endif
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
 
   if (keep_going != nullptr && keep_going() == false) {
     return { UNKNOWN_ERROR, {}, {} };
@@ -288,6 +283,8 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   if (finished != nullptr) {
     finished();
   }
+
+  io.print_async(fmt::format("\nedm plugin took {} secs to make predictions\n", elapsed.count()));
 
   return { maxError, ystar, flat_Bi_map };
 }
