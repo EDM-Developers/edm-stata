@@ -1,6 +1,7 @@
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
+#include <iostream>
 
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
@@ -12,6 +13,17 @@ typedef struct
   manifold_t M, Mp;
   int nthreads;
 } edm_inputs_t;
+
+class ConsoleIO : public IO
+{
+public:
+  ConsoleIO() { this->verbosity = std::numeric_limits<int>::max(); }
+  ConsoleIO(int v) { this->verbosity = v; }
+  virtual void out(const char* s) const { std::cout << s; }
+  virtual void out_async(const char* s) const { out(s); }
+  virtual void error(const char* s) const { std::cerr << s; }
+  virtual void flush() const { fflush(stdout); }
+};
 
 /*! \brief Read in a dump file.
  *

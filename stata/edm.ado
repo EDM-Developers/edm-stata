@@ -917,16 +917,25 @@ program define edmExplore, eclass sortpreserve
 					// display "pmani_flag: " `pmani_flag'
 
 					scalar edm_running = 1
+					local edm_print = ""
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 					nobreak {
 						while edm_running {
-							capture noi break sleep 10
+							capture noi break sleep 1
 							if _rc {
 								di "Aborting edm run"
 								scalar edm_running = 0
 								exit 1
 							}
+							if "`edm_print'" != "" {
+								local temp = "`edm_print'"
+								local edm_print = ""
+								di "`temp'" _c
+							}
 						}
+					}
+					if "`edm_print'" != "" {
+						di "`edm_print'"
 					}
 					plugin call smap_block_mdap `myvars' if `predict_set' == 1
 				}
@@ -1036,17 +1045,26 @@ program define edmExplore, eclass sortpreserve
 				/* display "vsave_flag: " `vsave_flag' */
 
 				scalar edm_running = 1
+				local edm_print = ""
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 				nobreak {
 					capture
 					while edm_running {
-						capture noi break sleep 10
+						capture noi break sleep 1
 						if _rc {
 							di "Aborting edm run"
 							scalar edm_running = 0
 							exit 1
 						}
+						if "`edm_print'" != "" {
+							local temp = "`edm_print'"
+							local edm_print = ""
+							di "`temp'" _c
+						}
 					}
+				}
+				if "`edm_print'" != "" {
+					di "`edm_print'"
 				}
 				plugin call smap_block_mdap `myvars' if `co_predict_set' == 1
 			}
@@ -1857,16 +1875,25 @@ program define edmXmap, eclass sortpreserve
 							// display "pmani_flag: " `pmani_flag'
 
 							scalar edm_running = 1
+							local edm_print = ""
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
 							nobreak {
 								while edm_running {
-									capture noi break sleep 10
+									capture noi break sleep 1
 									if _rc {
 										di "Aborting edm run"
 										scalar edm_running = 0
 										exit 1
 									}
+									if "`edm_print'" != "" {
+										local temp = "`edm_print'"
+										local edm_print = ""
+										di "`temp'" _c
+									}
 								}
+							}
+							if "`edm_print'" != "" {
+								di "`edm_print'"
 							}
 							plugin call smap_block_mdap `myvars' if `predict_set' == 1
 						}
@@ -1987,16 +2014,25 @@ program define edmXmap, eclass sortpreserve
 				local vsave_flag = 0
 				// display "vsave_flag: " `vsave_flag'
 				scalar edm_running = 1
+				local edm_print = ""
 				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 				nobreak {
 					while edm_running {
-						capture noi break sleep 10
+						capture noi break sleep 1
 						if _rc {
 							di "Aborting edm run"
 							scalar edm_running = 0
 							exit 1
 						}
+						if "`edm_print'" != "" {
+							local temp = "`edm_print'"
+							local edm_print = ""
+							di "`temp'" _c
+						}
 					}
+				}
+				if "`edm_print'" != "" {
+					di "`edm_print'"
 				}
 				plugin call smap_block_mdap `myvars' if `co_predict_set' == 1
 			}

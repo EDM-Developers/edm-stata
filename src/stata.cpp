@@ -17,6 +17,7 @@
 #include <numeric> // for std::accumulate
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -25,49 +26,62 @@
 #include <hdf5_hl.h>
 #endif
 
-void display(char* s)
+class StataIO : public IO
 {
-  SF_display(s);
+public:
+  virtual void out(const char* s) const { SF_display((char*)s); }
+  virtual void error(const char* s) const { SF_error((char*)s); }
+  virtual void flush() const { _stata_->spoutflush(); }
+
+  virtual void print(std::string s) const { IO::print(replace_newline(s)); }
+
+  virtual void print_async(std::string s) const { IO::print_async(replace_newline(s)); }
+
+  virtual void out_async(const char* s) const { SF_macro_save("_edm_print", (char*)s); }
+
+private:
+  std::string replace_newline(std::string s) const
+  {
+    size_t ind;
+    while ((ind = s.find("\n")) != std::string::npos) {
+      s = s.replace(ind, ind + 1, "{break}");
+    }
+    return s;
+  }
+};
+
+StataIO io;
+
+bool keep_going()
+{
+  double edm_running;
+  SF_scal_use("edm_running", &edm_running);
+  return (bool)edm_running;
 }
 
-void display(const char* s)
+void finished()
 {
-  SF_display((char*)s);
-}
-
-void display(std::string s)
-{
-  SF_display((char*)s.c_str());
-}
-
-void error(const char* s)
-{
-  SF_error((char*)s);
-}
-
-void flush()
-{
-  _stata_->spoutflush();
+  SF_scal_save("edm_running", 0.0);
 }
 
 void print_error(ST_retcode rc)
 {
   switch (rc) {
     case TOO_FEW_VARIABLES:
-      error("edm plugin call requires 11 or 12 arguments\n");
+      io.error("edm plugin call requires 11 or 12 arguments\n");
       break;
     case TOO_MANY_VARIABLES:
-      error("edm plugin call requires 11 or 12 arguments\n");
+      io.error("edm plugin call requires 11 or 12 arguments\n");
       break;
     case NOT_IMPLEMENTED:
-      error("Method is not yet implemented\n");
+      io.error("Method is not yet implemented\n");
       break;
     case INSUFFICIENT_UNIQUE:
-      error("Insufficient number of unique observations, consider "
-            "tweaking the values of E, k or use -force- option\n");
+      io.error("Insufficient number of unique observations, consider "
+               "tweaking the values of E, k or use -force- option\n");
       break;
     case INVALID_ALGORITHM:
-      error("Invalid algorithm argument\n");
+      io.error("Invalid algorithm argument\n");
       break;
   }
 }
@@ -167,71 +181,54 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
-                      bool pmani_flag, ST_int pmani, ST_int nthreads, int verbosity)
+                      bool pmani_flag, ST_int pmani, ST_int nthreads)
 {
-  if (verbosity > 1) {
+  if (io.verbosity > 1) {
     // Header of the plugin
-    display("\n====================\n");
-    display("Start of the plugin\n\n");
+    io.print("\n====================\n");
+    io.print("Start of the plugin\n\n");
 
     // Overview of variables and arguments passed and observations in sample
-    display(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
-    display(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
+    io.print(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
+    io.print(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
 
     for (int i = 0; i < argc; i++) {
-      display(fmt::format("arg {}: {}\n", i, argv[i]));
+      io.print(fmt::format("arg {}: {}\n", i, argv[i]));
     }
-    display("\n");
+    io.print("\n");
 
-    display(fmt::format("theta = {:6.4f}\n\n", opts.theta));
-    display(fmt::format("algorithm = {}\n\n", opts.algorithm.c_str()));
-    display(fmt::format("force compute = {}\n\n", opts.force_compute));
-    display(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-    display(fmt::format("number of variables in manifold = {}\n\n", M.cols));
-    display(fmt::format("train set obs: {}\n", M.rows));
-    display(fmt::format("predict set obs: {}\n\n", Mp.rows));
-    display(fmt::format("p_manifold flag = {}\n", pmani_flag));
+    io.print(fmt::format("theta = {:6.4f}\n\n", opts.theta));
+    io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
+    io.print(fmt::format("force compute = {}\n\n", opts.force_compute));
+    io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
+    io.print(fmt::format("number of variables in manifold = {}\n\n", M.cols));
+    io.print(fmt::format("train set obs: {}\n", M.rows));
+    io.print(fmt::format("predict set obs: {}\n\n", Mp.rows));
+    io.print(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
     if (pmani_flag) {
-      display(fmt::format("number of variables in p_manifold = {}\n", pmani));
+      io.print(fmt::format("number of variables in p_manifold = {}\n", pmani));
     }
-    display("\n");
+    io.print("\n");
 
-    display(fmt::format("l = {}\n\n", opts.l));
+    io.print(fmt::format("l = {}\n\n", opts.l));
 
     if (opts.save_mode) {
-      display(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
+      io.print(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
     }
 
-    display(fmt::format("save_mode = {}\n\n", opts.save_mode));
+    io.print(fmt::format("save_mode = {}\n\n", opts.save_mode));
 
-    display(fmt::format("Requested {} threads\n", argv[9]));
-    display(fmt::format("Using {} threads\n\n", nthreads));
+    io.print(fmt::format("Requested {} threads\n", argv[9]));
+    io.print(fmt::format("Using {} threads\n\n", nthreads));
 
-    flush();
+    io.flush();
   }
-}
-
-void out(const char* s)
-{
-  SF_display((char*)s);
-}
-
-bool keep_going()
-{
-  double edm_running;
-  SF_scal_use("edm_running", &edm_running);
-  return (bool)edm_running;
-}
-
-void finished()
-{
-  SF_scal_save("edm_running", 0.0);
 }
 
 std::future<smap_res_t> predictions;
 ST_int predCol, coeffsCol, coeffsWidth;
-ST_int verbosity;
+
 /*
 Example call to the plugin:
 
@@ -267,7 +264,7 @@ ST_retcode edm(int argc, char* argv[])
   ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
   ST_int varssv = atoi(argv[8]); // number of columns in smap coefficients
   ST_int nthreads = atoi(argv[9]);
-  verbosity = atoi(argv[10]);
+  io.verbosity = atoi(argv[10]);
 
   // Default number of neighbours is E + 1
   if (l <= 0) {
@@ -354,13 +351,12 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads, verbosity);
+  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
 
   predCol = mani + 2;
   coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
   coeffsWidth = varssv;
 
-  IO io = { display, error, flush, verbosity };
   std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, io, keep_going, finished));
   predictions = task.get_future();
 
@@ -384,9 +380,9 @@ ST_retcode save_results()
   }
 
   // Print a Footer message for the plugin.
-  if (verbosity > 1) {
-    display("\nEnd of the plugin\n");
-    display("====================\n\n");
+  if (io.verbosity > 1) {
+    io.out("\nEnd of the plugin\n");
+    io.out("====================\n\n");
   }
 
   finished();
@@ -405,10 +401,10 @@ STDLL stata_call(int argc, char* argv[])
       return rc;
     }
   } catch (const std::exception& e) {
-    error(e.what());
-    error("\n");
+    io.error(e.what());
+    io.error("\n");
   } catch (...) {
-    error("Unknown error in edm plugin\n");
+    io.error("Unknown error in edm plugin\n");
   }
   return UNKNOWN_ERROR;
 }
