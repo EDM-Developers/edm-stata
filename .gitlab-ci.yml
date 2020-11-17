@@ -4,6 +4,8 @@ build-windows:
     - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
+  after_script:
+    - cp "stata/edm_Windows_x64.plugin" "C:\Users\EDM\Dropbox\ci-builds"
   artifacts:
     paths:
     - stata/edm_Windows_x64.plugin
@@ -46,6 +48,8 @@ build-mac:
     - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
+  after_script:
+    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/ci-builds
   artifacts:
     paths:
       - stata/edm_MacOSX_x64.plugin
@@ -88,6 +92,9 @@ build-ubuntu:
     - cd ..
     - cmake --build build --config release
     - cmake --build build --config release --target install
+  after_script:
+    - cp stata/edm_Unix_x64.plugin ~/Dropbox/ci-builds
+    - cp stata/edm.ado ~/Dropbox/ci-builds
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
