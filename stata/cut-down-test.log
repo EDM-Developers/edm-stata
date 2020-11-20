@@ -561,3 +561,11 @@ end of do-file
 
 r(102);
 
+. prog drop edm
+
+. do bin_test.do
+
+. clear
+
+. 
+. cap log close _all
