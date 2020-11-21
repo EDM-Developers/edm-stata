@@ -18,7 +18,6 @@ void flush()
 
 int main(int argc, char* argv[])
 {
-
   if (argc != 2) {
     std::cerr << "Usage: ./driver <fname>" << std::endl;
     return -1;

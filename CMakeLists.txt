@@ -5,8 +5,11 @@ if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
 endif()
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-  set(_VCPKG_INSTALLED_DIR ${CMAKE_SOURCE_DIR}/vcpkg_installed)
 endif()
+
+set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
+set(BUILD_DRIVER FALSE CACHE BOOL "Generate command-line executable for the plugin")
+set(BUILD_GBENCH FALSE CACHE BOOL "Generate google benchmark executable")
 
 project(edm-mdap CXX)
 
@@ -27,10 +30,8 @@ endif()
 set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 
-set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to hdf5")
-
 if(WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive")
+  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI")
   set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
@@ -57,18 +58,10 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
 endif()
 
 # source list
-set(SRC
-    src/edm.cpp
-    src/edm.h
-    src/stata.cpp
-    src/ThreadPool.h
-    src/ThreadPool.cpp
-    vendor/stplugin.cpp
-    vendor/stplugin.h
-    )
+set(COMMON_SRC src/edm.cpp src/edm.h src/ThreadPool.h src/ThreadPool.cpp)
 
 # plugin build and installation
-add_library(edm SHARED ${SRC})
+add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
 set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
 
 if(WIN32)
@@ -81,83 +74,71 @@ endif()
 
 install(TARGETS edm DESTINATION .)
 
-# driver
-find_package(HDF5 COMPONENTS C HL)
-if (HDF5_FOUND)
-  add_executable(smap_driver src/driver.cpp src/driver.h)
-  set_target_properties(smap_driver PROPERTIES CXX_STANDARD 17)
-  target_link_libraries(smap_driver PRIVATE edm)
-  install(TARGETS smap_driver DESTINATION .)
-endif()
-
-# ↓↓↓ third-party code ↓↓↓
-
 # grab vendored files
 include(vendor/CMakeLists.txt)
 target_include_directories(edm PRIVATE vendor)
 
-# Google Benchmarks
-add_executable(gbench src/benchmark.cpp src/driver.h src/edm.cpp src/edm.h src/ThreadPool.h src/ThreadPool.cpp)
-set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
-if(WIN32)
-  target_compile_options(gbench PRIVATE "/MD")
-endif()
-
-find_package(benchmark CONFIG REQUIRED)
-target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-
-target_include_directories(gbench PUBLIC ${HDF5_INCLUDE_DIRS})
-  target_link_libraries(gbench PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
-  add_definitions(${HDF5_DEFINITIONS})
-
-if(WIN32)
-  find_package(OpenMP)
-  target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
-endif()
-
-install(TARGETS gbench DESTINATION .)
-
-# Boost's circular buffer (for thread pool queue)
+# ↓↓↓ third-party code ↓↓↓
 find_path(BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS "boost/circular_buffer.hpp")
-target_include_directories(edm PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
-
-# EIGEN3
 find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
-
-# FMT
 find_package(fmt CONFIG REQUIRED)
-target_link_libraries(edm PRIVATE fmt::fmt-header-only)
-
-# Add native multithreading libraries
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+target_include_directories(edm PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_link_libraries(edm PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm PRIVATE Threads::Threads)
+target_include_directories(edm PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
 
-# HDF5
-if (HDF5_FOUND)
-  target_include_directories(edm PUBLIC ${HDF5_INCLUDE_DIRS})
-  target_link_libraries(edm PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
-  add_definitions(${HDF5_DEFINITIONS})
-else()
-  set(DUMP_INPUT FALSE)
-  message(WARNING "HDF5 library not found. Unable to dump input values.")
-endif()
+# ↓↓↓ dev builds ↓↓↓
+if (DUMP_INPUT OR BUILD_DRIVER OR BUILD_GBENCH)
+  find_package(HDF5 COMPONENTS C HL)
 
-# we can only assess this after we have checked if HDF5 is available
-if(DUMP_INPUT)
-  add_definitions(-DDUMP_INPUT)
+  if (!HDF5_FOUND)
+    message(WARNING "Require HDF5 library for this dev build.")
+  endif()
+
+  if (DUMP_INPUT)
+    target_include_directories(edm PRIVATE ${HDF5_INCLUDE_DIRS})
+    target_link_libraries(edm PRIVATE ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+    set_target_properties(edm PROPERTIES COMPILE_DEFINITIONS DUMP_INPUT=TRUE)
+  endif()
+
+  if (BUILD_DRIVER)
+    add_executable(driver ${COMMON_SRC} src/driver.cpp src/driver.h)
+    set_target_properties(driver PROPERTIES CXX_STANDARD 17)
+    target_include_directories(driver PRIVATE ${EIGEN3_INCLUDE_DIR})
+    target_link_libraries(driver PRIVATE fmt::fmt-header-only)
+    target_link_libraries(driver PRIVATE Threads::Threads)
+    target_include_directories(driver PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
+    target_include_directories(driver PRIVATE ${HDF5_INCLUDE_DIRS})
+    target_link_libraries(driver PRIVATE ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+    install(TARGETS driver DESTINATION .)
+  endif()
+
+  # Google Benchmarks
+  if (BUILD_GBENCH)
+    add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/driver.h)
+    set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+    if(WIN32)
+      target_compile_options(gbench PRIVATE "/MD")
+    endif()
+    find_package(benchmark CONFIG REQUIRED)
+    target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+    target_include_directories(gbench PRIVATE ${EIGEN3_INCLUDE_DIR})
+    target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
+    target_link_libraries(gbench PRIVATE Threads::Threads)
+    target_include_directories(gbench PRIVATE ${BOOST_CIRCULAR_BUFFER_INCLUDE_DIRS})
+    target_include_directories(gbench PRIVATE ${HDF5_INCLUDE_DIRS})
+    target_link_libraries(gbench PRIVATE ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+    if(WIN32)
+      find_package(OpenMP)
+      target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
+    endif()
+    install(TARGETS gbench DESTINATION .)
+  endif()
 endif()
 
 # ↓↓↓ formatting with clang-format ↓↓↓
 include(ClangFormat)
-clangformat_setup(
-  src/edm.cpp
-  src/edm.h
-  src/driver.cpp
-  src/driver.h
-  src/stata.cpp
-  src/benchmark.cpp
-  src/ThreadPool.h
-  src/ThreadPool.cpp
-)
+clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/driver.cpp src/driver.h src/stata.cpp)
