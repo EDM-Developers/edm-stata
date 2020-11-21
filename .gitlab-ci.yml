@@ -6,7 +6,7 @@ stages:
 build-windows:
   stage: build
   script:
-    - cmake -B build -S .
+    - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   artifacts:
@@ -63,7 +63,7 @@ build-mac:
     - export VCPKG_ROOT=~/vcpkg/
     - export PATH="/Users/user175910/bin:$PATH"
   script:
-    - cmake -B build -S .
+    - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   artifacts:
@@ -119,7 +119,7 @@ build-ubuntu:
   script:
     - mkdir build
     - cd build
-    - cmake ..
+    - cmake .. -DBUILD_GBENCH=TRUE
     - cd ..
     - cmake --build build --config release
     - cmake --build build --config release --target install

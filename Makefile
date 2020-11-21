@@ -1,14 +1,12 @@
-all: build
-	cmake --build build -- $(MFLAGS) install
+all: build release
+	cmake --build build --config release --target install
 
 build:
-	if [ ! -d build ]; then mkdir build; fi
-	cd build && cmake .. ${CMAKE_OPTS} ${CMAKE_BUILD_TYPE}
-	ln -sf build/compile_commands.json
-	rm -f a.out cmake_hdf5_test.o
+	cmake -B build -S .
 
-release: CMAKE_BUILD_TYPE = -DCMAKE_BUILD_TYPE=Release
-release: build all
+.PHONY: release
+release: build
+	cmake --build build --config release
 
 .PHONY: clean
 clean:
@@ -17,4 +15,4 @@ clean:
 
 .PHONY: format
 format:
-	cmake --build build -- format
+	cmake --build build --target format

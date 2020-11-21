@@ -9,7 +9,9 @@
 #endif
 #endif
 
+#ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY
+#endif
 #include <fmt/format.h>
 
 #include "driver.h"
@@ -352,8 +354,15 @@ static void bm_get_distances_new_float(benchmark::State& state)
 
   edm_inputs_t vars = read_dumpfile(input);
 
-  std::vector<float> M_flat(vars.M.flat.begin(), vars.M.flat.end());
-  std::vector<float> Mp_flat(vars.Mp.flat.begin(), vars.Mp.flat.end());
+  std::vector<float> M_flat(vars.M.flat.size());
+  std::vector<float> Mp_flat(vars.Mp.flat.size());
+
+  for (size_t i = 0; i < M_flat.size(); i++) {
+    M_flat[i] = (float)vars.M.flat[i];
+  }
+  for (size_t i = 0; i < Mp_flat.size(); i++) {
+    Mp_flat[i] = (float)vars.Mp.flat[i];
+  }
 
   Manifold<float> M = { M_flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
   Manifold<float> Mp = { Mp_flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
