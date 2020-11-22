@@ -234,39 +234,42 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   auto start = std::chrono::high_resolution_clock::now();
 
   if (nthreads <= 1) {
-    for (int i = 0; i < Mp.rows; i++) {
-      if (keep_going != nullptr && keep_going() == false) {
-        break;
-      }
-      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, nullptr);
-    }
-  } else {
-    ThreadPool pool(nthreads, Mp.rows);
-    std::vector<std::future<void>> results(Mp.rows);
+    nthreads = 0;
+  }
 
-    io.print_async("Percent complete: 0");
-
+  ThreadPool pool(nthreads, Mp.rows);
+  std::vector<std::future<void>> results(Mp.rows);
+  if (nthreads > 1) {
     for (int i = 0; i < Mp.rows; i++) {
       results[i] =
         pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, keep_going); });
     }
+  }
 
-    double nextMessage = 1.0 / 40;
-    int dots = 0;
-    for (int i = 0; i < Mp.rows; i++) {
-      results[i].get();
+  io.print_async("Percent complete: 0");
+  double nextMessage = 1.0 / 40;
+  int dots = 0;
 
-      double progress = i / ((double)Mp.rows);
-      if (progress >= nextMessage) {
-        if (dots < 3) {
-          io.print_async(".");
-          dots += 1;
-        } else {
-          io.print_async(fmt::format(FMT_STRING("{:.0f}"), progress * 100));
-          dots = 0;
-        }
-        nextMessage += 1.0 / 40;
+  for (int i = 0; i < Mp.rows; i++) {
+    if (nthreads == 0) {
+      if (keep_going != nullptr && keep_going() == false) {
+        break;
       }
+      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, nullptr);
+    } else {
+      results[i].get();
+    }
+
+    double progress = i / ((double)Mp.rows);
+    if (progress >= nextMessage) {
+      if (dots < 3) {
+        io.print_async(".");
+        dots += 1;
+      } else {
+        io.print_async(fmt::format(FMT_STRING("{:.0f}"), progress * 100));
+        dots = 0;
+      }
+      nextMessage += 1.0 / 40;
     }
   }
 
