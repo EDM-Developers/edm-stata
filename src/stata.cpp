@@ -254,25 +254,25 @@ ST_retcode edm(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
-  ST_double theta = atof(argv[0]);
-  ST_int l = atoi(argv[1]);
-  std::string algorithm(argv[2]);
-  bool force_compute = (strcmp(argv[3], "force") == 0);
-  ST_double missingdistance = atof(argv[4]);
+  smap_opts_t opts;
+
+  opts.theta = atof(argv[0]);
+  opts.l = atoi(argv[1]);
+  opts.algorithm = std::string(argv[2]);
+  opts.force_compute = (strcmp(argv[3], "force") == 0);
+  opts.missingdistance = atof(argv[4]);
   ST_int mani = atoi(argv[5]);     // number of columns in the manifold
   bool pmani_flag = atoi(argv[6]); // contains the flag for p_manifold
-  bool save_mode = atoi(argv[7]);
-  ST_int pmani = atoi(argv[8]);  // contains the number of columns in p_manifold
-  ST_int varssv = atoi(argv[8]); // number of columns in smap coefficients
+  opts.save_mode = atoi(argv[7]);
+  ST_int pmani = atoi(argv[8]); // contains the number of columns in p_manifold
+  opts.varssv = atoi(argv[8]);  // number of columns in smap coefficients
   ST_int nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
 
   // Default number of neighbours is E + 1
-  if (l <= 0) {
-    l = mani + 1;
+  if (opts.l <= 0) {
+    opts.l = mani + 1;
   }
-
-  smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -362,7 +362,7 @@ ST_retcode edm(int argc, char* argv[])
 
   predCol = mani + 2;
   coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
-  coeffsWidth = varssv;
+  coeffsWidth = opts.varssv;
 
   std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, io, keep_going, finished));
   predictions = task.get_future();

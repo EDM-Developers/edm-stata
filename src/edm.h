@@ -29,13 +29,14 @@ typedef struct
   int rows, cols;
 } manifold_t;
 
-typedef struct
+struct smap_opts_t
 {
   bool force_compute, save_mode;
   int l, varssv;
   double theta, missingdistance;
   std::string algorithm;
-} smap_opts_t;
+  bool distributeThreads = false;
+};
 
 class IO
 {

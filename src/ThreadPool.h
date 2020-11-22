@@ -14,9 +14,10 @@ public:
   decltype(auto) enqueue(F&& f, Args&&... args);
   ~ThreadPool();
 
-private:
   // need to keep track of threads so we can join them
   std::vector<std::thread> workers;
+
+private:
   // the task queue
   boost::circular_buffer<std::packaged_task<void()>> tasks;
 
