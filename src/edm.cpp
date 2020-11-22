@@ -9,6 +9,7 @@
 
 #include "edm.h"
 #include "ThreadPool.h"
+#include "cpu.h"
 
 #ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY

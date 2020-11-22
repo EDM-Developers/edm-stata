@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2) {
+  if (argc < 2) {
     std::cerr << "Usage: ./driver <fname>" << std::endl;
     return -1;
   }
@@ -10,6 +10,10 @@ int main(int argc, char* argv[])
   std::string fname_in(argv[1]);
 
   edm_inputs_t vars = read_dumpfile(fname_in);
+
+  if (argc > 2) {
+    vars.nthreads = atoi(argv[2]);
+  }
 
   ConsoleIO io;
   smap_res_t smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
