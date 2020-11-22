@@ -58,7 +58,7 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
 endif()
 
 # source list
-set(COMMON_SRC src/edm.cpp src/edm.h src/ThreadPool.h src/ThreadPool.cpp)
+set(COMMON_SRC src/cpu.cpp src/cpu.h src/edm.cpp src/edm.h src/ThreadPool.cpp src/ThreadPool.h)
 
 # plugin build and installation
 add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)

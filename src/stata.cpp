@@ -5,6 +5,7 @@
 #endif
 #endif
 
+#include "cpu.h"
 #include "edm.h"
 #include "stplugin.h"
 
@@ -273,11 +274,17 @@ ST_retcode edm(int argc, char* argv[])
 
   smap_opts_t opts = { force_compute, save_mode, l, varssv, theta, missingdistance, algorithm };
 
-  // Default number of threads is the number of cores available
-  int ncores = std::thread::hardware_concurrency();
+  // Default number of threads is the number of physical cores available
+  ST_int npcores = (ST_int)num_physical_cores();
+  if (nthreads <= 0) {
+    nthreads = npcores;
+  }
 
-  if (nthreads <= 0 || nthreads > ncores) {
-    nthreads = ncores >= 8 ? ncores / 2 : ncores;
+  // Restrict going over the number of logical cores available
+  ST_int nlcores = (ST_int)num_logical_cores();
+  if (nthreads > nlcores) {
+    io.print(fmt::format("Restricting to {} threads (recommend {} threads)", nlcores, npcores));
+    nthreads = nlcores;
   }
 
   // Find which Stata rows contain the main manifold & for the y vector
