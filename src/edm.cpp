@@ -238,7 +238,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     nthreads = 0;
   }
 
-  ThreadPool pool(nthreads, Mp.rows);
+  MultiQueueThreadPool pool(nthreads, Mp.rows, 1);
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }

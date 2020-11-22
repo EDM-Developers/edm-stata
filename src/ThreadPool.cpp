@@ -1,13 +1,16 @@
 #include "ThreadPool.h"
 
 // the destructor joins all threads
-ThreadPool::~ThreadPool()
+MultiQueueThreadPool::~MultiQueueThreadPool()
 {
-  {
-    std::unique_lock<std::mutex> lock(queue_mutex);
-    stop = true;
+  for (size_t i = 0; i < workers.size(); i++) {
+    {
+      std::scoped_lock lock(mutexes[i]);
+      stop[i] = true;
+    }
+    conditions[i].notify_all();
   }
-  condition.notify_all();
+
   for (std::thread& worker : workers) {
     worker.join();
   }
