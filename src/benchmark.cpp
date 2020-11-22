@@ -663,6 +663,7 @@ static void bm_mf_smap_loop(benchmark::State& state)
 
   edm_inputs_t vars = read_dumpfile(input);
 
+  vars.opts.distributeThreads = false;
   vars.nthreads = threads;
 
   for (auto _ : state)
@@ -670,6 +671,28 @@ static void bm_mf_smap_loop(benchmark::State& state)
 }
 
 BENCHMARK(bm_mf_smap_loop)
+  ->DenseRange(0, tests.size() * threadRange.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+static void bm_mf_smap_loop_distribute(benchmark::State& state)
+{
+  int testNum = ((int)state.range(0)) / ((int)threadRange.size());
+  int threads = threadRange[state.range(0) % threadRange.size()];
+
+  std::string input = tests[testNum];
+  state.SetLabel(fmt::format("{} ({} threads)", input, threads));
+
+  edm_inputs_t vars = read_dumpfile(input);
+
+  vars.opts.distributeThreads = true;
+  vars.nthreads = threads;
+
+  for (auto _ : state)
+    smap_res_t res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
+}
+
+BENCHMARK(bm_mf_smap_loop_distribute)
   ->DenseRange(0, tests.size() * threadRange.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);

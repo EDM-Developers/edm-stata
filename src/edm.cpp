@@ -239,6 +239,9 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
   }
 
   ThreadPool pool(nthreads, Mp.rows);
+  if (opts.distributeThreads) {
+    distribute_threads(pool.workers);
+  }
   std::vector<std::future<void>> results(Mp.rows);
   if (nthreads > 1) {
     for (int i = 0; i < Mp.rows; i++) {
