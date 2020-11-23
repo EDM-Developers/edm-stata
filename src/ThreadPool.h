@@ -6,17 +6,19 @@
 #include <future>
 #include <vector>
 
+#ifndef _MSC_VER
+#ifndef __APPLE__
+#include <pthread.h>
+
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+#endif
+#endif
+
 class ThreadPool
 {
-public:
-  explicit ThreadPool(size_t, size_t);
-  template<class F, class... Args>
-  decltype(auto) enqueue(F&& f, Args&&... args);
-  ~ThreadPool();
-
-  // need to keep track of threads so we can join them
-  std::vector<std::thread> workers;
-
 private:
   // the task queue
   boost::circular_buffer<std::packaged_task<void()>> tasks;
@@ -24,33 +26,87 @@ private:
   // synchronization
   std::mutex queue_mutex;
   std::condition_variable condition;
-  bool stop;
-};
+  bool stop = false;
 
-// the constructor just launches some amount of workers
-inline ThreadPool::ThreadPool(size_t threads, size_t numtasks)
-  : stop(false)
-{
-  tasks.set_capacity(numtasks);
+  void kill_all_workers()
+  {
+    {
+      std::unique_lock<std::mutex> lock(queue_mutex);
+      stop = true;
+    }
+    condition.notify_all();
+    for (std::thread& worker : workers) {
+      worker.join();
+    }
+    workers.clear();
+  }
 
-  for (size_t i = 0; i < threads; ++i)
-    workers.emplace_back([this] {
-      for (;;) {
-        std::packaged_task<void()> task;
+public:
+  // need to keep track of threads so we can join them
+  std::vector<std::thread> workers;
 
-        {
-          std::unique_lock<std::mutex> lock(this->queue_mutex);
-          this->condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
-          if (this->stop && this->tasks.empty())
-            return;
-          task = std::move(this->tasks.front());
-          this->tasks.pop_front();
+  ThreadPool() {}
+
+  ThreadPool(size_t threads, size_t numtasks)
+  {
+    set_num_tasks(numtasks);
+    set_num_workers(threads);
+  }
+
+  template<class F, class... Args>
+  decltype(auto) enqueue(F&& f, Args&&... args);
+  ~ThreadPool();
+
+  inline void set_num_tasks(size_t numtasks)
+  {
+    tasks.clear();
+    tasks.set_capacity(numtasks);
+  }
+
+  inline void set_num_workers(size_t numworkers)
+  {
+    size_t currentSize = workers.size();
+    if (currentSize == numworkers) {
+      return;
+    }
+
+    if (numworkers < currentSize) {
+      kill_all_workers();
+      stop = false;
+      currentSize = 0;
+    }
+
+    for (size_t i = 0; i < numworkers - currentSize; ++i) {
+      workers.emplace_back([this, i, numworkers] {
+
+#ifndef _MSC_VER
+#ifndef __APPLE__
+        pthread_setname_np(pthread_self(),
+                           fmt::format("edm worker {} of {} [id {}])", i, numworkers, pthread_self()).c_str());
+#endif
+#endif
+
+        for (;;) {
+          std::packaged_task<void()> task;
+
+          // Don't restart the thread when the pool is running (stop == false) but there's no work to do
+          // (tasks.empty()).
+          {
+            std::unique_lock<std::mutex> lock(this->queue_mutex);
+            this->condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
+            // Stop the worker if the pool is stopped & there's no left-over tasks in the queue.
+            if (this->stop && this->tasks.empty())
+              return;
+            task = std::move(this->tasks.front());
+            this->tasks.pop_front();
+          }
+
+          task();
         }
-
-        task();
-      }
-    });
-}
+      });
+    }
+  }
+};
 
 // add new work item to the pool
 template<class F, class... Args>

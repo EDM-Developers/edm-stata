@@ -214,6 +214,8 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
   return INVALID_ALGORITHM;
 }
 
+ThreadPool pool;
+
 smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
                         int nthreads, const IO& io, bool keep_going(), void finished())
 {
@@ -238,7 +240,9 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     nthreads = 0;
   }
 
-  ThreadPool pool(nthreads, Mp.rows);
+  pool.set_num_tasks(Mp.rows);
+  pool.set_num_workers(nthreads);
+
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }

@@ -283,7 +283,7 @@ ST_retcode edm(int argc, char* argv[])
   // Restrict going over the number of logical cores available
   ST_int nlcores = (ST_int)num_logical_cores();
   if (nthreads > nlcores) {
-    io.print(fmt::format("Restricting to {} threads (recommend {} threads)", nlcores, npcores));
+    io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
     nthreads = nlcores;
   }
 
