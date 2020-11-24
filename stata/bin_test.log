@@ -3,8 +3,8 @@
 . set linesize 255
 
 . //set obs 500
-. set obs 15
-number of observations (_N) was 0, now 15
+. set obs 25
+number of observations (_N) was 0, now 25
 
 . set seed 12345678
 
@@ -21,15 +21,18 @@ number of observations (_N) was 0, now 15
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 15
+        time variable:  t, 1 to 25
                 delta:  1 unit
 
 . 
 . gen double x = 0.2 if _n==1
-(14 missing values generated)
+(24 missing values generated)
 
 . gen double y = 0.4 if _n==1
-(14 missing values generated)
+(24 missing values generated)
+
+. gen double z = 0.15 if _n==1
+(24 missing values generated)
 
 . 
 . * Create a dynamic system
@@ -50,12 +53,8 @@ number of observations (_N) was 0, now 15
 . 
 . 
 . * Create binary variables
-. replace x=1 if abs(x) > 0.5
-(9 real changes made)
-
-. replace x=0 if abs(x) <= 0.5
-(6 real changes made)
-
+. //replace x=1 if abs(x) > 0.5
+. //replace x=0 if abs(x) <= 0.5
 . 
 . //replace y=1 if abs(y) > 0.65
 . //replace y=0 if abs(y) <= 0.65
@@ -76,66 +75,15 @@ number of observations (_N) was 0, now 15
 . //edm explore x, copredict(teste) copredictvar(y)
 . //assert teste!=. if _n>1
 . 
-. edm xmap x y, algorithm(smap)
-Number of distinct values in manifold: 2
-Manifold metric: binary
+. //edm xmap x y, algorithm(smap)
+. 
+. edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap)
 
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 15
-first and last obs in sample = 1, 15
-
-arg 0: 1
-arg 1: 4
-arg 2: smap
-arg 3: 
-arg 4: 0
-arg 5: 2
-arg 6: 0
-arg 7: 0
-arg 8: 0
-arg 9: 4
-arg 10: 1
-arg 11: binary
-arg 12: binary
-
-theta = 1.0000
-
-algorithm = smap
-
-force compute = false
-
-missing distance = 0.000000
-
-number of variables in manifold = 2
-
-manifold metric = binary
-
-train set obs: 14
-predict set obs: 14
-
-p_manifold flag = false
-
-l = 4
-
-save_mode = false
-
-Requested 4 threads
-Using 4 threads
-
-
-End of the plugin
-====================
-
-Number of distinct values in manifold: 15
-Manifold metric: euclidean
-
-====================
-Start of the plugin
-
-number of vars & obs = 7, 15
-first and last obs in sample = 1, 15
+number of vars & obs = 7, 25
+first and last obs in sample = 1, 25
 
 arg 0: 1
 arg 1: 4
@@ -163,10 +111,111 @@ number of variables in manifold = 2
 
 manifold metric = euclidean
 
-train set obs: 14
-predict set obs: 14
+train set obs: 24
+predict set obs: 24
 
 p_manifold flag = false
+
+l = 4
+
+save_mode = false
+
+Requested 4 threads
+Using 4 threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 7, 25
+first and last obs in sample = 1, 25
+
+arg 0: 1
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 0
+arg 7: 0
+arg 8: 0
+arg 9: 4
+arg 10: 1
+arg 11: euclidean
+arg 12: euclidean
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = false
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+manifold metric = euclidean
+
+train set obs: 24
+predict set obs: 24
+
+p_manifold flag = false
+
+l = 4
+
+save_mode = false
+
+Requested 4 threads
+Using 4 threads
+
+
+End of the plugin
+====================
+
+
+====================
+Start of the plugin
+
+number of vars & obs = 9, 25
+first and last obs in sample = 1, 25
+
+arg 0: 1
+arg 1: 4
+arg 2: smap
+arg 3: 
+arg 4: 0
+arg 5: 2
+arg 6: 1
+arg 7: 0
+arg 8: 2
+arg 9: 4
+arg 10: 1
+arg 11: euclidean
+arg 12: euclidean
+
+theta = 1.0000
+
+algorithm = smap
+
+force compute = false
+
+missing distance = 0.000000
+
+number of variables in manifold = 2
+
+manifold metric = euclidean
+
+train set obs: 24
+predict set obs: 24
+
+p_manifold flag = true
+number of variables in p_manifold = 2
+p_manifold metric = euclidean
+
 
 l = 4
 
@@ -185,8 +234,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              14         -.51293           .6559 
-   x ~ x|M(y)              14           .4601          .58607 
+   y ~ y|M(x)              24         .075627          .20908 
+   x ~ x|M(y)              24          .53741          .19873 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 

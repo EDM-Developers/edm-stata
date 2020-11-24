@@ -5,7 +5,7 @@ log using "bin_test.log", replace nomsg
 
 set linesize 255
 //set obs 500
-set obs 15
+set obs 25
 set seed 12345678
 if c(MP) {
     qui set processor 1
@@ -19,6 +19,7 @@ tsset t
 
 gen double x = 0.2 if _n==1
 gen double y = 0.4 if _n==1
+gen double z = 0.15 if _n==1
 
 * Create a dynamic system
 local r_x 3.625
@@ -31,16 +32,17 @@ qui {
     forvalues i=2/`=_N' {
         replace x=l.x *(`r_x' *(1-l.x)-`beta_xy'*l.y) in `i'
         replace y=l.y *(`r_y' *(1-l.y)-`beta_yx'*l`tau'.x) in `i'
+        replace z=l.x+l.y in `i'
     }
 }
 
 
 * Create binary variables
-replace x=1 if abs(x) > 0.5
-replace x=0 if abs(x) <= 0.5
+//replace x=1 if abs(x) > 0.5
+//replace x=0 if abs(x) <= 0.5
 
-replace y=1 if abs(y) > 0.65
-replace y=0 if abs(y) <= 0.65
+//replace y=1 if abs(y) > 0.65
+//replace y=0 if abs(y) <= 0.65
 
 //qui {
 //  levelsof x
@@ -58,6 +60,8 @@ replace y=0 if abs(y) <= 0.65
 //edm explore x, copredict(teste) copredictvar(y)
 //assert teste!=. if _n>1
 
-edm xmap x y, algorithm(smap)
+//edm xmap x y, algorithm(smap)
+
+edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap)
 
 cap log close _all
