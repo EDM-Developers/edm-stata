@@ -20,6 +20,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 typedef int retcode;
@@ -36,46 +37,74 @@ struct BManifold
   size_t _rows, _cols;
 
   double operator()(size_t i, size_t j) const { return flat[i * _cols + j]; }
-
 };
 
-
-template<class T> void ignore( const T& ) { }
+template<class T>
+void ignore(const T&)
+{}
 
 class Manifold
 {
 private:
-  std::vector<double> _data, _dt;
-  std::vector<size_t> _ind;
-  std::vector<std::vector<double>> _extras;
-  size_t _nobs, _E, _E_actual;
   bool _use_dt;
+  double _dtweight;
+  size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
+  std::vector<double> _x;
+  std::vector<int> _t;
+  std::vector<std::vector<double>> _extras;
+  std::unordered_map<size_t, int> _obsNumToTime;
+  std::unordered_map<int, size_t> _timeToIndex;
 
 public:
-  Manifold(std::vector<double> data, std::vector<bool> useRow, size_t E, std::vector<double> dt, std::vector<std::vector<double>> extras) : _data(data), _dt(dt), _E(E), _extras(extras) {
-    _nobs = 0;
-    for (int row = 0; row < useRow.size(); row++) {
-      if (useRow[row]) {
-        _ind.push_back(row);
-        _nobs += 1;
+  Manifold(std::vector<double> x, std::vector<bool> useRow, size_t E, std::vector<int> t, double dtweight,
+           std::vector<std::vector<double>> extras)
+    : _x(x)
+    , _t(t)
+    , _dtweight(dtweight)
+    , _extras(extras)
+  {
+    size_t obsNum = 0;
+    for (size_t i = 0; i < useRow.size(); i++) {
+      if (useRow[i]) {
+        _obsNumToTime[obsNum] = t[i];
+        obsNum += 1;
       }
+      _timeToIndex[t[i]] = i;
     }
-    
-    _use_dt = (dt.size() > 0);
-    _E_actual = E + _use_dt*(E-1) + extras.size();
+
+    _nobs = _timeToIndex.size();
+
+    _use_dt = (dtweight > 0);
+    _E_x = E;
+    _E_dt = (_use_dt) * (E - 1);
+    _E_extras = extras.size();
+    _E_actual = _E_x + _E_dt + _E_extras;
   }
 
   double operator()(size_t i, size_t j) const
   {
     try {
-    if (j < _E) {
-      return _data.at(_ind[i] - j);
-    } else if (_use_dt && j < 2*_E-1) {
-      return _dt.at(_ind[i] - (j - _E));
-    } else {
-      return _extras.at(j-_E-_use_dt*_E).at(i);
-    }
-    
+      int referenceTime = _obsNumToTime.at(i);
+      size_t index;
+
+      if (j < _E_x) {
+
+        if (_use_dt) {
+          index = _timeToIndex.at(referenceTime) - j;
+        } else {
+          index = _timeToIndex.at(referenceTime - j);
+        }
+        return _x.at(index);
+      } else if (j < _E_x + _E_dt) {
+        j -= _E_x;
+        index = _timeToIndex.at(referenceTime) - j;
+        return _dtweight * (_t.at(index) - _t.at(index - 1));
+      } else {
+        j -= (_E_x + _E_dt);
+        index = _timeToIndex.at(referenceTime);
+        return _extras.at(j).at(index);
+      }
+
     } catch (const std::out_of_range& e) {
       ignore(e);
       return MISSING;
@@ -93,9 +122,9 @@ public:
     }
     return missing;
   }
-  
+
   size_t nobs() const { return _nobs; }
-  size_t E() const { return _E; }
+  size_t E() const { return _E_x; }
   size_t E_actual() const { return _E_actual; }
 };
 

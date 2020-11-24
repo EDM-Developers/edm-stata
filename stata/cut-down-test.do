@@ -40,7 +40,8 @@ edm explore x, e(2/10)
 
 edm xmap x y, k(5)
 
-edm xmap x y, e(6) lib(8) 
+// TODO: It sometimes crashed on this next line; look closer if not already fixed.
+edm xmap x y, e(6) lib(8)
 
 edm explore x, k(5) crossfold(10)
 
@@ -98,9 +99,7 @@ replace t=. if mod(t,19) ==1
 edm explore x
 edm explore x, dt
 
-// TODO: Update Manifold class to handle missing data
-
-/* edm explore x, allowmissing
+edm explore x, allowmissing
 edm explore x, missingdistance(2)
 edm xmap x l.x, allowmissing
 edm xmap x l.x, missingdistance(2)
@@ -109,9 +108,7 @@ edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
 
 edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
 
-edm explore x, extraembed(u) allowmissing dt crossfold(5) */
-
-set seed 12345678
+edm explore x, extraembed(u) allowmissing dt crossfold(5)
 
 edm explore d.x, dt
 

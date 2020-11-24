@@ -93,7 +93,8 @@ Note: Number of neighbours (k) is adjusted to 5
 Note: The embedding dimension E is 2
 
 . 
-. edm xmap x y, e(6) lib(8) 
+. // TODO: It sometimes crashed on this next line; look closer if not already fixed.
+. edm xmap x y, e(6) lib(8)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -379,20 +380,109 @@ Note: Random 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .36
 
 . 
-. // TODO: Update Manifold class to handle missing data
+. edm explore x, allowmissing
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99682         .011804 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. edm explore x, missingdistance(2)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of 2 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99531          .01599 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. edm xmap x l.x, allowmissing
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Missing values are assumed to have a distance of .25 with all values.
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124           .9998        .0027684 
+     x ~ x|M(l.x)             118           .9983        .0093729 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. edm xmap x l.x, missingdistance(2)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Missing values are assumed to have a distance of 2 with all values.
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124           .9998        .0027686 
+     x ~ x|M(l.x)             118           .9983        .0093764 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
 . 
-. /* edm explore x, allowmissing
-> edm explore x, missingdistance(2)
-> edm xmap x l.x, allowmissing
-> edm xmap x l.x, missingdistance(2)
-> 
-> edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
-> 
-> edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
-> 
-> edm explore x, extraembed(u) allowmissing dt crossfold(5) */
+. edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Additional variables in the embedding: u (+ time delta)
+Missing values are assumed to have a distance of .25 with all values.
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124          .88581         .056787 
+     x ~ x|M(l.x)             150          .22176          .30935 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 10 (including 5 extras)
+Note: Embedding includes the delta of the time variable with a weight of .55 and .54
+
 . 
-. set seed 12345678
+. edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l3.x
+Additional variables in the embedding: u (+ time delta)
+Missing values are assumed to have a distance of .25 with all values.
+---------------------------------------------------------------------
+            Mapping    Library size             rho             MAE
+---------------------------------------------------------------------
+   l3.x ~ l3.x|M(x)             123          .69907         .075825 
+---------------------------------------------------------------------
+Note: The embedding dimension E is 10 (including 5 extras)
+Note: Embedding includes the delta of the time variable with a weight of .55
+
+. 
+. edm explore x, extraembed(u) allowmissing dt crossfold(5)
+5-fold cross-validation progress (5 in total)
+.....
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: u (+ time delta)
+Missing values are assumed to have a distance of .25 with all values.
+----------------------------------------------------------------------
+                      --------- rho ---------  --------- MAE ---------
+ Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
+----------------------------------------------------------------------
+        4        1       .60892      .075603       .12527      .020011
+----------------------------------------------------------------------
+Note: Results from 5 runs
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+3
+Note: 5-fold cross validation results reported
+Note: Embedding includes the delta of the time variable with a weight of .55
 
 . 
 . edm explore d.x, dt
@@ -403,7 +493,7 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 3               1          .79119          .15124 
+                 3               1          .78058          .15644 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
@@ -421,10 +511,10 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .99555     .0047828      .013795     .0050988
-  Est. mean 95% CI   [   .99331,    .99779 ]   [  .011409,   .016181 ]
-2.5/97.5 Pc (Est.)   [   .98617,    1.0049 ]   [ .0038013,   .023788 ]
-2.5/97.5 Pc (Obs.)   [   .98107,    .99878 ]   [ .0085573,   .029111 ]
+        2        1       .99571     .0045792      .013297     .0039025
+  Est. mean 95% CI   [   .99357,    .99785 ]   [   .01147,   .015123 ]
+2.5/97.5 Pc (Est.)   [   .98673,    1.0047 ]   [ .0056481,   .020946 ]
+2.5/97.5 Pc (Obs.)   [   .98346,    .99887 ]   [ .0085166,   .024075 ]
 ----------------------------------------------------------------------
 Note: Results from 20 runs
 Note: Number of neighbours (k) is set to E+1
@@ -440,14 +530,14 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping        Lib size        Mean rho       Std. Dev.
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .40561         .066156
-  Est. mean 95% CI                    [   .37465,    .43657 ]
-2.5/97.5 Pc (Est.)                    [   .27595,    .53527 ]
-2.5/97.5 Pc (Obs.)                    [   .28987,    .53226 ]
-   x ~ x|M(y)              50          .87002         .017517
-  Est. mean 95% CI                    [   .86182,    .87822 ]
-2.5/97.5 Pc (Est.)                    [   .83569,    .90436 ]
-2.5/97.5 Pc (Obs.)                    [   .82731,    .89532 ]
+   y ~ y|M(x)              50          .37281         .068293
+  Est. mean 95% CI                    [   .34085,    .40477 ]
+2.5/97.5 Pc (Est.)                    [   .23896,    .50666 ]
+2.5/97.5 Pc (Obs.)                    [   .25678,    .49079 ]
+   x ~ x|M(y)              50          .86316         .024202
+  Est. mean 95% CI                    [   .85183,    .87448 ]
+2.5/97.5 Pc (Est.)                    [   .81572,    .91059 ]
+2.5/97.5 Pc (Obs.)                    [   .80334,    .89799 ]
 ---------------------------------------------------------------
 Note: Results from 20 replications
 Note: The embedding dimension E is 2
@@ -596,7 +686,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99876        .0076433 
+                 2               1          .99847        .0089172 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -727,7 +817,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99918        .0059577 
+                 2               1          .99846        .0083042 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -737,7 +827,7 @@ Note: Random 50/50 split for training and validation data
              |              Jackknife
              |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
 -------------+----------------------------------------------------------------
-           x |   .9991836   .0123701    80.77   0.000     .9747897    1.023578
+           x |   .9984628   .0106503    93.75   0.000     .9774601    1.019465
 ------------------------------------------------------------------------------
 
 . 

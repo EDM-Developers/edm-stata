@@ -290,7 +290,8 @@ struct BasicManifold
 };
 
 template<typename T>
-std::pair<std::vector<T>, int> get_distances_new(const BasicManifold<T>& M, const BasicObservation<T>& b, T missingdistance)
+std::pair<std::vector<T>, int> get_distances_new(const BasicManifold<T>& M, const BasicObservation<T>& b,
+                                                 T missingdistance)
 {
   int validDistances = 0;
   std::vector<T> d(M.rows());

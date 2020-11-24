@@ -574,7 +574,7 @@ program define edmExplore, eclass sortpreserve
 	}
 	forvalues i=1/`=`esize'-1' {
 		tempvar x_`i'
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1 // replace with 'if `touse'' for debugging
+		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1
 		qui replace `usable' = 0 if `x_`i'' ==.
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 		if `parsed_dt' ==1 {
@@ -586,7 +586,7 @@ program define edmExplore, eclass sortpreserve
 			/* sum `dt_value' */
 			/* di "dt descript"
 			sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable' ==1 // replace with 'if `touse'' for debugging
+			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw'
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 			/* di "mapping_`i': `mapping_`i''" */
 			/* di "incorporate lag `i' in dt mapping" */
@@ -908,8 +908,11 @@ program define edmExplore, eclass sortpreserve
 						loc varssv=0
 						// display "vsave_flag: " `vsave_flag'
 					}
+					
+					/* qui xtset
+					local original_t = r(timevar) */
 
-					local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
+					local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' t
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
@@ -939,6 +942,7 @@ program define edmExplore, eclass sortpreserve
 						di "`edm_print'"
 					}
 					plugin call smap_block_mdap `myvars' if `predict_set' == 1
+					
 				}
 
 
@@ -1030,8 +1034,8 @@ program define edmExplore, eclass sortpreserve
 				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
-				// di "Plugin Mode"
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
+				// di "Plugin Mode"					
+				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' t
 
 				unab vars : ``manifold''
 				local mani `: word count `vars''
@@ -1855,6 +1859,9 @@ program define edmXmap, eclass sortpreserve
 						}
 						else {
 							// di "Plugin Mode"
+							/* qui xtset
+							local original_t = r(timevar) */
+					
 							if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 								local vsave_flag = 1
 								// display "vsave_flag: " `vsave_flag'
@@ -1867,7 +1874,7 @@ program define edmXmap, eclass sortpreserve
 								// display "vsave_flag: " `vsave_flag'
 							}
 
-							local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
+							local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' t
 
 							unab vars : ``manifold''
 							local mani `: word count `vars''
@@ -2006,10 +2013,10 @@ program define edmXmap, eclass sortpreserve
 			else {
 				// di "Plugin Mode"
 				// TODO: Can this resetting of 'original_t' be avoided?
-				qui xtset
-				local original_t = r(timevar)
+				/* qui xtset
+				local original_t = r(timevar) */
 					
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
+				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' t
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				unab vars : `co_mapping'
