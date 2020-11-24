@@ -9,7 +9,6 @@ typedef struct
   int rows, cols;
 } manifold_t;
 
-
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
  */

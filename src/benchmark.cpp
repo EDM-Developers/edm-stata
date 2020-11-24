@@ -697,8 +697,6 @@ std::vector<int> get_thread_range()
 //   ->DenseRange(0, tests.size() * threadRange.size() - 1)
 //   ->MeasureProcessCPUTime()
 //   ->Unit(benchmark::kMillisecond);
-  
-
 
 // retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
 //                        const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map,
@@ -870,7 +868,6 @@ std::vector<int> get_thread_range()
 
 //   return INVALID_ALGORITHM;
 // }
-
 
 // #ifdef _MSC_VER
 // #include <omp.h>

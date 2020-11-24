@@ -67,33 +67,55 @@ public:
     _E_actual = _E_x + _E_dt + _E_extras;
   }
 
-  double operator()(size_t i, size_t j) const
+  double x(size_t i, size_t j) const
   {
     try {
       int referenceTime = _obsNumToTime.at(i);
       size_t index;
-
-      if (j < _E_x) {
-
-        if (_use_dt) {
-          index = _timeToIndex.at(referenceTime) - j;
-        } else {
-          index = _timeToIndex.at(referenceTime - j);
-        }
-        return _x.at(index);
-      } else if (j < _E_x + _E_dt) {
-        j -= _E_x;
+      if (_use_dt) {
         index = _timeToIndex.at(referenceTime) - j;
-        return _dtweight * (_t.at(index) - _t.at(index - 1));
       } else {
-        j -= (_E_x + _E_dt);
-        index = _timeToIndex.at(referenceTime);
-        return _extras.at(j).at(index);
+        index = _timeToIndex.at(referenceTime - j);
       }
-
+      return _x.at(index);
     } catch (const std::out_of_range& e) {
       ignore(e);
       return MISSING;
+    }
+  }
+
+  double dt(size_t i, size_t j) const
+  {
+    try {
+      int referenceTime = _obsNumToTime.at(i);
+      size_t index = _timeToIndex.at(referenceTime) - j;
+      return _dtweight * (_t.at(index) - _t.at(index - 1));
+    } catch (const std::out_of_range& e) {
+      ignore(e);
+      return MISSING;
+    }
+  }
+
+  double extras(size_t i, size_t j) const
+  {
+    try {
+      int referenceTime = _obsNumToTime.at(i);
+      size_t index = _timeToIndex.at(referenceTime);
+      return _extras.at(j).at(index);
+    } catch (const std::out_of_range& e) {
+      ignore(e);
+      return MISSING;
+    }
+  }
+
+  double operator()(size_t i, size_t j) const
+  {
+    if (j < _E_x) {
+      return x(i, j);
+    } else if (j < _E_x + _E_dt) {
+      return dt(i, j - _E_x);
+    } else {
+      return extras(i, j - (_E_x + _E_dt));
     }
   }
 
@@ -111,6 +133,8 @@ public:
 
   size_t nobs() const { return _nobs; }
   size_t E() const { return _E_x; }
+  size_t E_dt() const { return _E_dt; }
+  size_t E_extra() const { return _E_extras; }
   size_t E_actual() const { return _E_actual; }
 };
 
