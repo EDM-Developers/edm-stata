@@ -62,6 +62,22 @@ test-mac:
   tags:
     - mac-runner
 
+dropbox-deploy-mac:
+  variables:
+    PLUGIN_FILE: "edm_MacOSX_x64.plugin"
+  stage: deploy
+  dependencies:
+    - build-mac
+  only:
+    - master
+  before_script:
+    - cd stata
+  script:
+    - cp "${PLUGIN_FILE}" ~/Dropbox/master/
+  tags:
+    - mac-runner
+  
+
 build-ubuntu:
   stage: build
   before_script:
