@@ -102,14 +102,8 @@ dropbox-deploy:
     - master
   before_script:
     - cd stata
-    - curl "${UPLOADER_FETCH_URL}" -o "${UPLOADER}"
-    - echo "OAUTH_ACCESS_TOKEN=${DROPBOX_DEPLOY_TOKEN}" > "${UPLOADER_CONFIG}"
   script:
-    - bash "${UPLOADER}" -f "${UPLOADER_CONFIG}" mkdir "${TARGET_FOLDER}" &>/dev/null || echo "Target folder exists"
-    - bash "${UPLOADER}" -f "${UPLOADER_CONFIG}" upload "${PLUGIN_FILE}" "${TARGET_FOLDER}"
-  after_script:
-    - rm -f "${UPLOADER}"
-    - rm -f "${UPLOADER_CONFIG}"
+    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox
   tags:
     - ubuntu-stata-runner
   
