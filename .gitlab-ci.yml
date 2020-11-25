@@ -103,7 +103,7 @@ dropbox-deploy:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox
+    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox/master/
   tags:
     - ubuntu-stata-runner
   
