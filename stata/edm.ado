@@ -912,11 +912,14 @@ program define edmExplore, eclass sortpreserve
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
-
+					
 					qui {
 						ds ``manifold''
-						local label_mani : word 1 of `r(varlist)'
+						local label_mani : word 1 of `r(varlist)'	
+						preserve
+						sample 30000, count
 						levelsof `label_mani'
+						restore
 					}
 					local level_mani = r(r)
 					//display "Number of distinct values in manifold: " `level_mani'
@@ -1036,7 +1039,10 @@ program define edmExplore, eclass sortpreserve
 				qui {
 					ds ``manifold''
 					local label_mani : word 1 of `r(varlist)'
+					preserve
+					sample 30000, count
 					levelsof `label_mani'
+					restore
 				}
 				local level_mani = r(r)
 				//display "Number of distinct values in manifold: " `level_mani'
@@ -1055,7 +1061,10 @@ program define edmExplore, eclass sortpreserve
 				qui {
 					ds `co_mapping'
                     local label_pmani : word 1 of `r(varlist)'
+					preserve
+					sample 30000, count
 					levelsof `label_pmani'
+					restore
 				}
 				local level_pmani = r(r)
 				//display "Number of distinct values in p_manifold: " `level_pmani'
@@ -1882,7 +1891,10 @@ program define edmXmap, eclass sortpreserve
 							qui {
 								ds ``manifold''
 								local label_mani : word 1 of `r(varlist)'
+								preserve
+								sample 30000, count
 								levelsof `label_mani'
+								restore
 							}
 							local level_mani = r(r)
 							//display "Number of distinct values in manifold: " `level_mani'
@@ -2017,7 +2029,10 @@ program define edmXmap, eclass sortpreserve
 				qui {
 					ds ``manifold''
 					local label_mani : word 1 of `r(varlist)'
+					preserve
+					sample 30000, count
 					levelsof `label_mani'
+					restore
 				}
 				local level_mani = r(r)
 				//display "Number of distinct values in manifold: " `level_mani'
@@ -2036,7 +2051,10 @@ program define edmXmap, eclass sortpreserve
 				qui {
 					ds `co_mapping'
                     local label_pmani : word 1 of `r(varlist)'
+					preserve
+					sample 30000, count
 					levelsof `label_pmani'
+					restore
 				}
 				local level_pmani = r(r)
 				//display "Number of distinct values in p_manifold: " `level_pmani'
@@ -2047,7 +2065,7 @@ program define edmXmap, eclass sortpreserve
 				else {
 					local pmani_metric "euclidean"
 				}
-				//display "P-manifold metric: `pmani_metric'"
+				display "P-manifold metric: `pmani_metric'"
 				
 				local pmani_flag = 1
 				// display "pmani_flag: " `pmani_flag'

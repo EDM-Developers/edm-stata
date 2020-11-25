@@ -5,7 +5,7 @@ log using "bin_test.log", replace nomsg
 
 set linesize 255
 //set obs 500
-set obs 25
+set obs 50000
 set seed 12345678
 if c(MP) {
     qui set processor 1

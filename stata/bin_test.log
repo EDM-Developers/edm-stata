@@ -3,8 +3,8 @@
 . set linesize 255
 
 . //set obs 500
-. set obs 25
-number of observations (_N) was 0, now 25
+. set obs 50000
+number of observations (_N) was 0, now 50,000
 
 . set seed 12345678
 
@@ -21,18 +21,18 @@ number of observations (_N) was 0, now 25
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 25
+        time variable:  t, 1 to 50000
                 delta:  1 unit
 
 . 
 . gen double x = 0.2 if _n==1
-(24 missing values generated)
+(49,999 missing values generated)
 
 . gen double y = 0.4 if _n==1
-(24 missing values generated)
+(49,999 missing values generated)
 
 . gen double z = 0.15 if _n==1
-(24 missing values generated)
+(49,999 missing values generated)
 
 . 
 . * Create a dynamic system
@@ -82,8 +82,8 @@ number of observations (_N) was 0, now 25
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 25
-first and last obs in sample = 1, 25
+number of vars & obs = 7, 50000
+first and last obs in sample = 1, 50000
 
 arg 0: 1
 arg 1: 4
@@ -111,8 +111,8 @@ number of variables in manifold = 2
 
 manifold metric = euclidean
 
-train set obs: 24
-predict set obs: 24
+train set obs: 49999
+predict set obs: 49999
 
 p_manifold flag = false
 
@@ -131,8 +131,8 @@ End of the plugin
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 25
-first and last obs in sample = 1, 25
+number of vars & obs = 7, 50000
+first and last obs in sample = 1, 50000
 
 arg 0: 1
 arg 1: 4
@@ -160,8 +160,8 @@ number of variables in manifold = 2
 
 manifold metric = euclidean
 
-train set obs: 24
-predict set obs: 24
+train set obs: 49999
+predict set obs: 49999
 
 p_manifold flag = false
 
@@ -176,12 +176,13 @@ Using 4 threads
 End of the plugin
 ====================
 
+P-manifold metric: euclidean
 
 ====================
 Start of the plugin
 
-number of vars & obs = 9, 25
-first and last obs in sample = 1, 25
+number of vars & obs = 9, 50000
+first and last obs in sample = 1, 50000
 
 arg 0: 1
 arg 1: 4
@@ -209,8 +210,8 @@ number of variables in manifold = 2
 
 manifold metric = euclidean
 
-train set obs: 24
-predict set obs: 24
+train set obs: 49999
+predict set obs: 49999
 
 p_manifold flag = true
 number of variables in p_manifold = 2
@@ -234,8 +235,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              24         .075627          .20908 
-   x ~ x|M(y)              24          .53741          .19873 
+   y ~ y|M(x)           49999          .99808       .00069044 
+   x ~ x|M(y)           49999          .99999        .0001406 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
