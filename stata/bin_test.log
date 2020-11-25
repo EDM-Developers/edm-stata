@@ -3,8 +3,8 @@
 . set linesize 255
 
 . //set obs 500
-. set obs 50000
-number of observations (_N) was 0, now 50,000
+. set obs 500
+number of observations (_N) was 0, now 500
 
 . set seed 12345678
 
@@ -21,18 +21,18 @@ number of observations (_N) was 0, now 50,000
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 50000
+        time variable:  t, 1 to 500
                 delta:  1 unit
 
 . 
 . gen double x = 0.2 if _n==1
-(49,999 missing values generated)
+(499 missing values generated)
 
 . gen double y = 0.4 if _n==1
-(49,999 missing values generated)
+(499 missing values generated)
 
 . gen double z = 0.15 if _n==1
-(49,999 missing values generated)
+(499 missing values generated)
 
 . 
 . * Create a dynamic system
@@ -53,11 +53,19 @@ number of observations (_N) was 0, now 50,000
 . 
 . 
 . * Create binary variables
-. //replace x=1 if abs(x) > 0.5
-. //replace x=0 if abs(x) <= 0.5
+. replace x=1 if abs(x) > 0.5
+(343 real changes made)
+
+. replace x=0 if abs(x) <= 0.5
+(157 real changes made)
+
 . 
-. //replace y=1 if abs(y) > 0.65
-. //replace y=0 if abs(y) <= 0.65
+. replace y=1 if abs(y) > 0.65
+(244 real changes made)
+
+. replace y=0 if abs(y) <= 0.65
+(256 real changes made)
+
 . 
 . //qui {
 . //  levelsof x
@@ -71,7 +79,7 @@ number of observations (_N) was 0, now 50,000
 . * Determining the complexity of the system
 . 
 . //edm explore x, algorithm(smap)
-. 
+. //
 . //edm explore x, copredict(teste) copredictvar(y)
 . //assert teste!=. if _n>1
 . 
@@ -82,8 +90,8 @@ number of observations (_N) was 0, now 50,000
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 50000
-first and last obs in sample = 1, 50000
+number of vars & obs = 7, 500
+first and last obs in sample = 1, 500
 
 arg 0: 1
 arg 1: 4
@@ -96,8 +104,8 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: euclidean
-arg 12: euclidean
+arg 11: binary
+arg 12: binary
 
 theta = 1.0000
 
@@ -109,10 +117,10 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-manifold metric = euclidean
+manifold metric = binary
 
-train set obs: 49999
-predict set obs: 49999
+train set obs: 499
+predict set obs: 499
 
 p_manifold flag = false
 
@@ -131,8 +139,8 @@ End of the plugin
 ====================
 Start of the plugin
 
-number of vars & obs = 7, 50000
-first and last obs in sample = 1, 50000
+number of vars & obs = 7, 500
+first and last obs in sample = 1, 500
 
 arg 0: 1
 arg 1: 4
@@ -145,8 +153,8 @@ arg 7: 0
 arg 8: 0
 arg 9: 4
 arg 10: 1
-arg 11: euclidean
-arg 12: euclidean
+arg 11: binary
+arg 12: binary
 
 theta = 1.0000
 
@@ -158,10 +166,10 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-manifold metric = euclidean
+manifold metric = binary
 
-train set obs: 49999
-predict set obs: 49999
+train set obs: 499
+predict set obs: 499
 
 p_manifold flag = false
 
@@ -176,13 +184,12 @@ Using 4 threads
 End of the plugin
 ====================
 
-P-manifold metric: euclidean
 
 ====================
 Start of the plugin
 
-number of vars & obs = 9, 50000
-first and last obs in sample = 1, 50000
+number of vars & obs = 9, 500
+first and last obs in sample = 1, 500
 
 arg 0: 1
 arg 1: 4
@@ -195,7 +202,7 @@ arg 7: 0
 arg 8: 2
 arg 9: 4
 arg 10: 1
-arg 11: euclidean
+arg 11: binary
 arg 12: euclidean
 
 theta = 1.0000
@@ -208,10 +215,10 @@ missing distance = 0.000000
 
 number of variables in manifold = 2
 
-manifold metric = euclidean
+manifold metric = binary
 
-train set obs: 49999
-predict set obs: 49999
+train set obs: 499
+predict set obs: 499
 
 p_manifold flag = true
 number of variables in p_manifold = 2
@@ -235,8 +242,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)           49999          .99808       .00069044 
-   x ~ x|M(y)           49999          .99999        .0001406 
+   y ~ y|M(x)             499        -.032749          .50501 
+   x ~ x|M(y)             499          .17056          .46994 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 

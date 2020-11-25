@@ -914,10 +914,10 @@ program define edmExplore, eclass sortpreserve
 					local mani `: word count `vars''
 					
 					qui {
-						ds ``manifold''
-						local label_mani : word 1 of `r(varlist)'	
 						preserve
 						sample 30000, count
+						ds ``manifold''
+						local label_mani : word 1 of `r(varlist)'
 						levelsof `label_mani'
 						restore
 					}
@@ -1035,17 +1035,23 @@ program define edmExplore, eclass sortpreserve
 
 				unab vars : ``manifold''
 				local mani `: word count `vars''
+				
+				unab vars : `co_mapping'
+				local pmani `: word count `vars''
 
 				qui {
-					ds ``manifold''
-					local label_mani : word 1 of `r(varlist)'
 					preserve
 					sample 30000, count
+					ds ``manifold''
+					local label_mani : word 1 of `r(varlist)'
 					levelsof `label_mani'
+					local level_mani = r(r)
+					ds `co_mapping'
+                    local label_pmani : word 1 of `r(varlist)'
+					levelsof `label_pmani'
+					local level_pmani = r(r)
 					restore
 				}
-				local level_mani = r(r)
-				//display "Number of distinct values in manifold: " `level_mani'
 
 				if (`level_mani' <= 2) {
 					local mani_metric "binary"
@@ -1053,21 +1059,6 @@ program define edmExplore, eclass sortpreserve
 				else {
 					local mani_metric "euclidean"
 				}
-				//display "Manifold metric: `mani_metric'"
-
-				unab vars : `co_mapping'
-				local pmani `: word count `vars''
-
-				qui {
-					ds `co_mapping'
-                    local label_pmani : word 1 of `r(varlist)'
-					preserve
-					sample 30000, count
-					levelsof `label_pmani'
-					restore
-				}
-				local level_pmani = r(r)
-				//display "Number of distinct values in p_manifold: " `level_pmani'
 
 				if (`level_pmani' <= 2) {
 					local pmani_metric "binary"
@@ -1075,7 +1066,6 @@ program define edmExplore, eclass sortpreserve
 				else {
 					local pmani_metric "euclidean"
 				}
-				//display "P-manifold metric: `pmani_metric'"
 
 				local pmani_flag = 1
 				/* display "pmani_flag: " `pmani_flag' */
@@ -1889,10 +1879,10 @@ program define edmXmap, eclass sortpreserve
 							local mani `: word count `vars''
 
 							qui {
-								ds ``manifold''
-								local label_mani : word 1 of `r(varlist)'
 								preserve
 								sample 30000, count
+								ds ``manifold''
+								local label_mani : word 1 of `r(varlist)'
 								levelsof `label_mani'
 								restore
 							}
@@ -2026,16 +2016,22 @@ program define edmXmap, eclass sortpreserve
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				
+				unab vars : `co_mapping'
+				local pmani `: word count `vars''
+				
 				qui {
-					ds ``manifold''
-					local label_mani : word 1 of `r(varlist)'
 					preserve
 					sample 30000, count
+					ds ``manifold''
+					local label_mani : word 1 of `r(varlist)'
 					levelsof `label_mani'
+					local level_mani = r(r)
+					ds `co_mapping'
+                    local label_pmani : word 1 of `r(varlist)'
+					levelsof `label_pmani'
+					local level_pmani = r(r)
 					restore
 				}
-				local level_mani = r(r)
-				//display "Number of distinct values in manifold: " `level_mani'
 
 				if (`level_mani' <= 2) {
 					local mani_metric "binary"
@@ -2043,21 +2039,6 @@ program define edmXmap, eclass sortpreserve
 				else {
 					local mani_metric "euclidean"
 				}
-				//display "Manifold metric: `mani_metric'"
-				
-				unab vars : `co_mapping'
-				local pmani `: word count `vars''
-				
-				qui {
-					ds `co_mapping'
-                    local label_pmani : word 1 of `r(varlist)'
-					preserve
-					sample 30000, count
-					levelsof `label_pmani'
-					restore
-				}
-				local level_pmani = r(r)
-				//display "Number of distinct values in p_manifold: " `level_pmani'
 
 				if (`level_pmani' <= 2) {
 					local pmani_metric "binary"
@@ -2065,7 +2046,6 @@ program define edmXmap, eclass sortpreserve
 				else {
 					local pmani_metric "euclidean"
 				}
-				display "P-manifold metric: `pmani_metric'"
 				
 				local pmani_flag = 1
 				// display "pmani_flag: " `pmani_flag'
