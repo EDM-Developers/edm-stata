@@ -110,4 +110,6 @@ dropbox-deploy:
   after_script:
     - rm -f "${UPLOADER}"
     - rm -f "${UPLOADER_CONFIG}"
+  tags:
+    - ubuntu-stata-runner
   
