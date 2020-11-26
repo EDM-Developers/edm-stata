@@ -34,6 +34,21 @@ test-windows:
   tags:
     - windows-runner
 
+dropbox-deploy-windows:
+  variables:
+    PLUGIN_FILE: "edm_Windows_x64.plugin"
+  stage: deploy
+  dependencies:
+    - build-windows
+  only:
+    - master
+  before_script:
+    - cd stata
+  script:
+    - cp "${PLUGIN_FILE}" "C:\Users\EDM\Dropbox\master"
+  tags:
+    - windows-runner
+
 build-mac:
   stage: build
   before_script:
