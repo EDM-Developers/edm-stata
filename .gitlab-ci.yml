@@ -39,7 +39,7 @@ dropbox-deploy-windows:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" "C:\Users\EDM\Dropbox\master"
+    - cp "${PLUGIN_FILE}" "C:\Users\EDM\Dropbox\ci-builds-master"
   tags:
     - windows-runner
 
@@ -82,7 +82,7 @@ dropbox-deploy-mac:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" ~/Dropbox/master/
+    - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
   tags:
     - mac-runner
   
@@ -128,7 +128,7 @@ dropbox-deploy:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox/master/
+    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox/ci-builds-master/
   tags:
     - ubuntu-stata-runner
   
