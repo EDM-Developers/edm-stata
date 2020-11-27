@@ -56,12 +56,12 @@ replace y=0 if abs(y) <= 0.65
 * Determining the complexity of the system
 
 //edm explore x, algorithm(smap)
-//
-//edm explore x, copredict(teste) copredictvar(y)
-//assert teste!=. if _n>1
 
-//edm xmap x y, algorithm(smap)
 
-edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap)
+edm explore x, copredict(teste) copredictvar(y) manimetrics(binary)
+
+//edm xmap x y, algorithm(smap) autometrics
+
+//edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap) manimetrics(binary) autometrics
 
 cap log close _all

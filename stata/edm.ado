@@ -241,7 +241,7 @@ program define edmCoremap, eclass
 
 
 program define edmExplore, eclass sortpreserve
-	syntax anything  [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything  [if], [e(numlist ascending)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)] [manimetrics(string)] [comanimetrics(string)] [autometrics]
 
 	* set seed
 	if `seed' != 0 {
@@ -913,30 +913,41 @@ program define edmExplore, eclass sortpreserve
 					unab vars : ``manifold''
 					local mani `: word count `vars''
 					
-					qui {
-						preserve
-						sample 30000, count
-						ds ``manifold''
-						local label_mani : word 1 of `r(varlist)'
-						levelsof `label_mani'
-						restore
-					}
-					local level_mani = r(r)
-					//display "Number of distinct values in manifold: " `level_mani'
-
-					if (`level_mani' <= 2) {
-						local mani_metric "binary"
+					if ("`manimetrics'"!="") {
+						local mani_metric "`manimetrics'"
 					}
 					else {
-						local mani_metric "euclidean"
+						if ("`autometrics'" == "autometrics") {
+							qui {
+								preserve
+								sample 30000, count
+								ds ``manifold''
+								local label_mani : word 1 of `r(varlist)'
+								levelsof `label_mani'
+								restore
+							}
+							local level_mani = r(r)
+							//display "Number of distinct values in manifold: " `level_mani'
+							if (`level_mani' <= 2) {
+								local mani_metric "binary"
+							}
+							else {
+								local mani_metric "euclidean"
+							}
+							di ""
+							di "**** AUTOMATIC IDENTIFICATION OF MANIFOLD METRICS: `mani_metric' ****"
+							di ""
+						}
+						else {
+							local mani_metric "euclidean"
+						}
 					}
-					//display "Manifold metric: `mani_metric'"
-
+					
 					local pmani_flag = 0
 					//display "pmani_flag: " `pmani_flag'
 
 					local pmani_metric = "`mani_metric'"
-					//display "P_manifold metric: `pmani_metric'"
+					//display "p_manifold metrics: `pmani_metric'"
 
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' "`mani_metric'" "`pmani_metric'" `saveinputs'
 				}
@@ -1039,31 +1050,54 @@ program define edmExplore, eclass sortpreserve
 				unab vars : `co_mapping'
 				local pmani `: word count `vars''
 
-				qui {
-					preserve
-					sample 30000, count
-					ds ``manifold''
-					local label_mani : word 1 of `r(varlist)'
-					levelsof `label_mani'
-					local level_mani = r(r)
-					ds `co_mapping'
-                    local label_pmani : word 1 of `r(varlist)'
-					levelsof `label_pmani'
-					local level_pmani = r(r)
-					restore
+				if ("`manimetrics'"!="") {
+					local mani_metric "`manimetrics'"
 				}
+				if ("`comanimetrics'"!="") {
+					local pmani_metric "`comanimetrics'"
+				}
+				if ("`manimetrics'"=="" & "`comanimetrics'"=="" & "`autometrics'" == "autometrics") {
+					qui {
+						preserve
+						sample 30000, count
+						ds ``manifold''
+						local label_mani : word 1 of `r(varlist)'
+						levelsof `label_mani'
+						local level_mani = r(r)
+						ds `co_mapping'
+						local label_pmani : word 1 of `r(varlist)'
+						levelsof `label_pmani'
+						local level_pmani = r(r)
+						restore
+					}
 
-				if (`level_mani' <= 2) {
-					local mani_metric "binary"
+					if (`level_mani' <= 2) {
+						local mani_metric "binary"
+					}
+					else {
+						local mani_metric "euclidean"
+					}
+
+					if (`level_pmani' <= 2) {
+						local pmani_metric "binary"
+					}
+					else {
+						local pmani_metric "euclidean"
+					}
+					di ""
+					di "**** AUTOMATIC IDENTIFICATION OF METRICS ****"
+					di "	manifold metrics: `mani_metric'"
+					di "	p_manifold metrics: `pmani_metric'"
+					di ""
 				}
-				else {
+				if ("`manimetrics'"!="" & "`comanimetrics'"=="") {
+					local pmani_metric "euclidean"
+				}
+				if ("`manimetrics'"=="" & "`comanimetrics'"!="") {
 					local mani_metric "euclidean"
 				}
-
-				if (`level_pmani' <= 2) {
-					local pmani_metric "binary"
-				}
-				else {
+				if ("`manimetrics'"=="" & "`comanimetrics'"=="" & "`autometrics'" != "autometrics") {
+					local mani_metric "euclidean"
 					local pmani_metric "euclidean"
 				}
 
@@ -1167,7 +1201,7 @@ end
 
 
 program define edmXmap, eclass sortpreserve
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)] [manimetrics(string)] [comanimetrics(string)] [autometrics]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1878,30 +1912,41 @@ program define edmXmap, eclass sortpreserve
 							unab vars : ``manifold''
 							local mani `: word count `vars''
 
-							qui {
-								preserve
-								sample 30000, count
-								ds ``manifold''
-								local label_mani : word 1 of `r(varlist)'
-								levelsof `label_mani'
-								restore
-							}
-							local level_mani = r(r)
-							//display "Number of distinct values in manifold: " `level_mani'
-
-							if (`level_mani' <= 2) {
-								local mani_metric "binary"
+							if ("`manimetrics'"!="") {
+								local mani_metric "`manimetrics'"
 							}
 							else {
-								local mani_metric "euclidean"
+								if ("`autometrics'" == "autometrics") {
+									qui {
+										preserve
+										sample 30000, count
+										ds ``manifold''
+										local label_mani : word 1 of `r(varlist)'
+										levelsof `label_mani'
+										restore
+									}
+									local level_mani = r(r)
+									//display "Number of distinct values in manifold: " `level_mani'
+									if (`level_mani' <= 2) {
+										local mani_metric "binary"
+									}
+									else {
+										local mani_metric "euclidean"
+									}
+									di ""
+									di "**** AUTOMATIC IDENTIFICATION OF MANIFOLD METRICS: `mani_metric' ****"
+									di ""
+								}
+								else {
+									local mani_metric "euclidean"
+								}
 							}
-							//display "Manifold metric: `mani_metric'"
 
 							local pmani_flag = 0
 							//display "pmani_flag: " `pmani_flag'
 
 							local pmani_metric = "`mani_metric'"
-							//display "P_manifold metric: `pmani_metric'"
+							//display "p_manifold metrics: `pmani_metric'"
 
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' "`mani_metric'" "`pmani_metric'" `saveinputs'
 						}
@@ -2019,31 +2064,54 @@ program define edmXmap, eclass sortpreserve
 				unab vars : `co_mapping'
 				local pmani `: word count `vars''
 				
-				qui {
-					preserve
-					sample 30000, count
-					ds ``manifold''
-					local label_mani : word 1 of `r(varlist)'
-					levelsof `label_mani'
-					local level_mani = r(r)
-					ds `co_mapping'
-                    local label_pmani : word 1 of `r(varlist)'
-					levelsof `label_pmani'
-					local level_pmani = r(r)
-					restore
+				if ("`manimetrics'"!="") {
+					local mani_metric "`manimetrics'"
 				}
+				if ("`comanimetrics'"!="") {
+					local pmani_metric "`comanimetrics'"
+				}
+				if ("`manimetrics'"=="" & "`comanimetrics'"=="" & "`autometrics'" == "autometrics") {
+					qui {
+						preserve
+						sample 30000, count
+						ds ``manifold''
+						local label_mani : word 1 of `r(varlist)'
+						levelsof `label_mani'
+						local level_mani = r(r)
+						ds `co_mapping'
+						local label_pmani : word 1 of `r(varlist)'
+						levelsof `label_pmani'
+						local level_pmani = r(r)
+						restore
+					}
 
-				if (`level_mani' <= 2) {
-					local mani_metric "binary"
+					if (`level_mani' <= 2) {
+						local mani_metric "binary"
+					}
+					else {
+						local mani_metric "euclidean"
+					}
+
+					if (`level_pmani' <= 2) {
+						local pmani_metric "binary"
+					}
+					else {
+						local pmani_metric "euclidean"
+					}
+					di ""
+					di "**** AUTOMATIC IDENTIFICATION OF METRICS ****"
+					di "	manifold metrics: `mani_metric'"
+					di "	p_manifold metrics: `pmani_metric'"
+					di ""
 				}
-				else {
+				if ("`manimetrics'"!="" & "`comanimetrics'"=="") {
+					local pmani_metric "euclidean"
+				}
+				if ("`manimetrics'"=="" & "`comanimetrics'"!="") {
 					local mani_metric "euclidean"
 				}
-
-				if (`level_pmani' <= 2) {
-					local pmani_metric "binary"
-				}
-				else {
+				if ("`manimetrics'"=="" & "`comanimetrics'"=="" & "`autometrics'" != "autometrics") {
+					local mani_metric "euclidean"
 					local pmani_metric "euclidean"
 				}
 				

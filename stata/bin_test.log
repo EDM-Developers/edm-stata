@@ -79,13 +79,9 @@ number of observations (_N) was 0, now 500
 . * Determining the complexity of the system
 . 
 . //edm explore x, algorithm(smap)
-. //
-. //edm explore x, copredict(teste) copredictvar(y)
-. //assert teste!=. if _n>1
 . 
-. //edm xmap x y, algorithm(smap)
 . 
-. edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap)
+. edm explore x, copredict(teste) copredictvar(y) manimetrics(binary)
 
 ====================
 Start of the plugin
@@ -94,8 +90,8 @@ number of vars & obs = 7, 500
 first and last obs in sample = 1, 500
 
 arg 0: 1
-arg 1: 4
-arg 2: smap
+arg 1: 3
+arg 2: simplex
 arg 3: 
 arg 4: 0
 arg 5: 2
@@ -109,7 +105,7 @@ arg 12: binary
 
 theta = 1.0000
 
-algorithm = smap
+algorithm = simplex
 
 force compute = false
 
@@ -119,61 +115,12 @@ number of variables in manifold = 2
 
 manifold metric = binary
 
-train set obs: 499
-predict set obs: 499
+train set obs: 249
+predict set obs: 249
 
 p_manifold flag = false
 
-l = 4
-
-save_mode = false
-
-Requested 4 threads
-Using 4 threads
-
-
-End of the plugin
-====================
-
-
-====================
-Start of the plugin
-
-number of vars & obs = 7, 500
-first and last obs in sample = 1, 500
-
-arg 0: 1
-arg 1: 4
-arg 2: smap
-arg 3: 
-arg 4: 0
-arg 5: 2
-arg 6: 0
-arg 7: 0
-arg 8: 0
-arg 9: 4
-arg 10: 1
-arg 11: binary
-arg 12: binary
-
-theta = 1.0000
-
-algorithm = smap
-
-force compute = false
-
-missing distance = 0.000000
-
-number of variables in manifold = 2
-
-manifold metric = binary
-
-train set obs: 499
-predict set obs: 499
-
-p_manifold flag = false
-
-l = 4
+l = 3
 
 save_mode = false
 
@@ -192,8 +139,8 @@ number of vars & obs = 9, 500
 first and last obs in sample = 1, 500
 
 arg 0: 1
-arg 1: 4
-arg 2: smap
+arg 1: 3
+arg 2: simplex
 arg 3: 
 arg 4: 0
 arg 5: 2
@@ -207,7 +154,7 @@ arg 12: euclidean
 
 theta = 1.0000
 
-algorithm = smap
+algorithm = simplex
 
 force compute = false
 
@@ -217,7 +164,7 @@ number of variables in manifold = 2
 
 manifold metric = binary
 
-train set obs: 499
+train set obs: 498
 predict set obs: 499
 
 p_manifold flag = true
@@ -225,7 +172,7 @@ number of variables in p_manifold = 2
 p_manifold metric = euclidean
 
 
-l = 4
+l = 3
 
 save_mode = false
 
@@ -238,14 +185,18 @@ End of the plugin
 
 
 Empirical Dynamic Modelling
-Convergent Cross-mapping result for variables x and y
----------------------------------------------------------------
-      Mapping    Library size             rho             MAE
----------------------------------------------------------------
-   y ~ y|M(x)             499        -.032749          .50501 
-   x ~ x|M(y)             499          .17056          .46994 
----------------------------------------------------------------
-Note: The embedding dimension E is 2
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .28639          .44177 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
 
+. 
+. //edm xmap x y, algorithm(smap) autometrics
+. 
+. //edm xmap x y, copredict(teste) copredictvar(z y) algorithm(smap) manimetrics(binary) autometrics
 . 
 . cap log close _all
