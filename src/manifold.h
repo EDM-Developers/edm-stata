@@ -6,15 +6,17 @@
 class Manifold
 {
 private:
-  bool _use_dt;
+  bool _use_dt, _full_t;
   double _dtweight, _missing;
   size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
   std::vector<double> _x;
-  std::vector<int> _t;
+  std::vector<int> _t, _filtered_t;
   std::vector<bool> _filter;
   std::vector<std::vector<double>> _extras;
-  std::unordered_map<size_t, int> _obsNumToTime;
   std::unordered_map<int, size_t> _timeToIndex;
+
+  int obsNumToTime(size_t obsNum) const;
+  size_t timeToIndex(int time) const;
 
 public:
   Manifold(std::vector<double> x, std::vector<int> t, std::vector<std::vector<double>> extras, std::vector<bool> filter,

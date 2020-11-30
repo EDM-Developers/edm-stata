@@ -18,6 +18,9 @@ Manifold::Manifold(std::vector<double> x, std::vector<int> t, std::vector<std::v
   _E_dt = (_use_dt) * (E - 1);
   _E_extras = extras.size();
   _E_actual = _E_x + _E_dt + _E_extras;
+
+  _full_t = (t.back() - t.front()) == (t.size() - 1);
+
   set_filter(filter);
 }
 
@@ -25,27 +28,42 @@ void Manifold::set_filter(std::vector<bool> filter)
 {
   _filter = filter;
 
-  _obsNumToTime.clear();
+  _filtered_t.clear();
   _timeToIndex.clear();
 
   _nobs = 0;
   for (size_t i = 0; i < filter.size(); i++) {
     if (filter[i]) {
-      _obsNumToTime[_nobs++] = _t[i];
+      _filtered_t.push_back(_t[i]);
+      _nobs += 1;
     }
     _timeToIndex[_t[i]] = i;
   }
 }
 
+size_t Manifold::timeToIndex(int time) const
+{
+  if (_full_t) {
+    return (time - _t[0]);
+  } else {
+    return _timeToIndex.at(time);
+  }
+}
+
+int Manifold::obsNumToTime(size_t obsNum) const
+{
+  return _filtered_t.at(obsNum);
+}
+
 double Manifold::x(size_t i, size_t j) const
 {
   try {
-    int referenceTime = _obsNumToTime.at(i);
+    int referenceTime = obsNumToTime(i);
     size_t index;
     if (_use_dt) {
-      index = _timeToIndex.at(referenceTime) - j;
+      index = timeToIndex(referenceTime) - j;
     } else {
-      index = _timeToIndex.at(referenceTime - (int)j);
+      index = timeToIndex(referenceTime - (int)j);
     }
     return _x.at(index);
   } catch (const std::out_of_range& e) {
@@ -57,8 +75,8 @@ double Manifold::x(size_t i, size_t j) const
 double Manifold::dt(size_t i, size_t j) const
 {
   try {
-    int referenceTime = _obsNumToTime.at(i);
-    size_t index = _timeToIndex.at(referenceTime) - j;
+    int referenceTime = obsNumToTime(i);
+    size_t index = timeToIndex(referenceTime) - j;
     return _dtweight * (_t.at(index) - _t.at(index - 1));
   } catch (const std::out_of_range& e) {
     ignore(e);
@@ -69,8 +87,8 @@ double Manifold::dt(size_t i, size_t j) const
 double Manifold::extras(size_t i, size_t j) const
 {
   try {
-    int referenceTime = _obsNumToTime.at(i);
-    size_t index = _timeToIndex.at(referenceTime);
+    int referenceTime = obsNumToTime(i);
+    size_t index = timeToIndex(referenceTime);
     return _extras.at(j).at(index);
   } catch (const std::out_of_range& e) {
     ignore(e);
