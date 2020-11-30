@@ -41,7 +41,7 @@ public:
   double x(size_t i, size_t j) const;
   double dt(size_t i, size_t j) const;
   double extras(size_t i, size_t j) const;
-  double operator()(size_t i, size_t j) const;
+  double operator()(size_t i, size_t j) const { return _combined_flat[i * _E_actual + j]; }
 
   bool any_missing(size_t obsNum) const;
 

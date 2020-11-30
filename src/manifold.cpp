@@ -163,21 +163,6 @@ double Manifold::extras(size_t i, size_t j) const
   return _extras_flat[i * _E_extras + j];
 }
 
-double Manifold::operator()(size_t i, size_t j) const
-{
-  if (_combined_flat.size() > 0) {
-    return _combined_flat[i * _E_actual + j];
-  }
-
-  if (j < _E_x) {
-    return x(i, j);
-  } else if (j < _E_x + _E_dt) {
-    return dt(i, j - _E_x);
-  } else {
-    return extras(i, j - (_E_x + _E_dt));
-  }
-}
-
 bool Manifold::any_missing(size_t obsNum) const
 {
   bool missing = false;
