@@ -161,7 +161,8 @@ dropbox-deploy-ubuntu:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox/ci-builds-master/
+    - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
+    - cp edm.ado ~/Dropbox/ci-builds-master/
   tags:
     - ubuntu-stata-runner
 
