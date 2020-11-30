@@ -39,9 +39,11 @@ void Manifold::set_filter(std::vector<bool> filter)
     }
     _timeToIndex[_t[i]] = i;
   }
+
+  compute_lagged_embedding();
 }
 
-size_t Manifold::timeToIndex(int time) const
+size_t Manifold::time_to_index(int time) const
 {
   if (_full_t) {
     return (time - _t[0]);
@@ -50,20 +52,20 @@ size_t Manifold::timeToIndex(int time) const
   }
 }
 
-int Manifold::obsNumToTime(size_t obsNum) const
+int Manifold::obs_num_to_time(size_t obsNum) const
 {
   return _filtered_t.at(obsNum);
 }
 
-double Manifold::x(size_t i, size_t j) const
+double Manifold::find_x(size_t i, size_t j) const
 {
   try {
-    int referenceTime = obsNumToTime(i);
+    int referenceTime = obs_num_to_time(i);
     size_t index;
     if (_use_dt) {
-      index = timeToIndex(referenceTime) - j;
+      index = time_to_index(referenceTime) - j;
     } else {
-      index = timeToIndex(referenceTime - (int)j);
+      index = time_to_index(referenceTime - (int)j);
     }
     return _x.at(index);
   } catch (const std::out_of_range& e) {
@@ -72,11 +74,11 @@ double Manifold::x(size_t i, size_t j) const
   }
 }
 
-double Manifold::dt(size_t i, size_t j) const
+double Manifold::find_dt(size_t i, size_t j) const
 {
   try {
-    int referenceTime = obsNumToTime(i);
-    size_t index = timeToIndex(referenceTime) - j;
+    int referenceTime = obs_num_to_time(i);
+    size_t index = time_to_index(referenceTime) - j;
     return _dtweight * (_t.at(index) - _t.at(index - 1));
   } catch (const std::out_of_range& e) {
     ignore(e);
@@ -84,16 +86,60 @@ double Manifold::dt(size_t i, size_t j) const
   }
 }
 
-double Manifold::extras(size_t i, size_t j) const
+double Manifold::find_extras(size_t i, size_t j) const
 {
   try {
-    int referenceTime = obsNumToTime(i);
-    size_t index = timeToIndex(referenceTime);
+    int referenceTime = obs_num_to_time(i);
+    size_t index = time_to_index(referenceTime);
     return _extras.at(j).at(index);
   } catch (const std::out_of_range& e) {
     ignore(e);
     return _missing;
   }
+}
+
+void Manifold::compute_lagged_embedding()
+{
+  _x_flat = std::vector<double>(_nobs * _E_x);
+
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_x; j++) {
+      _x_flat[i * _E_x + j] = find_x(i, j);
+    }
+  }
+
+  if (_use_dt) {
+    _dt_flat = std::vector<double>(_nobs * _E_dt);
+
+    for (size_t i = 0; i < _nobs; i++) {
+      for (size_t j = 0; j < _E_dt; j++) {
+        _dt_flat[i * _E_dt + j] = find_dt(i, j);
+      }
+    }
+  }
+
+  _extras_flat = std::vector<double>(_nobs * _E_extras);
+
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_extras; j++) {
+      _extras_flat[i * _E_extras + j] = find_extras(i, j);
+    }
+  }
+}
+
+double Manifold::x(size_t i, size_t j) const
+{
+  return _x_flat[i * _E_x + j];
+}
+
+double Manifold::dt(size_t i, size_t j) const
+{
+  return _dt_flat[i * _E_dt + j];
+}
+
+double Manifold::extras(size_t i, size_t j) const
+{
+  return _extras_flat[i * _E_extras + j];
 }
 
 double Manifold::operator()(size_t i, size_t j) const

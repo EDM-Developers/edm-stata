@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
   if (argc > 2) {
     vars.opts.nthreads = atoi(argv[2]);
   }
-  //vars.opts.nthreads = 1;
+  // vars.opts.nthreads = 1;
 
   ConsoleIO io;
   Prediction smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, io);
