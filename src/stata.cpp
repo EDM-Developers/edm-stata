@@ -38,9 +38,17 @@ public:
 
   virtual void print_async(std::string s) const { IO::print_async(replace_newline(s)); }
 
-  virtual void out_async(const char* s) const { SF_macro_save("_edm_print", (char*)s); }
+  virtual void out_async(const char* s) const
+  {
+    SF_macro_use("_edm_print", buffer, BUFFER_SIZE);
+    strcat(buffer, s);
+    SF_macro_save("_edm_print", buffer);
+  }
 
 private:
+  static const size_t BUFFER_SIZE = 1000;
+  mutable char buffer[BUFFER_SIZE];
+
   std::string replace_newline(std::string s) const
   {
     size_t ind;
@@ -186,7 +194,7 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
 {
   if (io.verbosity > 1) {
     // Header of the plugin
-    io.print("\n====================\n");
+    io.print("\n{hline 20}\n");
     io.print("Start of the plugin\n\n");
 
     // Overview of variables and arguments passed and observations in sample
@@ -389,7 +397,7 @@ ST_retcode save_results()
   // Print a Footer message for the plugin.
   if (io.verbosity > 1) {
     io.out("\nEnd of the plugin\n");
-    io.out("====================\n\n");
+    io.out("{hline 20}\n\n");
   }
 
   finished();

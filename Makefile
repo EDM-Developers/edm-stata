@@ -1,12 +1,15 @@
-all: build release
-	cmake --build build --config release --target install
+all: build/CMakeCache.txt release install
 
-build:
+build/CMakeCache.txt:
 	cmake -B build -S .
 
 .PHONY: release
-release: build
+release: build/CMakeCache.txt
 	cmake --build build --config release
+
+.PHONY: install
+install:
+	cmake --build build --config release --target install
 
 .PHONY: clean
 clean:

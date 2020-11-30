@@ -254,10 +254,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     }
   }
 
-  io.print_async("Percent complete: 0");
-  double nextMessage = 1.0 / 40;
-  int dots = 0;
-
+  io.progress_bar(0.0);
   for (int i = 0; i < Mp.rows; i++) {
     if (nthreads == 0) {
       if (keep_going != nullptr && keep_going() == false) {
@@ -268,17 +265,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
       results[i].get();
     }
 
-    double progress = i / ((double)Mp.rows);
-    if (progress >= nextMessage) {
-      if (dots < 3) {
-        io.print_async(".");
-        dots += 1;
-      } else {
-        io.print_async(fmt::format(FMT_STRING("{:.0f}"), progress * 100));
-        dots = 0;
-      }
-      nextMessage += 1.0 / 40;
-    }
+    io.progress_bar((i + 1) / ((double)Mp.rows));
   }
 
   auto end = std::chrono::high_resolution_clock::now();

@@ -57,6 +57,31 @@ public:
     }
   }
 
+  virtual void progress_bar(double progress) const
+  {
+    if (progress == 0.0) {
+      print_async("Percent complete: 0");
+      nextMessage = 1.0 / 40;
+      dots = 0;
+      tens = 0;
+      return;
+    }
+
+    while (progress >= nextMessage) {
+      if (dots < 3) {
+        print_async(".");
+        dots += 1;
+      } else {
+        tens += 1;
+        print_async(std::to_string(tens * 10));
+        dots = 0;
+      }
+      nextMessage += 1.0 / 40;
+    }
+  }
+  mutable int dots, tens;
+  mutable double nextMessage;
+
   // Actual implementation of IO functions are in the subclasses
   virtual void out(const char*) const = 0;
   virtual void out_async(const char*) const = 0;
