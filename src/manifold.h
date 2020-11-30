@@ -20,6 +20,7 @@ private:
   std::vector<double> _x_flat;
   std::vector<double> _dt_flat;
   std::vector<double> _extras_flat;
+  std::vector<double> _combined_flat;
 
   std::unordered_map<int, size_t> _timeToIndex;
 
@@ -31,6 +32,7 @@ private:
   double find_extras(size_t i, size_t j) const;
 
   void compute_lagged_embedding();
+  void compute_lagged_embeddings();
 
 public:
   Manifold(std::vector<double> x, std::vector<int> t, std::vector<std::vector<double>> extras, std::vector<bool> filter,

@@ -100,6 +100,29 @@ double Manifold::find_extras(size_t i, size_t j) const
 
 void Manifold::compute_lagged_embedding()
 {
+  _combined_flat = std::vector<double>(_nobs * _E_actual);
+
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_x; j++) {
+      _combined_flat[i * _E_actual + j] = find_x(i, j);
+    }
+  }
+
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_dt; j++) {
+      _combined_flat[i * _E_actual + j + _E_x] = find_dt(i, j);
+    }
+  }
+
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_extras; j++) {
+      _combined_flat[i * _E_actual + j + _E_x + _E_dt] = find_extras(i, j);
+    }
+  }
+}
+
+void Manifold::compute_lagged_embeddings()
+{
   _x_flat = std::vector<double>(_nobs * _E_x);
 
   for (size_t i = 0; i < _nobs; i++) {
@@ -108,13 +131,11 @@ void Manifold::compute_lagged_embedding()
     }
   }
 
-  if (_use_dt) {
-    _dt_flat = std::vector<double>(_nobs * _E_dt);
+  _dt_flat = std::vector<double>(_nobs * _E_dt);
 
-    for (size_t i = 0; i < _nobs; i++) {
-      for (size_t j = 0; j < _E_dt; j++) {
-        _dt_flat[i * _E_dt + j] = find_dt(i, j);
-      }
+  for (size_t i = 0; i < _nobs; i++) {
+    for (size_t j = 0; j < _E_dt; j++) {
+      _dt_flat[i * _E_dt + j] = find_dt(i, j);
     }
   }
 
@@ -144,6 +165,10 @@ double Manifold::extras(size_t i, size_t j) const
 
 double Manifold::operator()(size_t i, size_t j) const
 {
+  if (_combined_flat.size() > 0) {
+    return _combined_flat[i * _E_actual + j];
+  }
+
   if (j < _E_x) {
     return x(i, j);
   } else if (j < _E_x + _E_dt) {
