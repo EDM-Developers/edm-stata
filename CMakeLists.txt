@@ -83,7 +83,7 @@ install(TARGETS edm DESTINATION .)
 # driver
 find_package(HDF5 COMPONENTS C HL)
 if (HDF5_FOUND)
-  add_executable(smap_driver src/driver.cpp)
+  add_executable(smap_driver src/driver.cpp src/driver.h)
   set_target_properties(smap_driver PROPERTIES CXX_STANDARD 17)
   target_link_libraries(smap_driver PRIVATE edm)
   install(TARGETS smap_driver DESTINATION .)
@@ -94,6 +94,22 @@ endif()
 # grab vendored files
 include(vendor/CMakeLists.txt)
 target_include_directories(edm PRIVATE vendor)
+
+# Google Benchmarks
+add_executable(gbench src/benchmark.cpp src/driver.h src/edm.cpp src/edm.h src/ThreadPool.h src/ThreadPool.cpp)
+set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+if(WIN32)
+  target_compile_options(gbench PRIVATE "/MD")
+endif()
+
+find_package(benchmark CONFIG REQUIRED)
+target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+
+target_include_directories(gbench PUBLIC ${HDF5_INCLUDE_DIRS})
+  target_link_libraries(gbench PUBLIC ${HDF5_C_LIBRARIES} ${HDF5_C_HL_LIBRARIES})
+  add_definitions(${HDF5_DEFINITIONS})
+
+install(TARGETS gbench DESTINATION .)
 
 # EIGEN3
 find_package(Eigen3 REQUIRED)
@@ -129,5 +145,7 @@ clangformat_setup(
   src/edm.cpp
   src/edm.h
   src/driver.cpp
+  src/driver.h
   src/stata.cpp
+  src/benchmark.cpp
 )

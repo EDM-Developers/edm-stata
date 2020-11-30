@@ -12,6 +12,8 @@ build-windows:
   artifacts:
     paths:
     - stata/edm_Windows_x64.plugin
+    - stata/gbench.exe
+    - build/Release/*.dll
   tags:
     - windows-runner
 
@@ -43,6 +45,18 @@ dropbox-deploy-windows:
   tags:
     - windows-runner
 
+perf-windows:
+  stage: deploy
+  dependencies:
+    - build-windows
+  before_script:
+    - cp build/Release/*.dll stata
+    - cd stata
+  script:
+    - ./gbench.exe
+  tags:
+    - windows-runner
+
 build-mac:
   stage: build
   before_script:
@@ -55,6 +69,7 @@ build-mac:
   artifacts:
     paths:
       - stata/edm_MacOSX_x64.plugin
+      - stata/gbench
   tags:
     - mac-runner
 
@@ -85,7 +100,17 @@ dropbox-deploy-mac:
     - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
   tags:
     - mac-runner
-  
+
+perf-mac:
+  stage: deploy
+  dependencies:
+    - build-mac
+  before_script:
+    - cd stata
+  script:
+    - ./gbench
+  tags:
+    - mac-runner
 
 build-ubuntu:
   stage: build
@@ -101,6 +126,7 @@ build-ubuntu:
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
+      - stata/gbench
   tags:
     - ubuntu-stata-runner
 
@@ -117,7 +143,7 @@ test-ubuntu:
   tags:
     - ubuntu-stata-runner
 
-dropbox-deploy:
+dropbox-deploy-ubuntu:
   variables:
     PLUGIN_FILE: "edm_Unix_x64.plugin"
   stage: deploy
@@ -131,4 +157,14 @@ dropbox-deploy:
     - cp "${PLUGIN_FILE}" /home/gitlab-runner/Dropbox/ci-builds-master/
   tags:
     - ubuntu-stata-runner
-  
+
+perf-ubuntu:
+  stage: deploy
+  dependencies:
+    - build-ubuntu
+  before_script:
+    - cd stata
+  script:
+    - ./gbench
+  tags:
+    - ubuntu-stata-runner
