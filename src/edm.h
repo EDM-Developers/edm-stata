@@ -27,7 +27,8 @@ typedef int retcode;
 
 struct Options
 {
-  bool forceCompute, saveMode, distributeThreads = false;
+  bool forceCompute, saveMode;
+  bool distributeThreads = false;
   int k, varssv, nthreads;
   double theta, missingdistance;
   std::string algorithm;

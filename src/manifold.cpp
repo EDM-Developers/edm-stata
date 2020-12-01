@@ -1,25 +1,18 @@
 #include "manifold.h"
-#include <stdexcept>
 
-template<class T>
-void ignore(const T&)
-{}
-
-Manifold::Manifold(std::vector<double> x, std::vector<int> t, std::vector<std::vector<double>> extras,
-                   std::vector<bool> filter, size_t E, double dtweight, double missing)
+Manifold::Manifold(std::vector<double> x, std::vector<double> t, std::vector<std::vector<double>> extras,
+                   std::vector<bool> filter, size_t E, double dtWeight, double missing)
   : _x(x)
   , _t(t)
   , _extras(extras)
-  , _dtweight(dtweight)
+  , _dtWeight(dtWeight)
   , _missing(missing)
 {
-  _use_dt = (dtweight > 0);
+  _use_dt = (dtWeight > 0);
   _E_x = E;
   _E_dt = (_use_dt) * (E - 1);
   _E_extras = extras.size();
   _E_actual = _E_x + _E_dt + _E_extras;
-
-  _full_t = (t.back() - t.front()) == (t.size() - 1);
 
   set_filter(filter);
 }
@@ -27,79 +20,53 @@ Manifold::Manifold(std::vector<double> x, std::vector<int> t, std::vector<std::v
 void Manifold::set_filter(std::vector<bool> filter)
 {
   _filter = filter;
-
-  _filtered_t.clear();
-  _timeToIndex.clear();
+  _filteredIndices.clear();
 
   _nobs = 0;
   for (size_t i = 0; i < filter.size(); i++) {
     if (filter[i]) {
-      _filtered_t.push_back(_t[i]);
+      _filteredIndices.push_back(i);
       _nobs += 1;
     }
-    _timeToIndex[_t[i]] = i;
   }
 
-  compute_lagged_embedding();
-}
-
-size_t Manifold::time_to_index(int time) const
-{
-  if (_full_t) {
-    return (time - _t[0]);
-  } else {
-    return _timeToIndex.at(time);
-  }
-}
-
-int Manifold::obs_num_to_time(size_t obsNum) const
-{
-  return _filtered_t.at(obsNum);
+  // Any lagged embeddings we previously computed are now invalid
+  _x_flat.clear();
+  _dt_flat.clear();
+  _extras_flat.clear();
+  _combined_flat.clear();
 }
 
 double Manifold::find_x(size_t i, size_t j) const
 {
-  try {
-    int referenceTime = obs_num_to_time(i);
-    size_t index;
-    if (_use_dt) {
-      index = time_to_index(referenceTime) - j;
-    } else {
-      index = time_to_index(referenceTime - (int)j);
-    }
-    return _x.at(index);
-  } catch (const std::out_of_range& e) {
-    ignore(e);
+  size_t index = _filteredIndices.at(i);
+  if (index < j) {
     return _missing;
   }
+  return _x[index - j];
 }
 
 double Manifold::find_dt(size_t i, size_t j) const
 {
-  try {
-    int referenceTime = obs_num_to_time(i);
-    size_t index = time_to_index(referenceTime) - j;
-    return _dtweight * (_t.at(index) - _t.at(index - 1));
-  } catch (const std::out_of_range& e) {
-    ignore(e);
+  size_t index = _filteredIndices.at(i);
+  if (index < j + 1 || _t[index - 1] == _missing || _t[index] == _missing) {
     return _missing;
   }
+  index -= j;
+  return _dtWeight * (_t[index] - _t[index - 1]);
 }
 
 double Manifold::find_extras(size_t i, size_t j) const
 {
-  try {
-    int referenceTime = obs_num_to_time(i);
-    size_t index = time_to_index(referenceTime);
-    return _extras.at(j).at(index);
-  } catch (const std::out_of_range& e) {
-    ignore(e);
-    return _missing;
-  }
+  size_t index = _filteredIndices.at(i);
+  return _extras.at(j).at(index);
 }
 
-void Manifold::compute_lagged_embedding()
+void Manifold::compute_lagged_embedding() const
 {
+  if (_combined_flat.size() > 0) {
+    return;
+  }
   _combined_flat = std::vector<double>(_nobs * _E_actual);
 
   for (size_t i = 0; i < _nobs; i++) {
@@ -121,8 +88,11 @@ void Manifold::compute_lagged_embedding()
   }
 }
 
-void Manifold::compute_lagged_embeddings()
+void Manifold::compute_lagged_embeddings() const
 {
+  if (_x_flat.size() > 0) {
+    return;
+  }
   _x_flat = std::vector<double>(_nobs * _E_x);
 
   for (size_t i = 0; i < _nobs; i++) {
@@ -146,21 +116,6 @@ void Manifold::compute_lagged_embeddings()
       _extras_flat[i * _E_extras + j] = find_extras(i, j);
     }
   }
-}
-
-double Manifold::x(size_t i, size_t j) const
-{
-  return _x_flat[i * _E_x + j];
-}
-
-double Manifold::dt(size_t i, size_t j) const
-{
-  return _dt_flat[i * _E_dt + j];
-}
-
-double Manifold::extras(size_t i, size_t j) const
-{
-  return _extras_flat[i * _E_extras + j];
 }
 
 bool Manifold::any_missing(size_t obsNum) const

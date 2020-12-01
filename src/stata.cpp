@@ -175,7 +175,7 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
-                      ST_int pmani, ST_int E, ST_int zcount, ST_double dtweight)
+                      ST_int pmani, ST_int E, ST_int zcount, ST_double dtWeight)
 {
   if (io.verbosity > 1) {
     // Header of the plugin
@@ -215,7 +215,7 @@ void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, c
 
     io.print(fmt::format("E is {}\n", E));
     io.print(fmt::format("We have {} 'extra' columns\n", zcount));
-    io.print(fmt::format("Adding dt with weight {}\n", dtweight));
+    io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
 
     io.print(fmt::format("Requested {} threads\n", argv[9]));
     io.print(fmt::format("Using {} threads\n\n", opts.nthreads));
@@ -305,24 +305,26 @@ ST_retcode edm(int argc, char* argv[])
     E = atoi(buffer);
   }
 
-  // Read in time
-  ST_int timeCol = mani + 5 + 1 + (int)pmaniFlag * pmani + opts.saveMode * opts.varssv;
-  std::vector<ST_int> t = stata_columns<ST_int>(timeCol);
-
   // Handle 'dt' flag
   SF_macro_use("_parsed_dt", buffer, 100);
   bool parsed_dt = (bool)atoi(buffer);
-  std::vector<ST_double> dt;
+  std::vector<ST_double> t;
 
-  double dtweight = 0;
+  double dtWeight = 0;
   if (parsed_dt) {
     SF_macro_use("_parsed_dtw", buffer, 100);
-    dtweight = atof(buffer);
+    dtWeight = atof(buffer);
   }
 
   // Read in the extras
   SF_macro_use("_zcount", buffer, 100);
   int zcount = atoi(buffer);
+
+  if (dtWeight > 0) {
+    // Read in time
+    ST_int timeCol = mani + 5 + 1 + (int)pmaniFlag * pmani + opts.saveMode * opts.varssv;
+    t = stata_columns<ST_double>(timeCol);
+  }
 
   std::vector<std::vector<ST_double>> extras(zcount);
 
@@ -330,7 +332,7 @@ ST_retcode edm(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(2 + z);
   }
 
-  Manifold M(x, t, extras, trainingRows, E, dtweight, MISSING);
+  Manifold M(x, t, extras, trainingRows, E, dtWeight, MISSING);
 
   // Read in the prediction manifold
   std::vector<ST_double> xPred;
@@ -347,7 +349,7 @@ ST_retcode edm(int argc, char* argv[])
     extrasPred = extras;
   }
 
-  Manifold Mp(xPred, t, extrasPred, predictionRows, E, dtweight, MISSING);
+  Manifold Mp(xPred, t, extrasPred, predictionRows, E, dtWeight, MISSING);
 
   // Read in the target vector 'y' from Stata
   std::vector<ST_double> yAll = stata_columns<ST_double>(mani + 1);
@@ -358,21 +360,13 @@ ST_retcode edm(int argc, char* argv[])
     }
   }
 
-  print_debug_info(argc, argv, opts, M, Mp, pmaniFlag, pmani, E, zcount, dtweight);
+  print_debug_info(argc, argv, opts, M, Mp, pmaniFlag, pmani, E, zcount, dtWeight);
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
   if (argc >= 12) {
-    hid_t fid = H5Fcreate(argv[11], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    save_options(fid, opts);
-    save_manifold(fid, "M", x, t, extras, trainingRows, E, dtweight);
-    save_manifold(fid, "Mp", xPred, t, extrasPred, predictionRows, E, dtweight);
-
-    hsize_t yLen = y.size();
-    H5LTmake_dataset_double(fid, "y", 1, &yLen, y.data());
-
-    H5Fclose(fid);
+    write_dumpfile(argv[11], opts, t, x, xPred, extras, extrasPred, trainingRows, predictionRows, y, E, dtWeight);
   }
 #endif
 

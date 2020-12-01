@@ -68,12 +68,12 @@ Options read_options(hid_t fid)
   return opts;
 }
 
-void save_manifold(const hid_t& fid, std::string name, std::vector<double> x, std::vector<int> t,
-                   std::vector<std::vector<double>> extras, std::vector<bool> filter, size_t E, double dtweight)
+void save_manifold(const hid_t& fid, std::string name, std::vector<double> x, std::vector<std::vector<double>> extras,
+                   std::vector<bool> filter)
 {
   hsize_t size = x.size();
   H5LTmake_dataset_double(fid, (name + ".x").c_str(), 1, &size, x.data());
-  H5LTmake_dataset_int(fid, (name + ".t").c_str(), 1, &size, t.data());
+
   std::vector<char> filterChar(size);
   for (int i = 0; i < size; i++) {
     filterChar[i] = (char)filter[i];
@@ -93,24 +93,17 @@ void save_manifold(const hid_t& fid, std::string name, std::vector<double> x, st
 
     H5LTmake_dataset_double(fid, (name + ".extras").c_str(), 1, &extrasSize, extrasFlat.data());
   }
-
-  unsigned Eint = (unsigned)E;
-  H5LTset_attribute_uint(fid, "/", (name + ".E").c_str(), &Eint, 1);
-  H5LTset_attribute_double(fid, "/", (name + ".dtweight").c_str(), &dtweight, 1);
 }
 
-Manifold read_manifold(hid_t fid, std::string name)
+Manifold read_manifold(hid_t fid, std::string name, std::vector<double> t, size_t E, double dtWeight)
 {
-
   hsize_t size;
   H5LTget_dataset_info(fid, (name + ".x").c_str(), &size, NULL, NULL);
 
   std::vector<double> x(size);
-  std::vector<int> t(size);
   std::vector<char> filterChar(size);
 
   H5LTread_dataset_double(fid, (name + ".x").c_str(), x.data());
-  H5LTread_dataset_int(fid, (name + ".t").c_str(), t.data());
   H5LTread_dataset_char(fid, (name + ".filter").c_str(), filterChar.data());
 
   std::vector<bool> filter(size);
@@ -139,14 +132,7 @@ Manifold read_manifold(hid_t fid, std::string name)
     }
   }
 
-  unsigned Eint;
-  H5LTget_attribute_uint(fid, "/", (name + ".E").c_str(), &Eint);
-  size_t E = (size_t)Eint;
-
-  double dtweight;
-  H5LTget_attribute_double(fid, "/", (name + ".dtweight").c_str(), &dtweight);
-
-  return Manifold(x, t, extras, filter, E, dtweight, MISSING);
+  return Manifold(x, t, extras, filter, E, dtWeight, MISSING);
 }
 
 /*! \brief Read in a dump file.
@@ -162,8 +148,23 @@ Inputs read_dumpfile(std::string fname_in)
 
   Options opts = read_options(fid);
 
-  Manifold M = read_manifold(fid, "M");
-  Manifold Mp = read_manifold(fid, "Mp");
+  unsigned Eint;
+  H5LTget_attribute_uint(fid, "/", "E", &Eint);
+  size_t E = (size_t)Eint;
+
+  double dtWeight;
+  H5LTget_attribute_double(fid, "/", "dtWeight", &dtWeight);
+
+  std::vector<double> t;
+  if (H5LTfind_dataset(fid, "t")) {
+    hsize_t size;
+    H5LTget_dataset_info(fid, "t", &size, NULL, NULL);
+    t = std::vector<double>(size);
+    H5LTread_dataset_double(fid, "t", t.data());
+  }
+
+  Manifold M = read_manifold(fid, "M", t, E, dtWeight);
+  Manifold Mp = read_manifold(fid, "Mp", t, E, dtWeight);
 
   hsize_t size;
   H5LTget_dataset_info(fid, "y", &size, NULL, NULL);
@@ -173,6 +174,32 @@ Inputs read_dumpfile(std::string fname_in)
   H5Fclose(fid);
 
   return { opts, M, Mp, y };
+}
+
+void write_dumpfile(const char* fname, const Options& opts, const std::vector<double>& t, const std::vector<double>& x,
+                    const std::vector<double>& xPred, const std::vector<std::vector<double>>& extras,
+                    const std::vector<std::vector<double>>& extrasPred, const std::vector<bool>& trainingRows,
+                    const std::vector<bool>& predictionRows, const std::vector<double>& y, int E, double dtWeight)
+{
+  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  save_options(fid, opts);
+
+  unsigned Eint = (unsigned)E;
+  H5LTset_attribute_uint(fid, "/", "E", &Eint, 1);
+  H5LTset_attribute_double(fid, "/", "dtWeight", &dtWeight, 1);
+
+  hsize_t tSize = t.size();
+  if (tSize > 0) {
+    H5LTmake_dataset_double(fid, "t", 1, &tSize, t.data());
+  }
+
+  save_manifold(fid, "M", x, extras, trainingRows);
+  save_manifold(fid, "Mp", xPred, extrasPred, predictionRows);
+
+  hsize_t yLen = y.size();
+  H5LTmake_dataset_double(fid, "y", 1, &yLen, y.data());
+
+  H5Fclose(fid);
 }
 
 void write_results(std::string fname_out, const Prediction& smap_res, int varssv)

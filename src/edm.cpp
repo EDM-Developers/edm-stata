@@ -82,7 +82,7 @@ retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, con
   }
 
   // If we only look at distances which are non-zero and non-missing,
-  // do we have enough of them to find 'l' neighbours?
+  // do we have enough of them to find k neighbours?
   int k = opts.k;
   if (k > validDistances) {
     if (opts.forceCompute) {
@@ -211,6 +211,10 @@ ThreadPool pool;
 Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, const IO& io,
                         bool keep_going(), void finished())
 {
+  // Precompute the lagged embeddings in contiguous blocks of memory
+  M.compute_lagged_embedding();
+  Mp.compute_lagged_embedding();
+
   size_t numPredictions = Mp.nobs();
 
   std::optional<std::vector<double>> flat_Bi_map{};
@@ -220,7 +224,6 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
     Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
   }
 
-  // OpenMP loop with call to mf_smap_single function
   std::vector<retcode> rc(numPredictions);
   std::vector<double> ystar(numPredictions);
 
