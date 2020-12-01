@@ -536,6 +536,7 @@ program define edmExplore, eclass sortpreserve
 		qui replace `usable' = `touse'
 	}
 
+	// TODO: numlist e is ascending? Can more easily get the min & max.
 	local max_e = -1
 	local min_e = .
 	foreach i of numlist `e' {
@@ -567,13 +568,13 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 	}
-	* If allow missing, use a wide definition of usable when generating manifold
+	* If allow missing, use a wide definition of usable when generating manifold // TODO: Repetition here?
 	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 		qui replace `usable' = `touse'
 	}
 	forvalues i=1/`=`esize'-1' {
 		tempvar x_`i'
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1
+		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1 // replace with 'if `touse'' for debugging
 		qui replace `usable' = 0 if `x_`i'' ==.
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 		if `parsed_dt' ==1 {
@@ -585,7 +586,7 @@ program define edmExplore, eclass sortpreserve
 			/* sum `dt_value' */
 			/* di "dt descript"
 			sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable' ==1
+			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable' ==1 // replace with 'if `touse'' for debugging
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 			/* di "mapping_`i': `mapping_`i''" */
 			/* di "incorporate lag `i' in dt mapping" */
@@ -848,7 +849,7 @@ program define edmExplore, eclass sortpreserve
 
 		foreach i of numlist `e' {
 			local manifold "mapping_`=`i'-2+`univariate''"
-			local e_offset = wordcount("`mapping_`=`i'-2+`univariate'''") - `i'
+			local e_offset = wordcount("``manifold''") - `i'
 			/* sum `mapping_`i'' */
 			foreach j of numlist `theta' {
 				/* noi sum ``manifold'' `x_f' `x_p' t if `train_set' ==1
@@ -908,7 +909,7 @@ program define edmExplore, eclass sortpreserve
 						// display "vsave_flag: " `vsave_flag'
 					}
 
-					local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+					local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
@@ -1030,7 +1031,7 @@ program define edmExplore, eclass sortpreserve
 			}
 			else {
 				// di "Plugin Mode"
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
+				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
 
 				unab vars : ``manifold''
 				local mani `: word count `vars''
@@ -1866,7 +1867,7 @@ program define edmXmap, eclass sortpreserve
 								// display "vsave_flag: " `vsave_flag'
 							}
 
-							local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save'
+							local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
 
 							unab vars : ``manifold''
 							local mani `: word count `vars''
@@ -2004,7 +2005,11 @@ program define edmXmap, eclass sortpreserve
 			}
 			else {
 				// di "Plugin Mode"
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save'
+				// TODO: Can this resetting of 'original_t' be avoided?
+				qui xtset
+				local original_t = r(timevar)
+					
+				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				unab vars : `co_mapping'

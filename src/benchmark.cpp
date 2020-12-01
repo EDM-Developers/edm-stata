@@ -255,7 +255,7 @@ static void bm_get_distances_reuse(benchmark::State& state)
 BENCHMARK(bm_get_distances_reuse)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
 
 template<typename T>
-struct Observation
+struct BasicObservation
 {
   const T* data;
   size_t E;
@@ -276,7 +276,7 @@ struct Observation
 };
 
 template<typename T>
-struct Manifold
+struct BasicManifold
 {
   std::vector<T> flat;
   size_t _rows, _cols;
@@ -286,11 +286,11 @@ struct Manifold
   size_t rows() const { return _rows; }
   size_t cols() const { return _cols; }
 
-  Observation<T> get_observation(size_t i) const { return { &(flat[i * _cols]), _cols }; }
+  BasicObservation<T> get_observation(size_t i) const { return { &(flat[i * _cols]), _cols }; }
 };
 
 template<typename T>
-std::pair<std::vector<T>, int> get_distances_new(const Manifold<T>& M, const Observation<T>& b, T missingdistance)
+std::pair<std::vector<T>, int> get_distances_new(const BasicManifold<T>& M, const BasicObservation<T>& b, T missingdistance)
 {
   int validDistances = 0;
   std::vector<T> d(M.rows());
@@ -335,12 +335,12 @@ static void bm_get_distances_new(benchmark::State& state)
 
   edm_inputs_t vars = read_dumpfile(input);
 
-  Manifold<double> M = { vars.M.flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
-  Manifold<double> Mp = { vars.Mp.flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
+  BasicManifold<double> M = { vars.M.flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
+  BasicManifold<double> Mp = { vars.Mp.flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
 
   int Mp_i = 0;
   for (auto _ : state) {
-    Observation<double> b = Mp.get_observation(Mp_i);
+    BasicObservation<double> b = Mp.get_observation(Mp_i);
     auto [d, validDistances] = get_distances_new(M, b, vars.opts.missingdistance);
     Mp_i = (Mp_i + 1) % vars.Mp.rows;
   }
@@ -365,12 +365,12 @@ static void bm_get_distances_new_float(benchmark::State& state)
     Mp_flat[i] = (float)vars.Mp.flat[i];
   }
 
-  Manifold<float> M = { M_flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
-  Manifold<float> Mp = { Mp_flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
+  BasicManifold<float> M = { M_flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
+  BasicManifold<float> Mp = { Mp_flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
 
   int Mp_i = 0;
   for (auto _ : state) {
-    Observation<float> b = Mp.get_observation(Mp_i);
+    BasicObservation<float> b = Mp.get_observation(Mp_i);
     auto [d, validDistances] = get_distances_new(M, b, (float)vars.opts.missingdistance);
     Mp_i = (Mp_i + 1) % vars.Mp.rows;
   }

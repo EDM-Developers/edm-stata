@@ -136,7 +136,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row
           ST_double value;
           ST_retcode rc = SF_vdata(j, i, &value);
           if (rc) {
-            throw std::runtime_error("Cannot read variables from Stata");
+            throw std::runtime_error(fmt::format("Cannot read Stata's variable {}", j));
           }
           if (SF_is_missing(value)) {
             if (std::is_floating_point<T>::value) {
@@ -178,7 +178,7 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
           ST_double value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
           ST_retcode rc = SF_vstore(j, i, value);
           if (rc) {
-            throw std::runtime_error("Cannot write variables to Stata");
+            throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
           }
           ind += 1;
         }
@@ -310,6 +310,11 @@ ST_retcode edm(int argc, char* argv[])
   auto _flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
   manifold_t M = { std::move(_flat_M), count_train_set, mani };
 
+
+  BManifold newM = { stata_columns<ST_double>(stataVarNum, mani, train_filter), (size_t)count_train_set,
+                       (size_t)mani };
+
+
   // Find which Stata rows contain the second manifold
   stataVarNum = mani + 4;
   auto predict_use = stata_columns<bool>(stataVarNum);
@@ -329,6 +334,104 @@ ST_retcode edm(int argc, char* argv[])
   // Read in the second manifold from Stata
   auto _flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
   manifold_t Mp{ std::move(_flat_Mp), count_predict_set, Mpcol };
+
+  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
+
+  std::vector<ST_double> x = stata_columns<ST_double>(1, 1);
+  
+  char buffer[100];
+  
+  // Read in time to calculate dt
+  SF_macro_use("_parsed_dt", buffer, 100);
+  bool parsed_dt = (bool) atoi(buffer);
+  std::vector<ST_double> dt;
+  
+  if (parsed_dt) {
+    ST_int timeCol = mani + 5 + 1 + (int)pmani_flag * pmani + opts.save_mode * opts.varssv;
+    std::vector<ST_double> t = stata_columns<ST_double>(timeCol, 1);
+    
+    SF_macro_use("_parsed_dtw", buffer, 100);
+    double dtweight = atof(buffer);
+    
+    dt = std::vector<ST_double>(t.size());
+    dt[0] = MISSING;
+    for (size_t i = 1; i < t.size(); i++) {
+      dt[i] = dtweight * (t[i] - t[i-1]);
+    }
+    
+    io.print(fmt::format("Adding dt with weight {}\n", dtweight));
+  }
+  
+  // Read in the extras
+  SF_macro_use("_zcount", buffer, 100);
+  int zcount = atoi(buffer); 
+  
+  io.print(fmt::format("We have {} extra columns\n", zcount));
+  
+  std::vector<std::vector<ST_double>> extras(zcount);
+
+  for (int z = 0; z < zcount; z++) {
+    extras[z] = stata_columns<ST_double>(2 + z, 1, train_filter);
+  }
+
+  int E;
+  if (pmani_flag) {
+    SF_macro_use("_e", buffer, 100);
+    std::string Estr(buffer);
+    std::size_t found = Estr.find_last_of(" ");
+    Estr = Estr.substr(found+1);
+    E = atoi(buffer); 
+    // SF_macro_use("_max_e", buffer, 100);
+    // E = atoi(buffer);
+  } else {
+    SF_macro_use("_i", buffer, 100);
+    E = atoi(buffer); 
+  }
+  
+  io.print(fmt::format("E is {}\n", E));
+  io.flush();
+  
+  Manifold impM(x, train_filter.useRow, E, dt, extras);
+
+  io.print(fmt::format("mani is {} and new manifold size is {}\n", mani, impM.E_actual()));
+  io.flush();
+  
+  io.print("Original version:\n");
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < mani; j++) {
+      io.print(fmt::format("{} ", newM(i, j)));
+    }
+    io.print("\n");
+  }
+  io.print("\n");
+
+  io.print("New version:\n");
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < mani; j++) {
+      io.print(fmt::format("{} ", impM(i, j)));
+    }
+    io.print("\n");
+  }
+  io.print("\n");
+  io.flush();
+  
+  for (int i = 0; i < count_train_set; i++) {
+    std::vector<double> newRow(mani), impRow(mani);
+    for (int j = 0; j < mani; j++) {
+      newRow[j] = newM(i, j);
+      impRow[j] = impM(i, j);
+    }
+    std::sort(newRow.begin(), newRow.end());
+    std::sort(impRow.begin(), impRow.end());
+    
+    for (int j = 0; j < mani; j++) {
+      if (newRow[j] != impRow[j]) {
+        io.print(fmt::format("ERROR! {} should be {}\n", impRow[j], newRow[j]));
+        io.flush();
+      }
+      assert(newRow[j] == impRow[j]);
+    }
+  }
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
@@ -366,7 +469,7 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
+  // print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
 
   predCol = mani + 2;
   coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
