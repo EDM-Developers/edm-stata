@@ -189,8 +189,8 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t& M, const manifold_t& Mp,
-                      bool pmani_flag, ST_int pmani, ST_int nthreads)
+void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
+                      ST_int pmani, ST_int nthreads)
 {
   if (io.verbosity > 1) {
     // Header of the plugin
@@ -210,9 +210,9 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
     io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
     io.print(fmt::format("force compute = {}\n\n", opts.force_compute));
     io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-    io.print(fmt::format("number of variables in manifold = {}\n\n", M.cols));
-    io.print(fmt::format("train set obs: {}\n", M.rows));
-    io.print(fmt::format("predict set obs: {}\n\n", Mp.rows));
+    io.print(fmt::format("number of variables in manifold = {}\n\n", M.E_actual()));
+    io.print(fmt::format("train set obs: {}\n", M.nobs()));
+    io.print(fmt::format("predict set obs: {}\n\n", Mp.nobs()));
     io.print(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
     if (pmani_flag) {
@@ -227,6 +227,10 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const manifold_t
     }
 
     io.print(fmt::format("save_mode = {}\n\n", opts.save_mode));
+
+    // io.print(fmt::format("E is {}\n", E));
+    // io.print(fmt::format("We have {} 'extra' columns\n", zcount));
+    // io.print(fmt::format("Adding dt with weight {}\n", dtweight));
 
     io.print(fmt::format("Requested {} threads\n", argv[9]));
     io.print(fmt::format("Using {} threads\n\n", nthreads));
@@ -295,22 +299,11 @@ ST_retcode edm(int argc, char* argv[])
     nthreads = nlcores;
   }
 
-  // Find which Stata rows contain the main manifold & for the y vector
+  // Find which rows are used for training & which for prediction
   ST_int stataVarNum = mani + 3;
   auto train_use = stata_columns<bool>(stataVarNum);
   int count_train_set = std::accumulate(train_use.begin(), train_use.end(), 0);
   row_filter_t train_filter = { train_use, count_train_set };
-
-  // Read in the y vector from Stata
-  stataVarNum = mani + 1;
-  auto y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
-
-  // Read in the main manifold from Stata
-  stataVarNum = 1;
-  auto _flat_M = stata_columns<ST_double>(stataVarNum, mani, train_filter);
-  manifold_t M = { std::move(_flat_M), count_train_set, mani };
-
-  BManifold newM = { stata_columns<ST_double>(stataVarNum, mani, train_filter), (size_t)count_train_set, (size_t)mani };
 
   // Find which Stata rows contain the second manifold
   stataVarNum = mani + 4;
@@ -318,25 +311,22 @@ ST_retcode edm(int argc, char* argv[])
   int count_predict_set = std::accumulate(predict_use.begin(), predict_use.end(), 0);
   row_filter_t predict_filter = { predict_use, count_predict_set };
 
-  // Find which Stata columns contain the second manifold
-  ST_int Mpcol;
-  if (pmani_flag) {
-    Mpcol = pmani;
-    stataVarNum = mani + 6;
-  } else {
-    Mpcol = mani;
-    stataVarNum = 1;
-  }
-
-  // Read in the second manifold from Stata
-  auto _flat_Mp = stata_columns<ST_double>(stataVarNum, Mpcol, predict_filter);
-  manifold_t Mp{ std::move(_flat_Mp), count_predict_set, Mpcol };
-
-  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
-
+  // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(1);
 
+  // Find the number of lags 'E' for the main data.
+  int E;
   char buffer[100];
+  if (pmani_flag) {
+    SF_macro_use("_e", buffer, 100);
+    std::string Estr(buffer);
+    std::size_t found = Estr.find_last_of(" ");
+    Estr = Estr.substr(found + 1);
+    E = atoi(buffer);
+  } else {
+    SF_macro_use("_i", buffer, 100);
+    E = atoi(buffer);
+  }
 
   // Read in time
   ST_int timeCol = mani + 5 + 1 + (int)pmani_flag * pmani + opts.save_mode * opts.varssv;
@@ -351,14 +341,11 @@ ST_retcode edm(int argc, char* argv[])
   if (parsed_dt) {
     SF_macro_use("_parsed_dtw", buffer, 100);
     dtweight = atof(buffer);
-    io.print(fmt::format("Adding dt with weight {}\n", dtweight));
   }
 
   // Read in the extras
   SF_macro_use("_zcount", buffer, 100);
   int zcount = atoi(buffer);
-
-  io.print(fmt::format("We have {} extra columns\n", zcount));
 
   std::vector<std::vector<ST_double>> extras(zcount);
 
@@ -366,66 +353,26 @@ ST_retcode edm(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(2 + z);
   }
 
-  int E;
+  Manifold M(x, train_filter.useRow, E, t, dtweight, extras);
+
+  // Read in the prediction manifold
   if (pmani_flag) {
-    SF_macro_use("_e", buffer, 100);
-    std::string Estr(buffer);
-    std::size_t found = Estr.find_last_of(" ");
-    Estr = Estr.substr(found + 1);
-    E = atoi(buffer);
-    // SF_macro_use("_max_e", buffer, 100);
-    // E = atoi(buffer);
-  } else {
-    SF_macro_use("_i", buffer, 100);
-    E = atoi(buffer);
-  }
-
-  io.print(fmt::format("E is {}\n", E));
-  io.flush();
-
-  Manifold impM(x, train_filter.useRow, E, t, dtweight, extras);
-
-  io.print(fmt::format("mani is {} and new manifold size is {}\n", mani, impM.E_actual()));
-  io.flush();
-
-  io.print("Original version:\n");
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < mani; j++) {
-      io.print(fmt::format("{} ", newM(i, j)));
-    }
-    io.print("\n");
-    io.flush();
-  }
-  io.print("\n");
-  io.flush();
-
-  io.print("New version:\n");
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < mani; j++) {
-      io.print(fmt::format("{} ", impM(i, j)));
-    }
-    io.print("\n");
-    io.flush();
-  }
-  io.flush();
-
-  for (int i = 0; i < count_train_set; i++) {
-    std::vector<double> newRow(mani), impRow(mani);
-    for (int j = 0; j < mani; j++) {
-      newRow[j] = newM(i, j);
-      impRow[j] = impM(i, j);
-    }
-    std::sort(newRow.begin(), newRow.end());
-    std::sort(impRow.begin(), impRow.end());
-
-    for (int j = 0; j < mani; j++) {
-      if (newRow[j] != impRow[j]) {
-        io.print(fmt::format("ERROR! {} should be {}\n", impRow[j], newRow[j]));
-        io.flush();
-      }
-      assert(newRow[j] == impRow[j]);
+    // In cases like 'edm explore x' (pmani_flag = false), then we
+    // share the same data between both manifolds.
+    stataVarNum = mani + 6;
+    x = stata_columns<ST_double>(stataVarNum);
+    for (int z = 0; z < zcount; z++) {
+      extras[z] = stata_columns<ST_double>(stataVarNum + 1 + z);
     }
   }
+
+  Manifold Mp(x, predict_filter.useRow, E, t, dtweight, extras);
+
+  // Read in the target vector 'y' from Stata
+  stataVarNum = mani + 1;
+  auto y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
+
+  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
@@ -462,8 +409,6 @@ ST_retcode edm(int argc, char* argv[])
     H5Fclose(fid);
   }
 #endif
-
-  // print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
 
   predCol = mani + 2;
   coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;

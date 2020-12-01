@@ -25,20 +25,6 @@
 
 typedef int retcode;
 
-typedef struct
-{
-  std::vector<double> flat;
-  int rows, cols;
-} manifold_t;
-
-struct BManifold
-{
-  std::vector<double> flat;
-  size_t _rows, _cols;
-
-  double operator()(size_t i, size_t j) const { return flat[i * _cols + j]; }
-};
-
 template<class T>
 void ignore(const T&)
 {}
@@ -72,7 +58,7 @@ public:
       _timeToIndex[t[i]] = i;
     }
 
-    _nobs = _timeToIndex.size();
+    _nobs = obsNum;
 
     _use_dt = (dtweight > 0);
     _E_x = E;
@@ -195,5 +181,5 @@ typedef struct
   std::optional<std::vector<double>> flat_Bi_map;
 } smap_res_t;
 
-DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+DLL smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                             int nthreads, const IO& io, bool keep_going() = nullptr, void finished() = nullptr);

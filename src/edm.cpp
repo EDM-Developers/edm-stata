@@ -43,30 +43,28 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                       const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map,
-                       bool keep_going() = nullptr)
+retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     return UNKNOWN_ERROR;
   }
   int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
+  std::vector<double> d(M.nobs());
 
-  for (int i = 0; i < M.rows(); i++) {
+  for (int i = 0; i < M.nobs(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
         if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -119,7 +117,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
 
-    Eigen::MatrixXd X_ls(l, M.cols());
+    Eigen::MatrixXd X_ls(l, M.E_actual());
     std::vector<double> y_ls(l), w_ls(l);
 
     double mean_w = 0.;
@@ -139,14 +137,8 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
       if (y[ind[j]] == MISSING) {
         continue;
       }
-      bool anyMissing = false;
-      for (int i = 0; i < M.cols(); i++) {
-        if (M(ind[j], i) == MISSING) {
-          anyMissing = true;
-          break;
-        }
-      }
-      if (anyMissing) {
+
+      if (M.any_missing(ind[j])) {
         continue;
       }
       rowc++;
@@ -157,7 +149,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
       } else if (opts.algorithm == "smap") {
         y_ls[rowc] = y[ind[j]] * w[j];
         w_ls[rowc] = w[j];
-        for (int i = 0; i < M.cols(); i++) {
+        for (int i = 0; i < M.E_actual(); i++) {
           X_ls(rowc, i) = M(ind[j], i) * w[j];
         }
       }
@@ -171,7 +163,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
     // concatenate the column vector 'w' with 'X_ls', keeping only
     // the first 'rowc+1' rows.
     Eigen::VectorXd y_ls_cj(rowc + 1);
-    Eigen::MatrixXd X_ls_cj(rowc + 1, M.cols() + 1);
+    Eigen::MatrixXd X_ls_cj(rowc + 1, M.E_actual() + 1);
 
     for (int i = 0; i < rowc + 1; i++) {
       y_ls_cj(i) = y_ls[i];
@@ -189,9 +181,9 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
       Eigen::VectorXd ics = svd.solve(y_ls_cj);
 
       r = ics(0);
-      for (int j = 1; j < M.cols() + 1; j++) {
-        if (b(j - 1) != MISSING) {
-          r += b(j - 1) * ics(j);
+      for (int j = 1; j < M.E_actual() + 1; j++) {
+        if (Mp(Mp_i, j - 1) != MISSING) {
+          r += Mp(Mp_i, j - 1) * ics(j);
         }
       }
 
@@ -216,23 +208,21 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
 ThreadPool pool;
 
-smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M, const manifold_t& Mp,
+smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                         int nthreads, const IO& io, bool keep_going(), void finished())
 {
-  // Create Eigen matrixes which are views of the supplied flattened matrices
-  MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-  MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
+  int numPredictions = Mp.nobs();
 
   std::optional<std::vector<double>> flat_Bi_map{};
   std::optional<MatrixView> Bi_map{};
   if (opts.save_mode) {
-    flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
+    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
+    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
   }
 
   // OpenMP loop with call to mf_smap_single function
-  std::vector<retcode> rc(Mp.rows);
-  std::vector<double> ystar(Mp.rows);
+  std::vector<retcode> rc(numPredictions);
+  std::vector<double> ystar(numPredictions);
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -240,32 +230,31 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const ma
     nthreads = 0;
   }
 
-  pool.set_num_tasks(Mp.rows);
+  pool.set_num_tasks(Mp.nobs());
   pool.set_num_workers(nthreads);
 
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }
-  std::vector<std::future<void>> results(Mp.rows);
+  std::vector<std::future<void>> results(numPredictions);
   if (nthreads > 1) {
-    for (int i = 0; i < Mp.rows; i++) {
-      results[i] =
-        pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, keep_going); });
+    for (int i = 0; i < numPredictions; i++) {
+      results[i] = pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, keep_going); });
     }
   }
 
   io.progress_bar(0.0);
-  for (int i = 0; i < Mp.rows; i++) {
+  for (int i = 0; i < numPredictions; i++) {
     if (nthreads == 0) {
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map, nullptr);
+      rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr);
     } else {
       results[i].get();
     }
 
-    io.progress_bar((i + 1) / ((double)Mp.rows));
+    io.progress_bar((i + 1) / ((double)numPredictions));
   }
 
   auto end = std::chrono::high_resolution_clock::now();

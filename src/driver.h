@@ -3,6 +3,13 @@
 #include <hdf5_hl.h>
 #include <iostream>
 
+typedef struct
+{
+  std::vector<double> flat;
+  int rows, cols;
+} manifold_t;
+
+
 /*! \struct Input
  *  \brief The input variables for an mf_smap_loop call.
  */
