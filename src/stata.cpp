@@ -23,8 +23,7 @@
 #include <vector>
 
 #ifdef DUMP_INPUT
-#include <hdf5.h>
-#include <hdf5_hl.h>
+#include "driver.h"
 #endif
 
 class StataIO : public IO
@@ -110,44 +109,35 @@ int num_if_in_rows()
   return num;
 }
 
-typedef struct
-{
-  std::vector<bool> useRow;
-  int numRows;
-} row_filter_t;
-
 /*
  * Read in columns from Stata (i.e. what Stata calls variables).
- * Starting from column number 'j0', read in 'numCols' of columns.
- * If 'filter' is supplied, we consider each row 'i' only if 'filter[i]'
- * evaluates to true. */
+ * Starting from column number 'j0', read in 'numCols' of columns
+ */
 template<typename T>
-std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row_filter_t>& filter = std::nullopt)
+std::vector<T> stata_columns(ST_int j0, int numCols = 1)
 {
   // Allocate space for the matrix of data from Stata
-  int numRows = filter.has_value() ? filter->numRows : num_if_in_rows();
+  int numRows = num_if_in_rows();
   std::vector<T> M(numRows * numCols);
   int ind = 0; // Flattened index of M matrix
   int r = 0;   // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
-    if (SF_ifobs(i)) {                                // Skip rows according to Stata's 'if'
-      if (!filter.has_value() || filter->useRow[r]) { // Skip rows given our own filter
-        for (ST_int j = j0; j < j0 + numCols; j++) {
-          ST_double value;
-          ST_retcode rc = SF_vdata(j, i, &value);
-          if (rc) {
-            throw std::runtime_error(fmt::format("Cannot read Stata's variable {}", j));
-          }
-          if (SF_is_missing(value)) {
-            if (std::is_floating_point<T>::value) {
-              value = MISSING;
-            } else {
-              value = 0;
-            }
-          }
-          M[ind] = (T)value;
-          ind += 1;
+    if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
+      for (ST_int j = j0; j < j0 + numCols; j++) {
+        ST_double value;
+        ST_retcode rc = SF_vdata(j, i, &value);
+        if (rc) {
+          throw std::runtime_error(fmt::format("Cannot read Stata's variable {}", j));
         }
+        if (SF_is_missing(value)) {
+          if (std::is_floating_point<T>::value) {
+            value = MISSING;
+          } else {
+            value = 0;
+          }
+        }
+        M[ind] = (T)value;
+        ind += 1;
       }
       r += 1;
     }
@@ -162,26 +152,21 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1, const std::optional<row
  * Starting from column number 'j0', write 'numCols' of columns.
  * The data being written is in the 'toSave' parameter, which is a
  * flattened row-major array.
- *
- * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
  */
-void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols = 1,
-                         const std::optional<row_filter_t>& filter = std::nullopt)
+void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols = 1)
 {
   int ind = 0; // Index of y vector
   int r = 0;   // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
-    if (SF_ifobs(i)) {                                // Skip rows according to Stata's 'if'
-      if (!filter.has_value() || filter->useRow[r]) { // Skip rows given our own filter
-        for (ST_int j = j0; j < j0 + numCols; j++) {
-          // Convert MISSING back to Stata's missing value
-          ST_double value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
-          ST_retcode rc = SF_vstore(j, i, value);
-          if (rc) {
-            throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
-          }
-          ind += 1;
+    if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
+      for (ST_int j = j0; j < j0 + numCols; j++) {
+        // Convert MISSING back to Stata's missing value
+        ST_double value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
+        ST_retcode rc = SF_vstore(j, i, value);
+        if (rc) {
+          throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
         }
+        ind += 1;
       }
       r += 1;
     }
@@ -189,8 +174,8 @@ void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols =
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
-                      ST_int pmani, ST_int nthreads)
+void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
+                      ST_int pmani, ST_int E, ST_int zcount, ST_double dtweight)
 {
   if (io.verbosity > 1) {
     // Header of the plugin
@@ -208,7 +193,7 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& 
 
     io.print(fmt::format("theta = {:6.4f}\n\n", opts.theta));
     io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
-    io.print(fmt::format("force compute = {}\n\n", opts.force_compute));
+    io.print(fmt::format("force compute = {}\n\n", opts.forceCompute));
     io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
     io.print(fmt::format("number of variables in manifold = {}\n\n", M.E_actual()));
     io.print(fmt::format("train set obs: {}\n", M.nobs()));
@@ -220,26 +205,26 @@ void print_debug_info(int argc, char* argv[], smap_opts_t opts, const Manifold& 
     }
     io.print("\n");
 
-    io.print(fmt::format("l = {}\n\n", opts.l));
+    io.print(fmt::format("k = {}\n\n", opts.k));
 
-    if (opts.save_mode) {
+    if (opts.saveMode) {
       io.print(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
     }
 
-    io.print(fmt::format("save_mode = {}\n\n", opts.save_mode));
+    io.print(fmt::format("save_mode = {}\n\n", opts.saveMode));
 
-    // io.print(fmt::format("E is {}\n", E));
-    // io.print(fmt::format("We have {} 'extra' columns\n", zcount));
-    // io.print(fmt::format("Adding dt with weight {}\n", dtweight));
+    io.print(fmt::format("E is {}\n", E));
+    io.print(fmt::format("We have {} 'extra' columns\n", zcount));
+    io.print(fmt::format("Adding dt with weight {}\n", dtweight));
 
     io.print(fmt::format("Requested {} threads\n", argv[9]));
-    io.print(fmt::format("Using {} threads\n\n", nthreads));
+    io.print(fmt::format("Using {} threads\n\n", opts.nthreads));
 
     io.flush();
   }
 }
 
-std::future<smap_res_t> predictions;
+std::future<Prediction> predictions;
 ST_int predCol, coeffsCol, coeffsWidth;
 
 /*
@@ -266,50 +251,42 @@ ST_retcode edm(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
-  smap_opts_t opts;
+  Options opts;
 
   opts.theta = atof(argv[0]);
-  opts.l = atoi(argv[1]);
+  opts.k = atoi(argv[1]);
   opts.algorithm = std::string(argv[2]);
-  opts.force_compute = (strcmp(argv[3], "force") == 0);
+  opts.forceCompute = (strcmp(argv[3], "force") == 0);
   opts.missingdistance = atof(argv[4]);
-  ST_int mani = atoi(argv[5]);     // number of columns in the manifold
-  bool pmani_flag = atoi(argv[6]); // contains the flag for p_manifold
-  opts.save_mode = atoi(argv[7]);
+  ST_int mani = atoi(argv[5]);    // number of columns in the manifold
+  bool pmaniFlag = atoi(argv[6]); // contains the flag for p_manifold
+  opts.saveMode = atoi(argv[7]);
   ST_int pmani = atoi(argv[8]); // contains the number of columns in p_manifold
   opts.varssv = atoi(argv[8]);  // number of columns in smap coefficients
-  ST_int nthreads = atoi(argv[9]);
+  opts.nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
 
-  // Default number of neighbours is E + 1
-  if (opts.l <= 0) {
-    opts.l = mani + 1;
+  // Default number of neighbours k is E + 1
+  if (opts.k <= 0) {
+    opts.k = mani + 1;
   }
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
-  if (nthreads <= 0) {
-    nthreads = npcores;
+  if (opts.nthreads <= 0) {
+    opts.nthreads = npcores;
   }
 
   // Restrict going over the number of logical cores available
   ST_int nlcores = (ST_int)num_logical_cores();
-  if (nthreads > nlcores) {
+  if (opts.nthreads > nlcores) {
     io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
-    nthreads = nlcores;
+    opts.nthreads = nlcores;
   }
 
   // Find which rows are used for training & which for prediction
-  ST_int stataVarNum = mani + 3;
-  auto train_use = stata_columns<bool>(stataVarNum);
-  int count_train_set = std::accumulate(train_use.begin(), train_use.end(), 0);
-  row_filter_t train_filter = { train_use, count_train_set };
-
-  // Find which Stata rows contain the second manifold
-  stataVarNum = mani + 4;
-  auto predict_use = stata_columns<bool>(stataVarNum);
-  int count_predict_set = std::accumulate(predict_use.begin(), predict_use.end(), 0);
-  row_filter_t predict_filter = { predict_use, count_predict_set };
+  std::vector<bool> trainingRows = stata_columns<bool>(mani + 3);
+  std::vector<bool> predictionRows = stata_columns<bool>(mani + 4);
 
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(1);
@@ -317,7 +294,7 @@ ST_retcode edm(int argc, char* argv[])
   // Find the number of lags 'E' for the main data.
   int E;
   char buffer[100];
-  if (pmani_flag) {
+  if (pmaniFlag) {
     SF_macro_use("_e", buffer, 100);
     std::string Estr(buffer);
     std::size_t found = Estr.find_last_of(" ");
@@ -329,7 +306,7 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Read in time
-  ST_int timeCol = mani + 5 + 1 + (int)pmani_flag * pmani + opts.save_mode * opts.varssv;
+  ST_int timeCol = mani + 5 + 1 + (int)pmaniFlag * pmani + opts.saveMode * opts.varssv;
   std::vector<ST_int> t = stata_columns<ST_int>(timeCol);
 
   // Handle 'dt' flag
@@ -353,68 +330,57 @@ ST_retcode edm(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(2 + z);
   }
 
-  Manifold M(x, train_filter.useRow, E, t, dtweight, extras);
+  Manifold M(x, t, extras, trainingRows, E, dtweight, MISSING);
 
   // Read in the prediction manifold
-  if (pmani_flag) {
+  std::vector<ST_double> xPred;
+  std::vector<std::vector<ST_double>> extrasPred(zcount);
+  if (pmaniFlag) {
+    xPred = stata_columns<ST_double>(mani + 6);
+    for (int z = 0; z < zcount; z++) {
+      extrasPred[z] = stata_columns<ST_double>(mani + 6 + 1 + z);
+    }
+  } else {
     // In cases like 'edm explore x' (pmani_flag = false), then we
     // share the same data between both manifolds.
-    stataVarNum = mani + 6;
-    x = stata_columns<ST_double>(stataVarNum);
-    for (int z = 0; z < zcount; z++) {
-      extras[z] = stata_columns<ST_double>(stataVarNum + 1 + z);
+    xPred = x;
+    extrasPred = extras;
+  }
+
+  Manifold Mp(xPred, t, extrasPred, predictionRows, E, dtweight, MISSING);
+
+  // Read in the target vector 'y' from Stata
+  std::vector<ST_double> yAll = stata_columns<ST_double>(mani + 1);
+  std::vector<ST_double> y;
+  for (size_t i = 0; i < trainingRows.size(); i++) {
+    if (trainingRows[i]) {
+      y.push_back(yAll[i]);
     }
   }
 
-  Manifold Mp(x, predict_filter.useRow, E, t, dtweight, extras);
-
-  // Read in the target vector 'y' from Stata
-  stataVarNum = mani + 1;
-  auto y = stata_columns<ST_double>(stataVarNum, 1, train_filter);
-
-  print_debug_info(argc, argv, opts, M, Mp, pmani_flag, pmani, nthreads);
+  print_debug_info(argc, argv, opts, M, Mp, pmaniFlag, pmani, E, zcount, dtweight);
 
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
   if (argc >= 12) {
     hid_t fid = H5Fcreate(argv[11], H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-    H5LTset_attribute_int(fid, "/", "count_train_set", &count_train_set, 1);
-    H5LTset_attribute_int(fid, "/", "count_predict_set", &count_predict_set, 1);
-    H5LTset_attribute_int(fid, "/", "Mpcol", &Mpcol, 1);
-    H5LTset_attribute_int(fid, "/", "mani", &mani, 1);
+    save_options(fid, opts);
+    save_manifold(fid, "M", x, t, extras, trainingRows, E, dtweight);
+    save_manifold(fid, "Mp", xPred, t, extrasPred, predictionRows, E, dtweight);
 
     hsize_t yLen = y.size();
     H5LTmake_dataset_double(fid, "y", 1, &yLen, y.data());
-
-    H5LTset_attribute_int(fid, "/", "l", &l, 1);
-    H5LTset_attribute_double(fid, "/", "theta", &theta, 1);
-
-    H5LTset_attribute_string(fid, "/", "algorithm", algorithm.c_str());
-    char bool_var = (char)save_mode;
-    H5LTset_attribute_char(fid, "/", "save_mode", &bool_var, 1);
-    bool_var = (char)force_compute;
-    H5LTset_attribute_char(fid, "/", "force_compute", &bool_var, 1);
-    H5LTset_attribute_int(fid, "/", "varssv", &varssv, 1);
-    H5LTset_attribute_double(fid, "/", "missingdistance", &missingdistance, 1);
-
-    hsize_t MLen = M.flat.size();
-    H5LTmake_dataset_double(fid, "flat_M", 1, &MLen, M.flat.data());
-    hsize_t MpLen = Mp.flat.size();
-    H5LTmake_dataset_double(fid, "flat_Mp", 1, &MpLen, Mp.flat.data());
-
-    H5LTset_attribute_int(fid, "/", "nthreads", &nthreads, 1);
 
     H5Fclose(fid);
   }
 #endif
 
   predCol = mani + 2;
-  coeffsCol = mani + 5 + 1 + (int)pmani_flag * pmani;
+  coeffsCol = mani + 5 + 1 + (int)pmaniFlag * pmani;
   coeffsWidth = opts.varssv;
 
-  std::packaged_task<smap_res_t()> task(std::bind(mf_smap_loop, opts, y, M, Mp, nthreads, io, keep_going, finished));
+  std::packaged_task<Prediction()> task(std::bind(mf_smap_loop, opts, y, M, Mp, io, keep_going, finished));
   predictions = task.get_future();
 
   std::thread master(std::move(task));
@@ -425,7 +391,7 @@ ST_retcode edm(int argc, char* argv[])
 
 ST_retcode save_results()
 {
-  smap_res_t res = predictions.get();
+  Prediction res = predictions.get();
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (res.rc == SUCCESS) {

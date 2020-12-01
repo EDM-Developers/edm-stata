@@ -3,23 +3,6 @@
 #include <hdf5_hl.h>
 #include <iostream>
 
-typedef struct
-{
-  std::vector<double> flat;
-  int rows, cols;
-} manifold_t;
-
-/*! \struct Input
- *  \brief The input variables for an mf_smap_loop call.
- */
-typedef struct
-{
-  smap_opts_t opts;
-  std::vector<double> y;
-  manifold_t M, Mp;
-  int nthreads;
-} edm_inputs_t;
-
 class ConsoleIO : public IO
 {
 public:
@@ -31,26 +14,46 @@ public:
   virtual void flush() const { fflush(stdout); }
 };
 
-/*! \brief Read in a dump file.
- *
- * Read in a dump file created with compile flag DUMP_INPUT.
- *
- * \param fname dump filename
- * \param pointer to InputVars struct to store the read
- */
-edm_inputs_t read_dumpfile(std::string fname_in)
+struct Inputs
 {
-  hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  Options opts;
+  Manifold M, Mp;
+  std::vector<double> y;
+};
 
-  smap_opts_t opts;
+void save_options(hid_t fid, Options opts)
+{
+  char boolVar = (char)opts.forceCompute;
+  H5LTset_attribute_char(fid, "/", "forceCompute", &boolVar, 1);
+  boolVar = (char)opts.saveMode;
+  H5LTset_attribute_char(fid, "/", "saveMode", &boolVar, 1);
+  boolVar = (char)opts.distributeThreads;
+  H5LTset_attribute_char(fid, "/", "distributeThreads", &boolVar, 1);
 
-  char bool_var;
-  H5LTget_attribute_char(fid, "/", "save_mode", &bool_var);
-  opts.save_mode = (bool)bool_var;
-  H5LTget_attribute_char(fid, "/", "force_compute", &bool_var);
-  opts.force_compute = (bool)bool_var;
+  H5LTset_attribute_int(fid, "/", "k", &opts.k, 1);
+  H5LTset_attribute_int(fid, "/", "varssv", &opts.varssv, 1);
 
-  H5LTget_attribute_int(fid, "/", "l", &(opts.l));
+  H5LTset_attribute_double(fid, "/", "theta", &opts.theta, 1);
+  H5LTset_attribute_double(fid, "/", "missingdistance", &opts.missingdistance, 1);
+
+  H5LTset_attribute_string(fid, "/", "algorithm", opts.algorithm.c_str());
+
+  H5LTset_attribute_int(fid, "/", "nthreads", &opts.nthreads, 1);
+}
+
+Options read_options(hid_t fid)
+{
+  Options opts;
+
+  char boolVar;
+  H5LTget_attribute_char(fid, "/", "forceCompute", &boolVar);
+  opts.forceCompute = (bool)boolVar;
+  H5LTget_attribute_char(fid, "/", "saveMode", &boolVar);
+  opts.saveMode = (bool)boolVar;
+  H5LTget_attribute_char(fid, "/", "distributeThreads", &boolVar);
+  opts.distributeThreads = (bool)boolVar;
+
+  H5LTget_attribute_int(fid, "/", "k", &(opts.k));
   H5LTget_attribute_int(fid, "/", "varssv", &(opts.varssv));
 
   H5LTget_attribute_double(fid, "/", "theta", &(opts.theta));
@@ -60,32 +63,119 @@ edm_inputs_t read_dumpfile(std::string fname_in)
   H5LTget_attribute_string(fid, "/", "algorithm", temps);
   opts.algorithm = std::string(temps);
 
-  manifold_t M, Mp;
+  H5LTget_attribute_int(fid, "/", "nthreads", &opts.nthreads);
 
-  H5LTget_attribute_int(fid, "/", "count_train_set", &(M.rows));
-  H5LTget_attribute_int(fid, "/", "mani", &(M.cols));
+  return opts;
+}
 
-  M.flat = std::vector<double>(M.rows * M.cols);
-  H5LTread_dataset_double(fid, "flat_M", M.flat.data());
+void save_manifold(const hid_t& fid, std::string name, std::vector<double> x, std::vector<int> t,
+                   std::vector<std::vector<double>> extras, std::vector<bool> filter, size_t E, double dtweight)
+{
+  hsize_t size = x.size();
+  H5LTmake_dataset_double(fid, (name + ".x").c_str(), 1, &size, x.data());
+  H5LTmake_dataset_int(fid, (name + ".t").c_str(), 1, &size, t.data());
+  std::vector<char> filterChar(size);
+  for (int i = 0; i < size; i++) {
+    filterChar[i] = (char)filter[i];
+  }
+  H5LTmake_dataset_char(fid, (name + ".filter").c_str(), 1, &size, filterChar.data());
 
-  H5LTget_attribute_int(fid, "/", "count_predict_set", &(Mp.rows));
-  H5LTget_attribute_int(fid, "/", "Mpcol", &(Mp.cols));
+  hsize_t extrasSize = extras.size();
+  if (extrasSize > 0 && extras[0].size() > 0) {
+    extrasSize *= extras[0].size();
 
-  Mp.flat = std::vector<double>(Mp.rows * Mp.cols);
-  H5LTread_dataset_double(fid, "flat_Mp", Mp.flat.data());
+    std::vector<double> extrasFlat(extrasSize);
+    for (int i = 0; i < extras[0].size(); i++) {
+      for (int j = 0; j < extras.size(); j++) {
+        extrasFlat[i * extras[0].size() + j] = extras[j][i];
+      }
+    }
 
-  std::vector<double> y(M.rows);
+    H5LTmake_dataset_double(fid, (name + ".extras").c_str(), 1, &extrasSize, extrasFlat.data());
+  }
+
+  unsigned Eint = (unsigned)E;
+  H5LTset_attribute_uint(fid, "/", (name + ".E").c_str(), &Eint, 1);
+  H5LTset_attribute_double(fid, "/", (name + ".dtweight").c_str(), &dtweight, 1);
+}
+
+Manifold read_manifold(hid_t fid, std::string name)
+{
+
+  hsize_t size;
+  H5LTget_dataset_info(fid, (name + ".x").c_str(), &size, NULL, NULL);
+
+  std::vector<double> x(size);
+  std::vector<int> t(size);
+  std::vector<char> filterChar(size);
+
+  H5LTread_dataset_double(fid, (name + ".x").c_str(), x.data());
+  H5LTread_dataset_int(fid, (name + ".t").c_str(), t.data());
+  H5LTread_dataset_char(fid, (name + ".filter").c_str(), filterChar.data());
+
+  std::vector<bool> filter(size);
+  for (int i = 0; i < size; i++) {
+    filter[i] = (bool)filterChar[i];
+  }
+
+  std::vector<std::vector<double>> extras;
+
+  if (H5LTfind_dataset(fid, (name + ".extras").c_str())) {
+    hsize_t extrasSize[2];
+
+    H5LTget_dataset_info(fid, (name + ".extras").c_str(), extrasSize, NULL, NULL);
+
+    std::vector<double> extrasFlat(extrasSize[0] * extrasSize[1]);
+
+    H5LTread_dataset_double(fid, (name + ".extras").c_str(), extrasFlat.data());
+
+    extras = std::vector<std::vector<double>>(extrasSize[1]);
+    for (int j = 0; j < extras.size(); j++) {
+      extras[j] = std::vector<double>(extrasSize[0]);
+
+      for (int i = 0; i < extras[0].size(); i++) {
+        extras[j][i] = extrasFlat[i * extras[0].size() + j];
+      }
+    }
+  }
+
+  unsigned Eint;
+  H5LTget_attribute_uint(fid, "/", (name + ".E").c_str(), &Eint);
+  size_t E = (size_t)Eint;
+
+  double dtweight;
+  H5LTget_attribute_double(fid, "/", (name + ".dtweight").c_str(), &dtweight);
+
+  return Manifold(x, t, extras, filter, E, dtweight, MISSING);
+}
+
+/*! \brief Read in a dump file.
+ *
+ * Read in a dump file created with compile flag DUMP_INPUT.
+ *
+ * \param fname dump filename
+ * \param pointer to InputVars struct to store the read
+ */
+Inputs read_dumpfile(std::string fname_in)
+{
+  hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+
+  Options opts = read_options(fid);
+
+  Manifold M = read_manifold(fid, "M");
+  Manifold Mp = read_manifold(fid, "Mp");
+
+  hsize_t size;
+  H5LTget_dataset_info(fid, "y", &size, NULL, NULL);
+  std::vector<double> y(size);
   H5LTread_dataset_double(fid, "y", y.data());
-
-  int nthreads;
-  H5LTget_attribute_int(fid, "/", "nthreads", &nthreads);
 
   H5Fclose(fid);
 
-  return { opts, y, M, Mp, nthreads };
+  return { opts, M, Mp, y };
 }
 
-void write_results(std::string fname_out, const smap_res_t& smap_res, int varssv)
+void write_results(std::string fname_out, const Prediction& smap_res, int varssv)
 {
   hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 

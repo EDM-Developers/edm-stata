@@ -43,7 +43,7 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                        std::vector<double>& ystar, std::optional<MatrixView>& Bi_map, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
@@ -83,11 +83,11 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
   // If we only look at distances which are non-zero and non-missing,
   // do we have enough of them to find 'l' neighbours?
-  int l = opts.l;
-  if (l > validDistances) {
-    if (opts.force_compute) {
-      l = validDistances;
-      if (l == 0) {
+  int k = opts.k;
+  if (k > validDistances) {
+    if (opts.forceCompute) {
+      k = validDistances;
+      if (k == 0) {
         return INSUFFICIENT_UNIQUE;
       }
     } else {
@@ -95,20 +95,20 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
     }
   }
 
-  std::vector<size_t> ind = minindex(d, l);
+  std::vector<size_t> ind = minindex(d, k);
 
   double d_base = d[ind[0]];
-  std::vector<double> w(l);
+  std::vector<double> w(k);
 
   double sumw = 0., r = 0.;
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
       w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       r = r + y[ind[j]] * (w[j] / sumw);
     }
 
@@ -117,23 +117,23 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
 
-    Eigen::MatrixXd X_ls(l, M.E_actual());
-    std::vector<double> y_ls(l), w_ls(l);
+    Eigen::MatrixXd X_ls(k, M.E_actual());
+    std::vector<double> y_ls(k), w_ls(k);
 
     double mean_w = 0.;
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = pow(d[ind[j]],0.5); */
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
-    mean_w = mean_w / (double)l;
-    for (int j = 0; j < l; j++) {
+    mean_w = mean_w / (double)k;
+    for (int j = 0; j < k; j++) {
       w[j] = exp(-opts.theta * (w[j] / mean_w));
     }
 
     int rowc = -1;
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       if (y[ind[j]] == MISSING) {
         continue;
       }
@@ -188,7 +188,7 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
       }
 
       // saving ics coefficients if savesmap option enabled
-      if (opts.save_mode) {
+      if (opts.saveMode) {
         for (int j = 0; j < opts.varssv; j++) {
           if (ics(j) == 0.) {
             (*Bi_map)(Mp_i, j) = MISSING;
@@ -208,14 +208,14 @@ retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
 
 ThreadPool pool;
 
-smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                        int nthreads, const IO& io, bool keep_going(), void finished())
+Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, const IO& io,
+                        bool keep_going(), void finished())
 {
-  int numPredictions = Mp.nobs();
+  size_t numPredictions = Mp.nobs();
 
   std::optional<std::vector<double>> flat_Bi_map{};
   std::optional<MatrixView> Bi_map{};
-  if (opts.save_mode) {
+  if (opts.saveMode) {
     flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
     Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
   }
@@ -226,18 +226,18 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Ma
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (nthreads <= 1) {
-    nthreads = 0;
+  if (opts.nthreads <= 1) {
+    opts.nthreads = 0;
   }
 
-  pool.set_num_tasks(Mp.nobs());
-  pool.set_num_workers(nthreads);
+  pool.set_num_tasks(numPredictions);
+  pool.set_num_workers(opts.nthreads);
 
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }
   std::vector<std::future<void>> results(numPredictions);
-  if (nthreads > 1) {
+  if (opts.nthreads > 1) {
     for (int i = 0; i < numPredictions; i++) {
       results[i] = pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, keep_going); });
     }
@@ -245,7 +245,7 @@ smap_res_t mf_smap_loop(smap_opts_t opts, const std::vector<double>& y, const Ma
 
   io.progress_bar(0.0);
   for (int i = 0; i < numPredictions; i++) {
-    if (nthreads == 0) {
+    if (opts.nthreads == 0) {
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }

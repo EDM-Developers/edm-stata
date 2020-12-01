@@ -31,8 +31,8 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k);
 std::vector<std::string> tests = {
   "logmapsmall.h5", // "edm explore x, e(10)" on 200 obs of logistic map
   "logmaplarge.h5", // "edm xmap x y, theta(0.2) algorithm(smap)" on ~50k obs of logistic map
-  "affectsmall.h5", // "edm xmap PA NA, dt e(10) k(-1) force alg(smap)" on ~5k obs of affect data
-  "affectbige.h5"   // "edm xmap PA NA, dt e(150) k(20) force alg(smap)" on ~5k obs of affect data
+  // "affectsmall.h5", // "edm xmap PA NA, dt e(10) k(-1) force alg(smap)" on ~5k obs of affect data
+  // "affectbige.h5"   // "edm xmap PA NA, dt e(150) k(20) force alg(smap)" on ~5k obs of affect data
 };
 
 ConsoleIO io(0);
@@ -63,25 +63,24 @@ static void bm_pow_half(benchmark::State& state)
 
 BENCHMARK(bm_pow_half);
 
-void get_distances(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M, const MatrixView& Mp)
+void get_distances(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp)
 {
   int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
+  std::vector<double> d(M.nobs());
 
-  for (int i = 0; i < M.rows(); i++) {
+  for (int i = 0; i < M.nobs(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
         if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -104,311 +103,49 @@ static void bm_get_distances(benchmark::State& state)
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
 
-  edm_inputs_t vars = read_dumpfile(input);
+  Inputs vars = read_dumpfile(input);
 
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
+  Manifold M = vars.M;
+  Manifold Mp = vars.Mp;
 
   int Mp_i = 0;
   for (auto _ : state) {
     get_distances(Mp_i, vars.opts, vars.y, M, Mp);
-    Mp_i = (Mp_i + 1) % vars.Mp.rows;
+    Mp_i = (Mp_i + 1) % vars.Mp.nobs();
   }
 }
 
 BENCHMARK(bm_get_distances)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
-
-void get_distances_colwise(int Mp_i, smap_opts_t opts, const std::vector<double>& y,
-                           const Eigen::Map<Eigen::MatrixXd>& M, const Eigen::Map<Eigen::MatrixXd>& Mp)
-{
-  int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
-
-  for (int i = 0; i < M.rows(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
-      }
-    }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
-
-    if (missing || dist == 0.) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
-      validDistances += 1;
-    }
-  }
-}
-
-static void bm_get_distances_colwise(benchmark::State& state)
-{
-  std::string input = tests[state.range(0)];
-  state.SetLabel(input);
-
-  edm_inputs_t vars = read_dumpfile(input);
-
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
-
-  std::vector<double> M_flat_colwise(vars.M.flat.size());
-  std::vector<double> Mp_flat_colwise(vars.Mp.flat.size());
-
-  int ind = 0;
-  for (int j = 0; j < vars.M.cols; j++) {
-    for (int i = 0; i < vars.M.rows; i++) {
-      M_flat_colwise[ind] = M(i, j);
-      ind += 1;
-    }
-  }
-
-  ind = 0;
-  for (int j = 0; j < vars.Mp.cols; j++) {
-    for (int i = 0; i < vars.Mp.rows; i++) {
-      Mp_flat_colwise[ind] = Mp(i, j);
-      ind += 1;
-    }
-  }
-
-  Eigen::Map<Eigen::MatrixXd> M_col(M_flat_colwise.data(), vars.M.rows, vars.M.cols);
-  Eigen::Map<Eigen::MatrixXd> Mp_col(Mp_flat_colwise.data(), vars.M.rows, vars.Mp.cols);
-
-  int Mp_i = 0;
-  for (auto _ : state) {
-    get_distances_colwise(Mp_i, vars.opts, vars.y, M_col, Mp_col);
-    Mp_i = (Mp_i + 1) % vars.Mp.rows;
-  }
-}
-
-BENCHMARK(bm_get_distances_colwise)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
-
-void get_distances_reuse(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-                         const MatrixView& Mp)
-{
-  int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
-
-  for (int i = 0; i < M.rows(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      double M_ij = M(i, j);
-      double b_j = b(j);
-      if ((M_ij == MISSING) || (b_j == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M_ij - b_j) * (M_ij - b_j);
-      }
-    }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
-
-    if (missing || dist == 0.) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
-      validDistances += 1;
-    }
-  }
-}
-
-static void bm_get_distances_reuse(benchmark::State& state)
-{
-  std::string input = tests[state.range(0)];
-  state.SetLabel(input);
-
-  edm_inputs_t vars = read_dumpfile(input);
-
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
-
-  int Mp_i = 0;
-  for (auto _ : state) {
-    get_distances_reuse(Mp_i, vars.opts, vars.y, M, Mp);
-    Mp_i = (Mp_i + 1) % vars.Mp.rows;
-  }
-}
-
-BENCHMARK(bm_get_distances_reuse)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
-
-template<typename T>
-struct BasicObservation
-{
-  const T* data;
-  size_t E;
-
-  T operator()(size_t j) const { return data[j]; }
-
-  bool any_missing() const
-  {
-    bool missing = false;
-    for (size_t i = 0; i < E; i++) {
-      if (data[i] == MISSING) {
-        missing = true;
-        break;
-      }
-    }
-    return missing;
-  }
-};
-
-template<typename T>
-struct BasicManifold
-{
-  std::vector<T> flat;
-  size_t _rows, _cols;
-
-  T operator()(size_t i, size_t j) const { return flat[i * _cols + j]; }
-
-  size_t rows() const { return _rows; }
-  size_t cols() const { return _cols; }
-
-  BasicObservation<T> get_observation(size_t i) const { return { &(flat[i * _cols]), _cols }; }
-};
-
-template<typename T>
-std::pair<std::vector<T>, int> get_distances_new(const BasicManifold<T>& M, const BasicObservation<T>& b,
-                                                 T missingdistance)
-{
-  int validDistances = 0;
-  std::vector<T> d(M.rows());
-
-  for (int i = 0; i < M.rows(); i++) {
-    T dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      T M_ij = M(i, j);
-      T b_j = b(j);
-      if ((M_ij == MISSING) || (b_j == MISSING)) {
-        if (missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M_ij - b_j) * (M_ij - b_j);
-      }
-    }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * missingdistance * missingdistance;
-    }
-
-    if (missing || dist == 0.) {
-      d[i] = std::numeric_limits<T>::max(); // MISSING doesn't fit inside float
-    } else {
-      d[i] = dist;
-      validDistances += 1;
-    }
-  }
-  return { d, validDistances };
-}
-
-static void bm_get_distances_new(benchmark::State& state)
-{
-  std::string input = tests[state.range(0)];
-  state.SetLabel(input);
-
-  edm_inputs_t vars = read_dumpfile(input);
-
-  BasicManifold<double> M = { vars.M.flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
-  BasicManifold<double> Mp = { vars.Mp.flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
-
-  int Mp_i = 0;
-  for (auto _ : state) {
-    BasicObservation<double> b = Mp.get_observation(Mp_i);
-    auto [d, validDistances] = get_distances_new(M, b, vars.opts.missingdistance);
-    Mp_i = (Mp_i + 1) % vars.Mp.rows;
-  }
-}
-
-BENCHMARK(bm_get_distances_new)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
-
-static void bm_get_distances_new_float(benchmark::State& state)
-{
-  std::string input = tests[state.range(0)];
-  state.SetLabel(input);
-
-  edm_inputs_t vars = read_dumpfile(input);
-
-  std::vector<float> M_flat(vars.M.flat.size());
-  std::vector<float> Mp_flat(vars.Mp.flat.size());
-
-  for (size_t i = 0; i < M_flat.size(); i++) {
-    M_flat[i] = (float)vars.M.flat[i];
-  }
-  for (size_t i = 0; i < Mp_flat.size(); i++) {
-    Mp_flat[i] = (float)vars.Mp.flat[i];
-  }
-
-  BasicManifold<float> M = { M_flat, (size_t)vars.M.rows, (size_t)vars.M.cols };
-  BasicManifold<float> Mp = { Mp_flat, (size_t)vars.Mp.rows, (size_t)vars.Mp.cols };
-
-  int Mp_i = 0;
-  for (auto _ : state) {
-    BasicObservation<float> b = Mp.get_observation(Mp_i);
-    auto [d, validDistances] = get_distances_new(M, b, (float)vars.opts.missingdistance);
-    Mp_i = (Mp_i + 1) % vars.Mp.rows;
-  }
-}
-
-BENCHMARK(bm_get_distances_new_float)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
 
 static void bm_nearest_neighbours(benchmark::State& state)
 {
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
 
-  edm_inputs_t vars = read_dumpfile(input);
+  Inputs vars = read_dumpfile(input);
 
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
+  Manifold M = vars.M;
+  Manifold Mp = vars.Mp;
 
   int Mp_i = 0;
-  smap_opts_t opts = vars.opts;
+  Options opts = vars.opts;
 
   int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
+  std::vector<double> d(M.nobs());
 
-  for (int i = 0; i < M.rows(); i++) {
+  for (int i = 0; i < M.nobs(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
         if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -425,10 +162,10 @@ static void bm_nearest_neighbours(benchmark::State& state)
     }
   }
 
-  int l = opts.l;
+  int k = opts.k;
 
   for (auto _ : state) {
-    std::vector<size_t> ind = minindex(d, l);
+    std::vector<size_t> ind = minindex(d, k);
   }
 }
 
@@ -439,32 +176,30 @@ static void bm_simplex(benchmark::State& state)
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
 
-  edm_inputs_t vars = read_dumpfile(input);
+  Inputs vars = read_dumpfile(input);
 
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
+  Manifold M = vars.M;
+  Manifold Mp = vars.Mp;
 
   int Mp_i = 0;
-  smap_opts_t opts = vars.opts;
-  std::vector<double> y = vars.y;
+  Options opts = vars.opts;
 
   int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
+  std::vector<double> d(M.nobs());
 
-  for (int i = 0; i < M.rows(); i++) {
+  for (int i = 0; i < M.nobs(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
         if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -481,23 +216,24 @@ static void bm_simplex(benchmark::State& state)
     }
   }
 
-  int l = opts.l;
+  int k = opts.k;
+  auto y = vars.y;
 
-  std::vector<size_t> ind = minindex(d, l);
+  std::vector<size_t> ind = minindex(d, k);
 
   double d_base = d[ind[0]];
-  std::vector<double> w(l);
+  std::vector<double> w(k);
 
   double sumw = 0., r = 0.;
 
   for (auto _ : state) {
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
       w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       r = r + y[ind[j]] * (w[j] / sumw);
     }
   }
@@ -510,32 +246,30 @@ static void bm_smap(benchmark::State& state)
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
 
-  edm_inputs_t vars = read_dumpfile(input);
+  Inputs vars = read_dumpfile(input);
 
-  MatrixView M((double*)vars.M.flat.data(), vars.M.rows, vars.M.cols);
-  MatrixView Mp((double*)vars.Mp.flat.data(), vars.Mp.rows, vars.Mp.cols);
+  Manifold M = vars.M;
+  Manifold Mp = vars.Mp;
 
   int Mp_i = 0;
-  smap_opts_t opts = vars.opts;
-  std::vector<double> y = vars.y;
+  Options opts = vars.opts;
 
   int validDistances = 0;
-  std::vector<double> d(M.rows());
-  auto b = Mp.row(Mp_i);
+  std::vector<double> d(M.nobs());
 
-  for (int i = 0; i < M.rows(); i++) {
+  for (int i = 0; i < M.nobs(); i++) {
     double dist = 0.;
     bool missing = false;
     int numMissingDims = 0;
-    for (int j = 0; j < M.cols(); j++) {
-      if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
         if (opts.missingdistance == 0) {
           missing = true;
           break;
         }
         numMissingDims += 1;
       } else {
-        dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
     // If the distance between M_i and b is 0 before handling missing values,
@@ -552,37 +286,38 @@ static void bm_smap(benchmark::State& state)
     }
   }
 
-  int l = opts.l;
+  int k = opts.k;
+  auto y = vars.y;
 
-  std::vector<size_t> ind = minindex(d, l);
+  std::vector<size_t> ind = minindex(d, k);
 
   double d_base = d[ind[0]];
-  std::vector<double> w(l);
+  std::vector<double> w(k);
   double sumw = 0., r = 0.;
 
   for (auto _ : state) {
-    Eigen::MatrixXd X_ls(l, M.cols());
-    std::vector<double> y_ls(l), w_ls(l);
+    Eigen::MatrixXd X_ls(k, M.E_actual());
+    std::vector<double> y_ls(k), w_ls(k);
 
     double mean_w = 0.;
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
       /* w[j] = pow(d[ind[j]],0.5); */
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
-    mean_w = mean_w / (double)l;
-    for (int j = 0; j < l; j++) {
+    mean_w = mean_w / (double)k;
+    for (int j = 0; j < k; j++) {
       w[j] = exp(-opts.theta * (w[j] / mean_w));
     }
 
     int rowc = -1;
-    for (int j = 0; j < l; j++) {
+    for (int j = 0; j < k; j++) {
       if (y[ind[j]] == MISSING) {
         continue;
       }
       bool anyMissing = false;
-      for (int i = 0; i < M.cols(); i++) {
+      for (int i = 0; i < M.E_actual(); i++) {
         if (M(ind[j], i) == MISSING) {
           anyMissing = true;
           break;
@@ -595,7 +330,7 @@ static void bm_smap(benchmark::State& state)
 
       y_ls[rowc] = y[ind[j]] * w[j];
       w_ls[rowc] = w[j];
-      for (int i = 0; i < M.cols(); i++) {
+      for (int i = 0; i < M.E_actual(); i++) {
         X_ls(rowc, i) = M(ind[j], i) * w[j];
       }
     }
@@ -607,7 +342,7 @@ static void bm_smap(benchmark::State& state)
     // concatenate the column vector 'w' with 'X_ls', keeping only
     // the first 'rowc+1' rows.
     Eigen::VectorXd y_ls_cj(rowc + 1);
-    Eigen::MatrixXd X_ls_cj(rowc + 1, M.cols() + 1);
+    Eigen::MatrixXd X_ls_cj(rowc + 1, M.E_actual() + 1);
 
     for (int i = 0; i < rowc + 1; i++) {
       y_ls_cj(i) = y_ls[i];
@@ -621,9 +356,9 @@ static void bm_smap(benchmark::State& state)
     Eigen::VectorXd ics = svd.solve(y_ls_cj);
 
     r = ics(0);
-    for (int j = 1; j < M.cols() + 1; j++) {
-      if (b(j - 1) != MISSING) {
-        r += b(j - 1) * ics(j);
+    for (int j = 1; j < M.E_actual() + 1; j++) {
+      if (Mp(Mp_i, j - 1) != MISSING) {
+        r += Mp(Mp_i, j - 1) * ics(j);
       }
     }
   }
@@ -652,430 +387,202 @@ std::vector<int> get_thread_range()
   return v;
 }
 
-// std::vector<int> threadRange = get_thread_range();
-
-// static void bm_mf_smap_loop(benchmark::State& state)
-// {
-//   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
-//   int threads = threadRange[state.range(0) % threadRange.size()];
-
-//   std::string input = tests[testNum];
-//   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   vars.opts.distributeThreads = false;
-//   vars.nthreads = threads;
-
-//   for (auto _ : state)
-//     smap_res_t res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
-// }
-
-// BENCHMARK(bm_mf_smap_loop)
-//   ->DenseRange(0, tests.size() * threadRange.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// static void bm_mf_smap_loop_distribute(benchmark::State& state)
-// {
-//   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
-//   int threads = threadRange[state.range(0) % threadRange.size()];
-
-//   std::string input = tests[testNum];
-//   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   vars.opts.distributeThreads = true;
-//   vars.nthreads = threads;
-
-//   for (auto _ : state)
-//     smap_res_t res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads, io);
-// }
-
-// BENCHMARK(bm_mf_smap_loop_distribute)
-//   ->DenseRange(0, tests.size() * threadRange.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// retcode mf_smap_single(int Mp_i, smap_opts_t opts, const std::vector<double>& y, const MatrixView& M,
-//                        const MatrixView& Mp, std::vector<double>& ystar, std::optional<MatrixView>& Bi_map,
-//                        bool keep_going() = nullptr)
-// {
-//   if (keep_going != nullptr && keep_going() == false) {
-//     return UNKNOWN_ERROR;
-//   }
-//   int validDistances = 0;
-//   std::vector<double> d(M.rows());
-//   auto b = Mp.row(Mp_i);
-
-//   for (int i = 0; i < M.rows(); i++) {
-//     double dist = 0.;
-//     bool missing = false;
-//     int numMissingDims = 0;
-//     for (int j = 0; j < M.cols(); j++) {
-//       if ((M(i, j) == MISSING) || (b(j) == MISSING)) {
-//         if (opts.missingdistance == 0) {
-//           missing = true;
-//           break;
-//         }
-//         numMissingDims += 1;
-//       } else {
-//         dist += (M(i, j) - b(j)) * (M(i, j) - b(j));
-//       }
-//     }
-//     // If the distance between M_i and b is 0 before handling missing values,
-//     // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-//     if (dist != 0) {
-//       dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-//     }
-
-//     if (missing || dist == 0.) {
-//       d[i] = MISSING;
-//     } else {
-//       d[i] = dist;
-//       validDistances += 1;
-//     }
-//   }
-
-//   // If we only look at distances which are non-zero and non-missing,
-//   // do we have enough of them to find 'l' neighbours?
-//   int l = opts.l;
-//   if (l > validDistances) {
-//     if (opts.force_compute) {
-//       l = validDistances;
-//       if (l == 0) {
-//         return INSUFFICIENT_UNIQUE;
-//       }
-//     } else {
-//       return INSUFFICIENT_UNIQUE;
-//     }
-//   }
-
-//   std::vector<size_t> ind = minindex(d, l);
-
-//   double d_base = d[ind[0]];
-//   std::vector<double> w(l);
-
-//   double sumw = 0., r = 0.;
-//   if (opts.algorithm == "" || opts.algorithm == "simplex") {
-//     for (int j = 0; j < l; j++) {
-//       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-//       /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-//       w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
-//       sumw = sumw + w[j];
-//     }
-//     for (int j = 0; j < l; j++) {
-//       r = r + y[ind[j]] * (w[j] / sumw);
-//     }
-
-//     ystar[Mp_i] = r;
-//     return SUCCESS;
-
-//   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
-
-//     Eigen::MatrixXd X_ls(l, M.cols());
-//     std::vector<double> y_ls(l), w_ls(l);
-
-//     double mean_w = 0.;
-//     for (int j = 0; j < l; j++) {
-//       /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-//       /* w[j] = pow(d[ind[j]],0.5); */
-//       w[j] = sqrt(d[ind[j]]);
-//       mean_w = mean_w + w[j];
-//     }
-//     mean_w = mean_w / (double)l;
-//     for (int j = 0; j < l; j++) {
-//       w[j] = exp(-opts.theta * (w[j] / mean_w));
-//     }
-
-//     int rowc = -1;
-//     for (int j = 0; j < l; j++) {
-//       if (y[ind[j]] == MISSING) {
-//         continue;
-//       }
-//       bool anyMissing = false;
-//       for (int i = 0; i < M.cols(); i++) {
-//         if (M(ind[j], i) == MISSING) {
-//           anyMissing = true;
-//           break;
-//         }
-//       }
-//       if (anyMissing) {
-//         continue;
-//       }
-//       rowc++;
-//       if (opts.algorithm == "llr") {
-//         // llr algorithm is not needed at this stage
-//         return NOT_IMPLEMENTED;
-
-//       } else if (opts.algorithm == "smap") {
-//         y_ls[rowc] = y[ind[j]] * w[j];
-//         w_ls[rowc] = w[j];
-//         for (int i = 0; i < M.cols(); i++) {
-//           X_ls(rowc, i) = M(ind[j], i) * w[j];
-//         }
-//       }
-//     }
-//     if (rowc == -1) {
-//       ystar[Mp_i] = MISSING;
-//       return SUCCESS;
-//     }
-
-//     // Pull out the first 'rowc+1' elements of the y_ls vector and
-//     // concatenate the column vector 'w' with 'X_ls', keeping only
-//     // the first 'rowc+1' rows.
-//     Eigen::VectorXd y_ls_cj(rowc + 1);
-//     Eigen::MatrixXd X_ls_cj(rowc + 1, M.cols() + 1);
-
-//     for (int i = 0; i < rowc + 1; i++) {
-//       y_ls_cj(i) = y_ls[i];
-//       X_ls_cj(i, 0) = w_ls[i];
-//       for (int j = 1; j < X_ls.cols() + 1; j++) {
-//         X_ls_cj(i, j) = X_ls(i, j - 1);
-//       }
-//     }
-
-//     if (opts.algorithm == "llr") {
-//       // llr algorithm is not needed at this stage
-//       return NOT_IMPLEMENTED;
-//     } else {
-//       Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
-//       Eigen::VectorXd ics = svd.solve(y_ls_cj);
-
-//       r = ics(0);
-//       for (int j = 1; j < M.cols() + 1; j++) {
-//         if (b(j - 1) != MISSING) {
-//           r += b(j - 1) * ics(j);
-//         }
-//       }
-
-//       // saving ics coefficients if savesmap option enabled
-//       if (opts.save_mode) {
-//         for (int j = 0; j < opts.varssv; j++) {
-//           if (ics(j) == 0.) {
-//             (*Bi_map)(Mp_i, j) = MISSING;
-//           } else {
-//             (*Bi_map)(Mp_i, j) = ics(j);
-//           }
-//         }
-//       }
-
-//       ystar[Mp_i] = r;
-//       return SUCCESS;
-//     }
-//   }
-
-//   return INVALID_ALGORITHM;
-// }
-
-// #ifdef _MSC_VER
-// #include <omp.h>
-
-// smap_res_t mf_smap_loop_openmp(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M,
-//                                const manifold_t& Mp, int nthreads)
-// {
-//   // Create Eigen matrixes which are views of the supplied flattened matrices
-//   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-//   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
-
-//   std::optional<std::vector<double>> flat_Bi_map{};
-//   std::optional<MatrixView> Bi_map{};
-//   if (opts.save_mode) {
-//     flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-//     Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
-//   }
-
-//   // OpenMP loop with call to mf_smap_single function
-//   std::vector<retcode> rc(Mp.rows);
-//   std::vector<double> ystar(Mp.rows);
-
-//   omp_set_num_threads(nthreads);
-
-//   int i;
-// #pragma omp parallel for
-//   for (i = 0; i < Mp.rows; i++) {
-//     rc[i] = mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map);
-//   }
-
-//   // Check if any mf_smap_single call failed, and if so find the most serious error
-//   retcode maxError = *std::max_element(rc.begin(), rc.end());
-
-//   return smap_res_t{ maxError, ystar, flat_Bi_map };
-// }
-
-// static void bm_mf_smap_loop_openmp(benchmark::State& state)
-// {
-//   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
-//   int threads = threadRange[state.range(0) % threadRange.size()];
-
-//   std::string input = tests[testNum];
-//   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   for (auto _ : state) {
-//     smap_res_t res = mf_smap_loop_openmp(vars.opts, vars.y, vars.M, vars.Mp, threads);
-//   }
-// }
-
-// BENCHMARK(bm_mf_smap_loop_openmp)
-//   ->DenseRange(0, tests.size() * threadRange.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// #endif
-
-// #ifdef _MSC_VER
-
-// #include <execution>
-
-// smap_res_t mf_smap_loop_cpp17_seq(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M,
-//                                   const manifold_t& Mp, int nthreads)
-// {
-//   // Create Eigen matrixes which are views of the supplied flattened matrices
-//   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-//   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
-
-//   std::optional<std::vector<double>> flat_Bi_map{};
-//   std::optional<MatrixView> Bi_map{};
-//   if (opts.save_mode) {
-//     flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-//     Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
-//   }
-
-//   // OpenMP loop with call to mf_smap_single function
-//   std::vector<retcode> rc(Mp.rows);
-//   std::vector<double> ystar(Mp.rows);
-
-//   std::vector<int> inds(Mp.rows);
-//   std::iota(inds.begin(), inds.end(), 0);
-
-//   std::transform(std::execution::seq, inds.begin(), inds.end(), rc.begin(),
-//                  [&](int i) { return mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
-
-//   // Check if any mf_smap_single call failed, and if so find the most serious error
-//   retcode maxError = *std::max_element(rc.begin(), rc.end());
-
-//   return smap_res_t{ maxError, ystar, flat_Bi_map };
-// }
-
-// static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
-// {
-//   std::string input = tests[state.range(0)];
-//   state.SetLabel(input);
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   for (auto _ : state) {
-//     smap_res_t res = mf_smap_loop_cpp17_seq(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
-//   }
-// }
-
-// BENCHMARK(bm_mf_smap_loop_cpp17_seq)
-//   ->DenseRange(0, tests.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// smap_res_t mf_smap_loop_cpp17_par(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M,
-//                                   const manifold_t& Mp, int nthreads)
-// {
-//   // Create Eigen matrixes which are views of the supplied flattened matrices
-//   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-//   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
-
-//   std::optional<std::vector<double>> flat_Bi_map{};
-//   std::optional<MatrixView> Bi_map{};
-//   if (opts.save_mode) {
-//     flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-//     Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
-//   }
-
-//   // OpenMP loop with call to mf_smap_single function
-//   std::vector<retcode> rc(Mp.rows);
-//   std::vector<double> ystar(Mp.rows);
-
-//   std::vector<int> inds(Mp.rows);
-//   std::iota(inds.begin(), inds.end(), 0);
-
-//   std::transform(std::execution::par, inds.begin(), inds.end(), rc.begin(),
-//                  [&](int i) { return mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
-
-//   // Check if any mf_smap_single call failed, and if so find the most serious error
-//   retcode maxError = *std::max_element(rc.begin(), rc.end());
-
-//   return smap_res_t{ maxError, ystar, flat_Bi_map };
-// }
-
-// static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
-// {
-//   std::string input = tests[state.range(0)];
-//   state.SetLabel(input);
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   for (auto _ : state) {
-//     smap_res_t res = mf_smap_loop_cpp17_par(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
-//   }
-// }
-
-// BENCHMARK(bm_mf_smap_loop_cpp17_par)
-//   ->DenseRange(0, tests.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// smap_res_t mf_smap_loop_cpp17_par_unseq(smap_opts_t opts, const std::vector<double>& y, const manifold_t& M,
-//                                         const manifold_t& Mp, int nthreads)
-// {
-//   // Create Eigen matrixes which are views of the supplied flattened matrices
-//   MatrixView M_mat((double*)M.flat.data(), M.rows, M.cols);     //  count_train_set, mani
-//   MatrixView Mp_mat((double*)Mp.flat.data(), Mp.rows, Mp.cols); // count_predict_set, mani
-
-//   std::optional<std::vector<double>> flat_Bi_map{};
-//   std::optional<MatrixView> Bi_map{};
-//   if (opts.save_mode) {
-//     flat_Bi_map = std::vector<double>(Mp.rows * opts.varssv);
-//     Bi_map = MatrixView(flat_Bi_map->data(), Mp.rows, opts.varssv);
-//   }
-
-//   // OpenMP loop with call to mf_smap_single function
-//   std::vector<retcode> rc(Mp.rows);
-//   std::vector<double> ystar(Mp.rows);
-
-//   std::vector<int> inds(Mp.rows);
-//   std::iota(inds.begin(), inds.end(), 0);
-
-//   std::transform(std::execution::par_unseq, inds.begin(), inds.end(), rc.begin(),
-//                  [&](int i) { return mf_smap_single(i, opts, y, M_mat, Mp_mat, ystar, Bi_map); });
-
-//   // Check if any mf_smap_single call failed, and if so find the most serious error
-//   retcode maxError = *std::max_element(rc.begin(), rc.end());
-
-//   return smap_res_t{ maxError, ystar, flat_Bi_map };
-// }
-
-// static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
-// {
-//   std::string input = tests[state.range(0)];
-//   state.SetLabel(input);
-
-//   edm_inputs_t vars = read_dumpfile(input);
-
-//   for (auto _ : state) {
-//     smap_res_t res = mf_smap_loop_cpp17_par_unseq(vars.opts, vars.y, vars.M, vars.Mp, vars.nthreads);
-//   }
-// }
-
-// BENCHMARK(bm_mf_smap_loop_cpp17_par_unseq)
-//   ->DenseRange(0, tests.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
-
-// #endif
-
-// BENCHMARK(bm_mf_smap_loop)
-//   ->DenseRange(0, tests.size() * threadRange.size() - 1)
-//   ->MeasureProcessCPUTime()
-//   ->Unit(benchmark::kMillisecond);
+std::vector<int> threadRange = get_thread_range();
+
+static void bm_mf_smap_loop(benchmark::State& state)
+{
+  int testNum = ((int)state.range(0)) / ((int)threadRange.size());
+  int threads = threadRange[state.range(0) % threadRange.size()];
+
+  std::string input = tests[testNum];
+  state.SetLabel(fmt::format("{} ({} threads)", input, threads));
+
+  Inputs vars = read_dumpfile(input);
+
+  vars.opts.distributeThreads = false;
+  vars.opts.nthreads = threads;
+
+  for (auto _ : state)
+    Prediction res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, io);
+}
+
+BENCHMARK(bm_mf_smap_loop)
+  ->DenseRange(0, tests.size() * threadRange.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+static void bm_mf_smap_loop_distribute(benchmark::State& state)
+{
+  int testNum = ((int)state.range(0)) / ((int)threadRange.size());
+  int threads = threadRange[state.range(0) % threadRange.size()];
+
+  std::string input = tests[testNum];
+  state.SetLabel(fmt::format("{} ({} threads)", input, threads));
+
+  Inputs vars = read_dumpfile(input);
+
+  vars.opts.distributeThreads = true;
+  vars.opts.nthreads = threads;
+
+  for (auto _ : state)
+    Prediction res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, io);
+}
+
+BENCHMARK(bm_mf_smap_loop_distribute)
+  ->DenseRange(0, tests.size() * threadRange.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map, bool keep_going());
+
+#ifdef _MSC_VER
+#include <omp.h>
+
+Prediction mf_smap_loop_openmp(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                               int nthreads)
+{
+  size_t numPredictions = Mp.nobs();
+
+  std::optional<std::vector<double>> flat_Bi_map{};
+  std::optional<MatrixView> Bi_map{};
+  if (opts.saveMode) {
+    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
+    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
+  }
+
+  // OpenMP loop with call to mf_smap_single function
+  std::vector<retcode> rc(numPredictions);
+  std::vector<double> ystar(numPredictions);
+
+  omp_set_num_threads(nthreads);
+
+  int i;
+#pragma omp parallel for
+  for (i = 0; i < Mp.nobs(); i++) {
+    rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr);
+  }
+
+  // Check if any mf_smap_single call failed, and if so find the most serious error
+  retcode maxError = *std::max_element(rc.begin(), rc.end());
+
+  return { maxError, ystar, flat_Bi_map };
+}
+
+static void bm_mf_smap_loop_openmp(benchmark::State& state)
+{
+  int testNum = ((int)state.range(0)) / ((int)threadRange.size());
+  int threads = threadRange[state.range(0) % threadRange.size()];
+
+  std::string input = tests[testNum];
+  state.SetLabel(fmt::format("{} ({} threads)", input, threads));
+
+  Inputs vars = read_dumpfile(input);
+
+  for (auto _ : state) {
+    Prediction res = mf_smap_loop_openmp(vars.opts, vars.y, vars.M, vars.Mp, threads);
+  }
+}
+
+BENCHMARK(bm_mf_smap_loop_openmp)
+  ->DenseRange(0, tests.size() * threadRange.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+#endif
+
+#ifdef _MSC_VER
+
+#include <execution>
+
+template<class PolicyType>
+Prediction mf_smap_loop_cpp17(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                              PolicyType policy)
+{
+  size_t numPredictions = Mp.nobs();
+
+  std::optional<std::vector<double>> flat_Bi_map{};
+  std::optional<MatrixView> Bi_map{};
+  if (opts.saveMode) {
+    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
+    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
+  }
+
+  // OpenMP loop with call to mf_smap_single function
+  std::vector<retcode> rc(numPredictions);
+  std::vector<double> ystar(numPredictions);
+
+  std::vector<int> inds(Mp.nobs());
+  std::iota(inds.begin(), inds.end(), 0);
+
+  std::transform(policy, inds.begin(), inds.end(), rc.begin(),
+                 [&](int i) { return mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr); });
+
+  // Check if any mf_smap_single call failed, and if so find the most serious error
+  retcode maxError = *std::max_element(rc.begin(), rc.end());
+
+  return Prediction{ maxError, ystar, flat_Bi_map };
+}
+
+static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  for (auto _ : state) {
+    Prediction res =
+      mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.y, vars.M, vars.Mp, std::execution::seq);
+  }
+}
+
+BENCHMARK(bm_mf_smap_loop_cpp17_seq)
+  ->DenseRange(0, tests.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  for (auto _ : state) {
+    Prediction res =
+      mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.y, vars.M, vars.Mp, std::execution::par);
+  }
+}
+
+BENCHMARK(bm_mf_smap_loop_cpp17_par)
+  ->DenseRange(0, tests.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  for (auto _ : state) {
+    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(vars.opts, vars.y, vars.M, vars.Mp,
+                                                                                     std::execution::par_unseq);
+  }
+}
+
+BENCHMARK(bm_mf_smap_loop_cpp17_par_unseq)
+  ->DenseRange(0, tests.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
+
+#endif
+
+BENCHMARK(bm_mf_smap_loop)
+  ->DenseRange(0, tests.size() * threadRange.size() - 1)
+  ->MeasureProcessCPUTime()
+  ->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();
