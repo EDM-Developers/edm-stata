@@ -22,10 +22,6 @@
 #include <algorithm> // std::partial_sort
 #include <cmath>
 #include <numeric> // std::iota
-#include <optional>
-
-/* internal functions */
-typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
 
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
@@ -43,11 +39,20 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map, bool keep_going() = nullptr)
+void simplex(int Mp_i, int t, Options opts, const std::vector<double>& y, int k, const std::vector<double>& d,
+             const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
+void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, int k,
+          const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs,
+          span_2d_retcode rc);
+
+void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                    span_2d_double ystar, span_2d_retcode rc, span_3d_double coeffs, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
-    return UNKNOWN_ERROR;
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      rc(t, Mp_i) = UNKNOWN_ERROR;
+    }
+    return;
   }
   int validDistances = 0;
   std::vector<double> d(M.nobs());
@@ -88,122 +93,153 @@ retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, con
     if (opts.forceCompute) {
       k = validDistances;
       if (k == 0) {
-        return INSUFFICIENT_UNIQUE;
+        for (int t = 0; t < opts.thetas.size(); t++) {
+          rc(t, Mp_i) = INSUFFICIENT_UNIQUE;
+        }
+        return;
       }
     } else {
-      return INSUFFICIENT_UNIQUE;
+      for (int t = 0; t < opts.thetas.size(); t++) {
+        rc(t, Mp_i) = INSUFFICIENT_UNIQUE;
+      }
+      return;
     }
   }
 
   std::vector<size_t> ind = minindex(d, k);
 
+  if (opts.algorithm == "" || opts.algorithm == "simplex") {
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      simplex(Mp_i, t, opts, y, k, d, ind, ystar, rc);
+    }
+  } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      smap(Mp_i, t, opts, y, M, Mp, k, d, ind, ystar, coeffs, rc);
+    }
+  } else {
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      rc(t, Mp_i) = INVALID_ALGORITHM;
+    }
+  }
+}
+
+void simplex(int Mp_i, int t, Options opts, const std::vector<double>& y, int k, const std::vector<double>& d,
+             const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc)
+{
+  double theta = opts.thetas[t];
+
+  double d_base = d[ind[0]];
+  std::vector<double> w(k);
+  double sumw = 0., r = 0.;
+
+  for (int j = 0; j < k; j++) {
+    w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
+    sumw = sumw + w[j];
+  }
+
+  for (int j = 0; j < k; j++) {
+    r = r + y[ind[j]] * (w[j] / sumw);
+  }
+
+  ystar(t, Mp_i) = r;
+  rc(t, Mp_i) = SUCCESS;
+}
+
+void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, int k,
+          const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs,
+          span_2d_retcode rc)
+{
+
   double d_base = d[ind[0]];
   std::vector<double> w(k);
 
-  double sumw = 0., r = 0.;
-  if (opts.algorithm == "" || opts.algorithm == "simplex") {
-    for (int j = 0; j < k; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
-      sumw = sumw + w[j];
-    }
-    for (int j = 0; j < k; j++) {
-      r = r + y[ind[j]] * (w[j] / sumw);
-    }
+  Eigen::MatrixXd X_ls(k, M.E_actual());
+  std::vector<double> y_ls(k), w_ls(k);
 
-    ystar[Mp_i] = r;
-    return SUCCESS;
+  double mean_w = 0.;
+  for (int j = 0; j < k; j++) {
+    w[j] = sqrt(d[ind[j]]);
+    mean_w = mean_w + w[j];
+  }
+  mean_w = mean_w / (double)k;
 
-  } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
+  double theta = opts.thetas[t];
 
-    Eigen::MatrixXd X_ls(k, M.E_actual());
-    std::vector<double> y_ls(k), w_ls(k);
+  for (int j = 0; j < k; j++) {
+    w[j] = exp(-theta * (w[j] / mean_w));
+  }
 
-    double mean_w = 0.;
-    for (int j = 0; j < k; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = pow(d[ind[j]],0.5); */
-      w[j] = sqrt(d[ind[j]]);
-      mean_w = mean_w + w[j];
-    }
-    mean_w = mean_w / (double)k;
-    for (int j = 0; j < k; j++) {
-      w[j] = exp(-opts.theta * (w[j] / mean_w));
+  int rowc = -1;
+  for (int j = 0; j < k; j++) {
+    if (y[ind[j]] == MISSING) {
+      continue;
     }
 
-    int rowc = -1;
-    for (int j = 0; j < k; j++) {
-      if (y[ind[j]] == MISSING) {
-        continue;
-      }
-
-      if (M.any_missing(ind[j])) {
-        continue;
-      }
-      rowc++;
-      if (opts.algorithm == "llr") {
-        // llr algorithm is not needed at this stage
-        return NOT_IMPLEMENTED;
-
-      } else if (opts.algorithm == "smap") {
-        y_ls[rowc] = y[ind[j]] * w[j];
-        w_ls[rowc] = w[j];
-        for (int i = 0; i < M.E_actual(); i++) {
-          X_ls(rowc, i) = M(ind[j], i) * w[j];
-        }
-      }
+    if (M.any_missing(ind[j])) {
+      continue;
     }
-    if (rowc == -1) {
-      ystar[Mp_i] = MISSING;
-      return SUCCESS;
-    }
-
-    // Pull out the first 'rowc+1' elements of the y_ls vector and
-    // concatenate the column vector 'w' with 'X_ls', keeping only
-    // the first 'rowc+1' rows.
-    Eigen::VectorXd y_ls_cj(rowc + 1);
-    Eigen::MatrixXd X_ls_cj(rowc + 1, M.E_actual() + 1);
-
-    for (int i = 0; i < rowc + 1; i++) {
-      y_ls_cj(i) = y_ls[i];
-      X_ls_cj(i, 0) = w_ls[i];
-      for (int j = 1; j < X_ls.cols() + 1; j++) {
-        X_ls_cj(i, j) = X_ls(i, j - 1);
-      }
-    }
-
+    rowc++;
     if (opts.algorithm == "llr") {
       // llr algorithm is not needed at this stage
-      return NOT_IMPLEMENTED;
-    } else {
-      Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      Eigen::VectorXd ics = svd.solve(y_ls_cj);
+      rc(t, Mp_i) = NOT_IMPLEMENTED;
+      return;
 
-      r = ics(0);
-      for (int j = 1; j < M.E_actual() + 1; j++) {
-        if (Mp(Mp_i, j - 1) != MISSING) {
-          r += Mp(Mp_i, j - 1) * ics(j);
-        }
+    } else if (opts.algorithm == "smap") {
+      y_ls[rowc] = y[ind[j]] * w[j];
+      w_ls[rowc] = w[j];
+      for (int i = 0; i < M.E_actual(); i++) {
+        X_ls(rowc, i) = M(ind[j], i) * w[j];
       }
+    }
+  }
+  if (rowc == -1) {
+    ystar(t, Mp_i) = MISSING;
+    rc(t, Mp_i) = SUCCESS;
+    return;
+  }
 
-      // saving ics coefficients if savesmap option enabled
-      if (opts.saveMode) {
-        for (int j = 0; j < opts.varssv; j++) {
-          if (ics(j) == 0.) {
-            (*Bi_map)(Mp_i, j) = MISSING;
-          } else {
-            (*Bi_map)(Mp_i, j) = ics(j);
-          }
-        }
-      }
+  // Pull out the first 'rowc+1' elements of the y_ls vector and
+  // concatenate the column vector 'w' with 'X_ls', keeping only
+  // the first 'rowc+1' rows.
+  Eigen::VectorXd y_ls_cj(rowc + 1);
+  Eigen::MatrixXd X_ls_cj(rowc + 1, M.E_actual() + 1);
 
-      ystar[Mp_i] = r;
-      return SUCCESS;
+  for (int i = 0; i < rowc + 1; i++) {
+    y_ls_cj(i) = y_ls[i];
+    X_ls_cj(i, 0) = w_ls[i];
+    for (int j = 1; j < X_ls.cols() + 1; j++) {
+      X_ls_cj(i, j) = X_ls(i, j - 1);
     }
   }
 
-  return INVALID_ALGORITHM;
+  if (opts.algorithm == "llr") {
+    // llr algorithm is not needed at this stage
+    rc(t, Mp_i) = NOT_IMPLEMENTED;
+  } else {
+    Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::VectorXd ics = svd.solve(y_ls_cj);
+
+    double r = ics(0);
+    for (int j = 1; j < M.E_actual() + 1; j++) {
+      if (Mp(Mp_i, j - 1) != MISSING) {
+        r += Mp(Mp_i, j - 1) * ics(j);
+      }
+    }
+
+    // saving ics coefficients if savesmap option enabled
+    if (opts.saveMode) {
+      for (int j = 0; j < opts.varssv; j++) {
+        if (ics(j) == 0.) {
+          coeffs(t, Mp_i, j) = MISSING;
+        } else {
+          coeffs(t, Mp_i, j) = ics(j);
+        }
+      }
+    }
+
+    ystar(t, Mp_i) = r;
+    rc(t, Mp_i) = SUCCESS;
+  }
 }
 
 ThreadPool pool;
@@ -215,17 +251,23 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
   M.compute_lagged_embedding();
   Mp.compute_lagged_embedding();
 
+  size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
-  std::optional<std::vector<double>> flat_Bi_map{};
-  std::optional<MatrixView> Bi_map{};
-  if (opts.saveMode) {
-    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
-  }
+  Prediction pred;
 
-  std::vector<retcode> rc(numPredictions);
-  std::vector<double> ystar(numPredictions);
+  pred.numThetas = numThetas;
+  pred.numPredictions = numPredictions;
+  pred.numCoeffCols = opts.varssv;
+
+  pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
+  auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
+
+  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
+  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+
+  auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
+  auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -239,10 +281,11 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }
+
   std::vector<std::future<void>> results(numPredictions);
   if (opts.nthreads > 1) {
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = pool.enqueue([&, i] { rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, keep_going); });
+      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, keep_going); });
     }
   }
 
@@ -252,7 +295,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr);
+      mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr);
     } else {
       results[i].get();
     }
@@ -268,7 +311,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
-  retcode maxError = *std::max_element(rc.begin(), rc.end());
+  pred.rc = *std::max_element(rc_data.get(), rc_data.get() + numThetas * numPredictions);
 
   if (finished != nullptr) {
     finished();
@@ -276,5 +319,5 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
 
   io.print_async(fmt::format("\nedm plugin took {} secs to make predictions\n", elapsed.count()));
 
-  return { maxError, ystar, flat_Bi_map };
+  return std::move(pred);
 }

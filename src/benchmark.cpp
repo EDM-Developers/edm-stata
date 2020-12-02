@@ -234,9 +234,7 @@ static void bm_simplex(benchmark::State& state)
 
   for (auto _ : state) {
     for (int j = 0; j < k; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = exp(-theta*pow((d[ind[j]] / d_base),(0.5))); */
-      w[j] = exp(-opts.theta * sqrt(d[ind[j]] / d_base));
+      w[j] = exp(-opts.thetas[0] * sqrt(d[ind[j]] / d_base));
       sumw = sumw + w[j];
     }
     for (int j = 0; j < k; j++) {
@@ -309,14 +307,12 @@ static void bm_smap(benchmark::State& state)
 
     double mean_w = 0.;
     for (int j = 0; j < k; j++) {
-      /* TO BE ADDED: benchmark pow(expression,0.5) vs sqrt(expression) */
-      /* w[j] = pow(d[ind[j]],0.5); */
       w[j] = sqrt(d[ind[j]]);
       mean_w = mean_w + w[j];
     }
     mean_w = mean_w / (double)k;
     for (int j = 0; j < k; j++) {
-      w[j] = exp(-opts.theta * (w[j] / mean_w));
+      w[j] = exp(-opts.thetas[0] * (w[j] / mean_w));
     }
 
     int rowc = -1;
@@ -421,6 +417,8 @@ BENCHMARK(bm_mf_smap_loop)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
+#ifdef _MSC_VER
+
 static void bm_mf_smap_loop_distribute(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
@@ -445,6 +443,8 @@ BENCHMARK(bm_mf_smap_loop_distribute)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
+#endif
+
 // static void bm_mf_smap_loop_lazy(benchmark::State& state)
 // {
 //   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
@@ -467,8 +467,8 @@ BENCHMARK(bm_mf_smap_loop_distribute)
 //   ->MeasureProcessCPUTime()
 //   ->Unit(benchmark::kMillisecond);
 
-retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                       std::vector<double>& ystar, std::optional<MatrixView>& Bi_map, bool keep_going());
+void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
+                    span_2d_double ystar, span_2d_retcode rc, span_3d_double coeffs, bool keep_going());
 
 #ifdef _MSC_VER
 #include <omp.h>
@@ -476,31 +476,40 @@ retcode mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, con
 Prediction mf_smap_loop_openmp(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                                int nthreads)
 {
+  // Precompute the lagged embeddings in contiguous blocks of memory
+  M.compute_lagged_embedding();
+  Mp.compute_lagged_embedding();
+
+  size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
-  std::optional<std::vector<double>> flat_Bi_map{};
-  std::optional<MatrixView> Bi_map{};
-  if (opts.saveMode) {
-    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
-  }
+  Prediction pred;
 
-  // OpenMP loop with call to mf_smap_single function
-  std::vector<retcode> rc(numPredictions);
-  std::vector<double> ystar(numPredictions);
+  pred.numThetas = numThetas;
+  pred.numPredictions = numPredictions;
+  pred.numCoeffCols = opts.varssv;
+
+  pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
+  auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
+
+  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
+  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+
+  auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
+  auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
 
   omp_set_num_threads(nthreads);
 
   int i;
 #pragma omp parallel for
-  for (i = 0; i < Mp.nobs(); i++) {
-    rc[i] = mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr);
+  for (i = 0; i < numPredictions; i++) {
+    mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr);
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
-  retcode maxError = *std::max_element(rc.begin(), rc.end());
+  retcode maxError = *std::max_element(rc.data(), rc.data() + numThetas * numPredictions);
 
-  return { maxError, ystar, flat_Bi_map };
+  return std::move(pred);
 }
 
 static void bm_mf_smap_loop_openmp(benchmark::State& state)
@@ -535,29 +544,38 @@ template<class PolicyType>
 Prediction mf_smap_loop_cpp17(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
                               PolicyType policy)
 {
+  // Precompute the lagged embeddings in contiguous blocks of memory
+  M.compute_lagged_embedding();
+  Mp.compute_lagged_embedding();
+
+  size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
-  std::optional<std::vector<double>> flat_Bi_map{};
-  std::optional<MatrixView> Bi_map{};
-  if (opts.saveMode) {
-    flat_Bi_map = std::vector<double>(numPredictions * opts.varssv);
-    Bi_map = MatrixView(flat_Bi_map->data(), numPredictions, opts.varssv);
-  }
+  Prediction pred;
 
-  // OpenMP loop with call to mf_smap_single function
-  std::vector<retcode> rc(numPredictions);
-  std::vector<double> ystar(numPredictions);
+  pred.numThetas = numThetas;
+  pred.numPredictions = numPredictions;
+  pred.numCoeffCols = opts.varssv;
+
+  pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
+  auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
+
+  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
+  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+
+  auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
+  auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
 
   std::vector<int> inds(Mp.nobs());
   std::iota(inds.begin(), inds.end(), 0);
 
-  std::transform(policy, inds.begin(), inds.end(), rc.begin(),
-                 [&](int i) { return mf_smap_single(i, opts, y, M, Mp, ystar, Bi_map, nullptr); });
+  std::for_each(policy, inds.begin(), inds.end(),
+                [&](int i) { mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr); });
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
-  retcode maxError = *std::max_element(rc.begin(), rc.end());
+  retcode maxError = *std::max_element(rc.data(), rc.data() + numThetas * numPredictions);
 
-  return Prediction{ maxError, ystar, flat_Bi_map };
+  return std::move(pred);
 }
 
 static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)

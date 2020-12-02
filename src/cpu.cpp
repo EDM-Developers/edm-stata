@@ -81,16 +81,15 @@ size_t num_physical_cores()
     prev_processor_info_size = ptr->Size;
   }
 
-  free(buffer);
+  if (buffer != NULL) {
+    free(buffer);
+  }
+
   if (ncpus != 0) {
     return ncpus;
   } else {
     return 0;
   }
-
-  if (buffer != NULL)
-    free(buffer);
-  return 0;
 
 #elif defined __APPLE__
 
@@ -112,12 +111,12 @@ void distribute_threads(std::vector<std::thread>& threads)
 {
 #ifdef _MSC_VER
 
-  int htPerCore = (int)(num_logical_cores() / num_physical_cores());
+  DWORD htPerCore = (DWORD)(num_logical_cores() / num_physical_cores());
 
   int nNumGroups = GetActiveProcessorGroupCount();
   if (nNumGroups > 1) {
-    int nCurGroup = 0;
-    int nNumRemaining = GetMaximumProcessorCount(nCurGroup);
+    WORD nCurGroup = 0;
+    DWORD nNumRemaining = GetMaximumProcessorCount(nCurGroup);
     for (int i = 0; i < threads.size(); i++) {
       auto hndl = threads[i].native_handle();
       GROUP_AFFINITY oldaffinity;
@@ -126,7 +125,7 @@ void distribute_threads(std::vector<std::thread>& threads)
         affinity = oldaffinity;
         if (affinity.Group != nCurGroup) {
           affinity.Group = nCurGroup;
-          auto bSucc = SetThreadGroupAffinity(hndl, &affinity, nullptr);
+          SetThreadGroupAffinity(hndl, &affinity, nullptr);
           nNumRemaining -= htPerCore;
           if (nNumRemaining <= 0) {
             nCurGroup = (nCurGroup + 1) % nNumGroups;

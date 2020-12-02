@@ -17,20 +17,29 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
-#include <optional>
+typedef int retcode;
+
+#include <memory> // For unique_ptr
 #include <string>
 #include <vector>
 
-#include "manifold.h"
+#include <experimental/mdspan>
 
-typedef int retcode;
+namespace stdex = std::experimental;
+
+using span_2d_double = stdex::mdspan<double, stdex::dynamic_extent, stdex::dynamic_extent>;
+using span_3d_double = stdex::mdspan<double, stdex::dynamic_extent, stdex::dynamic_extent, stdex::dynamic_extent>;
+using span_2d_retcode = stdex::mdspan<retcode, stdex::dynamic_extent, stdex::dynamic_extent>;
+
+#include "manifold.h"
 
 struct Options
 {
   bool forceCompute, saveMode;
   bool distributeThreads = false;
   int k, varssv, nthreads;
-  double theta, missingdistance;
+  double missingdistance;
+  std::vector<double> thetas;
   std::string algorithm;
 };
 
@@ -88,8 +97,9 @@ public:
 struct Prediction
 {
   retcode rc;
-  std::vector<double> ystar;
-  std::optional<std::vector<double>> flat_Bi_map;
+  size_t numThetas, numPredictions, numCoeffCols;
+  std::unique_ptr<double[]> ystar;
+  std::unique_ptr<double[]> coeffs;
 };
 
 DLL Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,

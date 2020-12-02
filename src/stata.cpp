@@ -147,30 +147,71 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
 }
 
 /*
- * Write data to columns in Stata (i.e. what Stata calls variables).
- *
- * Starting from column number 'j0', write 'numCols' of columns.
- * The data being written is in the 'toSave' parameter, which is a
- * flattened row-major array.
+ * Write data to columns in Stata (i.e. what Stata calls variables),
+ * starting from column number 'j0'.
  */
-void write_stata_columns(std::vector<ST_double> toSave, ST_int j0, int numCols = 1)
+void write_stata_columns(span_2d_double matrix, ST_int j0)
 {
-  int ind = 0; // Index of y vector
-  int r = 0;   // Count each row that isn't filtered by Stata 'if'
+  int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      for (ST_int j = j0; j < j0 + numCols; j++) {
+      for (ST_int j = j0; j < j0 + matrix.extent(0); j++) {
         // Convert MISSING back to Stata's missing value
-        ST_double value = (toSave[ind] == MISSING) ? SV_missval : toSave[ind];
+        ST_double value = (matrix(j - j0, r) == MISSING) ? SV_missval : matrix(j - j0, r);
         ST_retcode rc = SF_vstore(j, i, value);
         if (rc) {
           throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
         }
-        ind += 1;
       }
       r += 1;
     }
   }
+}
+
+/*
+ * Write data to columns in Stata (i.e. what Stata calls variables),
+ * starting from column number 'j0'.
+ */
+void write_stata_columns(span_3d_double matrix, ST_int j0)
+{
+  for (int t = 0; t < matrix.extent(0); t++) {
+    int r = 0; // Count each row that isn't filtered by Stata 'if'
+    for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
+      if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
+        for (ST_int j = j0; j < j0 + matrix.extent(2); j++) {
+          // Convert MISSING back to Stata's missing value
+          ST_double value = (matrix(t, r, j - j0) == MISSING) ? SV_missval : matrix(t, r, j - j0);
+          ST_retcode rc = SF_vstore(j, i, value);
+          if (rc) {
+            throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+          }
+        }
+        r += 1;
+      }
+    }
+
+    j0 += (ST_int)matrix.extent(2);
+  }
+}
+
+std::vector<double> stata_numlist(std::string macro)
+{
+  std::vector<double> numlist;
+
+  char buffer[1000];
+  SF_macro_use((char*)("_" + macro).c_str(), buffer, 1000);
+
+  std::string list(buffer);
+  size_t found = list.find(' ');
+  while (found != std::string::npos) {
+    std::string theta = list.substr(0, found);
+    numlist.push_back(atof(theta.c_str()));
+    list = list.substr(found + 1);
+    found = list.find(' ');
+  }
+  numlist.push_back(atof(list.c_str()));
+
+  return numlist;
 }
 
 /* Print to the Stata console the inputs to the plugin  */
@@ -191,7 +232,9 @@ void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, c
     }
     io.print("\n");
 
-    io.print(fmt::format("theta = {:6.4f}\n\n", opts.theta));
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      io.print(fmt::format("theta = {:6.4f}\n\n", opts.thetas[t]));
+    }
     io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
     io.print(fmt::format("force compute = {}\n\n", opts.forceCompute));
     io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
@@ -206,12 +249,8 @@ void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, c
     io.print("\n");
 
     io.print(fmt::format("k = {}\n\n", opts.k));
-
-    if (opts.saveMode) {
-      io.print(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
-    }
-
     io.print(fmt::format("save_mode = {}\n\n", opts.saveMode));
+    io.print(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
 
     io.print(fmt::format("E is {}\n", E));
     io.print(fmt::format("We have {} 'extra' columns\n", zcount));
@@ -225,7 +264,6 @@ void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, c
 }
 
 std::future<Prediction> predictions;
-ST_int predCol, coeffsCol, coeffsWidth;
 
 /*
 Example call to the plugin:
@@ -253,7 +291,8 @@ ST_retcode edm(int argc, char* argv[])
 
   Options opts;
 
-  opts.theta = atof(argv[0]);
+  opts.thetas = stata_numlist("theta");
+  double theta = atof(argv[0]);
   opts.k = atoi(argv[1]);
   opts.algorithm = std::string(argv[2]);
   opts.forceCompute = (strcmp(argv[3], "force") == 0);
@@ -261,12 +300,12 @@ ST_retcode edm(int argc, char* argv[])
   ST_int mani = atoi(argv[5]);    // number of columns in the manifold
   bool pmaniFlag = atoi(argv[6]); // contains the flag for p_manifold
   opts.saveMode = atoi(argv[7]);
-  ST_int pmani = atoi(argv[8]); // contains the number of columns in p_manifold
-  opts.varssv = atoi(argv[8]);  // number of columns in smap coefficients
+  ST_int pmani = atoi(argv[8]);            // contains the number of columns in p_manifold
+  opts.varssv = opts.saveMode ? pmani : 0; // number of columns in smap coefficients
   opts.nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
 
-  // Default number of neighbours k is E + 1
+  // Default number of neighbours k is E_actual + 1
   if (opts.k <= 0) {
     opts.k = mani + 1;
   }
@@ -285,49 +324,48 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // Find which rows are used for training & which for prediction
-  std::vector<bool> trainingRows = stata_columns<bool>(mani + 3);
-  std::vector<bool> predictionRows = stata_columns<bool>(mani + 4);
+  std::vector<bool> trainingRows = stata_columns<bool>(mani + 2);
+  std::vector<bool> predictionRows = stata_columns<bool>(mani + 3);
 
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(1);
 
   // Find the number of lags 'E' for the main data.
+  char buffer[1000];
+
   int E;
-  char buffer[100];
   if (pmaniFlag) {
-    SF_macro_use("_e", buffer, 100);
-    std::string Estr(buffer);
-    std::size_t found = Estr.find_last_of(" ");
-    Estr = Estr.substr(found + 1);
-    E = atoi(buffer);
+    std::vector<double> E_list = stata_numlist("e");
+    E = (int)E_list.back();
   } else {
-    SF_macro_use("_i", buffer, 100);
+    SF_macro_use("_i", buffer, 1000);
     E = atoi(buffer);
   }
 
   // Handle 'dt' flag
-  SF_macro_use("_parsed_dt", buffer, 100);
+  SF_macro_use("_parsed_dt", buffer, 1000);
   bool parsed_dt = (bool)atoi(buffer);
   std::vector<ST_double> t;
 
   double dtWeight = 0;
   if (parsed_dt) {
-    SF_macro_use("_parsed_dtw", buffer, 100);
+    SF_macro_use("_parsed_dtw", buffer, 1000);
     dtWeight = atof(buffer);
   }
 
-  // Read in the extras
-  SF_macro_use("_zcount", buffer, 100);
-  int zcount = atoi(buffer);
-
   if (dtWeight > 0) {
     // Read in time
-    ST_int timeCol = mani + 5 + 1 + (int)pmaniFlag * pmani + opts.saveMode * opts.varssv;
+    ST_int timeCol = mani + 4 + (int)pmaniFlag * pmani + 1;
     t = stata_columns<ST_double>(timeCol);
   }
 
+  // Read in the extras
+  SF_macro_use("_zcount", buffer, 1000);
+  int zcount = atoi(buffer);
+
   std::vector<std::vector<ST_double>> extras(zcount);
 
+  // TODO: Check that 'dt' isn't thrown in here in the edm.ado script
   for (int z = 0; z < zcount; z++) {
     extras[z] = stata_columns<ST_double>(2 + z);
   }
@@ -338,9 +376,9 @@ ST_retcode edm(int argc, char* argv[])
   std::vector<ST_double> xPred;
   std::vector<std::vector<ST_double>> extrasPred(zcount);
   if (pmaniFlag) {
-    xPred = stata_columns<ST_double>(mani + 6);
+    xPred = stata_columns<ST_double>(mani + 5);
     for (int z = 0; z < zcount; z++) {
-      extrasPred[z] = stata_columns<ST_double>(mani + 6 + 1 + z);
+      extrasPred[z] = stata_columns<ST_double>(mani + 5 + 1 + z);
     }
   } else {
     // In cases like 'edm explore x' (pmani_flag = false), then we
@@ -362,6 +400,10 @@ ST_retcode edm(int argc, char* argv[])
 
   print_debug_info(argc, argv, opts, M, Mp, pmaniFlag, pmani, E, zcount, dtWeight);
 
+  opts.thetas.clear();
+  opts.thetas.push_back(theta);
+  io.print(fmt::format("For now just doing theta = {}\n", theta));
+
 #ifdef DUMP_INPUT
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
@@ -369,10 +411,6 @@ ST_retcode edm(int argc, char* argv[])
     write_dumpfile(argv[11], opts, t, x, xPred, extras, extrasPred, trainingRows, predictionRows, y, E, dtWeight);
   }
 #endif
-
-  predCol = mani + 2;
-  coeffsCol = mani + 5 + 1 + (int)pmaniFlag * pmani;
-  coeffsWidth = opts.varssv;
 
   std::packaged_task<Prediction()> task(std::bind(mf_smap_loop, opts, y, M, Mp, io, keep_going, finished));
   predictions = task.get_future();
@@ -389,10 +427,13 @@ ST_retcode save_results()
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (res.rc == SUCCESS) {
-    write_stata_columns(res.ystar, predCol);
+    auto ystar = span_2d_double(res.ystar.get(), (int)res.numThetas, (int)res.numPredictions);
+    write_stata_columns(ystar, 1);
 
-    if (res.flat_Bi_map.has_value()) {
-      write_stata_columns(*res.flat_Bi_map, coeffsCol, coeffsWidth);
+    if (res.numCoeffCols) {
+      auto coeffs =
+        span_3d_double(res.coeffs.get(), (int)res.numThetas, (int)res.numPredictions, (int)res.numCoeffCols);
+      write_stata_columns(coeffs, 2);
     }
   }
 

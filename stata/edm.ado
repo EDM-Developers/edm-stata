@@ -913,7 +913,7 @@ program define edmExplore, eclass sortpreserve
 					/* qui xtset
 					local original_t = r(timevar) */
 
-					local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
+					local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
@@ -931,7 +931,7 @@ program define edmExplore, eclass sortpreserve
 					}
 					
 					if `verbosity' > 0 {
-						di "myvars `myvars' manifold <``manifold''> original_id <`original_id'> original_t <`original_t'>"
+						di "manifold <``manifold''> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
 						pause
 					}
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
@@ -959,7 +959,7 @@ program define edmExplore, eclass sortpreserve
 					if "`edm_print'" != "" {
 						di "`edm_print'"
 					}
-					plugin call smap_block_mdap `myvars' if `predict_set' == 1
+					plugin call smap_block_mdap `x_p' `vars_save' if `predict_set' == 1
 					
 				}
 
@@ -1053,7 +1053,7 @@ program define edmExplore, eclass sortpreserve
 			}
 			else {
 				// di "Plugin Mode"					
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
+				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
 
 				unab vars : ``manifold''
 				local mani `: word count `vars''
@@ -1076,7 +1076,7 @@ program define edmExplore, eclass sortpreserve
 				}
 				
 				if `verbosity' > 0 {
-					di "myvars `myvars' manifold <``manifold''> original_id <`original_id'> original_t <`original_t'>"
+					di "manifold <``manifold''> x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> original_t <`original_t'>"
 					pause
 				}
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
@@ -1104,7 +1104,7 @@ program define edmExplore, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `myvars' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' `vars_save' if `co_predict_set' == 1
 			}
 
 
@@ -1908,7 +1908,7 @@ program define edmXmap, eclass sortpreserve
 								// display "vsave_flag: " `vsave_flag'
 							}
 
-							local myvars ``manifold'' `x_f' `x_p' `train_set' `predict_set' `overlap' `vars_save' `original_t'
+							local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
 
 							unab vars : ``manifold''
 							local mani `: word count `vars''
@@ -1925,7 +1925,7 @@ program define edmXmap, eclass sortpreserve
 							}
 								
 							if `verbosity' > 0 {
-								di "myvars `myvars' manifold <``manifold''> original_id <`original_id'> original_t <`original_t'>"
+								di "manifold <``manifold''> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
 								pause
 							}
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
@@ -1954,7 +1954,7 @@ program define edmXmap, eclass sortpreserve
 							if "`edm_print'" != "" {
 								di "`edm_print'"
 							}
-							plugin call smap_block_mdap `myvars' if `predict_set' == 1
+							plugin call smap_block_mdap `x_p' `vars_save' if `predict_set' == 1
 						}
 
 						/* ==== END CODE FOR C PLUGIN ==== */
@@ -2067,7 +2067,7 @@ program define edmXmap, eclass sortpreserve
 				/* qui xtset
 				local original_t = r(timevar) */
 					
-				local myvars ``manifold'' `x_f' `co_x_p' `co_train_set' `co_predict_set' `overlap' `co_mapping' `vars_save' `original_t'
+				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				unab vars : `co_mapping'
@@ -2085,7 +2085,7 @@ program define edmXmap, eclass sortpreserve
 				}
 	
 				if `verbosity' > 0 {
-					di "myvars `myvars' manifold <``manifold''> original_id <`original_id'> original_t <`original_t'>"
+					di "manifold <``manifold''> x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> original_t <`original_t'>"
 					pause
 				}
 				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
@@ -2113,7 +2113,7 @@ program define edmXmap, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `myvars' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' `vars_save' if `co_predict_set' == 1
 			}
 
 			/* ==== END CODE FOR C PLUGIN ==== */

@@ -33,7 +33,7 @@ void save_options(hid_t fid, Options opts)
   H5LTset_attribute_int(fid, "/", "k", &opts.k, 1);
   H5LTset_attribute_int(fid, "/", "varssv", &opts.varssv, 1);
 
-  H5LTset_attribute_double(fid, "/", "theta", &opts.theta, 1);
+  H5LTset_attribute_double(fid, "/", "theta", &opts.thetas[0], 1);
   H5LTset_attribute_double(fid, "/", "missingdistance", &opts.missingdistance, 1);
 
   H5LTset_attribute_string(fid, "/", "algorithm", opts.algorithm.c_str());
@@ -56,7 +56,10 @@ Options read_options(hid_t fid)
   H5LTget_attribute_int(fid, "/", "k", &(opts.k));
   H5LTget_attribute_int(fid, "/", "varssv", &(opts.varssv));
 
-  H5LTget_attribute_double(fid, "/", "theta", &(opts.theta));
+  double theta;
+  H5LTget_attribute_double(fid, "/", "theta", &theta);
+  opts.thetas.push_back(theta);
+
   H5LTget_attribute_double(fid, "/", "missingdistance", &(opts.missingdistance));
 
   char temps[100];
@@ -204,17 +207,17 @@ void write_dumpfile(const char* fname, const Options& opts, const std::vector<do
 
 void write_results(std::string fname_out, const Prediction& smap_res, int varssv)
 {
-  hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  // hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-  H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
+  // H5LTset_attribute_int(fid, "/", "rc", &(smap_res.rc), 1);
 
-  hsize_t ystarLen[] = { (hsize_t)smap_res.ystar.size() };
-  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, smap_res.ystar.data());
+  // hsize_t ystarLen[] = { (hsize_t)smap_res.ystar.size() };
+  // H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, smap_res.ystar.data());
 
-  if (smap_res.flat_Bi_map.has_value()) {
-    hsize_t Bi_mapLen[] = { (hsize_t)(smap_res.flat_Bi_map->size() / varssv), (hsize_t)varssv };
-    H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, smap_res.flat_Bi_map->data());
-  }
+  // if (smap_res.flat_Bi_map.has_value()) {
+  //   hsize_t Bi_mapLen[] = { (hsize_t)(smap_res.flat_Bi_map->size() / varssv), (hsize_t)varssv };
+  //   H5LTmake_dataset_double(fid, "flat_Bi_map", 2, Bi_mapLen, smap_res.flat_Bi_map->data());
+  // }
 
-  H5Fclose(fid);
+  // H5Fclose(fid);
 }

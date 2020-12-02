@@ -77,6 +77,7 @@ install(TARGETS edm DESTINATION .)
 
 # grab vendored files
 include(vendor/CMakeLists.txt)
+target_include_directories(edm PRIVATE include)
 target_include_directories(edm PRIVATE vendor)
 
 # ↓↓↓ third-party code ↓↓↓
@@ -108,6 +109,7 @@ if (DUMP_INPUT OR BUILD_DRIVER OR BUILD_GBENCH)
   if (BUILD_DRIVER)
     add_executable(driver ${COMMON_SRC} src/driver.cpp src/driver.h)
     set_target_properties(driver PROPERTIES CXX_STANDARD 17)
+    target_include_directories(driver PRIVATE include)
     target_include_directories(driver PRIVATE ${EIGEN3_INCLUDE_DIR})
     target_link_libraries(driver PRIVATE fmt::fmt-header-only)
     target_link_libraries(driver PRIVATE Threads::Threads)
@@ -126,6 +128,7 @@ if (DUMP_INPUT OR BUILD_DRIVER OR BUILD_GBENCH)
     endif()
     find_package(benchmark CONFIG REQUIRED)
     target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+    target_include_directories(gbench PRIVATE include)
     target_include_directories(gbench PRIVATE ${EIGEN3_INCLUDE_DIR})
     target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
     target_link_libraries(gbench PRIVATE Threads::Threads)
