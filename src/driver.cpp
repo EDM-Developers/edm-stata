@@ -13,11 +13,12 @@ int main(int argc, char* argv[])
 
   if (argc > 2) {
     vars.opts.nthreads = atoi(argv[2]);
+  } else {
+    vars.opts.nthreads = 1;
   }
-  // vars.opts.nthreads = 1;
 
   ConsoleIO io;
-  Prediction smap_res = mf_smap_loop(vars.opts, vars.y, vars.M, vars.Mp, io);
+  Prediction smap_res = mf_smap_loop(vars.opts, vars.y, {}, vars.M, vars.Mp, io);
 
   std::size_t ext = fname_in.find_last_of(".");
   fname_in = fname_in.substr(0, ext);

@@ -244,8 +244,8 @@ void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Man
 
 ThreadPool pool;
 
-Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, const IO& io,
-                        bool keep_going(), void finished())
+Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const std::vector<double>& yPred,
+                        const Manifold& M, const Manifold& Mp, const IO& io, bool keep_going(), void finished())
 {
   // Precompute the lagged embeddings in contiguous blocks of memory
   M.compute_lagged_embedding();
@@ -285,7 +285,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
   std::vector<std::future<void>> results(numPredictions);
   if (opts.nthreads > 1) {
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, keep_going); });
+      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, yTrain, M, Mp, ystar, rc, coeffs, keep_going); });
     }
   }
 
@@ -295,7 +295,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr);
+      mf_smap_single(i, opts, yTrain, M, Mp, ystar, rc, coeffs, nullptr);
     } else {
       results[i].get();
     }
@@ -312,6 +312,29 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifo
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   pred.rc = *std::max_element(rc_data.get(), rc_data.get() + numThetas * numPredictions);
+
+  std::vector<double> y1, y2;
+  for (int i = 0; i < yPred.size(); i++) {
+    if (yPred[i] != MISSING && pred.ystar[i] != MISSING) {
+      y1.push_back(yPred[i]);
+      y2.push_back(pred.ystar[i]);
+    }
+  }
+
+  if (y1.size() > 0) {
+    Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
+    Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
+
+    pred.mae = (y1Map - y2Map).abs().mean();
+
+    const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
+    const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
+
+    pred.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
+  } else {
+    pred.mae = 0.0;
+    pred.rho = 0.0;
+  }
 
   if (finished != nullptr) {
     finished();

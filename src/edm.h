@@ -100,7 +100,9 @@ struct Prediction
   size_t numThetas, numPredictions, numCoeffCols;
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
+  double mae, rho;
 };
 
-DLL Prediction mf_smap_loop(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                            const IO& io, bool keep_going() = nullptr, void finished() = nullptr);
+DLL Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const std::vector<double>& yPred,
+                            const Manifold& M, const Manifold& Mp, const IO& io, bool keep_going() = nullptr,
+                            void finished() = nullptr);

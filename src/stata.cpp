@@ -391,10 +391,16 @@ ST_retcode edm(int argc, char* argv[])
 
   // Read in the target vector 'y' from Stata
   std::vector<ST_double> yAll = stata_columns<ST_double>(mani + 1);
-  std::vector<ST_double> y;
+  std::vector<ST_double> yTrain;
   for (size_t i = 0; i < trainingRows.size(); i++) {
     if (trainingRows[i]) {
-      y.push_back(yAll[i]);
+      yTrain.push_back(yAll[i]);
+    }
+  }
+  std::vector<ST_double> yPred;
+  for (size_t i = 0; i < trainingRows.size(); i++) {
+    if (predictionRows[i]) {
+      yPred.push_back(yAll[i]);
     }
   }
 
@@ -408,11 +414,11 @@ ST_retcode edm(int argc, char* argv[])
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
   if (argc >= 12) {
-    write_dumpfile(argv[11], opts, t, x, xPred, extras, extrasPred, trainingRows, predictionRows, y, E, dtWeight);
+    write_dumpfile(argv[11], opts, t, x, xPred, extras, extrasPred, trainingRows, predictionRows, yTrain, E, dtWeight);
   }
 #endif
 
-  std::packaged_task<Prediction()> task(std::bind(mf_smap_loop, opts, y, M, Mp, io, keep_going, finished));
+  std::packaged_task<Prediction()> task(std::bind(mf_smap_loop, opts, yTrain, yPred, M, Mp, io, keep_going, finished));
   predictions = task.get_future();
 
   std::thread master(std::move(task));
@@ -423,16 +429,23 @@ ST_retcode edm(int argc, char* argv[])
 
 ST_retcode save_results()
 {
-  Prediction res = predictions.get();
+  Prediction pred = predictions.get();
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
-  if (res.rc == SUCCESS) {
-    auto ystar = span_2d_double(res.ystar.get(), (int)res.numThetas, (int)res.numPredictions);
+  if (pred.rc == SUCCESS) {
+    // Save the rho/MAE (really only need this when pmani_flag=0; i.e. don't need this for coprediction)
+    std::string mae = fmt::format("{}", pred.mae);
+    std::string rho = fmt::format("{}", pred.rho);
+
+    SF_macro_save("_rmae", (char*)mae.c_str());
+    SF_macro_save("_rrho", (char*)rho.c_str());
+
+    auto ystar = span_2d_double(pred.ystar.get(), (int)pred.numThetas, (int)pred.numPredictions);
     write_stata_columns(ystar, 1);
 
-    if (res.numCoeffCols) {
+    if (pred.numCoeffCols) {
       auto coeffs =
-        span_3d_double(res.coeffs.get(), (int)res.numThetas, (int)res.numPredictions, (int)res.numCoeffCols);
+        span_3d_double(pred.coeffs.get(), (int)pred.numThetas, (int)pred.numPredictions, (int)pred.numCoeffCols);
       write_stata_columns(coeffs, 2);
     }
   }
@@ -445,7 +458,7 @@ ST_retcode save_results()
 
   finished();
 
-  return res.rc;
+  return pred.rc;
 }
 
 STDLL stata_call(int argc, char* argv[])

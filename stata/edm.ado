@@ -893,33 +893,33 @@ program define edmExplore, eclass sortpreserve
 				/* timer off 1
 				timer on 2 */
 				if `mata_mode' == 1 {
-					// di "Mata Mode"
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
+					tempvar mae
+					qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
+					qui sum `mae'
+					local rmae = r(mean)
+					drop `mae' 
+					
+					qui corr `x_f' `x_p' if `predict_set' == 1
+					local rrho = r(rho)
 				}
 				else {
-					// di "Plugin Mode"
 					if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 						local vsave_flag = 1
-						// display "vsave_flag: " `vsave_flag'
 						unab vars : `vars_save'
 						local varssv `: word count `vars''
 					}
 					else {
 						local vsave_flag = 0
 						loc varssv=0
-						// display "vsave_flag: " `vsave_flag'
 					}
 					
-					/* qui xtset
-					local original_t = r(timevar) */
-
 					local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
 
 					local pmani_flag = 0
-					// display "pmani_flag: " `pmani_flag'
 
 					scalar edm_running = 1
 					local edm_print = ""
@@ -963,21 +963,13 @@ program define edmExplore, eclass sortpreserve
 					
 				}
 
-
 				/* ==== END CODE FOR C PLUGIN ==== */
 
 
 				/* sum `x_f' `x_p' */
 
-				qui gen double `mae' = abs( `x_p' - `x_f' )  if `predict_set' == 1
-				qui sum `mae', meanonly
-				local rmae = r(mean)
-				drop `mae'
 				local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 				/* noi sum */
-
-
-				qui corr `x_f' `x_p' if `predict_set' == 1
 
 				if "`predict'" != "" {
 					cap gen double `predict' = `x_p'
@@ -991,7 +983,7 @@ program define edmExplore, eclass sortpreserve
 				local ++no_of_runs
 				mat r[`no_of_runs',1] = `current_e'
 				mat r[`no_of_runs',2] = `j'
-				mat r[`no_of_runs',3] = r(rho)
+				mat r[`no_of_runs',3] = `rrho'
 				mat r[`no_of_runs',4] = `rmae'
 				/* timer off 3 */
 				/* ereturn local rho = `=r(rho)'
@@ -1052,7 +1044,6 @@ program define edmExplore, eclass sortpreserve
 				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
-				// di "Plugin Mode"					
 				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
 
 				unab vars : ``manifold''
@@ -1062,10 +1053,7 @@ program define edmExplore, eclass sortpreserve
 				local pmani `: word count `vars''
 
 				local pmani_flag = 1
-				/* display "pmani_flag: " `pmani_flag' */
-
 				local vsave_flag = 0
-				/* display "vsave_flag: " `vsave_flag' */
 
 				scalar edm_running = 1
 				local edm_print = ""
@@ -1888,24 +1876,26 @@ program define edmXmap, eclass sortpreserve
 						/* ==== CODE FOR C PLUGIN ==== */
 
 						if `mata_mode' == 1 {
-							// di "Mata Mode"
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
+						
+							tempvar mae
+							qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
+							qui sum `mae'
+							local rmae = r(mean)
+							drop `mae' 
+							
+							qui corr `x_f' `x_p' if `predict_set' == 1
+							local rrho = r(rho)
 						}
 						else {
-							// di "Plugin Mode"
-							/* qui xtset
-							local original_t = r(timevar) */
-					
 							if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
 								local vsave_flag = 1
-								// display "vsave_flag: " `vsave_flag'
 								unab vars : `vars_save'
 								local varssv `: word count `vars''
 							}
 							else {
 								local vsave_flag = 0
 								loc varssv=0
-								// display "vsave_flag: " `vsave_flag'
 							}
 
 							local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
@@ -1914,10 +1904,10 @@ program define edmXmap, eclass sortpreserve
 							local mani `: word count `vars''
 
 							local pmani_flag = 0
-							// display "pmani_flag: " `pmani_flag'
 
 							scalar edm_running = 1
 							local edm_print = ""
+							
 							if `parsed_dt' == 0 {
 								qui tsset
 								qui gen original = 1
@@ -1961,14 +1951,10 @@ program define edmXmap, eclass sortpreserve
 						/* assert `x_p' !=. if `predict_set'==1
 						assert `x_f' !=. if `predict_set'==1 */
 						/* sum `x_f' `x_p' */
-						tempvar mae
-						qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
-						qui sum `mae'
-						local rmae = r(mean)
-						drop `mae'
+						
 						local current_e =`i'
 						/* scatter `x_f' `x_p' */
-						qui corr `x_f' `x_p' if `predict_set' == 1
+						
 						if "`predict'" != "" {
 							cap gen double `predict' = `x_p'
 							qui label variable `predict' "edm prediction result"
@@ -1978,7 +1964,7 @@ program define edmXmap, eclass sortpreserve
 						local ++no_of_runs
 						mat r`round'[`no_of_runs',1] = `round'
 						mat r`round'[`no_of_runs',2] = `lib_size'
-						mat r`round'[`no_of_runs',3] = r(rho)
+						mat r`round'[`no_of_runs',3] = `rrho'
 						mat r`round'[`no_of_runs',4] = `rmae'
 						drop `overlap'
 
@@ -2058,24 +2044,17 @@ program define edmXmap, eclass sortpreserve
 			/* ==== CODE FOR C PLUGIN ==== */
 
 			if `mata_mode' == 1 {
-				// di "Mata Mode"
 				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
-			else {
-				// di "Plugin Mode"
-				// TODO: Can this resetting of 'original_t' be avoided?
-				/* qui xtset
-				local original_t = r(timevar) */
-					
+			else {	
 				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				unab vars : `co_mapping'
 				local pmani `: word count `vars''
 				local pmani_flag = 1
-				// display "pmani_flag: " `pmani_flag'
 				local vsave_flag = 0
-				// display "vsave_flag: " `vsave_flag'
+
 				scalar edm_running = 1
 				local edm_print = ""
 				if `parsed_dt' == 0 {
