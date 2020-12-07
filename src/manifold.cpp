@@ -34,15 +34,15 @@ Manifold ManifoldGenerator::create_manifold(std::vector<bool> filter, bool predi
     }
   }
 
-  auto flat = std::shared_ptr<double[]>(new double[nobs * _E_actual], std::default_delete<double[]>());
+  auto flat = std::make_unique<double[]>(nobs * _E_actual);
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < _E_x; j++) {
       if (prediction && _copredict) {
-        flat.get()[i * _E_actual + j] = find_co_x(inds, i, j);
+        flat[i * _E_actual + j] = find_co_x(inds, i, j);
       } else {
-        flat.get()[i * _E_actual + j] = find_x(inds, i, j);
+        flat[i * _E_actual + j] = find_x(inds, i, j);
       }
     }
   }
@@ -50,14 +50,14 @@ Manifold ManifoldGenerator::create_manifold(std::vector<bool> filter, bool predi
   // Put the lagged embedding of dt in the next columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < _E_dt; j++) {
-      flat.get()[i * _E_actual + _E_x + j] = find_dt(inds, i, j);
+      flat[i * _E_actual + _E_x + j] = find_dt(inds, i, j);
     }
   }
 
   // Finally put the unlagged extras in the last columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < _E_extras; j++) {
-      flat.get()[i * _E_actual + _E_x + _E_dt + j] = find_extras(inds, i, j);
+      flat[i * _E_actual + _E_x + _E_dt + j] = find_extras(inds, i, j);
     }
   }
 

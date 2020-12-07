@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
   }
 
   ConsoleIO io;
-  Prediction pred = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
+  Prediction pred = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
 
   std::size_t ext = fnameIn.find_last_of(".");
   fnameIn = fnameIn.substr(0, ext);

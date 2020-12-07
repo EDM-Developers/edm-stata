@@ -238,8 +238,12 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
 
 ThreadPool pool;
 
-Prediction mf_smap_loop(Options opts, Manifold M, Manifold Mp, const IO& io, bool keep_going(), void finished())
+Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                        std::vector<bool> predictionRows, const IO& io, bool keep_going(), void finished())
 {
+  Manifold M = generator.create_manifold(trainingRows, false);
+  Manifold Mp = generator.create_manifold(predictionRows, true);
+
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 

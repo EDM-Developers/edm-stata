@@ -5,13 +5,13 @@
 
 class Manifold
 {
-  std::shared_ptr<double[]> _flat;
+  std::unique_ptr<double[]> _flat;
   std::vector<double> _y;
   size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
   double _missing;
 
 public:
-  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> y, size_t nobs, size_t E_x, size_t E_dt,
+  Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, size_t nobs, size_t E_x, size_t E_dt,
            size_t E_extras, size_t E_actual, double missing)
     : _flat(std::move(flat))
     , _y(y)
@@ -23,11 +23,11 @@ public:
     , _missing(missing)
   {}
 
-  double operator()(size_t i, size_t j) const { return _flat.get()[i * _E_actual + j]; }
+  double operator()(size_t i, size_t j) const { return _flat[i * _E_actual + j]; }
 
-  double x(size_t i, size_t j) const { return _flat.get()[i * _E_actual + j]; }
-  double dt(size_t i, size_t j) const { return _flat.get()[i * _E_actual + (j - _E_x)]; }
-  double extras(size_t i, size_t j) const { return _flat.get()[i * _E_actual + (j - _E_x - _E_dt)]; }
+  double x(size_t i, size_t j) const { return _flat[i * _E_actual + j]; }
+  double dt(size_t i, size_t j) const { return _flat[i * _E_actual + (j - _E_x)]; }
+  double extras(size_t i, size_t j) const { return _flat[i * _E_actual + (j - _E_x - _E_dt)]; }
   bool any_missing(size_t obsNum) const
   {
     if (_y[obsNum] == _missing) {
@@ -76,4 +76,5 @@ public:
                     double missing, size_t tau = 1);
 
   Manifold create_manifold(std::vector<bool> filter, bool prediction);
+  size_t E_actual() const { return _E_actual; }
 };

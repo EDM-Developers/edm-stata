@@ -105,13 +105,13 @@ static void bm_get_distances(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = vars.M;
-  Manifold Mp = vars.Mp;
+  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
 
   int Mp_i = 0;
   for (auto _ : state) {
     get_distances(Mp_i, vars.opts, M, Mp);
-    Mp_i = (Mp_i + 1) % vars.Mp.nobs();
+    Mp_i = (Mp_i + 1) % Mp.nobs();
   }
 }
 
@@ -124,8 +124,8 @@ static void bm_nearest_neighbours(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = std::move(vars.M);
-  Manifold Mp = std::move(vars.Mp);
+  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -178,8 +178,8 @@ static void bm_simplex(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = std::move(vars.M);
-  Manifold Mp = std::move(vars.Mp);
+  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -245,8 +245,8 @@ static void bm_smap(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = std::move(vars.M);
-  Manifold Mp = std::move(vars.Mp);
+  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -397,7 +397,7 @@ static void bm_mf_smap_loop(benchmark::State& state)
   vars.opts.nthreads = threads;
 
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
+    Prediction res = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
 }
 
 BENCHMARK(bm_mf_smap_loop)
@@ -421,7 +421,7 @@ static void bm_mf_smap_loop_distribute(benchmark::State& state)
   vars.opts.nthreads = threads;
 
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
+    Prediction res = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
 }
 
 BENCHMARK(bm_mf_smap_loop_distribute)
@@ -459,8 +459,12 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
 #ifdef _MSC_VER
 #include <omp.h>
 
-Prediction mf_smap_loop_openmp(Options opts, const Manifold& M, const Manifold& Mp, int nthreads)
+Prediction mf_smap_loop_openmp(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                               std::vector<bool> predictionRows, int nthreads)
 {
+  Manifold M = generator.create_manifold(trainingRows, false);
+  Manifold Mp = generator.create_manifold(predictionRows, true);
+
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
@@ -504,7 +508,7 @@ static void bm_mf_smap_loop_openmp(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_openmp(vars.opts, vars.M, vars.Mp, threads);
+    Prediction res = mf_smap_loop_openmp(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, threads);
   }
 }
 
@@ -520,8 +524,12 @@ BENCHMARK(bm_mf_smap_loop_openmp)
 #include <execution>
 
 template<class PolicyType>
-Prediction mf_smap_loop_cpp17(Options opts, const Manifold& M, const Manifold& Mp, PolicyType policy)
+Prediction mf_smap_loop_cpp17(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                              std::vector<bool> predictionRows, PolicyType policy)
 {
+  Manifold M = generator.create_manifold(trainingRows, false);
+  Manifold Mp = generator.create_manifold(predictionRows, true);
+
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
@@ -560,8 +568,8 @@ static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res =
-      mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.M, vars.Mp, std::execution::seq);
+    Prediction res = mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.generator, vars.trainingRows,
+                                                                          vars.predictionRows, std::execution::seq);
   }
 }
 
@@ -578,8 +586,8 @@ static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res =
-      mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.M, vars.Mp, std::execution::par);
+    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.generator, vars.trainingRows,
+                                                                         vars.predictionRows, std::execution::par);
   }
 }
 
@@ -596,8 +604,8 @@ static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(vars.opts, vars.M, vars.Mp,
-                                                                                     std::execution::par_unseq);
+    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(
+      vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, std::execution::par_unseq);
   }
 }
 

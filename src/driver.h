@@ -17,7 +17,8 @@ public:
 struct Inputs
 {
   Options opts;
-  Manifold M, Mp;
+  ManifoldGenerator generator;
+  std::vector<bool> trainingRows, predictionRows;
 };
 
 void save_options(hid_t fid, Options opts)
@@ -191,10 +192,7 @@ Inputs read_dumpfile(std::string fname_in)
 
   H5Fclose(fid);
 
-  Manifold M = generator.create_manifold(trainingRows, false);
-  Manifold Mp = generator.create_manifold(predictionRows, true);
-
-  return { std::move(opts), std::move(M), std::move(Mp) };
+  return { opts, generator, trainingRows, predictionRows };
 }
 
 void write_dumpfile(const char* fname, const Options& opts, const std::vector<double>& x, const std::vector<double>& y,

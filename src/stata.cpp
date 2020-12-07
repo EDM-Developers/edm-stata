@@ -214,8 +214,9 @@ std::vector<double> stata_numlist(std::string macro)
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, const Manifold& Mp, bool pmani_flag,
-                      ST_int pmani, ST_int E, ST_int zcount, ST_double dtWeight)
+void print_debug_info(int argc, char* argv[], Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                      std::vector<bool> predictionRows, bool pmani_flag, ST_int pmani, ST_int E, ST_int zcount,
+                      ST_double dtWeight)
 {
   if (io.verbosity > 1) {
     // Header of the plugin
@@ -237,9 +238,9 @@ void print_debug_info(int argc, char* argv[], Options opts, const Manifold& M, c
     io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
     io.print(fmt::format("force compute = {}\n\n", opts.forceCompute));
     io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
-    io.print(fmt::format("number of variables in manifold = {}\n\n", M.E_actual()));
-    io.print(fmt::format("train set obs: {}\n", M.nobs()));
-    io.print(fmt::format("predict set obs: {}\n\n", Mp.nobs()));
+    io.print(fmt::format("number of variables in manifold = {}\n\n", generator.E_actual()));
+    io.print(fmt::format("train set obs: {}\n", std::accumulate(trainingRows.begin(), trainingRows.end(), 0)));
+    io.print(fmt::format("predict set obs: {}\n\n", std::accumulate(predictionRows.begin(), predictionRows.end(), 0)));
     io.print(fmt::format("p_manifold flag = {}\n", pmani_flag));
 
     if (pmani_flag) {
@@ -379,10 +380,7 @@ ST_retcode edm(int argc, char* argv[])
 
   ManifoldGenerator generator(x, y, co_x, extras, t, E, dtWeight, MISSING);
 
-  Manifold M = generator.create_manifold(trainingRows, false);
-  Manifold Mp = generator.create_manifold(predictionRows, true);
-
-  print_debug_info(argc, argv, opts, M, Mp, copredict, pmani, E, numExtras, dtWeight);
+  print_debug_info(argc, argv, opts, generator, trainingRows, predictionRows, copredict, pmani, E, numExtras, dtWeight);
 
   opts.thetas.clear();
   opts.thetas.push_back(theta);
@@ -396,7 +394,8 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  predictions = std::async(std::launch::async, mf_smap_loop, opts, M, Mp, io, keep_going, finished);
+  predictions = std::async(std::launch::async, mf_smap_loop, opts, generator, trainingRows, predictionRows, io,
+                           keep_going, finished);
 
   return SUCCESS;
 }
