@@ -914,7 +914,7 @@ program define edmExplore, eclass sortpreserve
 						loc varssv=0
 					}
 					
-					local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
+					local myvars `x' `x_f' `train_set' `predict_set' `zlist' `original_t'
 
 					unab vars : ``manifold''
 					local mani `: word count `vars''
@@ -930,8 +930,8 @@ program define edmExplore, eclass sortpreserve
 						qui tsfill
 					}
 					
-					if `verbosity' > 0 {
-						di "manifold <``manifold''> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
+					if `verbosity' > 1 {
+						di "manifold <``manifold''> x <`x'> y <`y'> zlist <`zlist'> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
 						pause
 					}
 					plugin call smap_block_mdap `myvars', `j' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
@@ -1044,7 +1044,7 @@ program define edmExplore, eclass sortpreserve
 				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
-				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
+				local myvars `x' `x_f' `co_train_set' `co_predict_set' `co_x' `zlist' `original_t'
 
 				unab vars : ``manifold''
 				local mani `: word count `vars''
@@ -1063,8 +1063,8 @@ program define edmExplore, eclass sortpreserve
 					qui tsfill
 				}
 				
-				if `verbosity' > 0 {
-					di "manifold <``manifold''> x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> original_t <`original_t'>"
+				if `verbosity' > 1 {
+					di "manifold <``manifold''> x <`x'> y <`y'> zlist <`zlist'>  x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> co_x <`co_x'> co_y <`co_y'> co_zlist <`co_zlist'>  original_t <`original_t'>"
 					pause
 				}
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
@@ -1898,7 +1898,7 @@ program define edmXmap, eclass sortpreserve
 								loc varssv=0
 							}
 
-							local myvars ``manifold'' `x_f' `train_set' `predict_set' `overlap' `original_t'
+							local myvars `x' `x_f' `train_set' `predict_set' `zlist' `original_t'
 
 							unab vars : ``manifold''
 							local mani `: word count `vars''
@@ -1914,8 +1914,8 @@ program define edmXmap, eclass sortpreserve
 								qui tsfill
 							}
 								
-							if `verbosity' > 0 {
-								di "manifold <``manifold''> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
+							if `verbosity' > 1 {
+								di "manifold <``manifold''> x <`x'> y <`y'> zlist <`zlist'> x_f <`x_f'> train_set <`train_set'> predict_set <`predict_set'> overlap <`overlap'> original_t <`original_t'>"
 								pause
 							}
 							plugin call smap_block_mdap `myvars', `j' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `varssv' `nthreads' `verbosity' `saveinputs'
@@ -2046,8 +2046,8 @@ program define edmXmap, eclass sortpreserve
 			if `mata_mode' == 1 {
 				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
-			else {	
-				local myvars ``manifold'' `x_f' `co_train_set' `co_predict_set' `overlap' `co_mapping' `original_t'
+			else {
+				local myvars `x' `x_f' `co_train_set' `co_predict_set' `co_x' `zlist' `original_t'
 				unab vars : ``manifold''
 				local mani `: word count `vars''
 				unab vars : `co_mapping'
@@ -2063,8 +2063,8 @@ program define edmXmap, eclass sortpreserve
 					qui tsfill
 				}
 	
-				if `verbosity' > 0 {
-					di "manifold <``manifold''> x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> original_t <`original_t'>"
+				if `verbosity' > 1 {
+					di "manifold <``manifold''> x <`x'> y <`y'> zlist <`zlist'>  x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> co_x <`co_x'> co_y <`co_y'> co_zlist <`co_zlist'>  original_t <`original_t'>"
 					pause
 				}
 				plugin call smap_block_mdap `myvars', `last_theta' `k_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'

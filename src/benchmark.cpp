@@ -63,7 +63,7 @@ static void bm_pow_half(benchmark::State& state)
 
 BENCHMARK(bm_pow_half);
 
-void get_distances(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp)
+void get_distances(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp)
 {
   int validDistances = 0;
   std::vector<double> d(M.nobs());
@@ -104,15 +104,13 @@ static void bm_get_distances(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   Manifold M = vars.M;
   Manifold Mp = vars.Mp;
 
   int Mp_i = 0;
   for (auto _ : state) {
-    get_distances(Mp_i, vars.opts, vars.y, M, Mp);
+    get_distances(Mp_i, vars.opts, M, Mp);
     Mp_i = (Mp_i + 1) % vars.Mp.nobs();
   }
 }
@@ -125,11 +123,9 @@ static void bm_nearest_neighbours(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
-  Manifold M = vars.M;
-  Manifold Mp = vars.Mp;
+  Manifold M = std::move(vars.M);
+  Manifold Mp = std::move(vars.Mp);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -181,11 +177,9 @@ static void bm_simplex(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
-  Manifold M = vars.M;
-  Manifold Mp = vars.Mp;
+  Manifold M = std::move(vars.M);
+  Manifold Mp = std::move(vars.Mp);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -223,7 +217,6 @@ static void bm_simplex(benchmark::State& state)
   }
 
   int k = opts.k;
-  auto y = vars.y;
 
   std::vector<size_t> ind = minindex(d, k);
 
@@ -238,7 +231,7 @@ static void bm_simplex(benchmark::State& state)
       sumw = sumw + w[j];
     }
     for (int j = 0; j < k; j++) {
-      r = r + y[ind[j]] * (w[j] / sumw);
+      r = r + M.y(ind[j]) * (w[j] / sumw);
     }
   }
 }
@@ -251,11 +244,9 @@ static void bm_smap(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
-  Manifold M = vars.M;
-  Manifold Mp = vars.Mp;
+  Manifold M = std::move(vars.M);
+  Manifold Mp = std::move(vars.Mp);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -293,7 +284,6 @@ static void bm_smap(benchmark::State& state)
   }
 
   int k = opts.k;
-  auto y = vars.y;
 
   std::vector<size_t> ind = minindex(d, k);
 
@@ -317,7 +307,7 @@ static void bm_smap(benchmark::State& state)
 
     int rowc = -1;
     for (int j = 0; j < k; j++) {
-      if (y[ind[j]] == MISSING) {
+      if (M.y(ind[j]) == MISSING) {
         continue;
       }
       bool anyMissing = false;
@@ -332,7 +322,7 @@ static void bm_smap(benchmark::State& state)
       }
       rowc++;
 
-      y_ls[rowc] = y[ind[j]] * w[j];
+      y_ls[rowc] = M.y(ind[j]) * w[j];
       w_ls[rowc] = w[j];
       for (int i = 0; i < M.E_actual(); i++) {
         X_ls(rowc, i) = M(ind[j], i) * w[j];
@@ -402,14 +392,12 @@ static void bm_mf_smap_loop(benchmark::State& state)
   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   vars.opts.distributeThreads = false;
   vars.opts.nthreads = threads;
 
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.y, {}, vars.M, vars.Mp, io);
+    Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
 }
 
 BENCHMARK(bm_mf_smap_loop)
@@ -428,14 +416,12 @@ static void bm_mf_smap_loop_distribute(benchmark::State& state)
   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   vars.opts.distributeThreads = true;
   vars.opts.nthreads = threads;
 
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.y, {}, vars.M, vars.Mp, io);
+    Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
 }
 
 BENCHMARK(bm_mf_smap_loop_distribute)
@@ -459,7 +445,7 @@ BENCHMARK(bm_mf_smap_loop_distribute)
 //   vars.opts.nthreads = threads;
 
 //   for (auto _ : state)
-//     Prediction res = mf_smap_loop(vars.opts, vars.y, {}, vars.M, vars.Mp, io);
+//     Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
 // }
 
 // BENCHMARK(bm_mf_smap_loop_lazy)
@@ -467,19 +453,14 @@ BENCHMARK(bm_mf_smap_loop_distribute)
 //   ->MeasureProcessCPUTime()
 //   ->Unit(benchmark::kMillisecond);
 
-void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                    span_2d_double ystar, span_2d_retcode rc, span_3d_double coeffs, bool keep_going());
+void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
+                    span_2d_retcode rc, span_3d_double coeffs, bool keep_going());
 
 #ifdef _MSC_VER
 #include <omp.h>
 
-Prediction mf_smap_loop_openmp(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                               int nthreads)
+Prediction mf_smap_loop_openmp(Options opts, const Manifold& M, const Manifold& Mp, int nthreads)
 {
-  // Precompute the lagged embeddings in contiguous blocks of memory
-  M.compute_lagged_embedding();
-  Mp.compute_lagged_embedding();
-
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
@@ -503,7 +484,7 @@ Prediction mf_smap_loop_openmp(Options opts, const std::vector<double>& y, const
   int i;
 #pragma omp parallel for
   for (i = 0; i < numPredictions; i++) {
-    mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr);
+    mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, nullptr);
   }
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
@@ -521,11 +502,9 @@ static void bm_mf_smap_loop_openmp(benchmark::State& state)
   state.SetLabel(fmt::format("{} ({} threads)", input, threads));
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_openmp(vars.opts, vars.y, vars.M, vars.Mp, threads);
+    Prediction res = mf_smap_loop_openmp(vars.opts, vars.M, vars.Mp, threads);
   }
 }
 
@@ -541,13 +520,8 @@ BENCHMARK(bm_mf_smap_loop_openmp)
 #include <execution>
 
 template<class PolicyType>
-Prediction mf_smap_loop_cpp17(Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                              PolicyType policy)
+Prediction mf_smap_loop_cpp17(Options opts, const Manifold& M, const Manifold& Mp, PolicyType policy)
 {
-  // Precompute the lagged embeddings in contiguous blocks of memory
-  M.compute_lagged_embedding();
-  Mp.compute_lagged_embedding();
-
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
@@ -570,7 +544,7 @@ Prediction mf_smap_loop_cpp17(Options opts, const std::vector<double>& y, const 
   std::iota(inds.begin(), inds.end(), 0);
 
   std::for_each(policy, inds.begin(), inds.end(),
-                [&](int i) { mf_smap_single(i, opts, y, M, Mp, ystar, rc, coeffs, nullptr); });
+                [&](int i) { mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, nullptr); });
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   retcode maxError = *std::max_element(rc.data(), rc.data() + numThetas * numPredictions);
@@ -584,12 +558,10 @@ static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   for (auto _ : state) {
     Prediction res =
-      mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.y, vars.M, vars.Mp, std::execution::seq);
+      mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.M, vars.Mp, std::execution::seq);
   }
 }
 
@@ -604,12 +576,10 @@ static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   for (auto _ : state) {
     Prediction res =
-      mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.y, vars.M, vars.Mp, std::execution::par);
+      mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.M, vars.Mp, std::execution::par);
   }
 }
 
@@ -624,11 +594,9 @@ static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
   state.SetLabel(input);
 
   Inputs vars = read_dumpfile(input);
-  vars.M.compute_lagged_embedding();
-  vars.Mp.compute_lagged_embedding();
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(vars.opts, vars.y, vars.M, vars.Mp,
+    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(vars.opts, vars.M, vars.Mp,
                                                                                      std::execution::par_unseq);
   }
 }

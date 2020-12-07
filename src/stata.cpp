@@ -19,7 +19,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <vector>
 
 #ifdef DUMP_INPUT
@@ -298,12 +297,35 @@ ST_retcode edm(int argc, char* argv[])
   opts.forceCompute = (strcmp(argv[3], "force") == 0);
   opts.missingdistance = atof(argv[4]);
   ST_int mani = atoi(argv[5]);    // number of columns in the manifold
-  bool pmaniFlag = atoi(argv[6]); // contains the flag for p_manifold
+  bool copredict = atoi(argv[6]); // contains the flag for p_manifold
   opts.saveMode = atoi(argv[7]);
   ST_int pmani = atoi(argv[8]);            // contains the number of columns in p_manifold
   opts.varssv = opts.saveMode ? pmani : 0; // number of columns in smap coefficients
   opts.nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
+
+  char buffer[1000];
+
+  // Find the number of lags 'E' for the main data.
+  int E;
+  if (copredict) {
+    std::vector<double> E_list = stata_numlist("e");
+    E = (int)E_list.back();
+  } else {
+    SF_macro_use("_i", buffer, 1000);
+    E = atoi(buffer);
+  }
+
+  SF_macro_use("_parsed_dt", buffer, 1000);
+  bool parsed_dt = (bool)atoi(buffer);
+  double dtWeight = 0;
+  if (parsed_dt) {
+    SF_macro_use("_parsed_dtw", buffer, 1000);
+    dtWeight = atof(buffer);
+  }
+
+  SF_macro_use("_zcount", buffer, 1000);
+  int numExtras = atoi(buffer);
 
   // Default number of neighbours k is E_actual + 1
   if (opts.k <= 0) {
@@ -323,88 +345,44 @@ ST_retcode edm(int argc, char* argv[])
     opts.nthreads = nlcores;
   }
 
-  // Find which rows are used for training & which for prediction
-  std::vector<bool> trainingRows = stata_columns<bool>(mani + 2);
-  std::vector<bool> predictionRows = stata_columns<bool>(mani + 3);
-
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(1);
 
-  // Find the number of lags 'E' for the main data.
-  char buffer[1000];
+  // Read in the target vector 'y' from Stata
+  std::vector<ST_double> y = stata_columns<ST_double>(2);
 
-  int E;
-  if (pmaniFlag) {
-    std::vector<double> E_list = stata_numlist("e");
-    E = (int)E_list.back();
-  } else {
-    SF_macro_use("_i", buffer, 1000);
-    E = atoi(buffer);
-  }
+  // Find which rows are used for training & which for prediction
+  std::vector<bool> trainingRows = stata_columns<bool>(3);
+  std::vector<bool> predictionRows = stata_columns<bool>(4);
 
-  // Handle 'dt' flag
-  SF_macro_use("_parsed_dt", buffer, 1000);
-  bool parsed_dt = (bool)atoi(buffer);
-  std::vector<ST_double> t;
-
-  double dtWeight = 0;
-  if (parsed_dt) {
-    SF_macro_use("_parsed_dtw", buffer, 1000);
-    dtWeight = atof(buffer);
-  }
-
-  if (dtWeight > 0) {
-    // Read in time
-    ST_int timeCol = mani + 4 + (int)pmaniFlag * pmani + 1;
-    t = stata_columns<ST_double>(timeCol);
+  // Read in the prediction manifold
+  std::vector<ST_double> co_x;
+  if (copredict) {
+    co_x = stata_columns<ST_double>(5);
   }
 
   // Read in the extras
-  SF_macro_use("_zcount", buffer, 1000);
-  int zcount = atoi(buffer);
-
-  std::vector<std::vector<ST_double>> extras(zcount);
-
   // TODO: Check that 'dt' isn't thrown in here in the edm.ado script
-  for (int z = 0; z < zcount; z++) {
-    extras[z] = stata_columns<ST_double>(2 + z);
+  std::vector<std::vector<ST_double>> extras(numExtras);
+
+  for (int z = 0; z < numExtras; z++) {
+    extras[z] = stata_columns<ST_double>(4 + copredict + 1 + z);
   }
 
-  Manifold M(x, t, extras, trainingRows, E, dtWeight, MISSING);
+  // Handle 'dt' flag
+  // (We only need the time column in the case when 'dt' is set.)
+  std::vector<ST_double> t;
 
-  // Read in the prediction manifold
-  std::vector<ST_double> xPred;
-  std::vector<std::vector<ST_double>> extrasPred(zcount);
-  if (pmaniFlag) {
-    xPred = stata_columns<ST_double>(mani + 5);
-    for (int z = 0; z < zcount; z++) {
-      extrasPred[z] = stata_columns<ST_double>(mani + 5 + 1 + z);
-    }
-  } else {
-    // In cases like 'edm explore x' (pmani_flag = false), then we
-    // share the same data between both manifolds.
-    xPred = x;
-    extrasPred = extras;
+  if (dtWeight > 0) {
+    t = stata_columns<ST_double>(4 + copredict + numExtras + 1);
   }
 
-  Manifold Mp(xPred, t, extrasPred, predictionRows, E, dtWeight, MISSING);
+  ManifoldGenerator generator(x, y, co_x, extras, t, E, dtWeight, MISSING);
 
-  // Read in the target vector 'y' from Stata
-  std::vector<ST_double> yAll = stata_columns<ST_double>(mani + 1);
-  std::vector<ST_double> yTrain;
-  for (size_t i = 0; i < trainingRows.size(); i++) {
-    if (trainingRows[i]) {
-      yTrain.push_back(yAll[i]);
-    }
-  }
-  std::vector<ST_double> yPred;
-  for (size_t i = 0; i < trainingRows.size(); i++) {
-    if (predictionRows[i]) {
-      yPred.push_back(yAll[i]);
-    }
-  }
+  Manifold M = generator.create_manifold(trainingRows, false);
+  Manifold Mp = generator.create_manifold(predictionRows, true);
 
-  print_debug_info(argc, argv, opts, M, Mp, pmaniFlag, pmani, E, zcount, dtWeight);
+  print_debug_info(argc, argv, opts, M, Mp, copredict, pmani, E, numExtras, dtWeight);
 
   opts.thetas.clear();
   opts.thetas.push_back(theta);
@@ -414,15 +392,11 @@ ST_retcode edm(int argc, char* argv[])
   // Here we want to dump the input so we can use it without stata for
   // debugging and profiling purposes.
   if (argc >= 12) {
-    write_dumpfile(argv[11], opts, t, x, xPred, extras, extrasPred, trainingRows, predictionRows, yTrain, E, dtWeight);
+    write_dumpfile(argv[11], opts, x, y, co_x, extras, t, E, dtWeight, trainingRows, predictionRows);
   }
 #endif
 
-  std::packaged_task<Prediction()> task(std::bind(mf_smap_loop, opts, yTrain, yPred, M, Mp, io, keep_going, finished));
-  predictions = task.get_future();
-
-  std::thread master(std::move(task));
-  master.detach();
+  predictions = std::async(std::launch::async, mf_smap_loop, opts, M, Mp, io, keep_going, finished);
 
   return SUCCESS;
 }

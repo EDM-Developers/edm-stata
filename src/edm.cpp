@@ -39,14 +39,13 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-void simplex(int Mp_i, int t, Options opts, const std::vector<double>& y, int k, const std::vector<double>& d,
+void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
              const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
-void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, int k,
-          const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs,
-          span_2d_retcode rc);
+void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
+          const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs, span_2d_retcode rc);
 
-void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp,
-                    span_2d_double ystar, span_2d_retcode rc, span_3d_double coeffs, bool keep_going() = nullptr)
+void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
+                    span_2d_retcode rc, span_3d_double coeffs, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -110,11 +109,11 @@ void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const 
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex(Mp_i, t, opts, y, k, d, ind, ystar, rc);
+      simplex(Mp_i, t, opts, M, k, d, ind, ystar, rc);
     }
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap(Mp_i, t, opts, y, M, Mp, k, d, ind, ystar, coeffs, rc);
+      smap(Mp_i, t, opts, M, Mp, k, d, ind, ystar, coeffs, rc);
     }
   } else {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -123,7 +122,7 @@ void mf_smap_single(int Mp_i, Options opts, const std::vector<double>& y, const 
   }
 }
 
-void simplex(int Mp_i, int t, Options opts, const std::vector<double>& y, int k, const std::vector<double>& d,
+void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
              const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc)
 {
   double theta = opts.thetas[t];
@@ -138,16 +137,15 @@ void simplex(int Mp_i, int t, Options opts, const std::vector<double>& y, int k,
   }
 
   for (int j = 0; j < k; j++) {
-    r = r + y[ind[j]] * (w[j] / sumw);
+    r = r + M.y(ind[j]) * (w[j] / sumw);
   }
 
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
 }
 
-void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Manifold& M, const Manifold& Mp, int k,
-          const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs,
-          span_2d_retcode rc)
+void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
+          const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs, span_2d_retcode rc)
 {
 
   double d_base = d[ind[0]];
@@ -171,10 +169,6 @@ void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Man
 
   int rowc = -1;
   for (int j = 0; j < k; j++) {
-    if (y[ind[j]] == MISSING) {
-      continue;
-    }
-
     if (M.any_missing(ind[j])) {
       continue;
     }
@@ -185,7 +179,7 @@ void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Man
       return;
 
     } else if (opts.algorithm == "smap") {
-      y_ls[rowc] = y[ind[j]] * w[j];
+      y_ls[rowc] = M.y(ind[j]) * w[j];
       w_ls[rowc] = w[j];
       for (int i = 0; i < M.E_actual(); i++) {
         X_ls(rowc, i) = M(ind[j], i) * w[j];
@@ -244,13 +238,8 @@ void smap(int Mp_i, int t, Options opts, const std::vector<double>& y, const Man
 
 ThreadPool pool;
 
-Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const std::vector<double>& yPred,
-                        const Manifold& M, const Manifold& Mp, const IO& io, bool keep_going(), void finished())
+Prediction mf_smap_loop(Options opts, Manifold M, Manifold Mp, const IO& io, bool keep_going(), void finished())
 {
-  // Precompute the lagged embeddings in contiguous blocks of memory
-  M.compute_lagged_embedding();
-  Mp.compute_lagged_embedding();
-
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
@@ -285,7 +274,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const s
   std::vector<std::future<void>> results(numPredictions);
   if (opts.nthreads > 1) {
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, yTrain, M, Mp, ystar, rc, coeffs, keep_going); });
+      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, keep_going); });
     }
   }
 
@@ -295,7 +284,7 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const s
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      mf_smap_single(i, opts, yTrain, M, Mp, ystar, rc, coeffs, nullptr);
+      mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, nullptr);
     } else {
       results[i].get();
     }
@@ -314,9 +303,9 @@ Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const s
   pred.rc = *std::max_element(rc_data.get(), rc_data.get() + numThetas * numPredictions);
 
   std::vector<double> y1, y2;
-  for (int i = 0; i < yPred.size(); i++) {
-    if (yPred[i] != MISSING && pred.ystar[i] != MISSING) {
-      y1.push_back(yPred[i]);
+  for (int i = 0; i < Mp.ySize(); i++) {
+    if (Mp.y(i) != MISSING && pred.ystar[i] != MISSING) {
+      y1.push_back(Mp.y(i));
       y2.push_back(pred.ystar[i]);
     }
   }

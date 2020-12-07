@@ -103,6 +103,5 @@ struct Prediction
   double mae, rho;
 };
 
-DLL Prediction mf_smap_loop(Options opts, const std::vector<double>& yTrain, const std::vector<double>& yPred,
-                            const Manifold& M, const Manifold& Mp, const IO& io, bool keep_going() = nullptr,
+DLL Prediction mf_smap_loop(Options opts, Manifold M, Manifold Mp, const IO& io, bool keep_going() = nullptr,
                             void finished() = nullptr);

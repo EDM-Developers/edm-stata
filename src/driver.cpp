@@ -7,9 +7,9 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  std::string fname_in(argv[1]);
+  std::string fnameIn(argv[1]);
 
-  Inputs vars = read_dumpfile(fname_in);
+  Inputs vars = read_dumpfile(fnameIn);
 
   if (argc > 2) {
     vars.opts.nthreads = atoi(argv[2]);
@@ -18,13 +18,13 @@ int main(int argc, char* argv[])
   }
 
   ConsoleIO io;
-  Prediction smap_res = mf_smap_loop(vars.opts, vars.y, {}, vars.M, vars.Mp, io);
+  Prediction pred = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
 
-  std::size_t ext = fname_in.find_last_of(".");
-  fname_in = fname_in.substr(0, ext);
-  std::string fname_out = fname_in + "-out.h5";
+  std::size_t ext = fnameIn.find_last_of(".");
+  fnameIn = fnameIn.substr(0, ext);
+  std::string fnameOut = fnameIn + "-out.h5";
 
-  write_results(fname_out, smap_res, vars.opts.varssv);
+  write_results(fnameOut, pred);
 
-  return smap_res.rc;
+  return pred.rc;
 }
