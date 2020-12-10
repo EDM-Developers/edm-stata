@@ -218,73 +218,6 @@ std::vector<double> stata_numlist(std::string macro)
   return numlist;
 }
 
-void stata_load_rng_seed()
-{
-  char buffer[5100];
-  SF_macro_use("_edm_rng_state", buffer, 5100);
-
-  size_t rngStateSize = strlen(buffer);
-  if (rngStateSize == 0) {
-    return;
-  }
-
-  size_t expectedSize = 3 + 313 * 16;
-  if (rngStateSize != expectedSize) {
-    io.print(fmt::format("Error: Tried reading rngstate but got {} chars instead of {}\n", rngStateSize, expectedSize));
-    return;
-  }
-
-  std::string hexStr(buffer + 3);
-  std::stringstream stataRngState;
-
-  for (int i = 0; i < 312; i++) { // Last one seems useless?
-    std::string block = hexStr.substr(i * 16, 16);
-    unsigned long long blockNumber = std::stoull(block, nullptr, 16);
-    stataRngState << blockNumber << " ";
-  }
-
-  stataRngState >> rng;
-}
-
-double median(std::vector<double> u)
-{
-  if (u.size() % 2 == 0) {
-    const auto median_it1 = u.begin() + u.size() / 2 - 1;
-    const auto median_it2 = u.begin() + u.size() / 2;
-
-    std::nth_element(u.begin(), median_it1, u.end());
-    const auto e1 = *median_it1;
-
-    std::nth_element(u.begin(), median_it2, u.end());
-    const auto e2 = *median_it2;
-
-    return (e1 + e2) / 2;
-  } else {
-    const auto median_it = u.begin() + u.size() / 2;
-    std::nth_element(u.begin(), median_it, u.end());
-    return *median_it;
-  }
-}
-
-std::vector<size_t> rank(const std::vector<double>& v_temp)
-{
-  std::vector<std::pair<double, size_t>> v_sort(v_temp.size());
-
-  for (size_t i = 0U; i < v_sort.size(); ++i) {
-    v_sort[i] = std::make_pair(v_temp[i], i);
-  }
-
-  sort(v_sort.begin(), v_sort.end());
-
-  std::vector<size_t> result(v_temp.size());
-
-  // N.B. Stata's rank starts at 1, not 0, so the "+1" is added here.
-  for (size_t i = 0; i < v_sort.size(); ++i) {
-    result[v_sort[i].second] = i + 1;
-  }
-  return result;
-}
-
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                       std::vector<bool> predictionRows, bool pmani_flag, ST_int pmani, ST_int E, ST_int zcount,
@@ -369,6 +302,7 @@ ST_retcode edm(int argc, char* argv[])
   opts.missingdistance = atof(argv[4]);
   ST_int mani = atoi(argv[5]);    // number of columns in the manifold
   bool copredict = atoi(argv[6]); // contains the flag for p_manifold
+  opts.calcRhoMAE = !copredict;
   opts.saveMode = atoi(argv[7]);
   ST_int pmani = atoi(argv[8]);            // contains the number of columns in p_manifold
   opts.varssv = opts.saveMode ? pmani : 0; // number of columns in smap coefficients
@@ -376,6 +310,18 @@ ST_retcode edm(int argc, char* argv[])
   io.verbosity = atoi(argv[10]);
 
   char buffer[1001];
+
+  // For multiple simultaneous edm calls, each is allocated a task number
+  SF_macro_use("_task_num", buffer, 1000);
+  opts.taskNum = atoi(buffer);
+
+  double v;
+  SF_scal_use("edm_xmap", &v);
+  opts.xmap = (bool)v;
+  if (opts.xmap && opts.calcRhoMAE) {
+    SF_scal_use("edm_direction_num", &v);
+    opts.xmapDirectionNum = (int)v;
+  }
 
   // Find the number of lags 'E' for the main data.
   int E;
@@ -450,125 +396,6 @@ ST_retcode edm(int argc, char* argv[])
 
   ManifoldGenerator generator(x, y, co_x, extras, t, E, dtWeight, MISSING);
 
-  stata_load_rng_seed();
-  std::uniform_real_distribution<double> U(0.0, 1.0);
-  std::vector<double> u;
-
-  int nobs = 0;
-  for (int i = 0; i < trainingRows.size(); i++) {
-    if (trainingRows[i] || predictionRows[i]) {
-      nobs += 1;
-      u.push_back(U(rng));
-    }
-  }
-
-  double edm_xmap;
-  SF_scal_use("edm_xmap", &edm_xmap);
-  bool xmap = (bool)edm_xmap;
-
-  std::vector<bool> trainingRows2, predictionRows2;
-
-  std::vector<double> librarySizes;
-  if (xmap) {
-    librarySizes = stata_numlist("library");
-
-    // Find the 'u' cutoff value for this library size
-    int library = (int)librarySizes[0];
-
-    double uCutoff = 1.0;
-    if (library < u.size()) {
-      std::vector<double> uCopy(u);
-      const auto uCutoffIt = uCopy.begin() + library;
-      std::nth_element(uCopy.begin(), uCutoffIt, uCopy.end());
-      uCutoff = *uCutoffIt;
-    }
-
-    int obsNum = 0;
-    for (int i = 0; i < trainingRows.size(); i++) {
-      if (trainingRows[i] || predictionRows[i]) {
-        predictionRows2.push_back(true);
-        if (u[obsNum] < uCutoff) {
-          trainingRows2.push_back(true);
-        } else {
-          trainingRows2.push_back(false);
-        }
-        obsNum += 1;
-      } else {
-        trainingRows2.push_back(false);
-        predictionRows2.push_back(false);
-      }
-    }
-
-  } else {
-    // In explore mode, we can either be using 'full', 'crossfold', or just the normal default.
-    SF_macro_use("_full", buffer, 1000);
-    bool full = (bool)(std::string(buffer) == "full");
-
-    SF_macro_use("_crossfold", buffer, 1000);
-    int crossfold = atoi(buffer);
-
-    if (full) {
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (trainingRows[i] || predictionRows[i]) {
-          trainingRows2.push_back(true);
-          predictionRows2.push_back(true);
-        } else {
-          trainingRows2.push_back(false);
-          predictionRows2.push_back(false);
-        }
-      }
-    } else if (crossfold > 0) {
-
-      SF_macro_use("_t", buffer, 1000);
-      int t = atoi(buffer);
-
-      std::vector uRank = rank(u);
-
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (trainingRows[i] || predictionRows[i]) {
-          if (uRank[obsNum] % crossfold == (t - 1)) {
-            trainingRows2.push_back(false);
-            predictionRows2.push_back(true);
-          } else {
-            trainingRows2.push_back(true);
-            predictionRows2.push_back(false);
-          }
-          obsNum += 1;
-        } else {
-          trainingRows2.push_back(false);
-          predictionRows2.push_back(false);
-        }
-      }
-    } else {
-      double med = median(u);
-
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (trainingRows[i] || predictionRows[i]) {
-          if (u[obsNum] < med) {
-            trainingRows2.push_back(true);
-            predictionRows2.push_back(false);
-          } else {
-            trainingRows2.push_back(false);
-            predictionRows2.push_back(true);
-          }
-          obsNum += 1;
-        } else {
-          trainingRows2.push_back(false);
-          predictionRows2.push_back(false);
-        }
-      }
-    }
-  }
-
-  // TODO: Fix coprediction xmap (and probably explore too)
-  if (!copredict) {
-    trainingRows = trainingRows2;
-    predictionRows = predictionRows2;
-  }
-
   print_debug_info(argc, argv, opts, generator, trainingRows, predictionRows, copredict, pmani, E, numExtras, dtWeight);
 
   opts.thetas.clear();
@@ -595,12 +422,20 @@ ST_retcode save_results()
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (pred.rc == SUCCESS) {
-    // Save the rho/MAE (really only need this when pmani_flag=0; i.e. don't need this for coprediction)
-    std::string mae = fmt::format("{}", pred.mae);
-    std::string rho = fmt::format("{}", pred.rho);
+    // Save the rho/MAE results (don't need this for coprediction)
+    if (pred.calcRhoMAE) {
+      std::string resultMatrix = "r";
+      if (pred.xmap) {
+        resultMatrix += fmt::format("{}", pred.xmapDirectionNum);
+      }
 
-    SF_macro_save("_rmae", (char*)mae.c_str());
-    SF_macro_save("_rrho", (char*)rho.c_str());
+      if (SF_mat_store((char*)resultMatrix.c_str(), pred.taskNum, 3, pred.rho)) {
+        io.print(fmt::format("Error: failed to save rho {} to matrix '{}'\n", pred.rho, resultMatrix));
+      }
+      if (SF_mat_store((char*)resultMatrix.c_str(), pred.taskNum, 4, pred.mae)) {
+        io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", pred.mae, resultMatrix));
+      }
+    }
 
     auto ystar = span_2d_double(pred.ystar.get(), (int)pred.numThetas, (int)pred.numPredictions);
     write_stata_columns(ystar, 1);

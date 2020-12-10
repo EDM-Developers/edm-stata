@@ -41,6 +41,9 @@ struct Options
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
+  int taskNum;
+  bool xmap, calcRhoMAE = false;
+  int xmapDirectionNum;
 };
 
 class IO
@@ -101,6 +104,9 @@ struct Prediction
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
   double mae, rho;
+  int taskNum;
+  bool xmap, calcRhoMAE;
+  int xmapDirectionNum;
 };
 
 DLL Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,

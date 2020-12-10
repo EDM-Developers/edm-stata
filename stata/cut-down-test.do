@@ -9,7 +9,6 @@ if c(MP) {
 
 global EDM_VERBOSITY=0
 global EDM_NTHREADS=4
-global EDM_SEED=1234
 
 gen t = _n
 tsset t

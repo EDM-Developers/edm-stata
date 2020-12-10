@@ -306,15 +306,19 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
   // Check if any mf_smap_single call failed, and if so find the most serious error
   pred.rc = *std::max_element(rc_data.get(), rc_data.get() + numThetas * numPredictions);
 
-  std::vector<double> y1, y2;
-  for (int i = 0; i < Mp.ySize(); i++) {
-    if (Mp.y(i) != MISSING && pred.ystar[i] != MISSING) {
-      y1.push_back(Mp.y(i));
-      y2.push_back(pred.ystar[i]);
-    }
-  }
+  // Calculate the MAE & rho of prediction, if requested
+  pred.mae = MISSING;
+  pred.rho = MISSING;
 
-  if (y1.size() > 0) {
+  if (opts.calcRhoMAE) {
+    std::vector<double> y1, y2;
+    for (int i = 0; i < Mp.ySize(); i++) {
+      if (Mp.y(i) != MISSING && pred.ystar[i] != MISSING) {
+        y1.push_back(Mp.y(i));
+        y2.push_back(pred.ystar[i]);
+      }
+    }
+
     Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
     Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
 
@@ -324,10 +328,12 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
     const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
 
     pred.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
-  } else {
-    pred.mae = 0.0;
-    pred.rho = 0.0;
   }
+
+  pred.taskNum = opts.taskNum;
+  pred.xmap = opts.xmap;
+  pred.xmapDirectionNum = opts.xmapDirectionNum;
+  pred.calcRhoMAE = opts.calcRhoMAE;
 
   if (finished != nullptr) {
     finished();

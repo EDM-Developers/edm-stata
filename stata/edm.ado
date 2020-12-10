@@ -259,9 +259,6 @@ program define edmExplore, eclass sortpreserve
 	if `seed' != 0 {
 		set seed `seed'
 	}
-	if "${EDM_SEED}" != "" {
-		set seed ${EDM_SEED}
-	}
 	if `tp' < 1 {
 		di as error "tp must be greater than or equal to 1"
 		error 9
@@ -677,7 +674,7 @@ program define edmExplore, eclass sortpreserve
 		qui gen double `crossfoldu' = runiform() if `usable' ==1
 		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
 	}
-	local no_of_runs = 0
+
 	tempvar overlap
 	if `round' > 1 & `dot' > 0 {
 		if  `replicate' > 1 {
@@ -694,13 +691,11 @@ program define edmExplore, eclass sortpreserve
 	numlist "`theta'"
 	local theta_size = wordcount("`=r(numlist)'")
 
-	mat r = J(`=`round'*`theta_size'*`e_size'',4,.)
+	local task_num = 1
+	local num_tasks = `round'*`theta_size'*`e_size'
+	mat r = J(`num_tasks', 4, .)
 
 	forvalues t=1/`round' {
-		if "${EDM_SEED}" != "" {
-			local s = ${EDM_SEED} + `t'
-			set seed `s'
-		}
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
 			if `crossfold' > 0 {
@@ -714,7 +709,6 @@ program define edmExplore, eclass sortpreserve
 					gen byte `predict_set' = `train_set'
 				}
 				else {
-					local edm_rng_state = "`c(rngstate)'"
 					gen double `u' = runiform() if `usable' ==1
 					sum `u',d
 					gen byte `train_set' = `u' <r(p50) & `u' !=.
@@ -740,6 +734,7 @@ program define edmExplore, eclass sortpreserve
 		foreach i of numlist `e' {
 			local manifold "mapping_`=`i'-1'"
 			local e_offset = wordcount("``manifold''") - `i'
+			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
 			foreach j of numlist `theta' {
 				if `k'> 0{
@@ -761,9 +756,12 @@ program define edmExplore, eclass sortpreserve
 					local plus_amt = `zcount' + (`parsed_dt' ==1) + cond("`algorithm'" =="smap",2,1)
 					local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
-				local vars_save ""
+
+				mat r[`task_num',1] = `current_e'
+				mat r[`task_num',2] = `j'
 
 				if `mata_mode' == 1 {
+					local vars_save ""
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 					tempvar mae
 					qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
@@ -773,18 +771,15 @@ program define edmExplore, eclass sortpreserve
 					
 					qui corr `x_f' `x_p' if `predict_set' == 1
 					local rrho = r(rho)
+					
+					mat r[`task_num',3] = `rrho'
+					mat r[`task_num',4] = `rmae'
 				}
 				else {
-					if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
-						local vsave_flag = 1
-						unab vars : `vars_save'
-						local varssv `: word count `vars''
-					}
-					else {
-						local vsave_flag = 0
-						loc varssv=0
-					}
-					
+					// TODO: Check that `savesmap' is not needed in explore mode.
+					local vsave_flag = 0
+					loc varssv=0
+				
 					local myvars `x' `x_f' `train_set' `predict_set' `zlist' `original_t'
 
 					unab vars : ``manifold''
@@ -831,22 +826,16 @@ program define edmExplore, eclass sortpreserve
 					if "`edm_print'" != "" {
 						di "`edm_print'"
 					}
-					plugin call smap_block_mdap `x_p' `vars_save' if `predict_set' == 1
+					plugin call smap_block_mdap `x_p' if `predict_set' == 1
 				}
-
-				local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
 				if "`predict'" != "" {
 					cap gen double `predict' = `x_p'
 					qui label variable `predict' "edm prediction result"
 					cap replace `predict' = `x_p' if `x_p' !=.
 				}
-
-				local ++no_of_runs
-				mat r[`no_of_runs',1] = `current_e'
-				mat r[`no_of_runs',2] = `j'
-				mat r[`no_of_runs',3] = `rrho'
-				mat r[`no_of_runs',4] = `rmae'
+				
+				local ++task_num
 			}
 
 		}
@@ -867,7 +856,7 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 	if "`copredictvar'" != ""  {
-		if `no_of_runs' == 1 {
+		if `num_tasks' == 1 {
 			qui replace `overlap' = 0
 			qui replace `co_train_set' = 0 if `usable' ==0
 
@@ -928,7 +917,7 @@ program define edmExplore, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `co_x_p' `vars_save' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' if `co_predict_set' == 1
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -1145,10 +1134,11 @@ program define edmXmap, eclass sortpreserve
 
 	mat r1 = J(1,4,.)
 	mat r2 = J(1,4,.)
-	local max_round = ("`direction'" == "both") + 1
+	local num_directions = 1 + ("`direction'" == "both")
 
-	forvalues round=1/`max_round'{
-		if `round' ==2 {
+	forvalues direction_num = 1/`num_directions' {
+
+		if `direction_num' == 2 {
 			local swap "`x'"
 			local x "`y'"
 			local y "`swap'"
@@ -1338,7 +1328,7 @@ program define edmXmap, eclass sortpreserve
 
 		* mapping include variables and specified multivariates
 		local mapping_0 "`x' `zlist'"
-		local mapping_0_name "`=cond(`round'==1,"`ori_x'","`ori_y'")' `zlist_name'"
+		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
 		/* di "`mapping_0_name'" */
 		qui {
 			if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
@@ -1363,7 +1353,7 @@ program define edmXmap, eclass sortpreserve
 					local parsed_dt = 0
 				}
 			}
-			local parsed_dtw`round' = `parsed_dtw'
+			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
 		* If allow missing, use a wide definition of usable when generating manifold
 		if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
@@ -1384,7 +1374,7 @@ program define edmXmap, eclass sortpreserve
 			}
 
 			local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
-			local mapping_`i'_name "`mapping_`=`i'-1'_name' l`=`i'*`tau''.`=cond(`round'==1,"`ori_x'","`ori_y'")'"
+			local mapping_`i'_name "`mapping_`=`i'-1'_name' l`=`i'*`tau''.`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
 			if `parsed_dt' ==1 {
 				tempvar t_`i'
 				// note: embeding does not include the status itself, it includes the gap between current obs with the last obs
@@ -1413,7 +1403,7 @@ program define edmXmap, eclass sortpreserve
 				}
 				replace `usable' = 0 if f`tp'.`y' ==.
 				di "missing distance: `missingdistance'"
-				local missingdistance`round' = `missingdistance'
+				local missingdistance`direction_num' = `missingdistance'
 			}
 		}
 
@@ -1554,9 +1544,9 @@ program define edmXmap, eclass sortpreserve
 		tempvar u urank
 		tempvar overlap
 
-		local no_of_runs = 0
-		if `replicate' > 1 & `round' == 1 & `dot' > 0 {
-			di "Replication progress (`=`replicate'*`max_round'' in total)"
+		local task_num = 1
+		if `replicate' > 1 & `direction_num' == 1 & `dot' > 0 {
+			di "Replication progress (`=`replicate'*`num_directions'' in total)"
 			local finished_rep = 0
 		}
 
@@ -1575,16 +1565,12 @@ program define edmXmap, eclass sortpreserve
 		local theta_size = wordcount("`=r(numlist)'")
 		numlist "`library'"
 		local l_size = wordcount("`=r(numlist)'")
-		mat r`round' = J(`=`replicate'*`theta_size'*`e_size'*`l_size'',4,.)
+
+		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
+		mat r`direction_num' = J(`num_tasks', 4, .)
 
 		forvalues rep =1/`replicate' {
-			if "${EDM_SEED}" != "" {
-				local s = ${EDM_SEED} + `round' + `rep'
-				set seed `s'
-			}
-
 			cap drop `u' `urank'
-			local edm_rng_state = "`c(rngstate)'"
 			qui gen double `u' = runiform() if `usable' ==1
 			qui egen `urank' =rank(`u') if `usable' ==1, unique
 			qui count if `usable' ==1
@@ -1628,50 +1614,38 @@ program define edmXmap, eclass sortpreserve
 							/* local cmdfootnote = "Note: Number of neighbours (k) is set to E+1" + char(10) */
 						}
 
-						local vars_save ""
-						if "`savesmap'" != "" & ("`algorithm'" =="smap" | "`algorithm'" =="llr") {
-							/* forvalues em=1/`=`e'-1' {
-								di "`mapping_`em'_name'"
-								di "`mapping_`em''"
-							} */
+						if "`savesmap'" != "" {
+							qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
+							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `=cond(`direction_num'==1,"`ori_x'","`ori_y'")' predicting `=cond(`direction_num'==1,"`ori_y'","`ori_x'")' S-map equation (rep `rep')"
+							local vars_save "`savesmap'`direction_num'_b0_rep`rep'"
 
-							local ii =0
-							qui gen double `savesmap'`round'_b0_rep`rep' = .
-							qui label variable `savesmap'`round'_b0_rep`rep' "constant in `=cond(`round'==1,"`ori_x'","`ori_y'")' predicting `=cond(`round'==1,"`ori_y'","`ori_x'")' S-map equation (rep `rep')"
-							local vars_save "`vars_save' `savesmap'`round'_b0_rep`rep'"
+							local ii = 1
 							foreach name of local mapping_`=`e'-1'_name {
-								qui gen double `savesmap'`round'_b`++ii'_rep`rep' = .
-								qui label variable `savesmap'`round'_b`ii'_rep`rep' "`name' predicting `=cond(`round'==1,"`ori_y'","`ori_x'")' or `=cond(`round'==1,"`ori_y'","`ori_x'")'|M(`=cond(`round'==1,"`ori_x'","`ori_y'")') S-map coefficient (rep `rep')"
-								local vars_save "`vars_save' `savesmap'`round'_b`ii'_rep`rep'"
+								qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
+								qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' predicting `=cond(`direction_num'==1,"`ori_y'","`ori_x'")' or `=cond(`direction_num'==1,"`ori_y'","`ori_x'")'|M(`=cond(`direction_num'==1,"`ori_x'","`ori_y'")') S-map coefficient (rep `rep')"
+								local vars_save "`vars_save' `savesmap'`direction_num'_b`ii'_rep`rep'"
+								local ++ii
 							}
-
-							/* di "`vars_save'" */
 						}
-						/* di "``manifold''"
-						di "``manifold'_name'" */
+
 						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set' ==1
 						local last_theta =  `j'
 
-						/* if ${EDM_DEBUG} {
-							sum `overlap' ``manifold'' `x_f' `x_p' `train_set' `predict_set'  if `train_set' ==1
-							sum ``manifold'' `x_f' if `train_set' ==1
-							sum `x_p' if `predict_set' ==1
-							di "`missingdistance'"
-						} */
-
+						// TODO: currently `savemanifold' does nothing. 
 						if "`savemanifold'" !="" {
 							local counter = 1
 							foreach v of varlist ``manifold'' {
-								cap gen double `savemanifold'`round'_`counter' = `v'
+								cap gen double `savemanifold'`direction_num'_`counter' = `v'
 								if _rc!=0 {
-									di as error "Cannot save the manifold using variable `savemanifold'`round'_`counter' - is the prefix used already?"
+									di as error "Cannot save the manifold using variable `savemanifold'`direction_num'_`counter' - is the prefix used already?"
 									exit(100)
 								}
 								local ++counter
 							}
-
-
 						}
+
+						mat r`direction_num'[`task_num',1] = `direction_num'
+						mat r`direction_num'[`task_num',2] = `lib_size'
 
 						if `mata_mode' == 1 {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
@@ -1684,27 +1658,22 @@ program define edmXmap, eclass sortpreserve
 							
 							qui corr `x_f' `x_p' if `predict_set' == 1
 							local rrho = r(rho)
+
+							mat r`direction_num'[`task_num',3] = `rrho'
+							mat r`direction_num'[`task_num',4] = `rmae'
 						}
 						else {
-							if "`savesmap'"!="" & ("`algorithm'"=="smap"|"`algorithm'"=="llr") {
-								local vsave_flag = 1
-								unab vars : `vars_save'
-								local varssv `: word count `vars''
-							}
-							else {
-								local vsave_flag = 0
-								loc varssv=0
-							}
+							local vsave_flag = ("`savesmap'"!="") 
+							local varssv = wordcount("`vars_save'")
 
 							local myvars `x' `x_f' `train_set' `predict_set' `zlist' `original_t'
 
-							unab vars : ``manifold''
-							local mani `: word count `vars''
-
+							local mani = wordcount("``manifold''")
 							local pmani_flag = 0
 
 							scalar edm_running = 1
 							scalar edm_xmap = 1
+							scalar edm_direction_num = `direction_num'
 							local edm_print = ""
 							
 							if `parsed_dt' == 0 {
@@ -1745,25 +1714,15 @@ program define edmXmap, eclass sortpreserve
 							plugin call smap_block_mdap `x_p' `vars_save' if `predict_set' == 1
 						}
 
-						/* assert `x_p' !=. if `predict_set'==1
-						assert `x_f' !=. if `predict_set'==1 */
-						/* sum `x_f' `x_p' */
-						
-						local current_e =`i'
-						/* scatter `x_f' `x_p' */
-						
 						if "`predict'" != "" {
 							cap gen double `predict' = `x_p'
 							qui label variable `predict' "edm prediction result"
 							cap replace `predict' = `x_p' if `x_p' !=.
 						}
-						/* di "E = `current_e', theta = `j': Correlation = `=r(rho)'" */
-						local ++no_of_runs
-						mat r`round'[`no_of_runs',1] = `round'
-						mat r`round'[`no_of_runs',2] = `lib_size'
-						mat r`round'[`no_of_runs',3] = `rrho'
-						mat r`round'[`no_of_runs',4] = `rmae'
+
 						drop `overlap'
+
+						local ++task_num
 					}
 				}
 			}
@@ -1798,19 +1757,15 @@ program define edmXmap, eclass sortpreserve
 
 			}
 		}
-
-		/* mat list r */
-		/* mat r`round' = r`round'[2...,.] */
-		/* mat list r`round' */
-
 	}
 	if `replicate' > 1 & `dot' >0 {
 		if mod(`finished_rep',50*`dot') != 0 {
 			di ""
 		}
 	}
+
 	if "`copredictvar'" !="" {
-		if `no_of_runs' ==1{
+		if `num_tasks' == 1 {
 			qui gen byte `overlap' = 0
 			qui replace `co_train_set' = 0 if `usable' ==0
 			tempvar co_x_p
@@ -1825,10 +1780,13 @@ program define edmXmap, eclass sortpreserve
 			}
 			else {
 				local myvars `x' `x_f' `co_train_set' `co_predict_set' `co_x' `zlist' `original_t'
+
 				unab vars : ``manifold''
 				local mani `: word count `vars''
+
 				unab vars : `co_mapping'
 				local pmani `: word count `vars''
+
 				local pmani_flag = 1
 				local vsave_flag = 0
 
@@ -1871,7 +1829,7 @@ program define edmXmap, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `co_x_p' `vars_save' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' if `co_predict_set' == 1
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -1882,8 +1840,6 @@ program define edmXmap, eclass sortpreserve
 			di as result ""
 		}
 	}
-	/* mat list r1
-	mat list r2 */
 
 	mat cfull = (r1[1,3],r2[1,3])
 
@@ -2153,9 +2109,9 @@ Univariate simplex projection with manifold construct x and its lag values
 			display as text %16s "rho"  _c
 			display as text %16s "MAE"
 			di as txt "{hline `line_length'}"
-			local max_round= 1+ (e(direction) =="both")
-			forvalues round=1/`max_round'{
-				if `round' ==1 {
+			local num_directions = 1 + (e(direction) =="both")
+			forvalues direction_num = 1/`num_directions' {
+				if `direction_num' == 1 {
 					mat r = e(xmap_1)
 				}
 				else {
@@ -2195,8 +2151,8 @@ Univariate simplex projection with manifold construct x and its lag values
 			// process the return matrix
 			tempname reported_r r buffer summary_r
 
-			forvalues round=1/2{
-				if `round' ==1 {
+			forvalues direction_num=1/2{
+				if `direction_num' ==1 {
 					mat `r' = e(xmap_1)
 				}
 				else {
