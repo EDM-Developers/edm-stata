@@ -17,6 +17,8 @@
 #include <future>
 #include <numeric> // for std::accumulate
 #include <optional>
+#include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -51,13 +53,16 @@ private:
   {
     size_t ind;
     while ((ind = s.find("\n")) != std::string::npos) {
-      s = s.replace(ind, ind + 1, "{break}");
+      s.replace(ind, 1, "{break}");
     }
     return s;
   }
 };
 
+// Global state, needed to persist between multiple edm calls
 StataIO io;
+std::mt19937_64 rng;
+std::future<Prediction> predictions;
 
 bool keep_going()
 {
@@ -213,6 +218,73 @@ std::vector<double> stata_numlist(std::string macro)
   return numlist;
 }
 
+void stata_load_rng_seed()
+{
+  char buffer[5100];
+  SF_macro_use("_edm_rng_state", buffer, 5100);
+
+  size_t rngStateSize = strlen(buffer);
+  if (rngStateSize == 0) {
+    return;
+  }
+
+  size_t expectedSize = 3 + 313 * 16;
+  if (rngStateSize != expectedSize) {
+    io.print(fmt::format("Error: Tried reading rngstate but got {} chars instead of {}\n", rngStateSize, expectedSize));
+    return;
+  }
+
+  std::string hexStr(buffer + 3);
+  std::stringstream stataRngState;
+
+  for (int i = 0; i < 312; i++) { // Last one seems useless?
+    std::string block = hexStr.substr(i * 16, 16);
+    unsigned long long blockNumber = std::stoull(block, nullptr, 16);
+    stataRngState << blockNumber << " ";
+  }
+
+  stataRngState >> rng;
+}
+
+double median(std::vector<double> u)
+{
+  if (u.size() % 2 == 0) {
+    const auto median_it1 = u.begin() + u.size() / 2 - 1;
+    const auto median_it2 = u.begin() + u.size() / 2;
+
+    std::nth_element(u.begin(), median_it1, u.end());
+    const auto e1 = *median_it1;
+
+    std::nth_element(u.begin(), median_it2, u.end());
+    const auto e2 = *median_it2;
+
+    return (e1 + e2) / 2;
+  } else {
+    const auto median_it = u.begin() + u.size() / 2;
+    std::nth_element(u.begin(), median_it, u.end());
+    return *median_it;
+  }
+}
+
+std::vector<size_t> rank(const std::vector<double>& v_temp)
+{
+  std::vector<std::pair<double, size_t>> v_sort(v_temp.size());
+
+  for (size_t i = 0U; i < v_sort.size(); ++i) {
+    v_sort[i] = std::make_pair(v_temp[i], i);
+  }
+
+  sort(v_sort.begin(), v_sort.end());
+
+  std::vector<size_t> result(v_temp.size());
+
+  // N.B. Stata's rank starts at 1, not 0, so the "+1" is added here.
+  for (size_t i = 0; i < v_sort.size(); ++i) {
+    result[v_sort[i].second] = i + 1;
+  }
+  return result;
+}
+
 /* Print to the Stata console the inputs to the plugin  */
 void print_debug_info(int argc, char* argv[], Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                       std::vector<bool> predictionRows, bool pmani_flag, ST_int pmani, ST_int E, ST_int zcount,
@@ -263,8 +335,6 @@ void print_debug_info(int argc, char* argv[], Options opts, ManifoldGenerator ge
   }
 }
 
-std::future<Prediction> predictions;
-
 /*
 Example call to the plugin:
 
@@ -305,7 +375,7 @@ ST_retcode edm(int argc, char* argv[])
   opts.nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
 
-  char buffer[1000];
+  char buffer[1001];
 
   // Find the number of lags 'E' for the main data.
   int E;
@@ -379,6 +449,125 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   ManifoldGenerator generator(x, y, co_x, extras, t, E, dtWeight, MISSING);
+
+  stata_load_rng_seed();
+  std::uniform_real_distribution<double> U(0.0, 1.0);
+  std::vector<double> u;
+
+  int nobs = 0;
+  for (int i = 0; i < trainingRows.size(); i++) {
+    if (trainingRows[i] || predictionRows[i]) {
+      nobs += 1;
+      u.push_back(U(rng));
+    }
+  }
+
+  double edm_xmap;
+  SF_scal_use("edm_xmap", &edm_xmap);
+  bool xmap = (bool)edm_xmap;
+
+  std::vector<bool> trainingRows2, predictionRows2;
+
+  std::vector<double> librarySizes;
+  if (xmap) {
+    librarySizes = stata_numlist("library");
+
+    // Find the 'u' cutoff value for this library size
+    int library = (int)librarySizes[0];
+
+    double uCutoff = 1.0;
+    if (library < u.size()) {
+      std::vector<double> uCopy(u);
+      const auto uCutoffIt = uCopy.begin() + library;
+      std::nth_element(uCopy.begin(), uCutoffIt, uCopy.end());
+      uCutoff = *uCutoffIt;
+    }
+
+    int obsNum = 0;
+    for (int i = 0; i < trainingRows.size(); i++) {
+      if (trainingRows[i] || predictionRows[i]) {
+        predictionRows2.push_back(true);
+        if (u[obsNum] < uCutoff) {
+          trainingRows2.push_back(true);
+        } else {
+          trainingRows2.push_back(false);
+        }
+        obsNum += 1;
+      } else {
+        trainingRows2.push_back(false);
+        predictionRows2.push_back(false);
+      }
+    }
+
+  } else {
+    // In explore mode, we can either be using 'full', 'crossfold', or just the normal default.
+    SF_macro_use("_full", buffer, 1000);
+    bool full = (bool)(std::string(buffer) == "full");
+
+    SF_macro_use("_crossfold", buffer, 1000);
+    int crossfold = atoi(buffer);
+
+    if (full) {
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (trainingRows[i] || predictionRows[i]) {
+          trainingRows2.push_back(true);
+          predictionRows2.push_back(true);
+        } else {
+          trainingRows2.push_back(false);
+          predictionRows2.push_back(false);
+        }
+      }
+    } else if (crossfold > 0) {
+
+      SF_macro_use("_t", buffer, 1000);
+      int t = atoi(buffer);
+
+      std::vector uRank = rank(u);
+
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (trainingRows[i] || predictionRows[i]) {
+          if (uRank[obsNum] % crossfold == (t - 1)) {
+            trainingRows2.push_back(false);
+            predictionRows2.push_back(true);
+          } else {
+            trainingRows2.push_back(true);
+            predictionRows2.push_back(false);
+          }
+          obsNum += 1;
+        } else {
+          trainingRows2.push_back(false);
+          predictionRows2.push_back(false);
+        }
+      }
+    } else {
+      double med = median(u);
+
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (trainingRows[i] || predictionRows[i]) {
+          if (u[obsNum] < med) {
+            trainingRows2.push_back(true);
+            predictionRows2.push_back(false);
+          } else {
+            trainingRows2.push_back(false);
+            predictionRows2.push_back(true);
+          }
+          obsNum += 1;
+        } else {
+          trainingRows2.push_back(false);
+          predictionRows2.push_back(false);
+        }
+      }
+    }
+  }
+
+  // TODO: Fix coprediction xmap (and probably explore too)
+  if (!copredict) {
+    trainingRows = trainingRows2;
+    predictionRows = predictionRows2;
+  }
 
   print_debug_info(argc, argv, opts, generator, trainingRows, predictionRows, copredict, pmani, E, numExtras, dtWeight);
 
