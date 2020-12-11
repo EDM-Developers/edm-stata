@@ -16,7 +16,7 @@
 
 #include <future>
 #include <numeric> // for std::accumulate
-#include <optional>
+#include <queue>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -61,8 +61,7 @@ private:
 
 // Global state, needed to persist between multiple edm calls
 StataIO io;
-std::mt19937_64 rng;
-std::future<Prediction> predictions;
+std::queue<std::future<Prediction>> predictions;
 
 bool keep_going()
 {
@@ -71,9 +70,24 @@ bool keep_going()
   return (bool)edm_running;
 }
 
-void finished()
+void finished(PredictionStats stats)
 {
   SF_scal_save("edm_running", 0.0);
+
+  // Save the rho/MAE results if requested (i.e. not for coprediction)
+  if (stats.calcRhoMAE) {
+    std::string resultMatrix = "r";
+    if (stats.xmap) {
+      resultMatrix += fmt::format("{}", stats.xmapDirectionNum);
+    }
+
+    if (SF_mat_store((char*)resultMatrix.c_str(), stats.taskNum, 3, stats.rho)) {
+      io.print(fmt::format("Error: failed to save rho {} to matrix '{}'\n", stats.rho, resultMatrix));
+    }
+    if (SF_mat_store((char*)resultMatrix.c_str(), stats.taskNum, 4, stats.mae)) {
+      io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", stats.mae, resultMatrix));
+    }
+  }
 }
 
 void print_error(ST_retcode rc)
@@ -254,7 +268,8 @@ void print_debug_info(int argc, char* argv[], Options opts, ManifoldGenerator ge
     io.print("\n");
 
     io.print(fmt::format("k = {}\n\n", opts.k));
-    io.print(fmt::format("save_mode = {}\n\n", opts.saveMode));
+    io.print(fmt::format("savePrediction = {}\n\n", opts.savePrediction));
+    io.print(fmt::format("saveSMAPCoeffs = {}\n\n", opts.saveSMAPCoeffs));
     io.print(fmt::format("columns in smap coefficients = {}\n", opts.varssv));
 
     io.print(fmt::format("E is {}\n", E));
@@ -303,17 +318,11 @@ ST_retcode edm(int argc, char* argv[])
   ST_int mani = atoi(argv[5]);    // number of columns in the manifold
   bool copredict = atoi(argv[6]); // contains the flag for p_manifold
   opts.calcRhoMAE = !copredict;
-  opts.saveMode = atoi(argv[7]);
-  ST_int pmani = atoi(argv[8]);            // contains the number of columns in p_manifold
-  opts.varssv = opts.saveMode ? pmani : 0; // number of columns in smap coefficients
+  opts.saveSMAPCoeffs = atoi(argv[7]);
+  ST_int pmani = atoi(argv[8]);                  // contains the number of columns in p_manifold
+  opts.varssv = opts.saveSMAPCoeffs ? pmani : 0; // number of columns in smap coefficients
   opts.nthreads = atoi(argv[9]);
   io.verbosity = atoi(argv[10]);
-
-  char buffer[1001];
-
-  // For multiple simultaneous edm calls, each is allocated a task number
-  SF_macro_use("_task_num", buffer, 1000);
-  opts.taskNum = atoi(buffer);
 
   double v;
   SF_scal_use("edm_xmap", &v);
@@ -322,6 +331,15 @@ ST_retcode edm(int argc, char* argv[])
     SF_scal_use("edm_direction_num", &v);
     opts.xmapDirectionNum = (int)v;
   }
+
+  SF_scal_use("store_prediction", &v);
+  opts.savePrediction = (bool)v;
+
+  char buffer[1001];
+
+  // For multiple simultaneous edm calls, each is allocated a task number
+  SF_macro_use("_task_num", buffer, 1000);
+  opts.taskNum = atoi(buffer);
 
   // Find the number of lags 'E' for the main data.
   int E;
@@ -410,50 +428,30 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  predictions = std::async(std::launch::async, mf_smap_loop, opts, generator, trainingRows, predictionRows, io,
-                           keep_going, finished);
+  predictions.push(std::async(std::launch::async, mf_smap_loop, opts, generator, trainingRows, predictionRows, io,
+                              keep_going, finished));
 
   return SUCCESS;
 }
 
-ST_retcode save_results()
+ST_retcode save_prediction_to_stata_variables()
 {
-  Prediction pred = predictions.get();
+  Prediction pred = predictions.front().get();
+  predictions.pop();
 
   // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
   if (pred.rc == SUCCESS) {
-    // Save the rho/MAE results (don't need this for coprediction)
-    if (pred.calcRhoMAE) {
-      std::string resultMatrix = "r";
-      if (pred.xmap) {
-        resultMatrix += fmt::format("{}", pred.xmapDirectionNum);
-      }
-
-      if (SF_mat_store((char*)resultMatrix.c_str(), pred.taskNum, 3, pred.rho)) {
-        io.print(fmt::format("Error: failed to save rho {} to matrix '{}'\n", pred.rho, resultMatrix));
-      }
-      if (SF_mat_store((char*)resultMatrix.c_str(), pred.taskNum, 4, pred.mae)) {
-        io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", pred.mae, resultMatrix));
-      }
+    if (pred.ystar != nullptr) {
+      auto ystar = span_2d_double(pred.ystar.get(), (int)pred.numThetas, (int)pred.numPredictions);
+      write_stata_columns(ystar, 1);
     }
 
-    auto ystar = span_2d_double(pred.ystar.get(), (int)pred.numThetas, (int)pred.numPredictions);
-    write_stata_columns(ystar, 1);
-
-    if (pred.numCoeffCols) {
+    if (pred.coeffs != nullptr) {
       auto coeffs =
         span_3d_double(pred.coeffs.get(), (int)pred.numThetas, (int)pred.numPredictions, (int)pred.numCoeffCols);
-      write_stata_columns(coeffs, 2);
+      write_stata_columns(coeffs, (pred.ystar != nullptr) + 1);
     }
   }
-
-  // Print a Footer message for the plugin.
-  if (io.verbosity > 1) {
-    io.out("\nEnd of the plugin\n");
-    io.out("{hline 20}\n\n");
-  }
-
-  finished();
 
   return pred.rc;
 }
@@ -464,7 +462,7 @@ STDLL stata_call(int argc, char* argv[])
     if (argc > 0) {
       return edm(argc, argv);
     } else {
-      ST_retcode rc = save_results();
+      ST_retcode rc = save_prediction_to_stata_variables();
       print_error(rc);
       return rc;
     }

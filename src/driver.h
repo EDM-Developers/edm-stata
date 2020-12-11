@@ -25,8 +25,8 @@ void save_options(hid_t fid, Options opts)
 {
   char boolVar = (char)opts.forceCompute;
   H5LTset_attribute_char(fid, "/", "forceCompute", &boolVar, 1);
-  boolVar = (char)opts.saveMode;
-  H5LTset_attribute_char(fid, "/", "saveMode", &boolVar, 1);
+  boolVar = (char)opts.saveSMAPCoeffs;
+  H5LTset_attribute_char(fid, "/", "saveSMAPCoeffs", &boolVar, 1);
   boolVar = (char)opts.distributeThreads;
   H5LTset_attribute_char(fid, "/", "distributeThreads", &boolVar, 1);
 
@@ -48,8 +48,8 @@ Options read_options(hid_t fid)
   char boolVar;
   H5LTget_attribute_char(fid, "/", "forceCompute", &boolVar);
   opts.forceCompute = (bool)boolVar;
-  H5LTget_attribute_char(fid, "/", "saveMode", &boolVar);
-  opts.saveMode = (bool)boolVar;
+  H5LTget_attribute_char(fid, "/", "saveSMAPCoeffs", &boolVar);
+  opts.saveSMAPCoeffs = (bool)boolVar;
   H5LTget_attribute_char(fid, "/", "distributeThreads", &boolVar);
   opts.distributeThreads = (bool)boolVar;
 

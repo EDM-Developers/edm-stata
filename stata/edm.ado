@@ -97,7 +97,6 @@ program define edmDisplayCI, rclass
 		noi di ""
 		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Est.)" _c
 		forvalues j=1/`maxr' {
-
 			if `maxr' == 1 {
 				noi di as result %17s " " _c
 			}
@@ -144,7 +143,7 @@ program define edmPreprocessVariable, eclass
 		qui egen `varname' = std(`unnormalized')
 	}
 	else if strpos("`1'", ".") >0 {
-		qui gen double `varname' = `1' if `touse' == 1
+		qui gen double `varname' = `1' if `touse'
 	}
 end
 
@@ -347,7 +346,7 @@ program define edmExplore, eclass sortpreserve
 	}
 	local parsed_dtsave = "`dtsave'"
 
-	if `parsed_dt' == 1 {
+	if `parsed_dt' {
 		/* general algorithm for generating t patterns
 		1. keep only touse
 		2. drop all missings
@@ -356,7 +355,7 @@ program define edmExplore, eclass sortpreserve
 		 */
 		qui {
 			preserve
-			keep if `touse' ==1
+			keep if `touse'
 			if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 				keep if `x' != .
 			}
@@ -394,17 +393,17 @@ program define edmExplore, eclass sortpreserve
 			// update copredict mainfold
 			if "`copredictvar'" != "" {
 				preserve
-				keep if `touse' ==1
+				keep if `touse'
 				// this part is for filtering only
 				if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 					tokenize "`copredictvar'"
 					local co_x "`1'"
 					tempvar co_x_new
 					if substr("`co_x'", 1, 2) == "z." {
-						gen `co_x_new' = `=substr("`co_x'", 3, .)' if `touse' ==1
+						gen `co_x_new' = `=substr("`co_x'", 3, .)' if `touse'
 					}
 					else {
-						gen `co_x_new' = `co_x' if `touse' ==1
+						gen `co_x_new' = `co_x' if `touse'
 					}
 					keep if `co_`v'_new' !=.
 				}
@@ -447,12 +446,12 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 	qui {
-		gen byte `zusable' = `touse' ==1
+		gen byte `zusable' = `touse'
 		foreach v of local parsed_extravars {
 			tempvar z`++zcount'
 			/* noi di "extra embeding: `v'" */
 			if substr("`v'",1,2) == "z." {
-				sum `=substr("`v'",3,.)' if `touse' ==1
+				sum `=substr("`v'",3,.)' if `touse'
 				gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
 				replace `zusable' = 0 if `z`zcount'' ==.
 			}
@@ -461,7 +460,7 @@ program define edmExplore, eclass sortpreserve
 					noi di as error "`v' is not a variable name"
 					error 198
 				}
-				gen double `z`zcount'' = `v' if `touse' ==1
+				gen double `z`zcount'' = `v' if `touse'
 				replace `zusable' = 0 if `z`zcount'' ==.
 			}
 
@@ -476,7 +475,7 @@ program define edmExplore, eclass sortpreserve
 	1. more relaxed usable
 	2. deal within mata
 	*/
-	qui gen byte `usable' = `x'!=. & `touse' & `zusable' ==1
+	qui gen byte `usable' = `x'!=. & `touse' & `zusable'
 
 	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 		/* di "Reset usable due to allow missing" */
@@ -488,11 +487,11 @@ program define edmExplore, eclass sortpreserve
 	local max_e : word `e_size' of `e'
 
 	local mapping_0 "`x' `y' `zlist'"
-	if `parsed_dt' == 1 {
+	if `parsed_dt' {
 		if `parsed_dtw' ==0 {
-			qui sum `x' if `usable' ==1
+			qui sum `x' if `usable'
 			local xsd = r(sd)
-			qui sum `dt_value' if `usable' ==1
+			qui sum `dt_value' if `usable'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
 			if `tsd' ==0 {
@@ -509,14 +508,14 @@ program define edmExplore, eclass sortpreserve
 
 	forvalues i=1/`=`max_e'-1' {
 		tempvar x_`i'
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1
+		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
 		qui replace `usable' = 0 if `x_`i'' ==.
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
-		if `parsed_dt' ==1 {
+		if `parsed_dt' {
 			tempvar t_`i'
 			// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
 			/* di "dt descript"
-			sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
+			sum `dt_value' l`=`i'-1'.`dt_value' if `usable' */
 			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw'
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 			/* di "mapping_`i': `mapping_`i''" */
@@ -526,7 +525,7 @@ program define edmExplore, eclass sortpreserve
 
 	}
 
-	qui replace `usable' = 0 if f`future_step'.`x' ==. & `usable' ==1
+	qui replace `usable' = 0 if f`future_step'.`x' ==. & `usable'
 
 	if "`copredictvar'" != "" {
 		if "`copredict'" == "" {
@@ -534,7 +533,7 @@ program define edmExplore, eclass sortpreserve
 			error 111
 		}
 		// temporary move to newt_co
-		if `parsed_dt' == 1 {
+		if `parsed_dt' {
 			if "`original_id'" != ""{
 				qui xtset `original_id' `newt_co'
 			}
@@ -545,8 +544,8 @@ program define edmExplore, eclass sortpreserve
 
 		confirm new variable `copredict'
 		tempvar co_train_set co_predict_set co_usable
-		gen byte `co_train_set' = `usable' ==1
-		gen byte `co_usable' = `touse' ==1
+		gen byte `co_train_set' = `usable'
+		gen byte `co_usable' = `touse'
 
 		* build prediction manifold
 		tokenize "`copredictvar'"
@@ -559,7 +558,7 @@ program define edmExplore, eclass sortpreserve
 
 		* z list
 		tempvar co_zusable
-		qui gen byte `co_zusable' = `touse' ==1
+		qui gen byte `co_zusable' = `touse'
 		local co_zlist_name ""
 		local co_zlist ""
 		local co_zcount = 0
@@ -568,7 +567,7 @@ program define edmExplore, eclass sortpreserve
 				tempvar z`++co_zcount'
 				/* noi di "extra embeding: `v'" */
 				if substr("`v'",1,2) == "z." {
-					sum `=substr("`v'",3,.)' if `touse' ==1
+					sum `=substr("`v'",3,.)' if `touse'
 					gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
 					replace `co_zusable' = 0 if `z`co_zcount'' ==.
 					/* replace `z`co_zcount'' = 0 if `touse' != 1 */
@@ -578,7 +577,7 @@ program define edmExplore, eclass sortpreserve
 						noi di as error "`v' is not a variable name"
 						error 198
 					}
-					gen double `z`co_zcount'' = `v' if `touse' ==1
+					gen double `z`co_zcount'' = `v' if `touse'
 					replace `co_zusable' = 0 if `z`co_zcount'' ==.
 				}
 				local co_zlist_name "`co_zlist_name' `v'"
@@ -591,25 +590,23 @@ program define edmExplore, eclass sortpreserve
 
 		forvalues i=1/`=`max_e'-1' {
 			tempvar co_x_`i'
-			qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable' ==1
+			qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable'
 			qui replace `co_usable' = 0 if `co_x_`i'' ==.
 			local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 			local co_mapping "`co_mapping_`i''"
 			/* di "i=`i', x= `co_x_`i'', co_mapping "
 			list `co_usable' */
 			/* di "co_mapping_`i' w/o dt: `co_mapping_`i''" */
-			if `parsed_dt' ==1 {
+			if `parsed_dt' {
 				if `codtweight' ==0 {
 					local codtweight = `parsed_dtw'
 				}
 
 				tempvar t_`i'
 				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-				/* di "dt descript"
-				sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
 
 				// parsed _dtw should match copredict
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable' ==1
+				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
 				local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
 				/* di "incorporate lag `i' in dt mapping"
@@ -621,10 +618,10 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 
-		gen byte `co_predict_set' = `co_usable' ==1
+		gen byte `co_predict_set' = `co_usable'
 
 		//restore t
-		if `parsed_dt' == 1 {
+		if `parsed_dt' {
 			if "`original_id'" != ""{
 				qui xtset `original_id' `newt'
 			}
@@ -634,31 +631,35 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	tempvar x_f x_p train_set predict_set
+	tempvar x_f train_set predict_set
 	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
-	qui gen double `x_f' = f`future_step'.`x' if `usable' ==1
+	qui gen double `x_f' = f`future_step'.`x' if `usable'
 	qui replace `usable' =0 if `x_f' ==.
-	qui gen double `x_p' = .
+
+	if `mata_mode' {
+		tempvar x_p
+		qui gen double `x_p' = .
+	}
 
 	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 		qui {
 			/* di "Reset usable due to allow missing" */
 			replace `usable' = 0
 			foreach v of local mapping_`=`max_e'-1' {
-				replace `usable' =1 if `v' !=. & `touse' ==1
+				replace `usable' =1 if `v' !=. & `touse'
 			}
 			if `missingdistance' <=0 {
-				qui sum `x' if `usable' ==1
+				qui sum `x' if `usable'
 				local missingdistance = 2/sqrt(c(pi))*r(sd)
 			}
-			replace `x_f' = f`future_step'.`x' if `usable' ==1
+			replace `x_f' = f`future_step'.`x' if `usable'
 			replace `usable' = 0 if `x_f' ==.
 			/* di "missing distance: `missingdistance'" */
 		}
 
 	}
 
-	qui count if `usable' ==1
+	qui count if `usable'
 	scalar total_obs = r(N)
 
 	tempvar u mae
@@ -671,7 +672,7 @@ program define edmExplore, eclass sortpreserve
 		}
 		tempvar crossfoldu crossfoldunum
 		local edm_rng_state = "`c(rngstate)'"
-		qui gen double `crossfoldu' = runiform() if `usable' ==1
+		qui gen double `crossfoldu' = runiform() if `usable'
 		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
 	}
 
@@ -684,6 +685,11 @@ program define edmExplore, eclass sortpreserve
 			di "`crossfold'-fold cross-validation progress (`crossfold' in total)"
 		}
 		local finished_rep = 0
+	}
+
+	if "`predict'" != "" {
+		cap gen double `predict' = .
+		qui label variable `predict' "edm prediction result"
 	}
 
 	numlist "`e'"
@@ -699,31 +705,31 @@ program define edmExplore, eclass sortpreserve
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
 			if `crossfold' > 0 {
-				gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' -1) & `usable' ==1
-				gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' -1) & `usable' ==1
+				gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' -1) & `usable'
+				gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' -1) & `usable'
 			}
 			else {
 				* replicate mode
 				if "`full'" == "full" {
-					gen byte `train_set' = `usable' ==1
+					gen byte `train_set' = `usable'
 					gen byte `predict_set' = `train_set'
 				}
 				else {
-					gen double `u' = runiform() if `usable' ==1
+					gen double `u' = runiform() if `usable'
 					sum `u',d
 					gen byte `train_set' = `u' <r(p50) & `u' !=.
 					gen byte `predict_set' = `u' >=r(p50) & `u' !=.
 					drop `u'
 				}
 			}
-			gen byte `overlap' = (`train_set' ==`predict_set') & (`predict_set' ==1)
+			gen byte `overlap' = (`train_set' ==`predict_set') & `predict_set'
 			if "`full'" != "full" {
-				assert `overlap' == 0 if `predict_set' ==1
+				assert `overlap' == 0 if `predict_set'
 			}
 
-			count if `train_set' ==1
+			count if `train_set'
 			local train_size = r(N)
-			count if `predict_set' ==1
+			count if `predict_set'
 			local max_lib_size = min(`train_size',r(N))
 			if `max_lib_size' < 1 {
 				noi display as error "Invalid dimension or library specifications"
@@ -741,7 +747,7 @@ program define edmExplore, eclass sortpreserve
 					local lib_size = min(`k',`train_size')
 				}
 				else if `k' == 0{
-					local lib_size = `i' +`zcount' + (`parsed_dt' ==1) + cond("`algorithm'" =="smap",2,1)
+					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
 				}
 				else {
 					local lib_size = `max_lib_size'
@@ -753,27 +759,33 @@ program define edmExplore, eclass sortpreserve
 					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
 				else if `k' != `lib_size' & `k' == 0 {
-					local plus_amt = `zcount' + (`parsed_dt' ==1) + cond("`algorithm'" =="smap",2,1)
+					local plus_amt = `zcount' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
 					local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 
 				mat r[`task_num',1] = `current_e'
 				mat r[`task_num',2] = `j'
 
-				if `mata_mode' == 1 {
+				scalar store_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
+
+				if `mata_mode' {
 					local vars_save ""
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
 					tempvar mae
-					qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
+					qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set'
 					qui sum `mae'
 					local rmae = r(mean)
 					drop `mae' 
 					
-					qui corr `x_f' `x_p' if `predict_set' == 1
+					qui corr `x_f' `x_p' if `predict_set'
 					local rrho = r(rho)
 					
 					mat r[`task_num',3] = `rrho'
 					mat r[`task_num',4] = `rmae'
+					
+					if store_prediction {
+						cap replace `predict' = `x_p' if `x_p' !=.
+					}
 				}
 				else {
 					// TODO: Check that `savesmap' is not needed in explore mode.
@@ -826,13 +838,7 @@ program define edmExplore, eclass sortpreserve
 					if "`edm_print'" != "" {
 						di "`edm_print'"
 					}
-					plugin call smap_block_mdap `x_p' if `predict_set' == 1
-				}
-
-				if "`predict'" != "" {
-					cap gen double `predict' = `x_p'
-					qui label variable `predict' "edm prediction result"
-					cap replace `predict' = `x_p' if `x_p' !=.
+					plugin call smap_block_mdap `predict' if `predict_set'
 				}
 				
 				local ++task_num
@@ -863,7 +869,9 @@ program define edmExplore, eclass sortpreserve
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
 
-			if `mata_mode' == 1 {
+			scalar store_prediction = 1
+
+			if `mata_mode' {
 				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
@@ -917,7 +925,7 @@ program define edmExplore, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `co_x_p' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' if `co_predict_set'
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -999,7 +1007,7 @@ program define edmExplore, eclass sortpreserve
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
 	}
-	ereturn local mode = cond(`mata_mode' ==1, "mata","plugin")
+	ereturn local mode = cond(`mata_mode', "mata","plugin")
 	edmDisplay
 
 end
@@ -1158,7 +1166,7 @@ program define edmXmap, eclass sortpreserve
 		local parsed_dtsave = "`dtsave'"
 		/* di "`parsed_dtsave'"
 		di "parsed extra:`parsed_extravars':" */
-		if `parsed_dt' == 1 {
+		if `parsed_dt' {
 			/* general algorithm for generating t patterns
 			1. keep only touse
 			2. drop all missings
@@ -1169,7 +1177,7 @@ program define edmXmap, eclass sortpreserve
 
 				// update main mainfold
 				preserve
-				keep if `touse' ==1
+				keep if `touse'
 				if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 					keep if `x' != .
 				}
@@ -1204,7 +1212,7 @@ program define edmXmap, eclass sortpreserve
 				// update copredict mainfold
 				if "`copredictvar'" != "" {
 					preserve
-					keep if `touse' ==1
+					keep if `touse'
 					if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 						tokenize "`copredictvar'"
 						local co_x "`1'"
@@ -1212,11 +1220,11 @@ program define edmXmap, eclass sortpreserve
 						foreach v in "x" "y" {
 							tempvar co_`v'_new
 							if substr("`co_`v''",1,2) =="z." {
-								gen `co_`v'_new' = `=substr("`co_`v''",3,.)' if `touse' ==1
+								gen `co_`v'_new' = `=substr("`co_`v''",3,.)' if `touse'
 							}
 							else {
 								if "`co_`v''" !="" {
-									gen `co_`v'_new' = `co_`v'' if `touse' ==1
+									gen `co_`v'_new' = `co_`v'' if `touse'
 								}
 								else {
 									continue
@@ -1286,7 +1294,7 @@ program define edmXmap, eclass sortpreserve
 
 		}
 
-		qui gen byte `zusable' = `touse' ==1
+		qui gen byte `zusable' = `touse'
 		local zlist_name ""
 		local zlist ""
 		qui {
@@ -1295,7 +1303,7 @@ program define edmXmap, eclass sortpreserve
 				/* noi di "extra embeding: `v'" */
 				if substr("`v'",1,2) == "z." {
 
-					sum `=substr("`v'",3,.)' if `touse' ==1
+					sum `=substr("`v'",3,.)' if `touse'
 					gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
 					replace `zusable' = 0 if `z`zcount'' ==.
 					/* replace `z`zcount'' = 0 if `touse' != 1 */
@@ -1305,7 +1313,7 @@ program define edmXmap, eclass sortpreserve
 						noi di as error "`v' is not a variable name"
 						error 198
 					}
-					gen double `z`zcount'' = `v' if `touse' ==1
+					gen double `z`zcount'' = `v' if `touse'
 					replace `zusable' = 0 if `z`zcount'' ==.
 				}
 				local zlist_name "`zlist_name' `v'"
@@ -1324,7 +1332,7 @@ program define edmXmap, eclass sortpreserve
 
 		tempvar usable
 
-		qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable' == 1
+		qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable'
 
 		* mapping include variables and specified multivariates
 		local mapping_0 "`x' `zlist'"
@@ -1339,11 +1347,11 @@ program define edmXmap, eclass sortpreserve
 		}
 		/* di "usable"
 		sum `usable' */
-		if `parsed_dt' == 1 {
+		if `parsed_dt' {
 			if `parsed_dtw' ==0 {
-				qui sum `x' if `usable' ==1
+				qui sum `x' if `usable'
 				local xsd = r(sd)
-				qui sum `dt_value' if `usable' ==1
+				qui sum `dt_value' if `usable'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
 				if `tsd' ==0 {
@@ -1361,26 +1369,18 @@ program define edmXmap, eclass sortpreserve
 		}
 		forvalues i=1/`=`e'-1' {
 			tempvar x_`i'
-			/* sum `x' `usable'
-			sum `x' if `usable' ==1 */
+			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
 
-			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable' ==1
-			/* sum `x_`i'' */
-			/* pause on
-			pause check */
-			/* assert `x_`i'' !=0 */
 			if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 				qui replace `usable' = 0 if `x_`i'' ==.
 			}
 
 			local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 			local mapping_`i'_name "`mapping_`=`i'-1'_name' l`=`i'*`tau''.`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
-			if `parsed_dt' ==1 {
+			if `parsed_dt' {
 				tempvar t_`i'
-				// note: embeding does not include the status itself, it includes the gap between current obs with the last obs
-				/* di "dt descript"
-				sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable' ==1
+				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
+				qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable'
 				local mapping_`i' "`mapping_`i'' `t_`i''"
 				local mapping_`i'_name "`mapping_`i'_name' dt`i'"
 				/* di "incorporate lag `i' in dt mapping"
@@ -1395,10 +1395,10 @@ program define edmXmap, eclass sortpreserve
 				/* di "Reset usable due to allow missing" */
 				replace `usable' = 0
 				foreach v of local mapping_`=`e'-1' {
-					replace `usable' =1 if `v' !=. & `touse' ==1
+					replace `usable' =1 if `v' !=. & `touse'
 				}
-				if `missingdistance' <=0 {
-					sum `x' if `usable' ==1
+				if `missingdistance' <= 0 {
+					sum `x' if `usable'
 					local missingdistance = 2/sqrt(c(pi))*r(sd)
 				}
 				replace `usable' = 0 if f`tp'.`y' ==.
@@ -1407,10 +1407,10 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		if ("`copredictvar'" != "") & (`comap_constructed' ==0) {
+		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
 
 			// temporary move to newt_co
-			if `parsed_dt' == 1 {
+			if `parsed_dt' {
 				qui {
 					if "`original_id'" != ""{
 						qui xtset `original_id' `newt_co'
@@ -1422,8 +1422,8 @@ program define edmXmap, eclass sortpreserve
 			}
 			confirm new variable `copredict'
 			tempvar co_train_set co_predict_set co_usable
-			gen byte `co_train_set' = `usable' ==1
-			gen byte `co_usable' = `touse' ==1
+			gen byte `co_train_set' = `usable'
+			gen byte `co_usable' = `touse'
 			* build prediction manifold
 			tokenize "`copredictvar'"
 			local co_x "`1'"
@@ -1447,7 +1447,7 @@ program define edmXmap, eclass sortpreserve
 
 			* z list
 			tempvar co_zusable
-			qui gen byte `co_zusable' = `touse' ==1
+			qui gen byte `co_zusable' = `touse'
 			local co_zlist_name ""
 			local co_zlist ""
 			local co_zcount = 0
@@ -1457,7 +1457,7 @@ program define edmXmap, eclass sortpreserve
 					/* noi di "extra embeding: `v'" */
 					if substr("`v'",1,2) == "z." {
 
-						sum `=substr("`v'",3,.)' if `touse' ==1
+						sum `=substr("`v'",3,.)' if `touse'
 						gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
 						replace `co_zusable' = 0 if `z`co_zcount'' ==.
 						/* replace `z`co_zcount'' = 0 if `touse' != 1 */
@@ -1467,8 +1467,8 @@ program define edmXmap, eclass sortpreserve
 							noi di as error "`v' is not a variable name"
 							error 198
 						}
-						gen double `z`co_zcount'' = `v' if `touse' ==1
-						replace `co_zusable' = 0 if `z`co_zcount'' ==.
+						gen double `z`co_zcount'' = `v' if `touse'
+						replace `co_zusable' = 0 if `z`co_zcount'' == .
 					}
 					local co_zlist_name "`co_zlist_name' `v'"
 					local co_zlist "`co_zlist' `z`co_zcount''"
@@ -1480,16 +1480,16 @@ program define edmXmap, eclass sortpreserve
 			qui replace `co_usable' = 0 if `co_x'==.
 			forvalues i=1/`=`e'-1' {
 				tempvar co_x_`i'
-				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable' ==1
+				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable'
 				qui replace `co_usable' = 0 if `co_x_`i'' ==.
 				local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 				local co_mapping "`co_mapping_`i''"
-				if `parsed_dt' ==1 {
+				if `parsed_dt' {
 					if `codtweight' ==0 {
 						// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
-						/* qui sum `co_x' if `co_usable' ==1
+						/* qui sum `co_x' if `co_usable'
 						local xsd = r(sd)
-						qui sum `dt_value_co' if `co_usable' ==1
+						qui sum `dt_value_co' if `co_usable'
 						local tsd = r(sd)
 						local codtweight = `xsd'/`tsd'
 						if `tsd' ==0 {
@@ -1500,12 +1500,10 @@ program define edmXmap, eclass sortpreserve
 					}
 
 					tempvar t_`i'
-					// note: embeding does not include the status itself, it includes the gap between current obs with the last obs
-					/* di "dt descript"
-					sum `dt_value' l`=`i'-1'.`dt_value' if `usable' ==1 */
+					// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
 
 					// parsed _dtw should match copredict
-					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable' ==1
+					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
 					local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
 					/* di "incorporate lag `i' in dt mapping"
@@ -1516,12 +1514,12 @@ program define edmXmap, eclass sortpreserve
 				}
 			}
 
-			gen byte `co_predict_set' = `co_usable' ==1
-			local comap_constructed =1
+			gen byte `co_predict_set' = `co_usable' == 1
+			local comap_constructed = 1
 
 
 			//restore t
-			if `parsed_dt' == 1 {
+			if `parsed_dt' {
 				qui {
 					if "`original_id'" != ""{
 						xtset `original_id' `newt'
@@ -1533,10 +1531,19 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		tempvar x_f x_p train_set predict_set
+		tempvar x_f train_set predict_set
 
-		qui gen double `x_f' = f`tp'.`y' if `usable' ==1
-		qui gen double `x_p' = .
+		qui gen double `x_f' = f`tp'.`y' if `usable'
+
+		if "`predict'" != "" {
+			cap gen double `predict' = .
+			qui label variable `predict' "edm prediction result"
+		}
+
+		if `mata_mode' {
+			tempvar x_p
+			qui gen double `x_p' = .
+		}
 
 		qui gen byte `predict_set' = `usable'
 		qui gen byte `train_set' = . // to be decided by library length
@@ -1552,7 +1559,7 @@ program define edmXmap, eclass sortpreserve
 
 		* Now that `usable' is defined, we can set the default library size to be sum(usable).
 		* N.B. For each direction of the xmap, we probably have a different sum(usable) value. 
-		qui count if `usable' == 1
+		qui count if `usable'
 		scalar total_obs = r(N)
 
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
@@ -1571,9 +1578,9 @@ program define edmXmap, eclass sortpreserve
 
 		forvalues rep =1/`replicate' {
 			cap drop `u' `urank'
-			qui gen double `u' = runiform() if `usable' ==1
-			qui egen `urank' =rank(`u') if `usable' ==1, unique
-			qui count if `usable' ==1
+			qui gen double `u' = runiform() if `usable'
+			qui egen `urank' =rank(`u') if `usable', unique
+			qui count if `usable'
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
@@ -1591,19 +1598,19 @@ program define edmXmap, eclass sortpreserve
 							error 1
 						}
 
-						qui replace `train_set' = `urank' <=`lib_size' & `usable' ==1
-						qui count if `train_set' ==1
+						qui replace `train_set' = `urank' <= `lib_size' & `usable'
+						qui count if `train_set'
 						local train_size = r(N)
 
 						// detect k size
-						if `k'> 0{
+						if `k' > 0 {
 							local k_size = min(`k',`train_size' -1)
 						}
 						else if `k' == 0{
-							local k_size = `i' +`zcount' + (`parsed_dt' ==1) + cond("`algorithm'" =="smap",2,1)
+							local k_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 						}
 						else if `k' < 0  {
-							local k_size = `train_size' -1
+							local k_size = `train_size' - 1
 							/* di "full lib" */
 						}
 
@@ -1628,7 +1635,7 @@ program define edmXmap, eclass sortpreserve
 							}
 						}
 
-						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set' ==1
+						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set'
 						local last_theta =  `j'
 
 						// TODO: currently `savemanifold' does nothing. 
@@ -1647,20 +1654,26 @@ program define edmXmap, eclass sortpreserve
 						mat r`direction_num'[`task_num',1] = `direction_num'
 						mat r`direction_num'[`task_num',2] = `lib_size'
 
-						if `mata_mode' == 1 {
+						scalar store_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
+
+						if `mata_mode' {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
 
 							tempvar mae
-							qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set' == 1
+							qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set'
 							qui sum `mae'
 							local rmae = r(mean)
 							drop `mae' 
 							
-							qui corr `x_f' `x_p' if `predict_set' == 1
+							qui corr `x_f' `x_p' if `predict_set'
 							local rrho = r(rho)
 
 							mat r`direction_num'[`task_num',3] = `rrho'
 							mat r`direction_num'[`task_num',4] = `rmae'
+							
+							if store_prediction {
+								cap replace `predict' = `x_p' if `x_p' != .
+							}
 						}
 						else {
 							local vsave_flag = ("`savesmap'"!="") 
@@ -1711,17 +1724,10 @@ program define edmXmap, eclass sortpreserve
 							if "`edm_print'" != "" {
 								di "`edm_print'"
 							}
-							plugin call smap_block_mdap `x_p' `vars_save' if `predict_set' == 1
+							
+							plugin call smap_block_mdap `predict' `vars_save' if `predict_set'
 						}
-
-						if "`predict'" != "" {
-							cap gen double `predict' = `x_p'
-							qui label variable `predict' "edm prediction result"
-							cap replace `predict' = `x_p' if `x_p' !=.
-						}
-
 						drop `overlap'
-
 						local ++task_num
 					}
 				}
@@ -1758,24 +1764,27 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 	}
-	if `replicate' > 1 & `dot' >0 {
-		if mod(`finished_rep',50*`dot') != 0 {
+	if `replicate' > 1 & `dot' > 0 {
+		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
 		}
 	}
 
-	if "`copredictvar'" !="" {
+	if "`copredictvar'" != "" {
 		if `num_tasks' == 1 {
 			qui gen byte `overlap' = 0
-			qui replace `co_train_set' = 0 if `usable' ==0
+			qui replace `co_train_set' = 0 if `usable' == 0
+
 			tempvar co_x_p
-			qui gen double `co_x_p'=.
+			qui gen double `co_x_p' = .
+
+			scalar store_prediction = 1
 
 			//check whether dt transformation is required for copredict?
 			// extract t for copredict variables -> add to copredict extras
 			// set to new id t for mainfold construction
 
-			if `mata_mode' == 1 {
+			if `mata_mode' {
 				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
 			else {
@@ -1829,11 +1838,11 @@ program define edmXmap, eclass sortpreserve
 				if "`edm_print'" != "" {
 					di "`edm_print'"
 				}
-				plugin call smap_block_mdap `co_x_p' if `co_predict_set' == 1
+				plugin call smap_block_mdap `co_x_p' if `co_predict_set'
 			}
 
 			qui gen double `copredict' = `co_x_p'
-			qui label variable `copredict' "edm copredicted  `copredictvar' using manifold `ori_x' `ori_y'"
+			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
 		else {
 			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
@@ -1912,25 +1921,20 @@ program define edmXmap, eclass sortpreserve
 	else {
 		ereturn local extraembed = "`parsed_extravars'"
 	}
-
-
-	ereturn local mode = cond(`mata_mode' ==1, "mata","plugin")
+	ereturn local mode = cond(`mata_mode', "mata","plugin")
 	edmDisplay
 end
 
 
 program define edmDisplay, eclass
 /*
-
-
-Emperical Dynamic Model
+Empirical Dynamic Modelling
 Univariate simplex projection with manifold construct x and its lag values
 ------------------------------------
 | E | theta | rho |
 | 2 | 0.1 | 0.993 |
 ------------------------------------
 */
-
 	display _n "Empirical Dynamic Modelling"
 	local diopts "`options'"
 	local fmt "%12.5g"
@@ -1980,7 +1984,6 @@ Univariate simplex projection with manifold construct x and its lag values
 			di as txt "{hline 68}"
 		}
 		else {
-
 			di as txt "{hline 70}"
 			di as text %22s " " _c
 			di as txt "{hline 9} rho {hline 9}  " _c
@@ -2006,7 +2009,7 @@ Univariate simplex projection with manifold construct x and its lag values
 			mat list `reported_r' */
 			forvalues i = 1/ `nr' {
 				mat `buffer' = J(1,2,.)
-				if `reported_r'[`i',1] ==1 {
+				if `reported_r'[`i',1] == 1 {
 					continue
 				}
 				local base_E = `r'[`i',1]
@@ -2035,7 +2038,7 @@ Univariate simplex projection with manifold construct x and its lag values
 					display as result `dformat' `"`:display `fmt' `mat_sd'[1,`j'] '"' _c
 				}
 				mat `summary_r' = (`summary_r'\ `=`r'[`i',1]',`=`r'[`i',2]', `=`mat_mean'[1,1]',`=`mat_sd'[1,1]', `=`mat_mean'[1,2]',`=`mat_sd'[1,2]')
-				/* mat list `summary_r' */
+
 				di ""
 				if `=e(ci)'>0 & `=e(ci)'<100 {
 					/* set trace on */
@@ -2048,27 +2051,19 @@ Univariate simplex projection with manifold construct x and its lag values
 						}
 					}
 					local ++ci_counter
-
 				}
-
-
 			}
 			mat `summary_r'=`summary_r'[2...,.]
 			ereturn matrix summary = `summary_r'
 			di as txt "{hline 70}"
 			di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
-
-
 		}
-
 
 		if e(e_offset) != 0 {
 			di as text "Note: Actual E is higher than the specified E due to extras"
 		}
 		di as text ustrtrim(e(cmdfootnote))
 		/* di as txt "Note: E is the embedding dimension" */
-
-
 	}
 	else if e(subcommand) == "xmap" {
 		di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
@@ -2077,7 +2072,7 @@ Univariate simplex projection with manifold construct x and its lag values
 			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
 			di " in the embedding: `=e(extraembed)'"
 		}
-		if e(missingdistance)>0 & e(missingdistance)!= .{
+		if e(missingdistance)>0 & e(missingdistance)!= . {
 			di as text "Missing values are assumed to have a distance of " _c
 			/* di `:di %8.2g `=e(missingdistance)'' _c */
 
@@ -2090,7 +2085,6 @@ Univariate simplex projection with manifold construct x and its lag values
 				di `:di %8.2g `=e(missingdistance)'' _c
 				di " with all values."
 			}
-
 		}
 		local direction1 = "`=e(y)' ~ `=e(y)'|M(`=e(x)')"
 		local direction2 = "`=e(x)' ~ `=e(x)'|M(`=e(y)')"
@@ -2121,7 +2115,6 @@ Univariate simplex projection with manifold construct x and its lag values
 				local nr = rowsof(r)
 				local kr = colsof(r)
 
-
 				forvalues i = 1/ `nr' {
 
 					forvalues j=1/`kr' {
@@ -2151,8 +2144,8 @@ Univariate simplex projection with manifold construct x and its lag values
 			// process the return matrix
 			tempname reported_r r buffer summary_r
 
-			forvalues direction_num=1/2{
-				if `direction_num' ==1 {
+			forvalues direction_num = 1/2 {
+				if `direction_num' == 1 {
 					mat `r' = e(xmap_1)
 				}
 				else {
@@ -2160,7 +2153,6 @@ Univariate simplex projection with manifold construct x and its lag values
 					if e(direction) =="oneway" {
 						continue, break
 					}
-
 				}
 
 				local nr = rowsof(`r')
@@ -2172,7 +2164,7 @@ Univariate simplex projection with manifold construct x and its lag values
 				mat list `reported_r' */
 				forvalues i = 1/ `nr' {
 					mat `buffer' = J(1,2,.)
-					if `reported_r'[`i',1] ==1 {
+					if `reported_r'[`i',1] == 1 {
 						continue
 					}
 					local base_direction = `r'[`i',1]
@@ -2241,10 +2233,10 @@ Univariate simplex projection with manifold construct x and its lag values
 		di trim("`sdm'") _c
 		di "*std / sqrt(`=e(replicate)')"
 	} */
-	if `=e(force_compute)'==1 {
+	if `=e(force_compute)' == 1 {
 		di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
 	}
-	if `=e(dt)' ==1 {
+	if `=e(dt)' == 1 {
 		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
 		if `=e(dtw1)' != `=e(dtw2)' & `=e(dtw2)' !=. & e(direction) !="oneway" {
 			di `:di %8.2g `=e(dtw1)'' _c
@@ -2258,7 +2250,6 @@ Univariate simplex projection with manifold construct x and its lag values
 
 	/* di as txt "For more information, please refer to {help edm:help file} and the article." */
 end
-
 
 
 program define edmExtractExtra, rclass
@@ -2289,10 +2280,6 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 
 	st_view(S, ., skip_obs, predict_use)
 
-	/* matlist(M) */
-	/* matlist(st_data(., train_use, .)) */
-	/* matlist(Mp) */
-
 	if (l <= 0) { //default value of local library size
 		k = cols(M)
 		l = k + 1 // local library size (E+1) + itself
@@ -2302,7 +2289,6 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 	real scalar save_mode
 	if (vars_save != "") {
 		st_view(B, ., tokens(vars_save), predict_use)
-		/* matlist(B) */
 		save_mode = 1
 	}
 	else {
@@ -2310,18 +2296,13 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 	}
 	real scalar n
 	n = rows(Mp)
-	/* matlist(l) */
+
 	real rowvector b
 
 	for(i=1;i<=n;i++) {
-		/* sprintf("%g %g",i,S[i]) */
 		b= Mp[i,.]
 		ystar[i] = mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
-		/* ystar[i] =1 */
-		/* sprintf("%g",ystar[i]) */
 	}
-	/* return */
-	/* sprintf("done") */
 }
 end
 
@@ -2346,31 +2327,19 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	real scalar i,j,n,r,n_ls
 	n = rows(M)
 	d = J(n, 1, 0)
-	/* matlist(b) */
+
 	for(i=1;i<=n;i++) {
 		a= M[i,.] - b
-		/* matlist(a) */
+
 		if (missingdistance !=0) {
 			a=editvalue(a,., missingdistance)
 		}
 		// d is squared distance
 		d[i] = a*a'
-		/* sprintf("%g",d[i]) */
 	}
 
-
-
-	/* sprintf("d") */
-	/* matlist(d) */
 	minindex(d, l+skip_obs, ind, v)
 	// create weights for each point in the library
-	/* matlist(d[1...5]) */
-	/* matlist(l)
-	matlist(ind)
-	matlist(d[ind[1+skip_obs]])
-	matlist(d[ind[1]])
-	matlist(d[ind[2]])
-	matlist(d[ind[3]]) */
 
 	// find the smallest non-zero distance
 	real scalar d_base
@@ -2416,12 +2385,6 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	}
 	// note the w, X_ls, y_ls matrix are larger than necessary, the first skip_obs rows are not used
 	r = 0
-	/* matlist(y)
-	matlist(ind)
-	matlist(w) */
-/*
-	matlist(ind)
-	matlist(w) */
 
 	if (algorithm == "" | algorithm == "simplex") {
 		for(j=1+skip_obs;j<=l+skip_obs;j++) {
@@ -2429,12 +2392,9 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		}
 		w = w/sum(w)
 		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			/* sprintf("%g", j)  */
-			/* sprintf("%g %g %g", j, y[ind[j]],w[j])  */
 			r = r +  y[ind[j]] * w[j]
-			/* sprintf("%g %g", y[ind[j]], w[j])  */
 		}
-		/* sprintf("%g", r)  */
+
 		return(r)
 	}
 	else if (algorithm =="smap" | algorithm =="llr") {
@@ -2480,8 +2440,6 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		if (rowc ==0) {
 			return(.)
 		}
-		/* sprintf("done")
-		matlist(rowc) */
 
 		y_ls =y_ls[1..rowc]
 		X_ls =X_ls[1..rowc,.]
@@ -2491,17 +2449,6 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		// add constant
 		X_ls    = w_ls,X_ls
 
-		/* matlist(w)
-		printf("cutw")
-		matlist(w_ls[1..rowc])
-		matlist(X_ls) */
-
-		/* matlist(X_ls) */
-		/* printf("w")
-		matlist(w) */
-
-		/* X_ls    = X_ls,J(n_ls,1,1) */
-
 		if (algorithm == "llr") {
 			XpXi = quadcross(X_ls, w_ls, X_ls)
 			XpXi = invsym(XpXi)
@@ -2510,35 +2457,16 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		else {
 			b_ls = svsolve(X_ls, y_ls)
 		}
-/*
-		matlist(skip_obs)
-		matlist(w)
-		matlist(X_ls)
-		matlist(y_ls)
-		matlist(b_ls) */
-
-		/* if (hasmissing(b_ls) | b_ls[1]==0 ){
-			sprintf("colinearity?")
-			matlist(X_ls)
-			matlist(y_ls)
-			matlist(w_ls)
-			matlist(b_ls)
-		} */
 
 		if (save_index>0) {
 			Beta_smap[save_index,.] = editvalue(b_ls',0,.)
 			/* Beta_smap[save_index,.] = b_ls' */
 		}
-		/* matlist(b)
-		matlist(b_ls) */
+
 		x_pred = 1,editvalue(b,.,0)
 
-		/* matlist(x_pred)
-		matlist(b_ls) */
 		r = x_pred * b_ls
 
-		/* sprintf("R")
-		matlist(r) */
 		return(r)
 	}
 
@@ -2547,48 +2475,3 @@ end
 
 //smap block C implementation
 cap program smap_block_mdap, plugin using(edm_`=c(os)'_x`=c(bit)'.plugin)
-
-
-/*
-capture mata mata drop matlist()
-mata:
-void matlist(
-	real matrix X,
-	| string scalar fmt
-	)
-{
-	real scalar     i, j, wd, rw, cw
-	string scalar   sfmt
-
-	if (fmt=="") fmt = "%g"
-	wd = strlen(sprintf(fmt,-1/3))
-
-	if (length(X)==0) return
-
-	rw = trunc(log10(rows(X))) + 1
-	cw = trunc(log10(cols(X))) + 1
-	wd = max((cw,wd)) + 2
-	sfmt = "%"+strofreal(wd)+"s"
-
-	printf("{txt}"+(2+rw+1+1)*" ")
-	for (j=1;j<=cols(X);j++) {
-		printf(sfmt+" ", sprintf("%g", j))
-	}
-	printf("  \n")
-	printf((2+rw+1)*" " + "{c TLC}{hline " +
-		strofreal((wd+1)*cols(X)+1) + "}{c TRC}\n")
-	for (i=1;i<=rows(X);i++) {
-		printf("{txt}  %"+strofreal(rw)+"s {c |}{res}", sprintf("%g", i))
-		for (j=1;j<=cols(X);j++) {
-			printf(sfmt+" ",sprintf(fmt, X[i,j]))
-		}
-		printf(" {txt}{c |}\n")
-	}
-	printf((2+rw+1)*" " + "{c BLC}{hline " +
-		strofreal((wd+1)*cols(X)+1) + "}{c BRC}\n")
-}
-end  */
-
-
-
-

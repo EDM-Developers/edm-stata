@@ -35,7 +35,7 @@ using span_2d_retcode = stdex::mdspan<retcode, stdex::dynamic_extent, stdex::dyn
 
 struct Options
 {
-  bool forceCompute, saveMode;
+  bool forceCompute, savePrediction, saveSMAPCoeffs;
   bool distributeThreads = false;
   int k, varssv, nthreads;
   double missingdistance;
@@ -97,6 +97,14 @@ public:
   virtual void flush() const = 0;
 };
 
+struct PredictionStats
+{
+  double mae, rho;
+  int taskNum;
+  bool xmap, calcRhoMAE;
+  int xmapDirectionNum;
+};
+
 struct Prediction
 {
   retcode rc;
@@ -104,11 +112,8 @@ struct Prediction
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
   double mae, rho;
-  int taskNum;
-  bool xmap, calcRhoMAE;
-  int xmapDirectionNum;
 };
 
 DLL Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, const IO& io, bool keep_going() = nullptr,
-                            void finished() = nullptr);
+                            void finished(PredictionStats) = nullptr);

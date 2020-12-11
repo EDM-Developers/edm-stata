@@ -221,7 +221,7 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
     }
 
     // saving ics coefficients if savesmap option enabled
-    if (opts.saveMode) {
+    if (opts.saveSMAPCoeffs) {
       for (int j = 0; j < opts.varssv; j++) {
         if (ics(j) == 0.) {
           coeffs(t, Mp_i, j) = MISSING;
@@ -239,7 +239,8 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
 ThreadPool pool;
 
 Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                        std::vector<bool> predictionRows, const IO& io, bool keep_going(), void finished())
+                        std::vector<bool> predictionRows, const IO& io, bool keep_going(),
+                        void finished(PredictionStats))
 {
   Manifold M = generator.create_manifold(trainingRows, false);
   Manifold Mp = generator.create_manifold(predictionRows, true);
@@ -247,20 +248,14 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
 
-  Prediction pred;
+  auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
+  auto ystarView = span_2d_double(ystar.get(), (int)numThetas, (int)numPredictions);
 
-  pred.numThetas = numThetas;
-  pred.numPredictions = numPredictions;
-  pred.numCoeffCols = opts.varssv;
+  auto coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
+  auto coeffsView = span_3d_double(coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
 
-  pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
-  auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
-
-  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
-  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
-
-  auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
-  auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
+  auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
+  auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
 
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -278,7 +273,7 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
   std::vector<std::future<void>> results(numPredictions);
   if (opts.nthreads > 1) {
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, keep_going); });
+      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
     }
   }
 
@@ -288,7 +283,7 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      mf_smap_single(i, opts, M, Mp, ystar, rc, coeffs, nullptr);
+      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, nullptr);
     } else {
       results[i].get();
     }
@@ -303,43 +298,65 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
     return { UNKNOWN_ERROR, {}, {} };
   }
 
-  // Check if any mf_smap_single call failed, and if so find the most serious error
-  pred.rc = *std::max_element(rc_data.get(), rc_data.get() + numThetas * numPredictions);
-
   // Calculate the MAE & rho of prediction, if requested
-  pred.mae = MISSING;
-  pred.rho = MISSING;
+  PredictionStats stats;
+  stats.mae = MISSING;
+  stats.rho = MISSING;
 
   if (opts.calcRhoMAE) {
     std::vector<double> y1, y2;
     for (int i = 0; i < Mp.ySize(); i++) {
-      if (Mp.y(i) != MISSING && pred.ystar[i] != MISSING) {
+      if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
         y1.push_back(Mp.y(i));
-        y2.push_back(pred.ystar[i]);
+        y2.push_back(ystar[i]);
       }
     }
 
     Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
     Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
 
-    pred.mae = (y1Map - y2Map).abs().mean();
+    stats.mae = (y1Map - y2Map).abs().mean();
 
     const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
     const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
 
-    pred.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
+    stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
   }
 
-  pred.taskNum = opts.taskNum;
-  pred.xmap = opts.xmap;
-  pred.xmapDirectionNum = opts.xmapDirectionNum;
-  pred.calcRhoMAE = opts.calcRhoMAE;
+  stats.taskNum = opts.taskNum;
+  stats.xmap = opts.xmap;
+  stats.xmapDirectionNum = opts.xmapDirectionNum;
+  stats.calcRhoMAE = opts.calcRhoMAE;
+
+  Prediction pred;
+
+  // Check if any mf_smap_single call failed, and if so find the most serious error
+  pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
+
+  pred.mae = stats.mae;
+  pred.rho = stats.rho;
+
+  // If we're storing the prediction and/or the SMAP coefficients, put them
+  // into the resulting Prediction struct. Otherwise, let them be deleted.
+  if (opts.savePrediction) {
+    pred.ystar = std::move(ystar);
+  } else {
+    pred.ystar = nullptr;
+  }
+
+  if (opts.saveSMAPCoeffs) {
+    pred.coeffs = std::move(coeffs);
+  } else {
+    pred.coeffs = nullptr;
+  }
+
+  pred.numThetas = numThetas;
+  pred.numPredictions = numPredictions;
+  pred.numCoeffCols = opts.varssv;
 
   if (finished != nullptr) {
-    finished();
+    finished(stats);
   }
-
-  io.print_async(fmt::format("\nedm plugin took {} secs to make predictions\n", elapsed.count()));
 
   return std::move(pred);
 }
