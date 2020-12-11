@@ -109,7 +109,6 @@ Note: The embedding dimension E is 6
 . 
 . edm explore x, k(5) crossfold(10)
 10-fold cross-validation progress (10 in total)
-..........
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -466,7 +465,6 @@ Note: Embedding includes the delta of the time variable with a weight of .55
 . 
 . edm explore x, extraembed(u) allowmissing dt crossfold(5)
 5-fold cross-validation progress (5 in total)
-.....
 
 Empirical Dynamic Modelling
 Multivariate mapping with x and its lag values
@@ -503,7 +501,6 @@ Note: Embedding includes the delta of the time variable with a weight of .27
 . 
 . edm explore x, rep(20) ci(95)
 Replication progress (20 in total)
-....................
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -523,7 +520,6 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, lib(50) rep(20) ci(95)
 Replication progress (40 in total)
-........................................
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y

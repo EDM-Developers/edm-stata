@@ -396,8 +396,10 @@ static void bm_mf_smap_loop(benchmark::State& state)
   vars.opts.distributeThreads = false;
   vars.opts.nthreads = threads;
 
+  Prediction pred;
+  
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
+     mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
 }
 
 BENCHMARK(bm_mf_smap_loop)
@@ -420,8 +422,10 @@ static void bm_mf_smap_loop_distribute(benchmark::State& state)
   vars.opts.distributeThreads = true;
   vars.opts.nthreads = threads;
 
+  Prediction pred;
+
   for (auto _ : state)
-    Prediction res = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
+     mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
 }
 
 BENCHMARK(bm_mf_smap_loop_distribute)
@@ -445,7 +449,7 @@ BENCHMARK(bm_mf_smap_loop_distribute)
 //   vars.opts.nthreads = threads;
 
 //   for (auto _ : state)
-//     Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, io);
+//     Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, &io, &pred);
 // }
 
 // BENCHMARK(bm_mf_smap_loop_lazy)

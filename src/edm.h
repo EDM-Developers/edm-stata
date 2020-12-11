@@ -19,6 +19,7 @@
 
 typedef int retcode;
 
+#include <future>
 #include <memory> // For unique_ptr
 #include <string>
 #include <vector>
@@ -41,7 +42,7 @@ struct Options
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
-  int taskNum;
+  int taskNum, numTasks;
   bool xmap, calcRhoMAE = false;
   int xmapDirectionNum;
 };
@@ -114,6 +115,10 @@ struct Prediction
   double mae, rho;
 };
 
-DLL Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                            std::vector<bool> predictionRows, const IO& io, bool keep_going() = nullptr,
+std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                            std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
                             void finished(PredictionStats) = nullptr);
+
+DLL void mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                      std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
+                      void finished(PredictionStats) = nullptr);

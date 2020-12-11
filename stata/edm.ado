@@ -771,17 +771,15 @@ program define edmExplore, eclass sortpreserve
 				if `mata_mode' {
 					local vars_save ""
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`vars_save'","`force'", `missingdistance')
-					tempvar mae
-					qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set'
-					qui sum `mae'
-					local rmae = r(mean)
-					drop `mae' 
-					
+
 					qui corr `x_f' `x_p' if `predict_set'
-					local rrho = r(rho)
-					
-					mat r[`task_num',3] = `rrho'
-					mat r[`task_num',4] = `rmae'
+					mat r[`task_num',3] = r(rho)
+
+					tempvar mae
+					qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
+					qui sum `mae'
+					drop `mae'
+					mat r[`task_num',4] = r(mean)
 					
 					if store_prediction {
 						cap replace `predict' = `x_p' if `x_p' !=.
@@ -819,34 +817,12 @@ program define edmExplore, eclass sortpreserve
 						qui keep if original != .
 						drop original
 					}
-					
-					nobreak {
-						while edm_running {
-							capture noi break sleep 10
-							if _rc {
-								di "Aborting edm run"
-								scalar edm_running = 0
-								exit 1
-							}
-							if "`edm_print'" != "" {
-								local temp = "`edm_print'"
-								local edm_print = ""
-								di "`temp'" _c
-							}
-						}
-					}
-					if "`edm_print'" != "" {
-						di "`edm_print'"
-					}
-					plugin call smap_block_mdap `predict' if `predict_set'
 				}
-				
 				local ++task_num
 			}
-
 		}
 
-		if `round' > 1 & `dot' > 0 {
+		if `mata_mode' & `round' > 1 & `dot' > 0 {
 			local ++finished_rep
 			if mod(`finished_rep', 50*`dot') == 0 {
 				di as text ". `finished_rep'"
@@ -856,13 +832,39 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 	}
-	if `round' > 1 & `dot' > 0 {
+	if `mata_mode' & `round' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
 		}
 	}
+
+	// Collect all the asynchronous predictions from the plugin
+	if `mata_mode' == 0 {
+		nobreak {
+			while edm_running {
+				capture noi break sleep 10
+				if _rc {
+					di "Aborting edm run"
+					scalar edm_running = 0
+					exit 1
+				}
+				if "`edm_print'" != "" {
+					local temp = "`edm_print'"
+					local edm_print = ""
+					di "`temp'" _c
+				}
+			}
+		}
+		if "`edm_print'" != "" {
+			di "`edm_print'"
+		}
+
+		plugin call smap_block_mdap `predict' if `predict_set'
+	}
+	
 	if "`copredictvar'" != ""  {
 		if `num_tasks' == 1 {
+			local task_num = 1
 			qui replace `overlap' = 0
 			qui replace `co_train_set' = 0 if `usable' ==0
 
@@ -900,6 +902,8 @@ program define edmExplore, eclass sortpreserve
 					di "manifold <``manifold''> x <`x'> u <`u'> zlist <`zlist'>  x_f <`x_f'> co_train_set <`co_train_set'> co_predict_set <`co_predict_set'> overlap <`overlap'> co_mapping <`co_mapping'> co_x <`co_x'>  original_t <`original_t'>"
 					pause
 				}
+				
+				
 				plugin call smap_block_mdap `myvars', `theta' `lib_size' "`algorithm'" "`force'" `missingdistance' `mani' `pmani_flag' `vsave_flag' `pmani' `nthreads' `verbosity' `saveinputs'
 				if `parsed_dt' == 0 {
 					qui keep if original != .
@@ -1174,7 +1178,6 @@ program define edmXmap, eclass sortpreserve
 			4. generate oldt_pattern
 			*/
 			qui {
-
 				// update main mainfold
 				preserve
 				keep if `touse'
@@ -1659,18 +1662,15 @@ program define edmXmap, eclass sortpreserve
 						if `mata_mode' {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`vars_save'","`force'",`missingdistance')
 
-							tempvar mae
-							qui gen double `mae' = abs( `x_p' - `x_f' ) if `predict_set'
-							qui sum `mae'
-							local rmae = r(mean)
-							drop `mae' 
-							
 							qui corr `x_f' `x_p' if `predict_set'
-							local rrho = r(rho)
+							mat r`direction_num'[`task_num',3] = r(rho)
 
-							mat r`direction_num'[`task_num',3] = `rrho'
-							mat r`direction_num'[`task_num',4] = `rmae'
-							
+							tempvar mae
+							qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
+							qui sum `mae'
+							drop `mae'
+							mat r`direction_num'[`task_num',4] = r(mean)
+
 							if store_prediction {
 								cap replace `predict' = `x_p' if `x_p' != .
 							}
@@ -1705,34 +1705,14 @@ program define edmXmap, eclass sortpreserve
 								qui keep if original != .
 								drop original
 							}
-							
-							nobreak {
-								while edm_running {
-									capture noi break sleep 10
-									if _rc {
-										di "Aborting edm run"
-										scalar edm_running = 0
-										exit 1
-									}
-									if "`edm_print'" != "" {
-										local temp = "`edm_print'"
-										local edm_print = ""
-										di "`temp'" _c
-									}
-								}
-							}
-							if "`edm_print'" != "" {
-								di "`edm_print'"
-							}
-							
-							plugin call smap_block_mdap `predict' `vars_save' if `predict_set'
 						}
 						drop `overlap'
 						local ++task_num
 					}
 				}
 			}
-			if `replicate' > 1 & `dot' >0 {
+
+			if `mata_mode' & `replicate' > 1 & `dot' >0 {
 				local ++finished_rep
 				if mod(`finished_rep',50*`dot') == 0 {
 					di as text ". `finished_rep'"
@@ -1763,8 +1743,33 @@ program define edmXmap, eclass sortpreserve
 
 			}
 		}
+
+		// Collect all the asynchronous predictions from the plugin 
+		if `mata_mode' == 0 {
+			nobreak {
+				while edm_running {
+					capture noi break sleep 10
+					if _rc {
+						di "Aborting edm run"
+						scalar edm_running = 0
+						exit 1
+					}
+
+					if "`edm_print'" != "" {
+						local temp = "`edm_print'"
+						local edm_print = ""
+						di "`temp'" _c
+					}
+				}
+			}
+			if "`edm_print'" != "" {
+				di "`edm_print'"
+			}
+			
+			plugin call smap_block_mdap `predict' `vars_save' if `predict_set'
+		}
 	}
-	if `replicate' > 1 & `dot' > 0 {
+	if `mata_mode' & `replicate' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
 		}
@@ -1772,6 +1777,7 @@ program define edmXmap, eclass sortpreserve
 
 	if "`copredictvar'" != "" {
 		if `num_tasks' == 1 {
+			local task_num = 1
 			qui gen byte `overlap' = 0
 			qui replace `co_train_set' = 0 if `usable' == 0
 

@@ -16,7 +16,6 @@
 
 #include <future>
 #include <numeric> // for std::accumulate
-#include <queue>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -61,7 +60,10 @@ private:
 
 // Global state, needed to persist between multiple edm calls
 StataIO io;
-std::queue<std::future<Prediction>> predictions;
+int numPredictions = 0;
+std::atomic<int> numTasksRunning = 0;
+Prediction* predictions = nullptr;
+std::future<void>* futures = nullptr;
 
 bool keep_going()
 {
@@ -72,7 +74,10 @@ bool keep_going()
 
 void finished(PredictionStats stats)
 {
-  SF_scal_save("edm_running", 0.0);
+  numTasksRunning -= 1;
+  if (numTasksRunning == 0) {
+    SF_scal_save("edm_running", 0.0);
+  }
 
   // Save the rho/MAE results if requested (i.e. not for coprediction)
   if (stats.calcRhoMAE) {
@@ -341,6 +346,23 @@ ST_retcode edm(int argc, char* argv[])
   SF_macro_use("_task_num", buffer, 1000);
   opts.taskNum = atoi(buffer);
 
+  if (numTasksRunning == 0) {
+    if (copredict) {
+      numTasksRunning = 1;
+    } else {
+      SF_macro_use("_num_tasks", buffer, 1000);
+      numTasksRunning = atoi(buffer);
+    }
+  }
+
+  opts.numTasks = numTasksRunning;
+
+  if (predictions == nullptr) {
+    numPredictions = numTasksRunning;
+    predictions = new Prediction[numTasksRunning];
+    futures = new std::future<void>[numTasksRunning];
+  }
+
   // Find the number of lags 'E' for the main data.
   int E;
   if (copredict) {
@@ -378,6 +400,11 @@ ST_retcode edm(int argc, char* argv[])
   if (opts.nthreads > nlcores) {
     io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
     opts.nthreads = nlcores;
+  }
+
+  // // If multiple tasks are running in parallel, don't print from each one.
+  if (numTasksRunning > 1) {
+    io.verbosity = 0;
   }
 
   // Read in the main data from Stata
@@ -428,32 +455,46 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  predictions.push(std::async(std::launch::async, mf_smap_loop, opts, generator, trainingRows, predictionRows, io,
-                              keep_going, finished));
+  futures[opts.taskNum - 1] = edm_async(opts, generator, trainingRows, predictionRows, &io,
+                                        &(predictions[opts.taskNum - 1]), keep_going, finished);
 
   return SUCCESS;
 }
 
 ST_retcode save_prediction_to_stata_variables()
 {
-  Prediction pred = predictions.front().get();
-  predictions.pop();
+  ST_retcode rc = 0;
 
-  // If there are no errors, return the value of ystar (and smap coefficients) to Stata.
-  if (pred.rc == SUCCESS) {
-    if (pred.ystar != nullptr) {
-      auto ystar = span_2d_double(pred.ystar.get(), (int)pred.numThetas, (int)pred.numPredictions);
-      write_stata_columns(ystar, 1);
+  for (int i = 0; i < numPredictions; i++) {
+    futures[i].get();
+
+    // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
+    if (predictions[i].rc == SUCCESS) {
+      if (predictions[i].ystar != nullptr) {
+        auto ystar =
+          span_2d_double(predictions[i].ystar.get(), (int)predictions[i].numThetas, (int)predictions[i].numPredictions);
+        write_stata_columns(ystar, 1);
+      }
+
+      if (predictions[i].coeffs != nullptr) {
+        auto coeffs = span_3d_double(predictions[i].coeffs.get(), (int)predictions[i].numThetas,
+                                     (int)predictions[i].numPredictions, (int)predictions[i].numCoeffCols);
+        write_stata_columns(coeffs, (predictions[i].ystar != nullptr) + 1);
+      }
     }
 
-    if (pred.coeffs != nullptr) {
-      auto coeffs =
-        span_3d_double(pred.coeffs.get(), (int)pred.numThetas, (int)pred.numPredictions, (int)pred.numCoeffCols);
-      write_stata_columns(coeffs, (pred.ystar != nullptr) + 1);
+    if (predictions[i].rc > rc) {
+      rc = predictions[i].rc;
     }
   }
 
-  return pred.rc;
+  delete[] predictions;
+  delete[] futures;
+
+  predictions = nullptr;
+  futures = nullptr;
+
+  return rc;
 }
 
 STDLL stata_call(int argc, char* argv[])

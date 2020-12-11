@@ -14,11 +14,18 @@ int main(int argc, char* argv[])
   if (argc > 2) {
     vars.opts.nthreads = atoi(argv[2]);
   } else {
-    vars.opts.nthreads = 1;
+    vars.opts.nthreads = 2;
   }
+  vars.opts.numTasks = 1;
+  vars.opts.taskNum = 1;
 
   ConsoleIO io;
-  Prediction pred = mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, io);
+  Prediction pred;
+
+  std::future<void> fut =
+    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred, nullptr, nullptr);
+
+  fut.get();
 
   std::size_t ext = fnameIn.find_last_of(".");
   fnameIn = fnameIn.substr(0, ext);

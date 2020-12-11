@@ -1,9 +1,9 @@
 // Adapted from https://github.com/jhasse/ThreadPool/blob/master/ThreadPool.hpp
 #pragma once
 
-#include <boost/circular_buffer.hpp>
 #include <functional>
 #include <future>
+#include <queue>
 #include <vector>
 
 #ifndef _MSC_VER
@@ -21,7 +21,7 @@ class ThreadPool
 {
 private:
   // the task queue
-  boost::circular_buffer<std::packaged_task<void()>> tasks;
+  std::queue<std::packaged_task<void()>> tasks;
 
   // synchronization
   std::mutex queue_mutex;
@@ -47,21 +47,11 @@ public:
 
   ThreadPool() {}
 
-  ThreadPool(size_t threads, size_t numtasks)
-  {
-    set_num_tasks(numtasks);
-    set_num_workers(threads);
-  }
+  ThreadPool(size_t threads) { set_num_workers(threads); }
 
   template<class F, class... Args>
   decltype(auto) enqueue(F&& f, Args&&... args);
   ~ThreadPool();
-
-  inline void set_num_tasks(size_t numtasks)
-  {
-    tasks.clear();
-    tasks.set_capacity(numtasks);
-  }
 
   inline void set_num_workers(size_t numworkers)
   {
@@ -98,7 +88,7 @@ public:
             if (this->stop && this->tasks.empty())
               return;
             task = std::move(this->tasks.front());
-            this->tasks.pop_front();
+            this->tasks.pop();
           }
 
           task();
@@ -124,7 +114,7 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args)
     if (stop)
       throw std::runtime_error("enqueue on stopped ThreadPool");
 
-    tasks.push_back(std::move(task));
+    tasks.emplace(std::move(task));
   }
   condition.notify_one();
   return res;

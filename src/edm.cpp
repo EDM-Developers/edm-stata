@@ -238,10 +238,29 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
 
 ThreadPool pool;
 
-Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                        std::vector<bool> predictionRows, const IO& io, bool keep_going(),
-                        void finished(PredictionStats))
+std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                            std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
+                            void finished(PredictionStats))
 {
+  pool.set_num_workers(opts.nthreads);
+  if (opts.numTasks > 1) {
+    opts.nthreads = 1;
+  }
+
+  return pool.enqueue([opts, generator, trainingRows, predictionRows, io, pred, keep_going, finished] {
+    mf_smap_loop(opts, generator, trainingRows, predictionRows, io, pred, keep_going, finished);
+  });
+}
+
+void mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                  std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
+                  void finished(PredictionStats))
+{
+  // In case we call mf_smap_loop directly
+  if (opts.nthreads > 1 && pool.workers.size() == 0) {
+    pool.set_num_workers(opts.nthreads);
+  }
+
   Manifold M = generator.create_manifold(trainingRows, false);
   Manifold Mp = generator.create_manifold(predictionRows, true);
 
@@ -259,13 +278,6 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (opts.nthreads <= 1) {
-    opts.nthreads = 0;
-  }
-
-  pool.set_num_tasks(numPredictions);
-  pool.set_num_workers(opts.nthreads);
-
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }
@@ -277,9 +289,9 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
     }
   }
 
-  io.progress_bar(0.0);
+  io->progress_bar(0.0);
   for (int i = 0; i < numPredictions; i++) {
-    if (opts.nthreads == 0) {
+    if (opts.nthreads <= 1) {
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
@@ -288,14 +300,14 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
       results[i].get();
     }
 
-    io.progress_bar((i + 1) / ((double)numPredictions));
+    io->progress_bar((i + 1) / ((double)numPredictions));
   }
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
 
   if (keep_going != nullptr && keep_going() == false) {
-    return { UNKNOWN_ERROR, {}, {} };
+    *pred = { UNKNOWN_ERROR, {}, {} };
   }
 
   // Calculate the MAE & rho of prediction, if requested
@@ -328,35 +340,31 @@ Prediction mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<b
   stats.xmapDirectionNum = opts.xmapDirectionNum;
   stats.calcRhoMAE = opts.calcRhoMAE;
 
-  Prediction pred;
-
   // Check if any mf_smap_single call failed, and if so find the most serious error
-  pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
+  pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
 
-  pred.mae = stats.mae;
-  pred.rho = stats.rho;
+  pred->mae = stats.mae;
+  pred->rho = stats.rho;
 
   // If we're storing the prediction and/or the SMAP coefficients, put them
   // into the resulting Prediction struct. Otherwise, let them be deleted.
   if (opts.savePrediction) {
-    pred.ystar = std::move(ystar);
+    pred->ystar = std::move(ystar);
   } else {
-    pred.ystar = nullptr;
+    pred->ystar = nullptr;
   }
 
   if (opts.saveSMAPCoeffs) {
-    pred.coeffs = std::move(coeffs);
+    pred->coeffs = std::move(coeffs);
   } else {
-    pred.coeffs = nullptr;
+    pred->coeffs = nullptr;
   }
 
-  pred.numThetas = numThetas;
-  pred.numPredictions = numPredictions;
-  pred.numCoeffCols = opts.varssv;
+  pred->numThetas = numThetas;
+  pred->numPredictions = numPredictions;
+  pred->numCoeffCols = opts.varssv;
 
   if (finished != nullptr) {
     finished(stats);
   }
-
-  return std::move(pred);
 }
