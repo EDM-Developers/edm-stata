@@ -60,10 +60,8 @@ private:
 
 // Global state, needed to persist between multiple edm calls
 StataIO io;
-int numPredictions = 0;
-std::atomic<int> numTasksRunning = 0;
-Prediction* predictions = nullptr;
-std::future<void>* futures = nullptr;
+std::vector<Prediction> predictions;
+std::vector<std::future<void>> futures;
 
 bool keep_going()
 {
@@ -72,13 +70,8 @@ bool keep_going()
   return (bool)edm_running;
 }
 
-void finished(PredictionStats stats)
+void task_finished(PredictionStats stats)
 {
-  numTasksRunning -= 1;
-  if (numTasksRunning == 0) {
-    SF_scal_save("edm_running", 0.0);
-  }
-
   // Save the rho/MAE results if requested (i.e. not for coprediction)
   if (stats.calcRhoMAE) {
     std::string resultMatrix = "r";
@@ -93,6 +86,11 @@ void finished(PredictionStats stats)
       io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", stats.mae, resultMatrix));
     }
   }
+}
+
+void all_tasks_finished()
+{
+  SF_scal_save("edm_running", 0.0);
 }
 
 void print_error(ST_retcode rc)
@@ -346,21 +344,16 @@ ST_retcode edm(int argc, char* argv[])
   SF_macro_use("_task_num", buffer, 1000);
   opts.taskNum = atoi(buffer);
 
-  if (numTasksRunning == 0) {
-    if (copredict) {
-      numTasksRunning = 1;
-    } else {
-      SF_macro_use("_num_tasks", buffer, 1000);
-      numTasksRunning = atoi(buffer);
-    }
+  if (copredict) {
+    opts.numTasks = 1;
+  } else {
+    SF_macro_use("_num_tasks", buffer, 1000);
+    opts.numTasks = atoi(buffer);
   }
 
-  opts.numTasks = numTasksRunning;
-
-  if (predictions == nullptr) {
-    numPredictions = numTasksRunning;
-    predictions = new Prediction[numTasksRunning];
-    futures = new std::future<void>[numTasksRunning];
+  if (predictions.size() == 0) {
+    predictions = std::vector<Prediction>(opts.numTasks);
+    futures = std::vector<std::future<void>>(opts.numTasks);
   }
 
   // Find the number of lags 'E' for the main data.
@@ -403,7 +396,7 @@ ST_retcode edm(int argc, char* argv[])
   }
 
   // // If multiple tasks are running in parallel, don't print from each one.
-  if (numTasksRunning > 1) {
+  if (opts.numTasks > 1) {
     io.verbosity = 0;
   }
 
@@ -455,8 +448,9 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  futures[opts.taskNum - 1] = edm_async(opts, generator, trainingRows, predictionRows, &io,
-                                        &(predictions[opts.taskNum - 1]), keep_going, finished);
+  futures[opts.taskNum - 1] =
+    edm_async(opts, generator, trainingRows, predictionRows, &io, &(predictions[opts.taskNum - 1]), keep_going,
+              task_finished, all_tasks_finished);
 
   return SUCCESS;
 }
@@ -465,7 +459,7 @@ ST_retcode save_prediction_to_stata_variables()
 {
   ST_retcode rc = 0;
 
-  for (int i = 0; i < numPredictions; i++) {
+  for (int i = 0; i < predictions.size(); i++) {
     futures[i].get();
 
     // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
@@ -488,11 +482,8 @@ ST_retcode save_prediction_to_stata_variables()
     }
   }
 
-  delete[] predictions;
-  delete[] futures;
-
-  predictions = nullptr;
-  futures = nullptr;
+  predictions.clear();
+  futures.clear();
 
   return rc;
 }

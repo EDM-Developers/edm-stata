@@ -42,7 +42,7 @@ struct Options
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
-  int taskNum, numTasks;
+  int taskNum = 1, numTasks = 1;
   bool xmap, calcRhoMAE = false;
   int xmapDirectionNum;
 };
@@ -117,8 +117,8 @@ struct Prediction
 
 std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
-                            void finished(PredictionStats) = nullptr);
+                            void task_finished(PredictionStats) = nullptr, void all_tasks_finished(void) = nullptr);
 
-DLL void mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                      std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
-                      void finished(PredictionStats) = nullptr);
+void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+              std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
+              void task_finished(PredictionStats) = nullptr, void all_tasks_finished(void) = nullptr);

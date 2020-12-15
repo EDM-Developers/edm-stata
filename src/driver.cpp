@@ -22,8 +22,7 @@ int main(int argc, char* argv[])
   ConsoleIO io;
   Prediction pred;
 
-  std::future<void> fut =
-    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred, nullptr, nullptr);
+  std::future<void> fut = edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
 
   fut.get();
 

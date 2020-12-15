@@ -236,29 +236,36 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
   }
 }
 
+std::atomic<int> numTasksRunning = 0;
 ThreadPool pool;
 
 std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-                            void finished(PredictionStats))
+                            void task_finished(PredictionStats), void all_tasks_finished(void))
 {
   pool.set_num_workers(opts.nthreads);
   if (opts.numTasks > 1) {
     opts.nthreads = 1;
   }
 
-  return pool.enqueue([opts, generator, trainingRows, predictionRows, io, pred, keep_going, finished] {
-    mf_smap_loop(opts, generator, trainingRows, predictionRows, io, pred, keep_going, finished);
-  });
+  if (opts.taskNum == 1) {
+    numTasksRunning = opts.numTasks;
+  }
+
+  return pool.enqueue(
+    [opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished] {
+      edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished);
+    });
 }
 
-void mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                  std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-                  void finished(PredictionStats))
+void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+              std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
+              void task_finished(PredictionStats), void all_tasks_finished(void))
 {
-  // In case we call mf_smap_loop directly
+  // In case we call edm_task directly
   if (opts.nthreads > 1 && pool.workers.size() == 0) {
     pool.set_num_workers(opts.nthreads);
+    numTasksRunning = 1;
   }
 
   Manifold M = generator.create_manifold(trainingRows, false);
@@ -364,7 +371,15 @@ void mf_smap_loop(Options opts, ManifoldGenerator generator, std::vector<bool> t
   pred->numPredictions = numPredictions;
   pred->numCoeffCols = opts.varssv;
 
-  if (finished != nullptr) {
-    finished(stats);
+  if (task_finished != nullptr) {
+    task_finished(stats);
+  }
+
+  numTasksRunning -= 1;
+  if (numTasksRunning <= 0) {
+    if (all_tasks_finished != nullptr) {
+      all_tasks_finished();
+    }
+    numTasksRunning = 0;
   }
 }

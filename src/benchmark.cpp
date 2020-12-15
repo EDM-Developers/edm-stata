@@ -383,7 +383,7 @@ std::vector<int> get_thread_range()
 
 std::vector<int> threadRange = get_thread_range();
 
-static void bm_mf_smap_loop(benchmark::State& state)
+static void bm_edm_task(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
   int threads = threadRange[state.range(0) % threadRange.size()];
@@ -397,19 +397,19 @@ static void bm_mf_smap_loop(benchmark::State& state)
   vars.opts.nthreads = threads;
 
   Prediction pred;
-  
+
   for (auto _ : state)
-     mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
+    edm_task(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
 }
 
-BENCHMARK(bm_mf_smap_loop)
+BENCHMARK(bm_edm_task)
   ->DenseRange(0, tests.size() * threadRange.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
 #ifdef _MSC_VER
 
-static void bm_mf_smap_loop_distribute(benchmark::State& state)
+static void bm_edm_task_distribute(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
   int threads = threadRange[state.range(0) % threadRange.size()];
@@ -425,17 +425,17 @@ static void bm_mf_smap_loop_distribute(benchmark::State& state)
   Prediction pred;
 
   for (auto _ : state)
-     mf_smap_loop(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
+    edm_task(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
 }
 
-BENCHMARK(bm_mf_smap_loop_distribute)
+BENCHMARK(bm_edm_task_distribute)
   ->DenseRange(0, tests.size() * threadRange.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
 #endif
 
-// static void bm_mf_smap_loop_lazy(benchmark::State& state)
+// static void bm_edm_task_lazy(benchmark::State& state)
 // {
 //   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
 //   int threads = threadRange[state.range(0) % threadRange.size()];
@@ -449,10 +449,10 @@ BENCHMARK(bm_mf_smap_loop_distribute)
 //   vars.opts.nthreads = threads;
 
 //   for (auto _ : state)
-//     Prediction res = mf_smap_loop(vars.opts, vars.M, vars.Mp, &io, &pred);
+//     Prediction res = edm_task(vars.opts, vars.M, vars.Mp, &io, &pred);
 // }
 
-// BENCHMARK(bm_mf_smap_loop_lazy)
+// BENCHMARK(bm_edm_task_lazy)
 //   ->DenseRange(0, tests.size() * threadRange.size() - 1)
 //   ->MeasureProcessCPUTime()
 //   ->Unit(benchmark::kMillisecond);
@@ -463,8 +463,8 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
 #ifdef _MSC_VER
 #include <omp.h>
 
-Prediction mf_smap_loop_openmp(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                               std::vector<bool> predictionRows, int nthreads)
+Prediction edm_task_openmp(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                           std::vector<bool> predictionRows, int nthreads)
 {
   Manifold M = generator.create_manifold(trainingRows, false);
   Manifold Mp = generator.create_manifold(predictionRows, true);
@@ -501,7 +501,7 @@ Prediction mf_smap_loop_openmp(Options opts, ManifoldGenerator generator, std::v
   return std::move(pred);
 }
 
-static void bm_mf_smap_loop_openmp(benchmark::State& state)
+static void bm_edm_task_openmp(benchmark::State& state)
 {
   int testNum = ((int)state.range(0)) / ((int)threadRange.size());
   int threads = threadRange[state.range(0) % threadRange.size()];
@@ -512,11 +512,11 @@ static void bm_mf_smap_loop_openmp(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_openmp(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, threads);
+    Prediction res = edm_task_openmp(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, threads);
   }
 }
 
-BENCHMARK(bm_mf_smap_loop_openmp)
+BENCHMARK(bm_edm_task_openmp)
   ->DenseRange(0, tests.size() * threadRange.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
@@ -528,8 +528,8 @@ BENCHMARK(bm_mf_smap_loop_openmp)
 #include <execution>
 
 template<class PolicyType>
-Prediction mf_smap_loop_cpp17(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
-                              std::vector<bool> predictionRows, PolicyType policy)
+Prediction edm_task_cpp17(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+                          std::vector<bool> predictionRows, PolicyType policy)
 {
   Manifold M = generator.create_manifold(trainingRows, false);
   Manifold Mp = generator.create_manifold(predictionRows, true);
@@ -564,7 +564,7 @@ Prediction mf_smap_loop_cpp17(Options opts, ManifoldGenerator generator, std::ve
   return std::move(pred);
 }
 
-static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
+static void bm_edm_task_cpp17_seq(benchmark::State& state)
 {
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
@@ -572,17 +572,17 @@ static void bm_mf_smap_loop_cpp17_seq(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_cpp17<std::execution::sequenced_policy>(vars.opts, vars.generator, vars.trainingRows,
-                                                                          vars.predictionRows, std::execution::seq);
+    Prediction res = edm_task_cpp17<std::execution::sequenced_policy>(vars.opts, vars.generator, vars.trainingRows,
+                                                                      vars.predictionRows, std::execution::seq);
   }
 }
 
-BENCHMARK(bm_mf_smap_loop_cpp17_seq)
+BENCHMARK(bm_edm_task_cpp17_seq)
   ->DenseRange(0, tests.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
-static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
+static void bm_edm_task_cpp17_par(benchmark::State& state)
 {
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
@@ -590,17 +590,17 @@ static void bm_mf_smap_loop_cpp17_par(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_policy>(vars.opts, vars.generator, vars.trainingRows,
-                                                                         vars.predictionRows, std::execution::par);
+    Prediction res = edm_task_cpp17<std::execution::parallel_policy>(vars.opts, vars.generator, vars.trainingRows,
+                                                                     vars.predictionRows, std::execution::par);
   }
 }
 
-BENCHMARK(bm_mf_smap_loop_cpp17_par)
+BENCHMARK(bm_edm_task_cpp17_par)
   ->DenseRange(0, tests.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
-static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
+static void bm_edm_task_cpp17_par_unseq(benchmark::State& state)
 {
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
@@ -608,19 +608,19 @@ static void bm_mf_smap_loop_cpp17_par_unseq(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = mf_smap_loop_cpp17<std::execution::parallel_unsequenced_policy>(
+    Prediction res = edm_task_cpp17<std::execution::parallel_unsequenced_policy>(
       vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, std::execution::par_unseq);
   }
 }
 
-BENCHMARK(bm_mf_smap_loop_cpp17_par_unseq)
+BENCHMARK(bm_edm_task_cpp17_par_unseq)
   ->DenseRange(0, tests.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
 
 #endif
 
-BENCHMARK(bm_mf_smap_loop)
+BENCHMARK(bm_edm_task)
   ->DenseRange(0, tests.size() * threadRange.size() - 1)
   ->MeasureProcessCPUTime()
   ->Unit(benchmark::kMillisecond);
