@@ -234,8 +234,8 @@ void write_results(std::string fname_out, const Prediction& pred)
     H5LTmake_dataset_double(fid, "coeffs", 2, Bi_mapLen, pred.coeffs.get());
   }
 
-  H5LTset_attribute_double(fid, "/", "mae", &pred.mae, 1);
-  H5LTset_attribute_double(fid, "/", "rho", &pred.rho, 1);
+  H5LTset_attribute_double(fid, "/", "mae", &pred.stats.mae, 1);
+  H5LTset_attribute_double(fid, "/", "rho", &pred.stats.rho, 1);
 
   H5Fclose(fid);
 }

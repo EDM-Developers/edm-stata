@@ -241,14 +241,16 @@ ThreadPool pool;
 
 std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-                            void task_finished(PredictionStats), void all_tasks_finished(void))
+                            void all_tasks_finished(void))
 {
   pool.set_num_workers(opts.nthreads);
+
   if (opts.numTasks > 1) {
     opts.nthreads = 1;
+    io->verbosity = 0;
   }
 
-  if (opts.taskNum == 1) {
+  if (numTasksRunning == 0) {
     numTasksRunning = opts.numTasks;
   }
 
@@ -256,26 +258,20 @@ std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vect
     // If we're just running one task across multiple threads, then
     // make sure we don't waste one thread of the thread pool  on the
     // 'master' thread which just coordinates all the activity.
-    return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred,
-                              keep_going, task_finished, all_tasks_finished);
+    return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred, keep_going,
+                      all_tasks_finished);
   } else {
-    return pool.enqueue(
-      [opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished] {
-        edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished);
-      });
+    return pool.enqueue([opts, generator, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished] {
+      edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished);
+    });
   }
 }
 
+// Don't call this directly. The thread pool won't be setup correctly.
 void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-              void task_finished(PredictionStats), void all_tasks_finished(void))
+              void all_tasks_finished(void))
 {
-  // In case we call edm_task directly
-  if (opts.nthreads > 1 && pool.workers.size() == 0) {
-    pool.set_num_workers(opts.nthreads);
-    numTasksRunning = 1;
-  }
-
   Manifold M = generator.create_manifold(trainingRows, false);
   Manifold Mp = generator.create_manifold(predictionRows, true);
 
@@ -342,11 +338,10 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
     Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
     Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
 
-    stats.mae = (y1Map - y2Map).abs().mean();
-
     const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
     const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
 
+    stats.mae = (y1Map - y2Map).abs().mean();
     stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
   }
 
@@ -354,12 +349,10 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
   stats.xmap = opts.xmap;
   stats.xmapDirectionNum = opts.xmapDirectionNum;
   stats.calcRhoMAE = opts.calcRhoMAE;
+  pred->stats = stats;
 
   // Check if any mf_smap_single call failed, and if so find the most serious error
   pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
-
-  pred->mae = stats.mae;
-  pred->rho = stats.rho;
 
   // If we're storing the prediction and/or the SMAP coefficients, put them
   // into the resulting Prediction struct. Otherwise, let them be deleted.
@@ -378,10 +371,6 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
   pred->numThetas = numThetas;
   pred->numPredictions = numPredictions;
   pred->numCoeffCols = opts.varssv;
-
-  if (task_finished != nullptr) {
-    task_finished(stats);
-  }
 
   numTasksRunning -= 1;
   if (numTasksRunning <= 0) {

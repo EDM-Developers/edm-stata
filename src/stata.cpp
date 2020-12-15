@@ -26,6 +26,21 @@
 #include "driver.h"
 #endif
 
+// These are all the variables we depend upon inside the edm.ado script.
+// These definitions suppress "C++ doesn't permit string literals as char*" warnings.
+char* PRINT_MACRO = (char*)"_edm_print";
+char* E_MACRO = (char*)"_i";
+char* DT_MACRO = (char*)"_parsed_dt";
+char* DT_WEIGHT_MACRO = (char*)"_parsed_dtw";
+char* NUM_EXTRAS_MACRO = (char*)"_zcount";
+char* TASK_NUM_MACRO = (char*)"_task_num";
+char* NUM_TASKS_MACRO = (char*)"_num_tasks";
+
+char* RUNNING_SCALAR = (char*)"edm_running";
+char* XMAP_SCALAR = (char*)"edm_xmap";
+char* XMAP_DIRECTION_NUM_SCALAR = (char*)"edm_direction_num";
+char* STORE_PREDICTION_SCALAR = (char*)"store_prediction";
+
 class StataIO : public IO
 {
 public:
@@ -39,9 +54,9 @@ public:
 
   virtual void out_async(const char* s) const
   {
-    SF_macro_use("_edm_print", buffer, BUFFER_SIZE);
+    SF_macro_use(PRINT_MACRO, buffer, BUFFER_SIZE);
     strcat(buffer, s);
-    SF_macro_save("_edm_print", buffer);
+    SF_macro_save(PRINT_MACRO, buffer);
   }
 
 private:
@@ -66,31 +81,13 @@ std::vector<std::future<void>> futures;
 bool keep_going()
 {
   double edm_running;
-  SF_scal_use("edm_running", &edm_running);
+  SF_scal_use(RUNNING_SCALAR, &edm_running);
   return (bool)edm_running;
-}
-
-void task_finished(PredictionStats stats)
-{
-  // Save the rho/MAE results if requested (i.e. not for coprediction)
-  if (stats.calcRhoMAE) {
-    std::string resultMatrix = "r";
-    if (stats.xmap) {
-      resultMatrix += fmt::format("{}", stats.xmapDirectionNum);
-    }
-
-    if (SF_mat_store((char*)resultMatrix.c_str(), stats.taskNum, 3, stats.rho)) {
-      io.print(fmt::format("Error: failed to save rho {} to matrix '{}'\n", stats.rho, resultMatrix));
-    }
-    if (SF_mat_store((char*)resultMatrix.c_str(), stats.taskNum, 4, stats.mae)) {
-      io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", stats.mae, resultMatrix));
-    }
-  }
 }
 
 void all_tasks_finished()
 {
-  SF_scal_save("edm_running", 0.0);
+  SF_scal_save(RUNNING_SCALAR, 0.0);
 }
 
 void print_error(ST_retcode rc)
@@ -328,26 +325,26 @@ ST_retcode edm(int argc, char* argv[])
   io.verbosity = atoi(argv[10]);
 
   double v;
-  SF_scal_use("edm_xmap", &v);
+  SF_scal_use(XMAP_SCALAR, &v);
   opts.xmap = (bool)v;
   if (opts.xmap && opts.calcRhoMAE) {
-    SF_scal_use("edm_direction_num", &v);
+    SF_scal_use(XMAP_DIRECTION_NUM_SCALAR, &v);
     opts.xmapDirectionNum = (int)v;
   }
 
-  SF_scal_use("store_prediction", &v);
+  SF_scal_use(STORE_PREDICTION_SCALAR, &v);
   opts.savePrediction = (bool)v;
 
   char buffer[1001];
 
   // For multiple simultaneous edm calls, each is allocated a task number
-  SF_macro_use("_task_num", buffer, 1000);
+  SF_macro_use(TASK_NUM_MACRO, buffer, 1000);
   opts.taskNum = atoi(buffer);
 
   if (copredict) {
     opts.numTasks = 1;
   } else {
-    SF_macro_use("_num_tasks", buffer, 1000);
+    SF_macro_use(NUM_TASKS_MACRO, buffer, 1000);
     opts.numTasks = atoi(buffer);
   }
 
@@ -362,19 +359,19 @@ ST_retcode edm(int argc, char* argv[])
     std::vector<double> E_list = stata_numlist("e");
     E = (int)E_list.back();
   } else {
-    SF_macro_use("_i", buffer, 1000);
+    SF_macro_use(E_MACRO, buffer, 1000);
     E = atoi(buffer);
   }
 
-  SF_macro_use("_parsed_dt", buffer, 1000);
+  SF_macro_use(DT_MACRO, buffer, 1000);
   bool parsed_dt = (bool)atoi(buffer);
   double dtWeight = 0;
   if (parsed_dt) {
-    SF_macro_use("_parsed_dtw", buffer, 1000);
+    SF_macro_use(DT_WEIGHT_MACRO, buffer, 1000);
     dtWeight = atof(buffer);
   }
 
-  SF_macro_use("_zcount", buffer, 1000);
+  SF_macro_use(NUM_EXTRAS_MACRO, buffer, 1000);
   int numExtras = atoi(buffer);
 
   // Default number of neighbours k is E_actual + 1
@@ -393,11 +390,6 @@ ST_retcode edm(int argc, char* argv[])
   if (opts.nthreads > nlcores) {
     io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
     opts.nthreads = nlcores;
-  }
-
-  // // If multiple tasks are running in parallel, don't print from each one.
-  if (opts.numTasks > 1) {
-    io.verbosity = 0;
   }
 
   // Read in the main data from Stata
@@ -448,14 +440,32 @@ ST_retcode edm(int argc, char* argv[])
   }
 #endif
 
-  futures[opts.taskNum - 1] =
-    edm_async(opts, generator, trainingRows, predictionRows, &io, &(predictions[opts.taskNum - 1]), keep_going,
-              task_finished, all_tasks_finished);
+  // int vv = io.verbosity;
+  // io.verbosity = 1;
+
+  io.print(fmt::format("Task num: {} Num Tasks: {}\n", opts.taskNum, opts.numTasks));
+  if (opts.numTasks > 1) {
+    io.print("Setting nthreads to 1, i.e. running many tasks in parallel with one thread each.\n");
+  }
+
+  if (opts.taskNum == 1) {
+    io.print("On the first task, so setting numTasksRunning to opts.numTasks\n");
+  }
+
+  if (opts.numTasks == 1) {
+    io.print(
+      "numTasks is one, so launching a new master thread to run each prediction on the threads in the thread pool.\n");
+  }
+
+  // io.verbosity = vv;
+
+  futures[opts.taskNum - 1] = edm_async(opts, generator, trainingRows, predictionRows, &io,
+                                        &(predictions[opts.taskNum - 1]), keep_going, all_tasks_finished);
 
   return SUCCESS;
 }
 
-ST_retcode save_prediction_to_stata_variables()
+ST_retcode save_all_task_results_to_stata()
 {
   ST_retcode rc = 0;
 
@@ -464,6 +474,24 @@ ST_retcode save_prediction_to_stata_variables()
 
     // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
     if (predictions[i].rc == SUCCESS) {
+
+      // Save the rho/MAE results if requested (i.e. not for coprediction)
+      if (predictions[i].stats.calcRhoMAE) {
+        std::string resultMatrix = "r";
+        if (predictions[i].stats.xmap) {
+          resultMatrix += fmt::format("{}", predictions[i].stats.xmapDirectionNum);
+        }
+
+        if (SF_mat_store((char*)resultMatrix.c_str(), predictions[i].stats.taskNum, 3, predictions[i].stats.rho)) {
+          io.print(
+            fmt::format("Error: failed to save rho {} to matrix '{}'\n", predictions[i].stats.rho, resultMatrix));
+        }
+        if (SF_mat_store((char*)resultMatrix.c_str(), predictions[i].stats.taskNum, 4, predictions[i].stats.mae)) {
+          io.print(
+            fmt::format("Error: failed to save MAE {} to matrix '{}'\n", predictions[i].stats.mae, resultMatrix));
+        }
+      }
+
       if (predictions[i].ystar != nullptr) {
         auto ystar =
           span_2d_double(predictions[i].ystar.get(), (int)predictions[i].numThetas, (int)predictions[i].numPredictions);
@@ -494,7 +522,7 @@ STDLL stata_call(int argc, char* argv[])
     if (argc > 0) {
       return edm(argc, argv);
     } else {
-      ST_retcode rc = save_prediction_to_stata_variables();
+      ST_retcode rc = save_all_task_results_to_stata();
       print_error(rc);
       return rc;
     }
