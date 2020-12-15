@@ -246,7 +246,6 @@ std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vect
   pool.set_num_workers(opts.nthreads);
 
   if (opts.numTasks > 1) {
-    opts.nthreads = 1;
     io->verbosity = 0;
   }
 
@@ -254,17 +253,8 @@ std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vect
     numTasksRunning = opts.numTasks;
   }
 
-  if (opts.numTasks == 1) {
-    // If we're just running one task across multiple threads, then
-    // make sure we don't waste one thread of the thread pool  on the
-    // 'master' thread which just coordinates all the activity.
-    return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred, keep_going,
-                      all_tasks_finished);
-  } else {
-    return pool.enqueue([opts, generator, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished] {
-      edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished);
-    });
-  }
+  return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred, keep_going,
+                    all_tasks_finished);
 }
 
 // Don't call this directly. The thread pool won't be setup correctly.
@@ -287,35 +277,20 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   if (opts.distributeThreads) {
     distribute_threads(pool.workers);
   }
 
   std::vector<std::future<void>> results(numPredictions);
-  if (opts.nthreads > 1) {
-    for (int i = 0; i < numPredictions; i++) {
-      results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
-    }
+  for (int i = 0; i < numPredictions; i++) {
+    results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
   }
 
   io->progress_bar(0.0);
   for (int i = 0; i < numPredictions; i++) {
-    if (opts.nthreads <= 1) {
-      if (keep_going != nullptr && keep_going() == false) {
-        break;
-      }
-      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, nullptr);
-    } else {
-      results[i].get();
-    }
-
+    results[i].get();
     io->progress_bar((i + 1) / ((double)numPredictions));
   }
-
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed = end - start;
 
   if (keep_going != nullptr && keep_going() == false) {
     *pred = { UNKNOWN_ERROR, {}, {} };
