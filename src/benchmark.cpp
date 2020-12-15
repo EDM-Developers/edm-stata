@@ -398,8 +398,9 @@ static void bm_edm_task(benchmark::State& state)
 
   Prediction pred;
 
-  for (auto _ : state)
-    edm_task(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
+  for (auto _ : state) {
+    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred).get();
+  }
 }
 
 BENCHMARK(bm_edm_task)
@@ -425,7 +426,7 @@ static void bm_edm_task_distribute(benchmark::State& state)
   Prediction pred;
 
   for (auto _ : state)
-    edm_task(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred);
+    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred).get();
 }
 
 BENCHMARK(bm_edm_task_distribute)

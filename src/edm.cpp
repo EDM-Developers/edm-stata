@@ -252,10 +252,18 @@ std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vect
     numTasksRunning = opts.numTasks;
   }
 
-  return pool.enqueue(
-    [opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished] {
-      edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished);
-    });
+  if (opts.numTasks == 1) {
+    // If we're just running one task across multiple threads, then
+    // make sure we don't waste one thread of the thread pool  on the
+    // 'master' thread which just coordinates all the activity.
+    return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred,
+                              keep_going, task_finished, all_tasks_finished);
+  } else {
+    return pool.enqueue(
+      [opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished] {
+        edm_task(opts, generator, trainingRows, predictionRows, io, pred, keep_going, task_finished, all_tasks_finished);
+      });
+  }
 }
 
 void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,

@@ -42,7 +42,7 @@ struct Options
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
-  int taskNum = 1, numTasks = 1;
+  int taskNum, numTasks;
   bool xmap, calcRhoMAE = false;
   int xmapDirectionNum;
 };
