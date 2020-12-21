@@ -5,12 +5,14 @@
 
 class Manifold
 {
-  std::unique_ptr<double[]> _flat;
+  std::unique_ptr<double[]> _flat = nullptr;
   std::vector<double> _y;
   size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
   double _missing;
 
 public:
+  Manifold(){};
+
   Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, size_t nobs, size_t E_x, size_t E_dt,
            size_t E_extras, size_t E_actual, double missing)
     : _flat(std::move(flat))
@@ -57,24 +59,57 @@ public:
 class ManifoldGenerator
 {
 private:
-  bool _copredict, _use_dt;
+  bool _copredict = false;
+  bool _use_dt = false;
   int _tau;
-  double _dtWeight, _missing;
-  size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
+  double _missing;
+  size_t _nobs, _E_extras;
 
+  double find_x(const std::vector<size_t>& inds, size_t i, size_t j) const;
+  double find_co_x(const std::vector<size_t>& inds, size_t i, size_t j) const;
+  double find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const;
+  double find_extras(const std::vector<size_t>& inds, size_t i, size_t j) const;
+
+  // The following variables are normally private, but in the dev mode builds
+  // they are made public so we can more easily save them to a dump file.
+#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
+public:
+#endif
+  double _dtWeight;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
 
-  double find_x(std::vector<size_t> inds, size_t i, size_t j) const;
-  double find_co_x(std::vector<size_t> inds, size_t i, size_t j) const;
-  double find_dt(std::vector<size_t> inds, size_t i, size_t j) const;
-  double find_extras(std::vector<size_t> inds, size_t i, size_t j) const;
-
 public:
-  ManifoldGenerator(std::vector<double> x, std::vector<double> y, std::vector<double> co_x,
-                    std::vector<std::vector<double>> extras, std::vector<double> t, size_t E, double dtWeight,
-                    double missing, size_t tau = 1);
+  ManifoldGenerator(){};
 
-  Manifold create_manifold(std::vector<bool> filter, bool prediction);
-  size_t E_actual() const { return _E_actual; }
+  // TODO: Add 'tau' != 1 support
+  ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
+                    const std::vector<std::vector<double>>& extras, double missing, size_t tau = 1)
+    : _x(x)
+    , _y(y)
+    , _extras(extras)
+    , _missing(missing)
+    , _E_extras(extras.size())
+  {}
+
+  void add_coprediction_data(const std::vector<double>& co_x)
+  {
+    _co_x = co_x;
+    _copredict = true;
+  }
+
+  void add_dt_data(const std::vector<double>& t, double dtWeight)
+  {
+    _t = t;
+    _dtWeight = dtWeight;
+    _use_dt = true;
+  }
+
+  Manifold create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const;
+
+  size_t E_actual(size_t E) const
+  {
+    size_t E_dt = (_use_dt) * (E - 1);
+    return E + E_dt + _E_extras;
+  }
 };

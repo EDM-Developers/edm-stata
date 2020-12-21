@@ -105,8 +105,8 @@ static void bm_get_distances(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
-  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   for (auto _ : state) {
@@ -124,8 +124,8 @@ static void bm_nearest_neighbours(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
-  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -178,8 +178,8 @@ static void bm_simplex(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
-  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -245,8 +245,8 @@ static void bm_smap(benchmark::State& state)
 
   Inputs vars = read_dumpfile(input);
 
-  Manifold M = vars.generator.create_manifold(vars.trainingRows, false);
-  Manifold Mp = vars.generator.create_manifold(vars.predictionRows, true);
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -399,7 +399,7 @@ static void bm_edm_task(benchmark::State& state)
   Prediction pred;
 
   for (auto _ : state) {
-    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred).get();
+    edm_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred).get();
   }
 }
 
@@ -426,7 +426,7 @@ static void bm_edm_task_distribute(benchmark::State& state)
   Prediction pred;
 
   for (auto _ : state)
-    edm_async(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, &io, &pred).get();
+    edm_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred).get();
 }
 
 BENCHMARK(bm_edm_task_distribute)
@@ -457,33 +457,33 @@ BENCHMARK(bm_edm_task_distribute)
 //   ->DenseRange(0, tests.size() * threadRange.size() - 1)
 //   ->MeasureProcessCPUTime()
 //   ->Unit(benchmark::kMillisecond);
-
 void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
-                    span_2d_retcode rc, span_3d_double coeffs, bool keep_going());
+                    span_2d_retcode rc, span_2d_double coeffs, bool keep_going());
 
 #ifdef _MSC_VER
 #include <omp.h>
 
-Prediction edm_task_openmp(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+Prediction edm_task_openmp(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
                            std::vector<bool> predictionRows, int nthreads)
 {
-  Manifold M = generator.create_manifold(trainingRows, false);
-  Manifold Mp = generator.create_manifold(predictionRows, true);
+  Manifold M = generator->create_manifold(E, trainingRows, false);
+  Manifold Mp = generator->create_manifold(E, predictionRows, true);
 
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
+  size_t numCoeffCols = M.E_actual() + 1;
 
   Prediction pred;
 
   pred.numThetas = numThetas;
   pred.numPredictions = numPredictions;
-  pred.numCoeffCols = opts.varssv;
+  pred.numCoeffCols = numCoeffCols;
 
   pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
   auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
 
-  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
-  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+  pred.coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
+  auto coeffs = span_2d_double(pred.coeffs.get(), (int)numPredictions, (int)numCoeffCols);
 
   auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
@@ -513,7 +513,8 @@ static void bm_edm_task_openmp(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = edm_task_openmp(vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, threads);
+    Prediction res =
+      edm_task_openmp(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, threads);
   }
 }
 
@@ -529,26 +530,27 @@ BENCHMARK(bm_edm_task_openmp)
 #include <execution>
 
 template<class PolicyType>
-Prediction edm_task_cpp17(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+Prediction edm_task_cpp17(Options opts, ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
                           std::vector<bool> predictionRows, PolicyType policy)
 {
-  Manifold M = generator.create_manifold(trainingRows, false);
-  Manifold Mp = generator.create_manifold(predictionRows, true);
+  Manifold M = generator->create_manifold(E, trainingRows, false);
+  Manifold Mp = generator->create_manifold(E, predictionRows, true);
 
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
+  size_t numCoeffCols = M.E_actual() + 1;
 
   Prediction pred;
 
   pred.numThetas = numThetas;
   pred.numPredictions = numPredictions;
-  pred.numCoeffCols = opts.varssv;
+  pred.numCoeffCols = numCoeffCols;
 
   pred.ystar = std::make_unique<double[]>(numThetas * numPredictions);
   auto ystar = span_2d_double(pred.ystar.get(), (int)numThetas, (int)numPredictions);
 
-  pred.coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
-  auto coeffs = span_3d_double(pred.coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+  pred.coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
+  auto coeffs = span_2d_double(pred.coeffs.get(), (int)numPredictions, (int)numCoeffCols);
 
   auto rc_data = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rc = span_2d_retcode(rc_data.get(), (int)numThetas, (int)numPredictions);
@@ -573,8 +575,8 @@ static void bm_edm_task_cpp17_seq(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = edm_task_cpp17<std::execution::sequenced_policy>(vars.opts, vars.generator, vars.trainingRows,
-                                                                      vars.predictionRows, std::execution::seq);
+    Prediction res = edm_task_cpp17<std::execution::sequenced_policy>(
+      vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, std::execution::seq);
   }
 }
 
@@ -591,8 +593,8 @@ static void bm_edm_task_cpp17_par(benchmark::State& state)
   Inputs vars = read_dumpfile(input);
 
   for (auto _ : state) {
-    Prediction res = edm_task_cpp17<std::execution::parallel_policy>(vars.opts, vars.generator, vars.trainingRows,
-                                                                     vars.predictionRows, std::execution::par);
+    Prediction res = edm_task_cpp17<std::execution::parallel_policy>(
+      vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, std::execution::par);
   }
 }
 
@@ -610,7 +612,7 @@ static void bm_edm_task_cpp17_par_unseq(benchmark::State& state)
 
   for (auto _ : state) {
     Prediction res = edm_task_cpp17<std::execution::parallel_unsequenced_policy>(
-      vars.opts, vars.generator, vars.trainingRows, vars.predictionRows, std::execution::par_unseq);
+      vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, std::execution::par_unseq);
   }
 }
 

@@ -1,3 +1,5 @@
+#define DRIVER_MODE 1
+
 #include "edm.h"
 #include <hdf5.h>
 #include <hdf5_hl.h>
@@ -18,6 +20,7 @@ struct Inputs
 {
   Options opts;
   ManifoldGenerator generator;
+  size_t E;
   std::vector<bool> trainingRows, predictionRows;
 };
 
@@ -31,7 +34,6 @@ void save_options(hid_t fid, Options opts)
   H5LTset_attribute_char(fid, "/", "distributeThreads", &boolVar, 1);
 
   H5LTset_attribute_int(fid, "/", "k", &opts.k, 1);
-  H5LTset_attribute_int(fid, "/", "varssv", &opts.varssv, 1);
 
   H5LTset_attribute_double(fid, "/", "theta", &opts.thetas[0], 1);
   H5LTset_attribute_double(fid, "/", "missingdistance", &opts.missingdistance, 1);
@@ -54,7 +56,6 @@ Options read_options(hid_t fid)
   opts.distributeThreads = (bool)boolVar;
 
   H5LTget_attribute_int(fid, "/", "k", &(opts.k));
-  H5LTget_attribute_int(fid, "/", "varssv", &(opts.varssv));
 
   double theta;
   H5LTget_attribute_double(fid, "/", "theta", &theta);
@@ -71,40 +72,37 @@ Options read_options(hid_t fid)
   return opts;
 }
 
-void save_manifold_generator(const hid_t& fid, const std::vector<double>& x, const std::vector<double>& y,
-                             const std::vector<double>& co_x, const std::vector<std::vector<double>>& extras,
-                             const std::vector<double>& t, int E, double dtWeight)
+void save_manifold_generator(const hid_t& fid, const ManifoldGenerator& generator)
 {
-  hsize_t size = x.size();
-  H5LTmake_dataset_double(fid, "x", 1, &size, x.data());
+  hsize_t size = generator._x.size();
+  H5LTmake_dataset_double(fid, "x", 1, &size, generator._x.data());
 
-  H5LTmake_dataset_double(fid, "y", 1, &size, y.data());
+  H5LTmake_dataset_double(fid, "y", 1, &size, generator._y.data());
 
-  if (co_x.size() > 0) {
-    H5LTmake_dataset_double(fid, "co_x", 1, &size, co_x.data());
+  if (generator._co_x.size() > 0) {
+    H5LTmake_dataset_double(fid, "co_x", 1, &size, generator._co_x.data());
   }
 
-  hsize_t extrasSize = extras.size();
-  if (extrasSize > 0 && extras[0].size() > 0) {
-    extrasSize *= extras[0].size();
+  hsize_t numExtras = generator._extras.size();
+  if (numExtras > 0 && generator._extras[0].size() > 0) {
+    hsize_t numObs = generator._extras[0].size();
+    hsize_t extrasSize = numExtras * numObs;
 
     std::vector<double> extrasFlat(extrasSize);
-    for (int i = 0; i < extras[0].size(); i++) {
-      for (int j = 0; j < extras.size(); j++) {
-        extrasFlat[i * extras[0].size() + j] = extras[j][i];
+    for (int i = 0; i < numObs; i++) {
+      for (int j = 0; j < numExtras; j++) {
+        extrasFlat[i * numObs + j] = generator._extras[j][i];
       }
     }
 
     H5LTmake_dataset_double(fid, "extras", 1, &extrasSize, extrasFlat.data());
   }
 
-  if (t.size() > 0) {
-    H5LTmake_dataset_double(fid, "time", 1, &size, t.data());
+  if (generator._t.size() > 0) {
+    H5LTmake_dataset_double(fid, "time", 1, &size, generator._t.data());
   }
 
-  unsigned Eint = (unsigned)E;
-  H5LTset_attribute_uint(fid, "/", "E", &Eint, 1);
-  H5LTset_attribute_double(fid, "/", "dtWeight", &dtWeight, 1);
+  H5LTset_attribute_double(fid, "/", "dtWeight", &generator._dtWeight, 1);
 }
 
 ManifoldGenerator read_manifold_generator(hid_t fid)
@@ -117,12 +115,6 @@ ManifoldGenerator read_manifold_generator(hid_t fid)
 
   std::vector<double> y(size);
   H5LTread_dataset_double(fid, "y", y.data());
-
-  std::vector<double> co_x;
-  if (H5LTfind_dataset(fid, "co_x")) {
-    co_x = std::vector<double>(size);
-    H5LTread_dataset_double(fid, "co_x", co_x.data());
-  }
 
   std::vector<std::vector<double>> extras;
   if (H5LTfind_dataset(fid, "extras")) {
@@ -139,22 +131,27 @@ ManifoldGenerator read_manifold_generator(hid_t fid)
     }
   }
 
-  // Bug in "H5LTfind_dataset" which return true for the column "t"
-  // even when that dataset doesn't exist in the HDF5 file.
-  std::vector<double> t;
-  if (H5LTfind_dataset(fid, "time")) {
-    t = std::vector<double>(size);
-    H5LTread_dataset_double(fid, "time", t.data());
+  ManifoldGenerator generator(x, y, extras, MISSING);
+
+  if (H5LTfind_dataset(fid, "co_x")) {
+    std::vector<double> co_x = std::vector<double>(size);
+    H5LTread_dataset_double(fid, "co_x", co_x.data());
+    generator.add_coprediction_data(co_x);
   }
 
-  unsigned Eint;
-  H5LTget_attribute_uint(fid, "/", "E", &Eint);
-  size_t E = (size_t)Eint;
+  // Bug in "H5LTfind_dataset" which return true for the column "t"
+  // even when that dataset doesn't exist in the HDF5 file.
+  if (H5LTfind_dataset(fid, "time")) {
+    std::vector<double> t = std::vector<double>(size);
+    H5LTread_dataset_double(fid, "time", t.data());
 
-  double dtWeight;
-  H5LTget_attribute_double(fid, "/", "dtWeight", &dtWeight);
+    double dtWeight;
+    H5LTget_attribute_double(fid, "/", "dtWeight", &dtWeight);
 
-  return ManifoldGenerator(x, y, co_x, extras, t, E, dtWeight, MISSING);
+    generator.add_dt_data(t, dtWeight);
+  }
+
+  return generator;
 }
 
 /*! \brief Read in a dump file.
@@ -171,6 +168,10 @@ Inputs read_dumpfile(std::string fname_in)
   Options opts = read_options(fid);
 
   ManifoldGenerator generator = read_manifold_generator(fid);
+
+  unsigned Eint;
+  H5LTget_attribute_uint(fid, "/", "E", &Eint);
+  size_t E = (size_t)Eint;
 
   // Read in the training/prediction filters
   hsize_t size;
@@ -192,19 +193,20 @@ Inputs read_dumpfile(std::string fname_in)
 
   H5Fclose(fid);
 
-  return { opts, generator, trainingRows, predictionRows };
+  return { opts, generator, E, trainingRows, predictionRows };
 }
 
-void write_dumpfile(const char* fname, const Options& opts, const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<double>& co_x, const std::vector<std::vector<double>>& extras,
-                    const std::vector<double>& t, int E, double dtWeight, const std::vector<bool>& trainingRows,
-                    const std::vector<bool>& predictionRows)
+void write_dumpfile(const char* fname, const Options& opts, const ManifoldGenerator& generator, int E,
+                    const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows)
 {
   hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   save_options(fid, opts);
 
-  save_manifold_generator(fid, x, y, co_x, extras, t, E, dtWeight);
+  save_manifold_generator(fid, generator);
+
+  unsigned Eint = (unsigned)E;
+  H5LTset_attribute_uint(fid, "/", "E", &Eint, 1);
 
   hsize_t size = (hsize_t)trainingRows.size();
   std::vector<char> filterChar(size);

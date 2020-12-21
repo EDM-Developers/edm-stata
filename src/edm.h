@@ -29,22 +29,20 @@ typedef int retcode;
 namespace stdex = std::experimental;
 
 using span_2d_double = stdex::mdspan<double, stdex::dynamic_extent, stdex::dynamic_extent>;
-using span_3d_double = stdex::mdspan<double, stdex::dynamic_extent, stdex::dynamic_extent, stdex::dynamic_extent>;
 using span_2d_retcode = stdex::mdspan<retcode, stdex::dynamic_extent, stdex::dynamic_extent>;
 
 #include "manifold.h"
 
 struct Options
 {
-  bool forceCompute, savePrediction, saveSMAPCoeffs;
+  bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
   bool distributeThreads = false;
-  int k, varssv, nthreads;
+  int k, nthreads;
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
-  int taskNum = 1, numTasks = 1;
-  bool xmap, calcRhoMAE = false;
-  int xmapDirectionNum;
+  size_t taskNum = 1, numTasks = 1;
+  bool calcRhoMAE = false;
 };
 
 class IO
@@ -102,8 +100,7 @@ struct PredictionStats
 {
   double mae, rho;
   int taskNum;
-  bool xmap, calcRhoMAE;
-  int xmapDirectionNum;
+  bool calcRhoMAE;
 };
 
 struct Prediction
@@ -115,10 +112,10 @@ struct Prediction
   PredictionStats stats;
 };
 
-std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
                             void all_tasks_finished(void) = nullptr);
 
-void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
-              void all_tasks_finished(void) = nullptr);
+              void all_tasks_finished(void) = nullptr, bool serial = false);

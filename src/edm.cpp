@@ -42,10 +42,10 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
 void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
              const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
 void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
-          const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs, span_2d_retcode rc);
+          const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc);
 
 void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
-                    span_2d_retcode rc, span_3d_double coeffs, bool keep_going() = nullptr)
+                    span_2d_retcode rc, span_2d_double coeffs, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -112,7 +112,12 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
       simplex(Mp_i, t, opts, M, k, d, ind, ystar, rc);
     }
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
+    bool saveCoeffsForLargestTheta = opts.saveSMAPCoeffs;
+    opts.saveSMAPCoeffs = false;
     for (int t = 0; t < opts.thetas.size(); t++) {
+      if (t == opts.thetas.size() - 1) {
+        opts.saveSMAPCoeffs = saveCoeffsForLargestTheta;
+      }
       smap(Mp_i, t, opts, M, Mp, k, d, ind, ystar, coeffs, rc);
     }
   } else {
@@ -145,7 +150,7 @@ void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std:
 }
 
 void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
-          const std::vector<size_t>& ind, span_2d_double ystar, span_3d_double coeffs, span_2d_retcode rc)
+          const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc)
 {
 
   double d_base = d[ind[0]];
@@ -222,11 +227,11 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
 
     // saving ics coefficients if savesmap option enabled
     if (opts.saveSMAPCoeffs) {
-      for (int j = 0; j < opts.varssv; j++) {
+      for (int j = 0; j < M.E_actual() + 1; j++) {
         if (ics(j) == 0.) {
-          coeffs(t, Mp_i, j) = MISSING;
+          coeffs(Mp_i, j) = MISSING;
         } else {
-          coeffs(t, Mp_i, j) = ics(j);
+          coeffs(Mp_i, j) = ics(j);
         }
       }
     }
@@ -237,63 +242,97 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
 }
 
 std::atomic<int> numTasksRunning = 0;
-ThreadPool pool;
+ThreadPool workerPool, masterPool;
 
-std::future<void> edm_async(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
                             void all_tasks_finished(void))
 {
-  pool.set_num_workers(opts.nthreads);
+  bool serial = (opts.numTasks > 1);
 
-  if (opts.numTasks > 1) {
-    io->verbosity = 0;
+  workerPool.set_num_workers(opts.nthreads);
+  if (!serial) {
+    masterPool.set_num_workers(opts.nthreads);
   }
 
   if (numTasksRunning == 0) {
-    numTasksRunning = opts.numTasks;
+    numTasksRunning = (int)opts.numTasks;
   }
 
-  return std::async(std::launch::async, edm_task, opts, generator, trainingRows, predictionRows, io, pred, keep_going,
-                    all_tasks_finished);
+  if (serial) {
+    return workerPool.enqueue(
+      [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial] {
+        edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial);
+      });
+  } else {
+    return masterPool.enqueue(
+      [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial] {
+        edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial);
+      });
+  }
 }
 
-// Don't call this directly. The thread pool won't be setup correctly.
-void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> trainingRows,
+// Don't call this directly. The thread pools won't be setup correctly.
+void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-              void all_tasks_finished(void))
+              void all_tasks_finished(void), bool serial)
 {
-  Manifold M = generator.create_manifold(trainingRows, false);
-  Manifold Mp = generator.create_manifold(predictionRows, true);
+
+  Manifold M, Mp;
+  if (serial) {
+    M = generator->create_manifold(E, trainingRows, false);
+    Mp = generator->create_manifold(E, predictionRows, true);
+  } else {
+    std::future<void> f1 = workerPool.enqueue([&] { M = generator->create_manifold(E, trainingRows, false); });
+    std::future<void> f2 = workerPool.enqueue([&] { Mp = generator->create_manifold(E, predictionRows, true); });
+    f1.get();
+    f2.get();
+  }
 
   size_t numThetas = opts.thetas.size();
   size_t numPredictions = Mp.nobs();
+  size_t numCoeffCols = M.E_actual() + 1;
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
   auto ystarView = span_2d_double(ystar.get(), (int)numThetas, (int)numPredictions);
 
-  auto coeffs = std::make_unique<double[]>(numThetas * numPredictions * opts.varssv);
-  auto coeffsView = span_3d_double(coeffs.get(), (int)numThetas, (int)numPredictions, (int)opts.varssv);
+  // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
+  auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
+  auto coeffsView = span_2d_double(coeffs.get(), (int)numPredictions, (int)numCoeffCols);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
 
-  if (opts.distributeThreads) {
-    distribute_threads(pool.workers);
-  }
+  if (serial) {
+    io->progress_bar(0.0);
+    for (int i = 0; i < numPredictions; i++) {
+      if (keep_going != nullptr && keep_going() == false) {
+        *pred = { UNKNOWN_ERROR, {}, {} };
+      }
+      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going);
+      io->progress_bar((i + 1) / ((double)numPredictions));
+    }
+    io->print("\n");
+  } else {
+    if (opts.distributeThreads) {
+      distribute_threads(workerPool.workers);
+    }
 
-  std::vector<std::future<void>> results(numPredictions);
-  for (int i = 0; i < numPredictions; i++) {
-    results[i] = pool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
-  }
+    std::vector<std::future<void>> results(numPredictions);
+    for (int i = 0; i < numPredictions; i++) {
+      results[i] =
+        workerPool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
+    }
 
-  io->progress_bar(0.0);
-  for (int i = 0; i < numPredictions; i++) {
-    results[i].get();
-    io->progress_bar((i + 1) / ((double)numPredictions));
-  }
+    // io->progress_bar(0.0);
+    for (int i = 0; i < numPredictions; i++) {
+      results[i].get();
+      // io->progress_bar((i + 1) / ((double)numPredictions));
+    }
 
-  if (keep_going != nullptr && keep_going() == false) {
-    *pred = { UNKNOWN_ERROR, {}, {} };
+    if (keep_going != nullptr && keep_going() == false) {
+      *pred = { UNKNOWN_ERROR, {}, {} };
+    }
   }
 
   // Calculate the MAE & rho of prediction, if requested
@@ -320,9 +359,7 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
     stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
   }
 
-  stats.taskNum = opts.taskNum;
-  stats.xmap = opts.xmap;
-  stats.xmapDirectionNum = opts.xmapDirectionNum;
+  stats.taskNum = (int)opts.taskNum;
   stats.calcRhoMAE = opts.calcRhoMAE;
   pred->stats = stats;
 
@@ -332,7 +369,15 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
   // If we're storing the prediction and/or the SMAP coefficients, put them
   // into the resulting Prediction struct. Otherwise, let them be deleted.
   if (opts.savePrediction) {
-    pred->ystar = std::move(ystar);
+    // Take only the predictions for the largest theta value.
+    if (numThetas == 1) {
+      pred->ystar = std::move(ystar);
+    } else {
+      pred->ystar = std::make_unique<double[]>(numPredictions);
+      for (int i = 0; i < numPredictions; i++) {
+        pred->ystar[i] = ystarView(numThetas - 1, i);
+      }
+    }
   } else {
     pred->ystar = nullptr;
   }
@@ -345,7 +390,7 @@ void edm_task(Options opts, ManifoldGenerator generator, std::vector<bool> train
 
   pred->numThetas = numThetas;
   pred->numPredictions = numPredictions;
-  pred->numCoeffCols = opts.varssv;
+  pred->numCoeffCols = numCoeffCols;
 
   numTasksRunning -= 1;
   if (numTasksRunning <= 0) {

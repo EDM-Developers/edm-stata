@@ -1,27 +1,10 @@
 #include "manifold.h"
 
-ManifoldGenerator::ManifoldGenerator(std::vector<double> x, std::vector<double> y, std::vector<double> co_x,
-                                     std::vector<std::vector<double>> extras, std::vector<double> t, size_t E,
-                                     double dtWeight, double missing, size_t tau)
-  : _x(x)
-  , _y(y)
-  , _co_x(co_x)
-  , _extras(extras)
-  , _t(t)
-  , _dtWeight(dtWeight)
-  , _missing(missing)
+Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const
 {
-  // TODO: Add 'tau' != 1 support
-  _copredict = (co_x.size() > 0);
-  _use_dt = (dtWeight > 0);
-  _E_x = E;
-  _E_dt = (_use_dt) * (E - 1);
-  _E_extras = extras.size();
-  _E_actual = _E_x + _E_dt + _E_extras;
-}
+  size_t E_dt = (_use_dt) * (E - 1);
+  size_t E_actual = E + E_dt + _E_extras;
 
-Manifold ManifoldGenerator::create_manifold(std::vector<bool> filter, bool prediction)
-{
   std::vector<size_t> inds;
   std::vector<double> y;
 
@@ -34,37 +17,37 @@ Manifold ManifoldGenerator::create_manifold(std::vector<bool> filter, bool predi
     }
   }
 
-  auto flat = std::make_unique<double[]>(nobs * _E_actual);
+  auto flat = std::make_unique<double[]>(nobs * E_actual);
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < _E_x; j++) {
+    for (size_t j = 0; j < E; j++) {
       if (prediction && _copredict) {
-        flat[i * _E_actual + j] = find_co_x(inds, i, j);
+        flat[i * E_actual + j] = find_co_x(inds, i, j);
       } else {
-        flat[i * _E_actual + j] = find_x(inds, i, j);
+        flat[i * E_actual + j] = find_x(inds, i, j);
       }
     }
   }
 
   // Put the lagged embedding of dt in the next columns
   for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < _E_dt; j++) {
-      flat[i * _E_actual + _E_x + j] = find_dt(inds, i, j);
+    for (size_t j = 0; j < E_dt; j++) {
+      flat[i * E_actual + E + j] = find_dt(inds, i, j);
     }
   }
 
   // Finally put the unlagged extras in the last columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < _E_extras; j++) {
-      flat[i * _E_actual + _E_x + _E_dt + j] = find_extras(inds, i, j);
+      flat[i * E_actual + E + E_dt + j] = find_extras(inds, i, j);
     }
   }
 
-  return { flat, y, nobs, _E_x, _E_dt, _E_extras, _E_actual, _missing };
+  return { flat, y, nobs, E, E_dt, _E_extras, E_actual, _missing };
 }
 
-double ManifoldGenerator::find_x(std::vector<size_t> inds, size_t i, size_t j) const
+double ManifoldGenerator::find_x(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
   size_t index = inds.at(i);
   if (index < j) {
@@ -73,7 +56,7 @@ double ManifoldGenerator::find_x(std::vector<size_t> inds, size_t i, size_t j) c
   return _x[index - j];
 }
 
-double ManifoldGenerator::find_co_x(std::vector<size_t> inds, size_t i, size_t j) const
+double ManifoldGenerator::find_co_x(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
   size_t index = inds.at(i);
   if (index < j) {
@@ -82,7 +65,7 @@ double ManifoldGenerator::find_co_x(std::vector<size_t> inds, size_t i, size_t j
   return _co_x[index - j];
 }
 
-double ManifoldGenerator::find_dt(std::vector<size_t> inds, size_t i, size_t j) const
+double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
   size_t index = inds.at(i);
   if (index < j + 1 || _t[index - 1] == _missing || _t[index] == _missing) {
@@ -92,7 +75,7 @@ double ManifoldGenerator::find_dt(std::vector<size_t> inds, size_t i, size_t j) 
   return _dtWeight * (_t[index] - _t[index - 1]);
 }
 
-double ManifoldGenerator::find_extras(std::vector<size_t> inds, size_t i, size_t j) const
+double ManifoldGenerator::find_extras(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
   size_t index = inds.at(i);
   return _extras.at(j).at(index);
