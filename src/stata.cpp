@@ -29,7 +29,6 @@
 
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
-char* PRINT_MACRO = (char*)"_edm_print";
 char* RUNNING_SCALAR = (char*)"edm_running";
 
 class StataIO : public IO
@@ -38,30 +37,6 @@ public:
   virtual void out(const char* s) const { SF_display((char*)s); }
   virtual void error(const char* s) const { SF_error((char*)s); }
   virtual void flush() const { _stata_->spoutflush(); }
-
-  virtual void print(std::string s) const { IO::print(replace_newline(s)); }
-
-  virtual void print_async(std::string s) const { IO::print_async(replace_newline(s)); }
-
-  virtual void out_async(const char* s) const
-  {
-    SF_macro_use(PRINT_MACRO, buffer, BUFFER_SIZE);
-    strcat(buffer, s);
-    SF_macro_save(PRINT_MACRO, buffer);
-  }
-
-private:
-  static const size_t BUFFER_SIZE = 1000;
-  mutable char buffer[BUFFER_SIZE];
-
-  std::string replace_newline(std::string s) const
-  {
-    size_t ind;
-    while ((ind = s.find("\n")) != std::string::npos) {
-      s.replace(ind, 1, "{break}");
-    }
-    return s;
-  }
 };
 
 // Global state, needed to persist between multiple edm calls
@@ -71,16 +46,24 @@ ManifoldGenerator generator;
 std::queue<Prediction> predictions;
 std::queue<std::future<void>> futures;
 
+std::mutex rwStataScalar;
+
 bool keep_going()
 {
   double edm_running;
-  SF_scal_use(RUNNING_SCALAR, &edm_running);
+  {
+    std::lock_guard<std::mutex> guard(rwStataScalar);
+    SF_scal_use(RUNNING_SCALAR, &edm_running);
+  }
   return (bool)edm_running;
 }
 
 void all_tasks_finished()
 {
-  SF_scal_save(RUNNING_SCALAR, 0.0);
+  {
+    std::lock_guard<std::mutex> guard(rwStataScalar);
+    SF_scal_save(RUNNING_SCALAR, 0.0);
+  }
 }
 
 void print_error(std::string command, ST_retcode rc)

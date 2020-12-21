@@ -304,15 +304,18 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
 
   if (serial) {
-    io->progress_bar(0.0);
+    if (opts.numTasks == 1) {
+      io->progress_bar(0.0);
+    }
     for (int i = 0; i < numPredictions; i++) {
       if (keep_going != nullptr && keep_going() == false) {
         *pred = { UNKNOWN_ERROR, {}, {} };
       }
       mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going);
-      io->progress_bar((i + 1) / ((double)numPredictions));
+      if (opts.numTasks == 1) {
+        io->progress_bar((i + 1) / ((double)numPredictions));
+      }
     }
-    io->print("\n");
   } else {
     if (opts.distributeThreads) {
       distribute_threads(workerPool.workers);
@@ -324,10 +327,14 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
         workerPool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
     }
 
-    // io->progress_bar(0.0);
+    if (opts.numTasks == 1) {
+      io->progress_bar(0.0);
+    }
     for (int i = 0; i < numPredictions; i++) {
       results[i].get();
-      // io->progress_bar((i + 1) / ((double)numPredictions));
+      if (opts.numTasks == 1) {
+        io->progress_bar((i + 1) / ((double)numPredictions));
+      }
     }
 
     if (keep_going != nullptr && keep_going() == false) {
@@ -392,6 +399,9 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   pred->numPredictions = numPredictions;
   pred->numCoeffCols = numCoeffCols;
 
+  if (opts.numTasks > 1) {
+    io->print(".");
+  }
   numTasksRunning -= 1;
   if (numTasksRunning <= 0) {
     if (all_tasks_finished != nullptr) {

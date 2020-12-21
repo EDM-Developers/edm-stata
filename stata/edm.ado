@@ -703,7 +703,6 @@ program define edmExplore, eclass sortpreserve
 	if `mata_mode' == 0 {
 		// Setup variables which the plugin will modify
 		scalar edm_running = 1
-		local edm_print = ""
 
 		// Fill in any gaps in the time series (temporarily).
 		timer on 66
@@ -876,15 +875,7 @@ program define edmExplore, eclass sortpreserve
 					scalar edm_running = 0
 					exit 1
 				}
-				if "`edm_print'" != "" {
-					local temp = "`edm_print'"
-					local edm_print = ""
-					di "`temp'" _c
-				}
 			}
-		}
-		if "`edm_print'" != "" {
-			di "`edm_print'"
 		}
 
 		local result_matrix = "r"
@@ -906,7 +897,6 @@ program define edmExplore, eclass sortpreserve
 			}
 			else {
 				scalar edm_running = 1
-				local edm_print = ""
 
 				// Fill in any gaps in the time series (temporarily).
 				timer on 66
@@ -942,15 +932,7 @@ program define edmExplore, eclass sortpreserve
 							scalar edm_running = 0
 							exit 1
 						}
-						if "`edm_print'" != "" {
-							local temp = "`edm_print'"
-							local edm_print = ""
-							di "`temp'" _c
-						}
 					}
-				}
-				if "`edm_print'" != "" {
-					di "`edm_print'"
 				}
 
 				plugin call smap_block_mdap `co_x_p' if `co_predict_set' , "collect_results"
@@ -1611,7 +1593,6 @@ program define edmXmap, eclass sortpreserve
 		if `mata_mode' == 0 {
 			// Setup variables which the plugin will modify
 			scalar edm_running = 1
-			local edm_print = ""
 
 			// Fill in any gaps in the time series (temporarily).
 			timer on 66
@@ -1818,15 +1799,7 @@ program define edmXmap, eclass sortpreserve
 						scalar edm_running = 0
 						exit 1
 					}
-					if "`edm_print'" != "" {
-						local temp = "`edm_print'"
-						local edm_print = ""
-						di "`temp'" _c
-					}
 				}
-			}
-			if "`edm_print'" != "" {
-				di "`edm_print'"
 			}
 
 			local result_matrix = "r`direction_num'"
@@ -1857,7 +1830,6 @@ program define edmXmap, eclass sortpreserve
 			}
 			else {
 				scalar edm_running = 1
-				local edm_print = ""
 
 				// Fill in any gaps in the time series (temporarily).
 				timer on 66
@@ -1893,15 +1865,7 @@ program define edmXmap, eclass sortpreserve
 							scalar edm_running = 0
 							exit 1
 						}
-						if "`edm_print'" != "" {
-							local temp = "`edm_print'"
-							local edm_print = ""
-							di "`temp'" _c
-						}
 					}
-				}
-				if "`edm_print'" != "" {
-					di "`edm_print'"
 				}
 
 				plugin call smap_block_mdap `co_x_p' if `co_predict_set' , "collect_results"
