@@ -703,8 +703,7 @@ program define edmExplore, eclass sortpreserve
 	// TODO: Check that `savesmap' is not needed in explore mode.		
 	if `mata_mode' == 0 {
 		// Setup variables which the plugin will modify
-		scalar edm_running = 1
-		local edm_print = ""
+		scalar plugin_finished = 0
 
 		// Fill in any gaps in the time series (temporarily).
 		tempvar before_tsfill
@@ -871,18 +870,9 @@ program define edmExplore, eclass sortpreserve
 	if `mata_mode' == 0 {
 		timer on 99
 		nobreak {
-			while edm_running {
+			while !plugin_finished {
 				capture noi break sleep 10
-				if _rc {
-					di "Aborting edm run"
-					scalar edm_running = 0
-					exit 1
-				}
-				if "`edm_print'" != "" {
-					local temp = "`edm_print'"
-					local edm_print = ""
-					di "`temp'" _c
-				}
+				plugin call smap_block_mdap , "report_progress" _rc
 			}
 		}
 
@@ -904,8 +894,7 @@ program define edmExplore, eclass sortpreserve
 				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
-				scalar edm_running = 1
-				local edm_print = ""
+				scalar plugin_finished = 0
 
 				// Fill in any gaps in the time series (temporarily).
 				timer on 66
@@ -934,18 +923,9 @@ program define edmExplore, eclass sortpreserve
 
 				timer on 99
 				nobreak {
-					while edm_running {
+					while !plugin_finished {
 						capture noi break sleep 10
-						if _rc {
-							di "Aborting edm run"
-							scalar edm_running = 0
-							exit 1
-						}
-						if "`edm_print'" != "" {
-							local temp = "`edm_print'"
-							local edm_print = ""
-							di "`temp'" _c
-						}
+						plugin call smap_block_mdap , "report_progress" _rc
 					}
 				}
 
@@ -1609,8 +1589,7 @@ program define edmXmap, eclass sortpreserve
 
 		if `mata_mode' == 0 {
 			// Setup variables which the plugin will modify
-			scalar edm_running = 1
-			local edm_print = ""
+			scalar plugin_finished = 0
 
 			// Fill in any gaps in the time series (temporarily).
 			tempvar before_tsfill
@@ -1811,18 +1790,9 @@ program define edmXmap, eclass sortpreserve
 		if `mata_mode' == 0 {
 			timer on 99
 			nobreak {
-				while edm_running {
+				while !plugin_finished {
 					capture noi break sleep 10
-					if _rc {
-						di "Aborting edm run"
-						scalar edm_running = 0
-						exit 1
-					}
-					if "`edm_print'" != "" {
-						local temp = "`edm_print'"
-						local edm_print = ""
-						di "`temp'" _c
-					}
+					plugin call smap_block_mdap , "report_progress" _rc
 				}
 			}
 
@@ -1853,8 +1823,7 @@ program define edmXmap, eclass sortpreserve
 				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
 			else {
-				scalar edm_running = 1
-				local edm_print = ""
+				scalar plugin_finished = 0
 
 				// Fill in any gaps in the time series (temporarily).
 				timer on 66
@@ -1883,18 +1852,9 @@ program define edmXmap, eclass sortpreserve
 
 				timer on 99
 				nobreak {
-					while edm_running {
+					while !plugin_finished {
 						capture noi break sleep 10
-						if _rc {
-							di "Aborting edm run"
-							scalar edm_running = 0
-							exit 1
-						}
-						if "`edm_print'" != "" {
-							local temp = "`edm_print'"
-							local edm_print = ""
-							di "`temp'" _c
-						}
+						plugin call smap_block_mdap , "report_progress" _rc
 					}
 				}
 

@@ -50,24 +50,34 @@ class IO
 public:
   int verbosity = 0;
 
-  virtual void print(std::string s) const
+  virtual void print(std::string s)
   {
     if (verbosity > 0) {
-      std::lock_guard<std::mutex> guard(printMutex);
       out(s.c_str());
       flush();
     }
   }
 
-  virtual void print_async(std::string s) const
+  virtual void print_async(std::string s)
   {
     if (verbosity > 0) {
-      std::lock_guard<std::mutex> guard(printMutex);
-      out_async(s.c_str());
+      std::lock_guard<std::mutex> guard(bufferMutex);
+      buffer += s;
     }
   }
 
-  virtual void progress_bar(double progress) const
+  virtual std::string get_and_clear_async_buffer()
+  {
+    if (verbosity > 0) {
+      std::lock_guard<std::mutex> guard(bufferMutex);
+      std::string ret = buffer;
+      buffer = "";
+      return ret;
+    }
+    return "";
+  }
+
+  virtual void progress_bar(double progress)
   {
     if (verbosity < 1) {
       return;
@@ -97,15 +107,18 @@ public:
       print_async("\n");
     }
   }
-  mutable int dots, tens;
-  mutable double nextMessage;
-  mutable std::mutex printMutex;
 
   // Actual implementation of IO functions are in the subclasses
   virtual void out(const char*) const = 0;
-  virtual void out_async(const char*) const = 0;
   virtual void error(const char*) const = 0;
   virtual void flush() const = 0;
+
+private:
+  std::string buffer = "";
+  std::mutex bufferMutex;
+
+  int dots, tens;
+  double nextMessage;
 };
 
 struct PredictionStats

@@ -29,8 +29,7 @@
 
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
-char* PRINT_MACRO = (char*)"_edm_print";
-char* RUNNING_SCALAR = (char*)"edm_running";
+char* FINISHED_SCALAR = (char*)"plugin_finished";
 
 class StataIO : public IO
 {
@@ -38,21 +37,6 @@ public:
   virtual void out(const char* s) const { SF_display((char*)s); }
   virtual void error(const char* s) const { SF_error((char*)s); }
   virtual void flush() const { _stata_->spoutflush(); }
-  virtual void out_async(const char* s) const
-  {
-#ifdef _MSC_VER
-    out(s);
-  }
-#else
-    SF_macro_use(PRINT_MACRO, buffer, BUFFER_SIZE);
-    strcat(buffer, s);
-    SF_macro_save(PRINT_MACRO, buffer);
-  }
-
-private:
-  static const size_t BUFFER_SIZE = 1000;
-  mutable char buffer[BUFFER_SIZE];
-#endif
 };
 
 // Global state, needed to persist between multiple edm calls
@@ -62,24 +46,17 @@ ManifoldGenerator generator;
 std::queue<Prediction> predictions;
 std::queue<std::future<void>> futures;
 
-std::mutex rwStataScalar;
+std::atomic<bool> breakButtonPressed = false;
+std::atomic<bool> allTasksFinished = false;
 
 bool keep_going()
 {
-  double edm_running;
-  {
-    std::lock_guard<std::mutex> guard(rwStataScalar);
-    SF_scal_use(RUNNING_SCALAR, &edm_running);
-  }
-  return (bool)edm_running;
+  return !breakButtonPressed;
 }
 
 void all_tasks_finished()
 {
-  {
-    std::lock_guard<std::mutex> guard(rwStataScalar);
-    SF_scal_save(RUNNING_SCALAR, 0.0);
-  }
+  allTasksFinished = true;
 }
 
 void print_error(std::string command, ST_retcode rc)
@@ -302,6 +279,9 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
+  breakButtonPressed = false;
+  allTasksFinished = false;
+
   opts.calcRhoMAE = true;
 
   int numExtras = atoi(argv[0]);
@@ -512,13 +492,29 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 STDLL stata_call(int argc, char* argv[])
 {
   try {
-    ST_retcode rc;
+    ST_retcode rc = UNKNOWN_ERROR + 1;
     std::string command(argv[0]);
 
     if (command == "transfer_manifold_data") {
       rc = read_manifold_data_from_stata(argc - 1, argv + 1);
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
+    } else if (command == "report_progress") {
+      io.print(io.get_and_clear_async_buffer());
+
+      bool breakHit = atoi(argv[1]);
+      if (breakHit) {
+        breakButtonPressed = true;
+        allTasksFinished = true;
+        rc = 1;
+        io.print("Aborting edm run\n");
+      } else {
+        rc = SUCCESS;
+      }
+
+      if (allTasksFinished) {
+        SF_scal_save(FINISHED_SCALAR, 1.0);
+      }
     } else if (command == "collect_results") {
       rc = save_all_task_results_to_stata(argc - 1, argv + 1);
     } else if (command == "launch_coprediction_task") {
