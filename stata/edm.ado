@@ -509,6 +509,7 @@ program define edmExplore, eclass sortpreserve
 	forvalues i=1/`=`max_e'-1' {
 		tempvar x_`i'
 		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
+		// TODO: Is the next line compatible with 'allowmissing' option?
 		qui replace `usable' = 0 if `x_`i'' ==.
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 		if `parsed_dt' {
@@ -646,14 +647,14 @@ program define edmExplore, eclass sortpreserve
 			/* di "Reset usable due to allow missing" */
 			replace `usable' = 0
 			foreach v of local mapping_`=`max_e'-1' {
-				replace `usable' =1 if `v' !=. & `touse'
+				replace `usable' = 1 if `v' != . & `touse'
 			}
 			if `missingdistance' <=0 {
 				qui sum `x' if `usable'
 				local missingdistance = 2/sqrt(c(pi))*r(sd)
 			}
 			replace `x_f' = f`future_step'.`x' if `usable'
-			replace `usable' = 0 if `x_f' ==.
+			replace `usable' = 0 if `x_f' == .
 			/* di "missing distance: `missingdistance'" */
 		}
 
@@ -662,23 +663,24 @@ program define edmExplore, eclass sortpreserve
 	qui count if `usable'
 	scalar total_obs = r(N)
 
-	tempvar u mae
-	mat r = J(1,4,.)
+	if (`crossfold' == 0 & "`full'" != "full") {
+		tempvar u
+	}
+
 	local round = max(`crossfold', `replicate')
-	if `crossfold' >0 {
+	if `crossfold' > 0 {
 		if `crossfold' > `=total_obs' / `max_e' {
 			di as error "Not enough observations for cross-validations"
 			error 149
 		}
 		tempvar crossfoldu crossfoldunum
-		local edm_rng_state = "`c(rngstate)'"
 		qui gen double `crossfoldu' = runiform() if `usable'
 		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
 	}
 
 	tempvar overlap
 	if `round' > 1 & `dot' > 0 {
-		if  `replicate' > 1 {
+		if `replicate' > 1 {
 			di "Replication progress (`replicate' in total)"
 		}
 		else if `crossfold' > 1 {
@@ -721,9 +723,11 @@ program define edmExplore, eclass sortpreserve
 			pause
 		}
 
-		plugin call smap_block_mdap `x' `x_f' `zlist' `original_t', "transfer_manifold_data" ///
-				`zcount' `parsed_dtw' ///
-				"`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks'
+		local explore_mode = 1
+		local full_mode = ("`full'" == "full")
+		plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable' `crossfoldu', "transfer_manifold_data" ///
+				`zcount' `parsed_dtw' "`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks' ///
+				`explore_mode' `full_mode' `crossfold' 
 
 		timer on 66
 		if `parsed_dt' == 0 {
@@ -749,7 +753,12 @@ program define edmExplore, eclass sortpreserve
 				}
 				else {
 					timer on 62
-					gen double `u' = runiform() if `usable'
+					if `t' == 1 {
+						gen double `u' = runiform() if `usable'
+					}
+					else {
+						replace `u' = runiform() if `usable'
+					}
 					timer off 62
 					timer on 63
 					sum `u',d
@@ -758,7 +767,7 @@ program define edmExplore, eclass sortpreserve
 					gen byte `train_set' = `u' <r(p50) & `u' !=.
 					gen byte `predict_set' = `u' >=r(p50) & `u' !=.
 					timer off 64
-					drop `u'
+					/* drop `u' */
 				}
 			}
 			gen byte `overlap' = (`train_set' ==`predict_set') & `predict_set'
@@ -831,10 +840,11 @@ program define edmExplore, eclass sortpreserve
 				else {
 					// TODO: Check we never save SMAP coeffs in explore mode.
 					local save_smap_coeffs = 0
+					local k_adj = `lib_size'
 
 					if `verbosity' > 1 {
-						di "launch_edm_task <`i', `j', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-						di "train_set <`train_set'> predict_set <`predict_set'>"
+						di "launch_edm_task <`t', `i', `j', `k_adj', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
+						di "train_set <`train_set'> predict_set <`predict_set'> u <`u'>"
 						pause
 					}
 
@@ -847,8 +857,8 @@ program define edmExplore, eclass sortpreserve
 					}
 					timer off 66
 
-					plugin call smap_block_mdap `train_set' `predict_set', "launch_edm_task" ///
-							`i' `j' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
+					plugin call smap_block_mdap `train_set' `predict_set' `u', "launch_edm_task" ///
+							`t' `i' `j' `k_adj' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
 
 					timer on 66
 					if `parsed_dt' == 0 {
@@ -894,9 +904,8 @@ program define edmExplore, eclass sortpreserve
 	
 	if "`copredictvar'" != ""  {
 		if `num_tasks' == 1 {
-			local task_num = 1
 			qui replace `overlap' = 0
-			qui replace `co_train_set' = 0 if `usable' ==0
+			qui replace `co_train_set' = 0 if `usable' == 0
 
 			tempvar co_x_p
 			qui gen double `co_x_p'=.
@@ -969,7 +978,7 @@ program define edmExplore, eclass sortpreserve
 	ereturn scalar report_actuale = `report_actuale'
 	ereturn local x "`ori_x'"
 	ereturn local y "`ori_y'"
-	if `crossfold' >0 {
+	if `crossfold' > 0 {
 		ereturn local cmdfootnote "`cmdfootnote'Note: `crossfold'-fold cross validation results reported"
 	}
 	else {
@@ -1618,9 +1627,12 @@ program define edmXmap, eclass sortpreserve
 				pause
 			}
 
-			plugin call smap_block_mdap `x' `x_f' `zlist' `original_t', "transfer_manifold_data" ///
-					`zcount' `parsed_dtw' ///
-					"`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks'
+			local explore_mode = 0
+			local full_mode = 0
+			local crossfold = 0
+			plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable', "transfer_manifold_data" ///
+					`zcount' `parsed_dtw' "`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks' ///
+					`explore_mode' `full_mode' `crossfold'
 
 			timer on 66
 			if `parsed_dt' == 0 {
@@ -1634,16 +1646,33 @@ program define edmXmap, eclass sortpreserve
 			local all_savesmap_vars = ""
 		}
 
+		qui gen double `u' = .
+	
 		forvalues rep =1/`replicate' {
-			cap drop `u' `urank'
-			qui gen double `u' = runiform() if `usable'
-			qui egen `urank' =rank(`u') if `usable', unique
+			timer on 60 
+
+			timer on 62
+			qui replace `u' = runiform() if `usable'
+			timer off 62
+			
+			timer on 63
+			
+			/* if `mata_mode' { */
+			cap drop `urank'
+			qui egen double `urank' =rank(`u') if `usable', unique
+			/* } */
+			timer off 63
+
+			// TODO: Check if next line is needed?
 			qui count if `usable'
+
+			timer off 60
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
 				foreach j of numlist `theta' {
 					foreach lib_size of numlist `library' {
+						timer on 61
 						if `lib_size' > `=total_obs' {
 							di as error "Library size exceeds the limit."
 							error 1
@@ -1656,9 +1685,11 @@ program define edmXmap, eclass sortpreserve
 							error 1
 						}
 
+						timer on 64
 						qui replace `train_set' = `urank' <= `lib_size' & `usable'
 						qui count if `train_set'
 						local train_size = r(N)
+						timer off 64
 
 						// detect k size
 						if `k' > 0 {
@@ -1715,6 +1746,7 @@ program define edmXmap, eclass sortpreserve
 
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
+						timer off 61
 						if `mata_mode' {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance')
 
@@ -1744,13 +1776,13 @@ program define edmXmap, eclass sortpreserve
 							timer off 66
 
 							if `verbosity' > 1 {
-								di "launch_edm_task <`i', `j', `k_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-								di "train_set <`train_set'> predict_set <`predict_set'>"
+								di "launch_edm_task <`rep', `i', `j', `k_size', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
+								di "train_set <`train_set'> predict_set <`predict_set'> u <`u'>"
 								pause
 							}
 
-							plugin call smap_block_mdap `train_set' `predict_set', "launch_edm_task" ///
-									`i' `j' `k_size' `save_prediction' `save_smap_coeffs' `saveinputs'
+							plugin call smap_block_mdap `train_set' `predict_set' `u', "launch_edm_task" ///
+									`rep' `i' `j' `k_size' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
 
 							timer on 66
 							if `parsed_dt' == 0 {
@@ -1820,7 +1852,6 @@ program define edmXmap, eclass sortpreserve
 
 	if "`copredictvar'" != "" {
 		if `num_tasks' == 1 {
-			local task_num = 1
 			qui gen byte `overlap' = 0
 			qui replace `co_train_set' = 0 if `usable' == 0
 

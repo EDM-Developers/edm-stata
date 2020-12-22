@@ -39,10 +39,181 @@ public:
   virtual void flush() const { _stata_->spoutflush(); }
 };
 
-// Global state, needed to persist between multiple edm calls
 StataIO io;
+
+double median(std::vector<double> u)
+{
+  if (u.size() % 2 == 0) {
+    const auto median_it1 = u.begin() + u.size() / 2 - 1;
+    const auto median_it2 = u.begin() + u.size() / 2;
+
+    std::nth_element(u.begin(), median_it1, u.end());
+    const auto e1 = *median_it1;
+
+    std::nth_element(u.begin(), median_it2, u.end());
+    const auto e2 = *median_it2;
+
+    return (e1 + e2) / 2;
+  } else {
+    const auto median_it = u.begin() + u.size() / 2;
+    std::nth_element(u.begin(), median_it, u.end());
+    return *median_it;
+  }
+}
+
+std::vector<size_t> rank(const std::vector<double>& v_temp)
+{
+  std::vector<std::pair<double, size_t>> v_sort(v_temp.size());
+
+  for (size_t i = 0U; i < v_sort.size(); ++i) {
+    v_sort[i] = std::make_pair(v_temp[i], i);
+  }
+
+  sort(v_sort.begin(), v_sort.end());
+
+  std::vector<size_t> result(v_temp.size());
+
+  // N.B. Stata's rank starts at 1, not 0, so the "+1" is added here.
+  for (size_t i = 0; i < v_sort.size(); ++i) {
+    result[v_sort[i].second] = i + 1;
+  }
+  return result;
+}
+
+class TrainPredictSplitter
+{
+private:
+  bool _explore, _full;
+  int _crossfold;
+  std::vector<bool> _usable;
+  std::vector<size_t> _crossfoldURank;  
+  
+  std::vector<double> strip_missing(std::vector<double> vWithMissing) {
+    std::vector<double> v;
+    for (double &val : vWithMissing ) {
+      if (val != MISSING) {
+        v.push_back(val);
+      }
+    }
+    return v;
+  }
+  
+public:
+  TrainPredictSplitter() { }
+  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, std::vector<double> crossfoldU)
+      : _explore(explore), _full(full), _crossfold(crossfold), _usable(usable) {
+        if (crossfold > 0) {
+           _crossfoldURank = rank(strip_missing(crossfoldU));
+        }
+      }
+
+  bool requiresRandomNumbers() { return (_crossfold == 0) && !_full; }
+
+  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library, int crossfoldIter) {
+    if (_explore && _full) {
+       return {_usable, _usable};
+    }
+    
+    std::vector<bool> trainingRows(_usable.size()), predictionRows(_usable.size());
+    
+    if (_explore && _crossfold > 0) {
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (_usable[i]) {
+          if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
+            trainingRows[i] = false;
+            predictionRows[i] = true;
+          } else {
+            trainingRows[i] = true;
+            predictionRows[i] = false;
+          }
+          obsNum += 1;
+        } else {
+          trainingRows[i] = false;
+          predictionRows[i] = false;
+        }
+      }
+      return {trainingRows, predictionRows};
+    }
+    
+    std::vector<double> u = strip_missing(uWithMissing);
+
+    if (_explore) {
+      io.print("Split: explore mode\n");
+
+      io.print("Split: some u vals\n");
+      for (int i = 0; i < 5; i++) {
+        io.print(fmt::format("u[{}] = {}\n", i, u[i]));
+      }
+      
+      double med = median(u);
+      
+      io.print(fmt::format("Median = {}\n", med));
+
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (_usable[i]) {
+          if (u[obsNum] < med) {
+            trainingRows[i] = true;
+            predictionRows[i] = false;
+          } else {
+            trainingRows[i] = false;
+            predictionRows[i] = true;
+          }
+          obsNum += 1;
+        } else {
+          trainingRows[i] = false;
+          predictionRows[i] = false;
+        }
+      }
+    } else {
+      io.print(fmt::format("Split: xmap mode library = {}\n", library));
+      
+      io.print("Split: some u vals\n");
+      for (int i = 0; i < 5; i++) {
+        io.print(fmt::format("u[{}] = {}\n", i, u[i]));
+      }
+      
+      double uCutoff = 1.0;
+      if (library < u.size()) {
+        io.print("Split: have a library which is smaller than the number of usable\n");
+        std::vector<double> uCopy(u);
+        const auto uCutoffIt = uCopy.begin() + library;
+        std::nth_element(uCopy.begin(), uCutoffIt, uCopy.end());
+        uCutoff = *uCutoffIt;
+        
+        io.print(fmt::format("Split: uCutoff = {}\n", uCutoff));
+      } else {
+        io.print("Split: just using all usable vals");
+      }
+
+      int obsNum = 0;
+      for (int i = 0; i < trainingRows.size(); i++) {
+        if (_usable[i]) {
+          predictionRows[i] = true;
+          if (u[obsNum] < uCutoff) {
+            trainingRows[i] = true;
+          } else {
+            trainingRows[i] = false;
+          }
+          obsNum += 1;
+        } else {
+          trainingRows[i] = false;
+          predictionRows[i] = false;
+        }
+      }
+    }
+    io.flush();
+    
+    return {trainingRows, predictionRows};
+  }
+};
+
+// Global state, needed to persist between multiple edm calls
+
 Options opts;
 ManifoldGenerator generator;
+TrainPredictSplitter splitter;
 std::queue<Prediction> predictions;
 std::queue<std::future<void>> futures;
 
@@ -272,10 +443,10 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
  */
 ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 {
-  if (argc < 8) {
+  if (argc < 11) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 8) {
+  if (argc > 11) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -293,6 +464,9 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   opts.nthreads = atoi(reqThreads);
   io.verbosity = atoi(argv[6]);
   opts.numTasks = atoi(argv[7]);
+  bool explore = atoi(argv[8]);
+  bool full = atoi(argv[9]);
+  int crossfold = atoi(argv[10]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -329,6 +503,14 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
     generator.add_dt_data(t, dtWeight);
   }
 
+  // The stata variable named `usable'
+  std::vector<bool> usable = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 1);
+  std::vector<ST_double> crossfoldU;
+  if (crossfold > 0) {
+    crossfoldU = stata_columns<ST_double>(2 + numExtras + (dtWeight > 0) + 2);
+  }
+  splitter = TrainPredictSplitter(explore, full, crossfold, usable, crossfoldU);
+
   print_setup_info(argc, argv, reqThreads, numExtras, dtWeight);
 
   return SUCCESS;
@@ -336,10 +518,10 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 
 ST_retcode launch_edm_task(int argc, char* argv[])
 {
-  if (argc < 5) {
+  if (argc < 7) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 6) {
+  if (argc > 8) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -347,15 +529,16 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   taskOpts.taskNum = futures.size();
 
-  // Find the number of lags 'E' for the main data.
-  int E = atoi(argv[0]);
+  int iterationNumber = atoi(argv[0]);
+  int E = atoi(argv[1]);
   int E_actual = (int)generator.E_actual(E);
 
-  taskOpts.thetas.push_back(atof(argv[1]));
-  taskOpts.k = atoi(argv[2]);
+  taskOpts.thetas.push_back(atof(argv[2]));
+  taskOpts.k = atoi(argv[3]);
+  int library = atoi(argv[4]);
 
-  taskOpts.savePrediction = atoi(argv[3]);
-  taskOpts.saveSMAPCoeffs = atoi(argv[4]);
+  taskOpts.savePrediction = atoi(argv[5]);
+  taskOpts.saveSMAPCoeffs = atoi(argv[6]);
 
   // Default number of neighbours k is E_actual + 1
   if (taskOpts.k <= 0) {
@@ -365,12 +548,41 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   // Find which rows are used for training & which for prediction
   std::vector<bool> trainingRows = stata_columns<bool>(1);
   std::vector<bool> predictionRows = stata_columns<bool>(2);
+  std::vector<ST_double> u;
+  if (splitter.requiresRandomNumbers()){
+    u = stata_columns<ST_double>(3);
+  } 
+
+  std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
+  std::vector<bool> newtrainingRows = split.first;
+  std::vector<bool> newpredictionRows = split.second;
+  
+  if (trainingRows.size() != newtrainingRows.size()) {
+    io.print("TRAINING ROWS SIZE WRONG\n");
+  }
+  
+  if (predictionRows.size() != newpredictionRows.size()) {
+    io.print("TRAINING ROWS SIZE WRONG\n");
+  }
+  
+  for (int i = 0; i < trainingRows.size(); i++) {
+    if (trainingRows[i] != newtrainingRows[i]) {
+      io.print(fmt::format("Training rows error @ [{}], should be {} have {}\n", i, trainingRows[i], newtrainingRows[i]));
+    }
+  }
+  
+  for (int i = 0; i < predictionRows.size(); i++) {
+    if (predictionRows[i] != newpredictionRows[i]) {
+      io.print(fmt::format("Prediction rows error @ [{}], should be {} have {}\n", i, predictionRows[i], newpredictionRows[i]));
+    }
+  }
+  
 
 #ifdef DUMP_INPUT
-  if (argc == 6) {
+  if (argc == 8) {
     io.print("Dumping inputs to hdf5 file\n");
     io.flush();
-    write_dumpfile(argv[5], taskOpts, generator, E, trainingRows, predictionRows);
+    write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);
   }
 #endif
 
