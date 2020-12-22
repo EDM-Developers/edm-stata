@@ -29,6 +29,7 @@
 
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
+char* PRINT_MACRO = (char*)"_edm_print";
 char* RUNNING_SCALAR = (char*)"edm_running";
 
 class StataIO : public IO
@@ -37,6 +38,21 @@ public:
   virtual void out(const char* s) const { SF_display((char*)s); }
   virtual void error(const char* s) const { SF_error((char*)s); }
   virtual void flush() const { _stata_->spoutflush(); }
+  virtual void out_async(const char* s) const
+  {
+#ifdef _MSC_VER
+    out(s);
+  }
+#else
+    SF_macro_use(PRINT_MACRO, buffer, BUFFER_SIZE);
+    strcat(buffer, s);
+    SF_macro_save(PRINT_MACRO, buffer);
+  }
+
+private:
+  static const size_t BUFFER_SIZE = 1000;
+  mutable char buffer[BUFFER_SIZE];
+#endif
 };
 
 // Global state, needed to persist between multiple edm calls

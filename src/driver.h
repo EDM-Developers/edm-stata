@@ -11,6 +11,7 @@ public:
   ConsoleIO() { this->verbosity = std::numeric_limits<int>::max(); }
   ConsoleIO(int v) { this->verbosity = v; }
   virtual void out(const char* s) const { std::cout << s; }
+  virtual void out_async(const char* s) const { out(s); }
   virtual void error(const char* s) const { std::cerr << s; }
   virtual void flush() const { fflush(stdout); }
 };

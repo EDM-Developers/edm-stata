@@ -59,6 +59,14 @@ public:
     }
   }
 
+  virtual void print_async(std::string s) const
+  {
+    if (verbosity > 0) {
+      std::lock_guard<std::mutex> guard(printMutex);
+      out_async(s.c_str());
+    }
+  }
+
   virtual void progress_bar(double progress) const
   {
     if (verbosity < 1) {
@@ -66,7 +74,7 @@ public:
     }
 
     if (progress == 0.0) {
-      print("Percent complete: 0");
+      print_async("Percent complete: 0");
       nextMessage = 1.0 / 40;
       dots = 0;
       tens = 0;
@@ -75,18 +83,18 @@ public:
 
     while (progress >= nextMessage) {
       if (dots < 3) {
-        print(".");
+        print_async(".");
         dots += 1;
       } else {
         tens += 1;
-        print(std::to_string(tens * 10));
+        print_async(std::to_string(tens * 10));
         dots = 0;
       }
       nextMessage += 1.0 / 40;
     }
 
     if (progress >= 1.0) {
-      print("\n");
+      print_async("\n");
     }
   }
   mutable int dots, tens;
@@ -95,6 +103,7 @@ public:
 
   // Actual implementation of IO functions are in the subclasses
   virtual void out(const char*) const = 0;
+  virtual void out_async(const char*) const = 0;
   virtual void error(const char*) const = 0;
   virtual void flush() const = 0;
 };
