@@ -395,6 +395,10 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
     pred->coeffs = nullptr;
   }
 
+  if (opts.savePrediction || opts.saveSMAPCoeffs) {
+    pred->predictionRows = predictionRows;
+  }
+
   pred->numThetas = numThetas;
   pred->numPredictions = numPredictions;
   pred->numCoeffCols = numCoeffCols;

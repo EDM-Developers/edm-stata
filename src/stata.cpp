@@ -86,36 +86,43 @@ private:
   bool _explore, _full;
   int _crossfold;
   std::vector<bool> _usable;
-  std::vector<size_t> _crossfoldURank;  
-  
-  std::vector<double> strip_missing(std::vector<double> vWithMissing) {
+  std::vector<size_t> _crossfoldURank;
+
+  std::vector<double> strip_missing(std::vector<double> vWithMissing)
+  {
     std::vector<double> v;
-    for (double &val : vWithMissing ) {
+    for (double& val : vWithMissing) {
       if (val != MISSING) {
         v.push_back(val);
       }
     }
     return v;
   }
-  
+
 public:
-  TrainPredictSplitter() { }
+  TrainPredictSplitter() {}
   TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, std::vector<double> crossfoldU)
-      : _explore(explore), _full(full), _crossfold(crossfold), _usable(usable) {
-        if (crossfold > 0) {
-           _crossfoldURank = rank(strip_missing(crossfoldU));
-        }
-      }
+    : _explore(explore)
+    , _full(full)
+    , _crossfold(crossfold)
+    , _usable(usable)
+  {
+    if (crossfold > 0) {
+      _crossfoldURank = rank(strip_missing(crossfoldU));
+    }
+  }
 
   bool requiresRandomNumbers() { return (_crossfold == 0) && !_full; }
 
-  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library, int crossfoldIter) {
+  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library,
+                                                                      int crossfoldIter)
+  {
     if (_explore && _full) {
-       return {_usable, _usable};
+      return { _usable, _usable };
     }
-    
+
     std::vector<bool> trainingRows(_usable.size()), predictionRows(_usable.size());
-    
+
     if (_explore && _crossfold > 0) {
       int obsNum = 0;
       for (int i = 0; i < trainingRows.size(); i++) {
@@ -133,22 +140,13 @@ public:
           predictionRows[i] = false;
         }
       }
-      return {trainingRows, predictionRows};
+      return { trainingRows, predictionRows };
     }
-    
+
     std::vector<double> u = strip_missing(uWithMissing);
 
     if (_explore) {
-      io.print("Split: explore mode\n");
-
-      io.print("Split: some u vals\n");
-      for (int i = 0; i < 5; i++) {
-        io.print(fmt::format("u[{}] = {}\n", i, u[i]));
-      }
-      
       double med = median(u);
-      
-      io.print(fmt::format("Median = {}\n", med));
 
       int obsNum = 0;
       for (int i = 0; i < trainingRows.size(); i++) {
@@ -167,24 +165,12 @@ public:
         }
       }
     } else {
-      io.print(fmt::format("Split: xmap mode library = {}\n", library));
-      
-      io.print("Split: some u vals\n");
-      for (int i = 0; i < 5; i++) {
-        io.print(fmt::format("u[{}] = {}\n", i, u[i]));
-      }
-      
       double uCutoff = 1.0;
       if (library < u.size()) {
-        io.print("Split: have a library which is smaller than the number of usable\n");
         std::vector<double> uCopy(u);
         const auto uCutoffIt = uCopy.begin() + library;
         std::nth_element(uCopy.begin(), uCutoffIt, uCopy.end());
         uCutoff = *uCutoffIt;
-        
-        io.print(fmt::format("Split: uCutoff = {}\n", uCutoff));
-      } else {
-        io.print("Split: just using all usable vals");
       }
 
       int obsNum = 0;
@@ -204,8 +190,8 @@ public:
       }
     }
     io.flush();
-    
-    return {trainingRows, predictionRows};
+
+    return { trainingRows, predictionRows };
   }
 };
 
@@ -311,22 +297,28 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
 }
 
 /*
- * Write data to a column in Stata (i.e. what Stata calls variables),
- * starting from column number 'j'.
+ * Write data to a column number 'j' in Stata (i.e. to a Stata 'variable').
+ *
+ * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
  */
-void write_stata_column(ST_double* data, size_t len, ST_int j)
+void write_stata_column(ST_double* data, size_t len, ST_int j, const std::vector<bool>& filter = {})
 {
+  bool useFilter = (filter.size() > 0);
+  int obs = 0;
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      // Convert MISSING back to Stata's missing value
-      ST_double value = (data[r] == MISSING) ? SV_missval : data[r];
-      ST_retcode rc = SF_vstore(j, i, value);
-      if (rc) {
-        throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+      if (useFilter && filter[r]) {
+        // Convert MISSING back to Stata's missing value
+        ST_double value = (data[obs] == MISSING) ? SV_missval : data[obs];
+        ST_retcode rc = SF_vstore(j, i, value);
+        if (rc) {
+          throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+        }
+        obs += 1;
       }
       r += 1;
-      if (r >= len) {
+      if (obs >= len) {
         break;
       }
     }
@@ -334,24 +326,29 @@ void write_stata_column(ST_double* data, size_t len, ST_int j)
 }
 
 /*
- * Write data to columns in Stata (i.e. what Stata calls variables),
- * starting from column number 'j0'.
+ * Write data to columns ('variables') in Stata, starting from column number 'j0'.
+ * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
  */
-void write_stata_columns(span_2d_double matrix, ST_int j0)
+void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<bool>& filter = {})
 {
+  bool useFilter = (filter.size() > 0);
+  int obs = 0;
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      for (ST_int j = j0; j < j0 + matrix.extent(1); j++) {
-        // Convert MISSING back to Stata's missing value
-        ST_double value = (matrix(r, j - j0) == MISSING) ? SV_missval : matrix(r, j - j0);
-        ST_retcode rc = SF_vstore(j, i, value);
-        if (rc) {
-          throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+      if (useFilter && filter[r]) {
+        for (ST_int j = j0; j < j0 + matrix.extent(1); j++) {
+          // Convert MISSING back to Stata's missing value
+          ST_double value = (matrix(obs, j - j0) == MISSING) ? SV_missval : matrix(obs, j - j0);
+          ST_retcode rc = SF_vstore(j, i, value);
+          if (rc) {
+            throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+          }
         }
+        obs += 1;
       }
       r += 1;
-      if (r >= matrix.extent(0)) {
+      if (obs >= matrix.extent(0)) {
         break;
       }
     }
@@ -546,37 +543,14 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   // Find which rows are used for training & which for prediction
-  std::vector<bool> trainingRows = stata_columns<bool>(1);
-  std::vector<bool> predictionRows = stata_columns<bool>(2);
   std::vector<ST_double> u;
-  if (splitter.requiresRandomNumbers()){
-    u = stata_columns<ST_double>(3);
-  } 
+  if (splitter.requiresRandomNumbers()) {
+    u = stata_columns<ST_double>(1);
+  }
 
   std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
-  std::vector<bool> newtrainingRows = split.first;
-  std::vector<bool> newpredictionRows = split.second;
-  
-  if (trainingRows.size() != newtrainingRows.size()) {
-    io.print("TRAINING ROWS SIZE WRONG\n");
-  }
-  
-  if (predictionRows.size() != newpredictionRows.size()) {
-    io.print("TRAINING ROWS SIZE WRONG\n");
-  }
-  
-  for (int i = 0; i < trainingRows.size(); i++) {
-    if (trainingRows[i] != newtrainingRows[i]) {
-      io.print(fmt::format("Training rows error @ [{}], should be {} have {}\n", i, trainingRows[i], newtrainingRows[i]));
-    }
-  }
-  
-  for (int i = 0; i < predictionRows.size(); i++) {
-    if (predictionRows[i] != newpredictionRows[i]) {
-      io.print(fmt::format("Prediction rows error @ [{}], should be {} have {}\n", i, predictionRows[i], newpredictionRows[i]));
-    }
-  }
-  
+  std::vector<bool> trainingRows = split.first;
+  std::vector<bool> predictionRows = split.second;
 
 #ifdef DUMP_INPUT
   if (argc == 8) {
@@ -671,22 +645,24 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       if (pred.stats.calcRhoMAE) {
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 3, pred.stats.rho)) {
-          io.print(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix, pred.stats.taskNum + 1, 3));
+          io.print(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix,
+                               pred.stats.taskNum + 1, 3));
         }
 
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 4, pred.stats.mae)) {
-          io.print(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix, pred.stats.taskNum + 1, 4));
+          io.print(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix,
+                               pred.stats.taskNum + 1, 4));
         }
       }
 
       if (pred.ystar != nullptr) {
-        write_stata_column(pred.ystar.get(), pred.numPredictions, 1);
+        write_stata_column(pred.ystar.get(), pred.numPredictions, 1, pred.predictionRows);
       }
 
       if (pred.coeffs != nullptr) {
         auto coeffs = span_2d_double(pred.coeffs.get(), (int)pred.numPredictions, (int)pred.numCoeffCols);
 
-        write_stata_columns(coeffs, (pred.ystar != nullptr) + numCoeffColsSaved + 1);
+        write_stata_columns(coeffs, (pred.ystar != nullptr) + numCoeffColsSaved + 1, pred.predictionRows);
         numCoeffColsSaved += pred.numCoeffCols;
       }
     }

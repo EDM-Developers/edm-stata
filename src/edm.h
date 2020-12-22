@@ -135,6 +135,7 @@ struct Prediction
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
   PredictionStats stats;
+  std::vector<bool> predictionRows;
 };
 
 std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,

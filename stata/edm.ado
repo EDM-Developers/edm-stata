@@ -632,7 +632,10 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	tempvar x_f train_set predict_set
+	tempvar x_f
+	if `mata_mode' {
+		tempvar train_set predict_set
+	}
 	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
 	qui gen double `x_f' = f`future_step'.`x' if `usable'
 	qui replace `usable' =0 if `x_f' ==.
@@ -740,48 +743,60 @@ program define edmExplore, eclass sortpreserve
 	forvalues t=1/`round' {
 		timer on 60
 		qui {
-			cap drop `train_set' `predict_set' `overlap'
-			if `crossfold' > 0 {
-				gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
-				gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
-			}
-			else {
-				* replicate mode
-				if "`full'" == "full" {
-					gen byte `train_set' = `usable'
-					gen byte `predict_set' = `train_set'
+			if `crossfold' == 0 & "`full'" != "full" {
+				timer on 62
+				if `t' == 1 {
+					gen double `u' = runiform() if `usable'
 				}
 				else {
-					timer on 62
-					if `t' == 1 {
-						gen double `u' = runiform() if `usable'
+					replace `u' = runiform() if `usable'
+				}
+				timer off 62
+			}
+			
+			if `mata_mode' {
+				cap drop `train_set' `predict_set' `overlap'
+				if `crossfold' > 0 {
+					gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
+					gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
+				}
+				else {
+					* replicate mode
+					if "`full'" == "full" {
+						gen byte `train_set' = `usable'
+						gen byte `predict_set' = `train_set'
 					}
 					else {
-						replace `u' = runiform() if `usable'
+						
+						timer on 63
+						sum `u',d
+						timer off 63
+						timer on 64
+						gen byte `train_set' = `u' <r(p50) & `u' !=.
+						gen byte `predict_set' = `u' >=r(p50) & `u' !=.
+						timer off 64
+						/* drop `u' */
 					}
-					timer off 62
-					timer on 63
-					sum `u',d
-					timer off 63
-					timer on 64
-					gen byte `train_set' = `u' <r(p50) & `u' !=.
-					gen byte `predict_set' = `u' >=r(p50) & `u' !=.
-					timer off 64
-					/* drop `u' */
+				}
+
+				gen byte `overlap' = (`train_set' ==`predict_set') & `predict_set'
+				if "`full'" != "full" {
+					assert `overlap' == 0 if `predict_set'
+				}
+				
+				// TODO: Fix this for plugin mode
+				count if `train_set'
+				local train_size = r(N)
+				count if `predict_set'
+				local max_lib_size = min(`train_size',r(N))
+				if `max_lib_size' < 1 {
+					noi display as error "Invalid dimension or library specifications"
+					error 9
 				}
 			}
-			gen byte `overlap' = (`train_set' ==`predict_set') & `predict_set'
-			if "`full'" != "full" {
-				assert `overlap' == 0 if `predict_set'
-			}
-
-			count if `train_set'
-			local train_size = r(N)
-			count if `predict_set'
-			local max_lib_size = min(`train_size',r(N))
-			if `max_lib_size' < 1 {
-				noi display as error "Invalid dimension or library specifications"
-				error 9
+			else {
+				count if `usable'
+				local train_size = r(N) / 2
 			}
 		}
 		timer off 60
@@ -795,17 +810,19 @@ program define edmExplore, eclass sortpreserve
 				timer on 61
 
 				if `k' > 0 {
-					local lib_size = min(`k',`train_size')
+					// TODO: Fix this
+					/* local lib_size = min(`k',`train_size') */
+					local lib_size = `k'
 				}
-				else if `k' == 0 {
-					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
+				else if `k' <= 0 { // TODO: Return this to '== 0'
+					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 				}
-				else {
+				/* else {
 					local lib_size = `max_lib_size'
-				}
-				if `lib_size' > `max_lib_size' {
+				} */
+				/* if `lib_size' > `max_lib_size' {
 					local lib_size = `max_lib_size'
-				}
+				} */
 				if `k' != 0 {
 					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
@@ -857,7 +874,7 @@ program define edmExplore, eclass sortpreserve
 					}
 					timer off 66
 
-					plugin call smap_block_mdap `train_set' `predict_set' `u', "launch_edm_task" ///
+					plugin call smap_block_mdap `u', "launch_edm_task" ///
 							`t' `i' `j' `k_adj' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
 
 					timer on 66
@@ -893,18 +910,20 @@ program define edmExplore, eclass sortpreserve
 		nobreak {
 			while !plugin_finished {
 				capture noi break sleep 10
-				plugin call smap_block_mdap , "report_progress" _rc
+				plugin call smap_block_mdap, "report_progress" _rc
 			}
 		}
 
 		local result_matrix = "r"
-		plugin call smap_block_mdap `predict' if `predict_set' , "collect_results" `result_matrix'
+		plugin call smap_block_mdap `predict', "collect_results" `result_matrix'
 		timer off 99
 	}
-	
+
 	if "`copredictvar'" != ""  {
 		if `num_tasks' == 1 {
-			qui replace `overlap' = 0
+			if `mata_mode' {
+				qui replace `overlap' = 0
+			}
 			qui replace `co_train_set' = 0 if `usable' == 0
 
 			tempvar co_x_p
@@ -949,7 +968,7 @@ program define edmExplore, eclass sortpreserve
 					}
 				}
 
-				plugin call smap_block_mdap `co_x_p' if `co_predict_set' , "collect_results"
+				plugin call smap_block_mdap `co_x_p', "collect_results"
 				timer off 99
 			}
 
@@ -1593,6 +1612,9 @@ program define edmXmap, eclass sortpreserve
 			local library = total_obs
 		}
 
+		qui count if `usable'
+		local num_usable = r(N)
+
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
 		local max_e : word `e_size' of `e'
@@ -1657,15 +1679,11 @@ program define edmXmap, eclass sortpreserve
 			
 			timer on 63
 			
-			/* if `mata_mode' { */
-			cap drop `urank'
-			qui egen double `urank' =rank(`u') if `usable', unique
-			/* } */
+			if `mata_mode' {
+				cap drop `urank'
+				qui egen double `urank' =rank(`u') if `usable', unique
+			}
 			timer off 63
-
-			// TODO: Check if next line is needed?
-			qui count if `usable'
-
 			timer off 60
 
 			foreach i of numlist `e' {
@@ -1677,6 +1695,8 @@ program define edmXmap, eclass sortpreserve
 							di as error "Library size exceeds the limit."
 							error 1
 							/* di "max triggered lib size `lib_size' , rankmax `total_obs'" */
+							// TODO: Does the next line ever get reached?
+							// TODO: Can easily check these lib_size constraints earlier in the function.
 							continue, break
 						}
 						else if `lib_size' <= `i' + 1 {
@@ -1686,9 +1706,13 @@ program define edmXmap, eclass sortpreserve
 						}
 
 						timer on 64
-						qui replace `train_set' = `urank' <= `lib_size' & `usable'
-						qui count if `train_set'
-						local train_size = r(N)
+						
+						if `mata_mode' {
+							qui replace `train_set' = `urank' <= `lib_size' & `usable'
+						}
+
+						local train_size = min(`lib_size',`num_usable')
+
 						timer off 64
 
 						// detect k size
@@ -1777,11 +1801,11 @@ program define edmXmap, eclass sortpreserve
 
 							if `verbosity' > 1 {
 								di "launch_edm_task <`rep', `i', `j', `k_size', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-								di "train_set <`train_set'> predict_set <`predict_set'> u <`u'>"
+								di "u <`u'>"
 								pause
 							}
 
-							plugin call smap_block_mdap `train_set' `predict_set' `u', "launch_edm_task" ///
+							plugin call smap_block_mdap `u', "launch_edm_task" ///
 									`rep' `i' `j' `k_size' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
 
 							timer on 66
@@ -1840,7 +1864,7 @@ program define edmXmap, eclass sortpreserve
 			}
 
 			local result_matrix = "r`direction_num'"
-			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'' if `predict_set' , "collect_results" `result_matrix'
+			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" `result_matrix'
 			timer off 99
 		}
 	}
@@ -1878,7 +1902,7 @@ program define edmXmap, eclass sortpreserve
 
 				if `verbosity' > 1 {
 					di "launch_coprediction_task <`max_e', `theta', `k_size', `saveinputs'>"
-					di "train_set <`co_train_set'> predict_set <`co_predict_set'>"
+					di "co_train_set <`co_train_set'> co_predict_set <`co_predict_set'>"
 					pause
 				}
 
@@ -1900,7 +1924,7 @@ program define edmXmap, eclass sortpreserve
 					}
 				}
 
-				plugin call smap_block_mdap `co_x_p' if `co_predict_set' , "collect_results"
+				plugin call smap_block_mdap `co_x_p', "collect_results"
 				timer off 99
 			}
 
