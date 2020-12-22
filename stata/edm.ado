@@ -908,9 +908,13 @@ program define edmExplore, eclass sortpreserve
 	if `mata_mode' == 0 {
 		timer on 99
 		nobreak {
+			local breakHit = 0
 			while !plugin_finished {
-				capture noi break sleep 10
-				plugin call smap_block_mdap, "report_progress" _rc
+				capture noi break sleep 1
+				if _rc {
+					local breakHit = 1
+				}
+				plugin call smap_block_mdap , "report_progress" `breakHit'
 			}
 		}
 
@@ -962,9 +966,13 @@ program define edmExplore, eclass sortpreserve
 
 				timer on 99
 				nobreak {
+					local breakHit = 0
 					while !plugin_finished {
-						capture noi break sleep 10
-						plugin call smap_block_mdap , "report_progress" _rc
+						capture noi break sleep 1
+						if _rc {
+							local breakHit = 1
+						}
+						plugin call smap_block_mdap , "report_progress" `breakHit'
 					}
 				}
 
@@ -1857,9 +1865,13 @@ program define edmXmap, eclass sortpreserve
 		if `mata_mode' == 0 {
 			timer on 99
 			nobreak {
+				local breakHit = 0
 				while !plugin_finished {
-					capture noi break sleep 10
-					plugin call smap_block_mdap , "report_progress" _rc
+					capture noi break sleep 1
+					if _rc {
+						local breakHit = 1
+					}
+					plugin call smap_block_mdap , "report_progress" `breakHit'
 				}
 			}
 
@@ -1918,9 +1930,13 @@ program define edmXmap, eclass sortpreserve
 
 				timer on 99
 				nobreak {
+					local breakHit = 0
 					while !plugin_finished {
-						capture noi break sleep 10
-						plugin call smap_block_mdap , "report_progress" _rc
+						capture noi break sleep 1
+						if _rc {
+							local breakHit = 1
+						}
+						plugin call smap_block_mdap , "report_progress" `breakHit'
 					}
 				}
 

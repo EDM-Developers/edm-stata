@@ -218,7 +218,8 @@ void all_tasks_finished()
 
 void print_error(std::string command, ST_retcode rc)
 {
-  if (rc != SUCCESS) {
+  // Don't print header if rc=SUCCESS or rc=1 (when Break button pressed) 
+  if (rc > 1) {
     io.error((char*)fmt::format("Error in edm '{}': ", command).c_str());
   }
   switch (rc) {
@@ -695,7 +696,7 @@ STDLL stata_call(int argc, char* argv[])
         breakButtonPressed = true;
         allTasksFinished = true;
         rc = 1;
-        io.print("Aborting edm run\n");
+        io.out("Aborting edm run\n");
       } else {
         rc = SUCCESS;
       }
