@@ -459,11 +459,11 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       if (pred.stats.calcRhoMAE) {
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 3, pred.stats.rho)) {
-          io.print(fmt::format("Error: failed to save rho {} to matrix '{}'\n", pred.stats.rho, resultMatrix));
+          io.print(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix, pred.stats.taskNum + 1, 3));
         }
 
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 4, pred.stats.mae)) {
-          io.print(fmt::format("Error: failed to save MAE {} to matrix '{}'\n", pred.stats.mae, resultMatrix));
+          io.print(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix, pred.stats.taskNum + 1, 4));
         }
       }
 

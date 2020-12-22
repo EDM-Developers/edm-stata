@@ -734,6 +734,7 @@ program define edmExplore, eclass sortpreserve
 	}
 		
 	forvalues t=1/`round' {
+		timer on 60
 		qui {
 			cap drop `train_set' `predict_set' `overlap'
 			if `crossfold' > 0 {
@@ -747,10 +748,16 @@ program define edmExplore, eclass sortpreserve
 					gen byte `predict_set' = `train_set'
 				}
 				else {
+					timer on 62
 					gen double `u' = runiform() if `usable'
+					timer off 62
+					timer on 63
 					sum `u',d
+					timer off 63
+					timer on 64
 					gen byte `train_set' = `u' <r(p50) & `u' !=.
 					gen byte `predict_set' = `u' >=r(p50) & `u' !=.
+					timer off 64
 					drop `u'
 				}
 			}
@@ -768,6 +775,7 @@ program define edmExplore, eclass sortpreserve
 				error 9
 			}
 		}
+		timer off 60
 
 		foreach i of numlist `e' {
 			local manifold "mapping_`=`i'-1'"
@@ -775,10 +783,12 @@ program define edmExplore, eclass sortpreserve
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
 			foreach j of numlist `theta' {
-				if `k'> 0{
+				timer on 61
+
+				if `k' > 0 {
 					local lib_size = min(`k',`train_size')
 				}
-				else if `k' == 0{
+				else if `k' == 0 {
 					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
 				}
 				else {
@@ -800,6 +810,7 @@ program define edmExplore, eclass sortpreserve
 
 				local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
+				timer off 61
 				if `mata_mode' {
 					local savesmap_vars ""
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`savesmap_vars'","`force'", `missingdistance')
