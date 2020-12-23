@@ -509,7 +509,6 @@ program define edmExplore, eclass sortpreserve
 	forvalues i=1/`=`max_e'-1' {
 		tempvar x_`i'
 		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
-		// TODO: Is the next line compatible with 'allowmissing' option?
 		qui replace `usable' = 0 if `x_`i'' ==.
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 		if `parsed_dt' {
@@ -664,21 +663,22 @@ program define edmExplore, eclass sortpreserve
 	}
 
 	qui count if `usable'
-	scalar total_obs = r(N)
-
-	if (`crossfold' == 0 & "`full'" != "full") {
-		tempvar u
-	}
+	local num_usable = r(N)
 
 	local round = max(`crossfold', `replicate')
 	if `crossfold' > 0 {
-		if `crossfold' > `=total_obs' / `max_e' {
+		if `crossfold' > `num_usable' / `max_e' {
 			di as error "Not enough observations for cross-validations"
 			error 149
 		}
 		tempvar crossfoldu crossfoldunum
 		qui gen double `crossfoldu' = runiform() if `usable'
 		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
+	}
+	
+	if `num_usable' == 0 | (`num_usable' == 1 & "`full'" != "full") | (`crossfold' > 0 & `num_usable' < `crossfold') {
+		noi display as error "Invalid dimension or library specifications"
+		error 9
 	}
 
 	tempvar overlap
@@ -695,6 +695,10 @@ program define edmExplore, eclass sortpreserve
 	if "`predict'" != "" {
 		cap gen double `predict' = .
 		qui label variable `predict' "edm prediction result"
+	}
+
+	if (`crossfold' == 0 & "`full'" != "full") {
+		tempvar u
 	}
 
 	numlist "`theta'"
@@ -739,66 +743,65 @@ program define edmExplore, eclass sortpreserve
 		}
 		timer off 66
 	}
-		
+
 	forvalues t=1/`round' {
 		timer on 60
-		qui {
-			if `crossfold' == 0 & "`full'" != "full" {
-				timer on 62
-				if `t' == 1 {
-					gen double `u' = runiform() if `usable'
-				}
-				else {
-					replace `u' = runiform() if `usable'
-				}
-				timer off 62
-			}
-			
-			if `mata_mode' {
-				cap drop `train_set' `predict_set' `overlap'
-				if `crossfold' > 0 {
-					gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
-					gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
-				}
-				else {
-					* replicate mode
-					if "`full'" == "full" {
-						gen byte `train_set' = `usable'
-						gen byte `predict_set' = `train_set'
-					}
-					else {
-						
-						timer on 63
-						sum `u',d
-						timer off 63
-						timer on 64
-						gen byte `train_set' = `u' <r(p50) & `u' !=.
-						gen byte `predict_set' = `u' >=r(p50) & `u' !=.
-						timer off 64
-						/* drop `u' */
-					}
-				}
-
-				gen byte `overlap' = (`train_set' ==`predict_set') & `predict_set'
-				if "`full'" != "full" {
-					assert `overlap' == 0 if `predict_set'
-				}
-				
-				// TODO: Fix this for plugin mode
-				count if `train_set'
-				local train_size = r(N)
-				count if `predict_set'
-				local max_lib_size = min(`train_size',r(N))
-				if `max_lib_size' < 1 {
-					noi display as error "Invalid dimension or library specifications"
-					error 9
-				}
+		
+		// Generate some random numbers (if we're in a mode which needs them
+		// to separate the testing and prediction sets.)
+		if `crossfold' == 0 & "`full'" != "full" {
+			if `t' == 1 {
+				qui gen double `u' = runiform() if `usable'
 			}
 			else {
-				count if `usable'
-				local train_size = r(N) / 2
+				qui replace `u' = runiform() if `usable'
 			}
 		}
+
+		// Split the data into training and prediction sets.
+		// (The plugin will do this itself.)
+		if `mata_mode' {
+			cap drop `train_set' `predict_set' `overlap'
+			if `crossfold' > 0 {
+				qui gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
+				qui gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
+			}
+			else if "`full'" == "full"  {
+				gen byte `train_set' = `usable'
+				gen byte `predict_set' = `train_set'
+			}
+			else {
+				qui sum `u', d
+				qui gen byte `train_set' = `u' < r(p50) & `u' !=.
+				qui gen byte `predict_set' = `u' >= r(p50) & `u' !=.
+			}
+			
+			qui gen byte `overlap' = (`train_set' == `predict_set') & `predict_set'
+			if "`full'" != "full" {
+				assert `overlap' == 0 if `predict_set'
+			}
+		}
+
+		// Find the maximum library size.
+		// N.B. This is min(sum(train_set), sum(predict_set)))
+		if `crossfold' > 0 {
+			// TODO: Try to clean up this part a bit.
+			cap drop counting_up in_crossfold_t
+			qui gen counting_up = _n if _n <= `num_usable'
+			qui gen in_crossfold_t = mod(counting_up,`crossfold') == (`t' - 1) 
+			qui count if in_crossfold_t
+			local train_size = r(N)
+			local max_lib_size = min(`train_size,', `num_usable' - `train_size')
+		}
+		else if "`full'" == "full"  {
+			local train_size = `num_usable'
+			local max_lib_size = `train_size'
+		}
+		else {
+			local train_size = floor(`num_usable'/2)
+			local max_lib_size = `train_size'
+		}
+
 		timer off 60
 
 		foreach i of numlist `e' {
@@ -810,19 +813,17 @@ program define edmExplore, eclass sortpreserve
 				timer on 61
 
 				if `k' > 0 {
-					// TODO: Fix this
-					/* local lib_size = min(`k',`train_size') */
-					local lib_size = `k'
+					local lib_size = min(`k',`train_size')
 				}
-				else if `k' <= 0 { // TODO: Return this to '== 0'
+				else if `k' == 0 {
 					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 				}
-				/* else {
+				else {
 					local lib_size = `max_lib_size'
-				} */
-				/* if `lib_size' > `max_lib_size' {
+				}
+				if `lib_size' > `max_lib_size' {
 					local lib_size = `max_lib_size'
-				} */
+				}
 				if `k' != 0 {
 					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
@@ -907,6 +908,7 @@ program define edmExplore, eclass sortpreserve
 	// Collect all the asynchronous predictions from the plugin
 	if `mata_mode' == 0 {
 		timer on 99
+		plugin call smap_block_mdap , "report_progress"
 		nobreak {
 			local breakHit = 0
 			while !plugin_finished {
@@ -965,6 +967,7 @@ program define edmExplore, eclass sortpreserve
 				timer off 66
 
 				timer on 99
+				plugin call smap_block_mdap , "report_progress"
 				nobreak {
 					local breakHit = 0
 					while !plugin_finished {
@@ -997,7 +1000,7 @@ program define edmExplore, eclass sortpreserve
 	matrix rownames cfull = rho
 	/* mat list cfull */
 	ereturn post cfull, esample(`usable')
-	ereturn scalar N = total_obs
+	ereturn scalar N = `num_usable'
 	/* ereturn post r, esample(`usable') dep("`y'") properties("r") */
 	ereturn local subcommand = "explore"
 	ereturn local direction = "oneway"
@@ -1538,8 +1541,8 @@ program define edmXmap, eclass sortpreserve
 				local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 				local co_mapping "`co_mapping_`i''"
 				if `parsed_dt' {
-					// TODO: Get codtweight working (currently it is ignore, like in this codtweight=0 default case).
-					if `codtweight' ==0 {
+					// TODO: Get codtweight working (currently it is ignored, like in this codtweight=0 default case).
+					if `codtweight' == 0 {
 						// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 						/* qui sum `co_x' if `co_usable'
 						local xsd = r(sd)
@@ -1614,10 +1617,10 @@ program define edmXmap, eclass sortpreserve
 		* Now that `usable' is defined, we can set the default library size to be sum(usable).
 		* N.B. For each direction of the xmap, we probably have a different sum(usable) value. 
 		qui count if `usable'
-		scalar total_obs = r(N)
+		local num_usable = r(N)
 
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
-			local library = total_obs
+			local library = `num_usable'
 		}
 
 		qui count if `usable'
@@ -1699,10 +1702,10 @@ program define edmXmap, eclass sortpreserve
 				foreach j of numlist `theta' {
 					foreach lib_size of numlist `library' {
 						timer on 61
-						if `lib_size' > `=total_obs' {
+						if `lib_size' > `num_usable' {
 							di as error "Library size exceeds the limit."
 							error 1
-							/* di "max triggered lib size `lib_size' , rankmax `total_obs'" */
+							/* di "max triggered lib size `lib_size' , rankmax `num_usable'" */
 							// TODO: Does the next line ever get reached?
 							// TODO: Can easily check these lib_size constraints earlier in the function.
 							continue, break
@@ -1760,7 +1763,7 @@ program define edmXmap, eclass sortpreserve
 						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set'
 						local last_theta =  `j'
 
-						// TODO: currently `savemanifold' does nothing. 
+						// TODO: currently `savemanifold' does nothing in the plugin. 
 						if "`savemanifold'" !="" {
 							local counter = 1
 							foreach v of varlist ``manifold'' {
@@ -1864,6 +1867,7 @@ program define edmXmap, eclass sortpreserve
 		// Collect all the asynchronous predictions from the plugin 
 		if `mata_mode' == 0 {
 			timer on 99
+			plugin call smap_block_mdap , "report_progress"
 			nobreak {
 				local breakHit = 0
 				while !plugin_finished {
@@ -1929,6 +1933,7 @@ program define edmXmap, eclass sortpreserve
 				timer off 66
 
 				timer on 99
+				plugin call smap_block_mdap , "report_progress"
 				nobreak {
 					local breakHit = 0
 					while !plugin_finished {
@@ -1973,7 +1978,7 @@ program define edmXmap, eclass sortpreserve
 	}
 	/* mat list cfull */
 	ereturn post cfull, esample(`usable')
-	ereturn scalar N = total_obs
+	ereturn scalar N = `num_usable'
 	ereturn local subcommand = "xmap"
 	ereturn matrix xmap_1  = r1
 	if "`direction'" == "both" {

@@ -218,7 +218,7 @@ void all_tasks_finished()
 
 void print_error(std::string command, ST_retcode rc)
 {
-  // Don't print header if rc=SUCCESS or rc=1 (when Break button pressed) 
+  // Don't print header if rc=SUCCESS or rc=1 (when Break button pressed)
   if (rc > 1) {
     io.error((char*)fmt::format("Error in edm '{}': ", command).c_str());
   }
@@ -691,7 +691,7 @@ STDLL stata_call(int argc, char* argv[])
     } else if (command == "report_progress") {
       io.print(io.get_and_clear_async_buffer());
 
-      bool breakHit = atoi(argv[1]);
+      bool breakHit = (argc == 2) && atoi(argv[1]);
       if (breakHit) {
         breakButtonPressed = true;
         allTasksFinished = true;
