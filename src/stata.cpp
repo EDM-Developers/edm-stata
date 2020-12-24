@@ -441,10 +441,10 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
  */
 ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 {
-  if (argc < 11) {
+  if (argc < 12) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 11) {
+  if (argc > 12) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -454,17 +454,18 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   opts.calcRhoMAE = true;
 
   int numExtras = atoi(argv[0]);
-  double dtWeight = atof(argv[1]);
-  opts.algorithm = std::string(argv[2]);
-  opts.forceCompute = (std::string(argv[3]) == "force");
-  opts.missingdistance = atof(argv[4]);
-  char* reqThreads = argv[5];
+  bool dtMode = atoi(argv[1]);
+  double dtWeight = atof(argv[2]);
+  opts.algorithm = std::string(argv[3]);
+  opts.forceCompute = (std::string(argv[4]) == "force");
+  opts.missingdistance = atof(argv[5]);
+  char* reqThreads = argv[6];
   opts.nthreads = atoi(reqThreads);
-  io.verbosity = atoi(argv[6]);
-  opts.numTasks = atoi(argv[7]);
-  bool explore = atoi(argv[8]);
-  bool full = atoi(argv[9]);
-  int crossfold = atoi(argv[10]);
+  io.verbosity = atoi(argv[7]);
+  opts.numTasks = atoi(argv[8]);
+  bool explore = atoi(argv[9]);
+  bool full = atoi(argv[10]);
+  int crossfold = atoi(argv[11]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -496,7 +497,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   generator = ManifoldGenerator(x, y, extras, MISSING);
 
   // Handle 'dt' flag
-  if (dtWeight > 0) {
+  if (dtMode) {
     std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
     generator.add_dt_data(t, dtWeight);
   }
@@ -516,7 +517,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 
 ST_retcode launch_edm_task(int argc, char* argv[])
 {
-  if (argc < 7) {
+  if (argc < 8) {
     return TOO_FEW_VARIABLES;
   }
   if (argc > 8) {
@@ -554,7 +555,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   std::vector<bool> predictionRows = split.second;
 
 #ifdef DUMP_INPUT
-  if (argc == 8) {
+  if (std::string(argv[7]).size() > 0) {
     io.print("Dumping inputs to hdf5 file\n");
     io.flush();
     write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);
@@ -570,7 +571,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
 ST_retcode launch_coprediction_task(int argc, char* argv[])
 {
-  if (argc < 3) {
+  if (argc < 4) {
     return TOO_FEW_VARIABLES;
   }
   if (argc > 4) {
@@ -609,7 +610,7 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
 #ifdef DUMP_INPUT
-  if (argc == 4) {
+  if (std::string(argv[3]).size() > 0) {
     write_dumpfile(argv[3], taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
 #endif

@@ -253,7 +253,6 @@ program define edmCoremap, eclass
 
 program define edmExplore, eclass sortpreserve
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
-	timer on 65
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -488,20 +487,20 @@ program define edmExplore, eclass sortpreserve
 
 	local mapping_0 "`x' `y' `zlist'"
 	if `parsed_dt' {
-		if `parsed_dtw' ==0 {
+		if `parsed_dtw' == 0 {
 			qui sum `x' if `usable'
 			local xsd = r(sd)
 			qui sum `dt_value' if `usable'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
-			if `tsd' ==0 {
+			if `tsd' == 0 {
 				// if there is no variance, no sampling required
 				local parsed_dtw = 0
 				local parsed_dt = 0
 			}
 		}
 	}
-	* If allow missing, use a wide definition of usable when generating manifold // TODO: Repetition here?
+	* If allow missing, use a wide definition of usable when generating manifold
 	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
 		qui replace `usable' = `touse'
 	}
@@ -522,7 +521,6 @@ program define edmExplore, eclass sortpreserve
 			/* di "incorporate lag `i' in dt mapping" */
 			/* sum l`=`i'-1'.`dt_value' `t_`i'' */
 		}
-
 	}
 
 	qui replace `usable' = 0 if f`future_step'.`x' ==. & `usable'
@@ -708,7 +706,6 @@ program define edmExplore, eclass sortpreserve
 	local num_tasks = `round'*`theta_size'*`e_size'
 	mat r = J(`num_tasks', 4, .)
 	
-	timer off 65
 	// TODO: Check that `savesmap' is not needed in explore mode.		
 	if `mata_mode' == 0 {
 		// Setup variables which the plugin will modify
@@ -716,13 +713,11 @@ program define edmExplore, eclass sortpreserve
 
 		// Fill in any gaps in the time series (temporarily).
 		tempvar before_tsfill
-		timer on 66
 		if `parsed_dt' == 0 {
 			qui tsset
 			qui gen `before_tsfill' = 1
 			qui tsfill
 		}
-		timer off 66
 
 		// Print out some of these gibberish tempvar names if requested
 		if `verbosity' > 1 {
@@ -733,19 +728,16 @@ program define edmExplore, eclass sortpreserve
 		local explore_mode = 1
 		local full_mode = ("`full'" == "full")
 		plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable' `crossfoldu', "transfer_manifold_data" ///
-				`zcount' `parsed_dtw' "`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks' ///
-				`explore_mode' `full_mode' `crossfold' 
+				"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+				"`explore_mode'" "`full_mode'" "`crossfold'"
 
-		timer on 66
 		if `parsed_dt' == 0 {
 			qui keep if `before_tsfill' != .
 			drop `before_tsfill'
 		}
-		timer off 66
 	}
 
 	forvalues t=1/`round' {
-		timer on 60
 		
 		// Generate some random numbers (if we're in a mode which needs them
 		// to separate the testing and prediction sets.)
@@ -802,7 +794,6 @@ program define edmExplore, eclass sortpreserve
 			local max_lib_size = `train_size'
 		}
 
-		timer off 60
 
 		foreach i of numlist `e' {
 			local manifold "mapping_`=`i'-1'"
@@ -810,7 +801,6 @@ program define edmExplore, eclass sortpreserve
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
 			foreach j of numlist `theta' {
-				timer on 61
 
 				if `k' > 0 {
 					local lib_size = min(`k',`train_size')
@@ -837,7 +827,6 @@ program define edmExplore, eclass sortpreserve
 
 				local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
-				timer off 61
 				if `mata_mode' {
 					local savesmap_vars ""
 					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`savesmap_vars'","`force'", `missingdistance')
@@ -867,23 +856,19 @@ program define edmExplore, eclass sortpreserve
 					}
 
 					// Fill in any gaps in the time series (temporarily).
-					timer on 66
 					if `parsed_dt' == 0 {
 						qui tsset
 						qui gen `before_tsfill' = 1
 						qui tsfill
 					}
-					timer off 66
 
 					plugin call smap_block_mdap `u', "launch_edm_task" ///
-							`t' `i' `j' `k_adj' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
+							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 
-					timer on 66
 					if `parsed_dt' == 0 {
 						qui keep if `before_tsfill' != .
 						drop `before_tsfill'
 					}
-					timer off 66
 				}
 				local ++task_num
 			}
@@ -907,7 +892,6 @@ program define edmExplore, eclass sortpreserve
 
 	// Collect all the asynchronous predictions from the plugin
 	if `mata_mode' == 0 {
-		timer on 99
 		plugin call smap_block_mdap , "report_progress"
 		nobreak {
 			local breakHit = 0
@@ -916,13 +900,12 @@ program define edmExplore, eclass sortpreserve
 				if _rc {
 					local breakHit = 1
 				}
-				plugin call smap_block_mdap , "report_progress" `breakHit'
+				plugin call smap_block_mdap , "report_progress" "`breakHit'"
 			}
 		}
 
 		local result_matrix = "r"
-		plugin call smap_block_mdap `predict', "collect_results" `result_matrix'
-		timer off 99
+		plugin call smap_block_mdap `predict', "collect_results" "`result_matrix'"
 	}
 
 	if "`copredictvar'" != ""  {
@@ -942,13 +925,11 @@ program define edmExplore, eclass sortpreserve
 				scalar plugin_finished = 0
 
 				// Fill in any gaps in the time series (temporarily).
-				timer on 66
 				if `parsed_dt' == 0 {
 					qui tsset
 					qui gen `before_tsfill' = 1
 					qui tsfill
 				}
-				timer off 66
 
 				if `verbosity' > 1 {
 					di "launch_coprediction_task <`max_e', `theta', `lib_size', `saveinputs'>"
@@ -957,16 +938,13 @@ program define edmExplore, eclass sortpreserve
 				}
 
 				plugin call smap_block_mdap `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						`max_e' `theta' `lib_size' `saveinputs'
+						"`max_e'" "`theta'" "`lib_size'" "`saveinputs'"
  
-				timer on 66
 				if `parsed_dt' == 0 {
 					qui keep if `before_tsfill' != .
 					drop `before_tsfill'
 				}
-				timer off 66
 
-				timer on 99
 				plugin call smap_block_mdap , "report_progress"
 				nobreak {
 					local breakHit = 0
@@ -975,12 +953,11 @@ program define edmExplore, eclass sortpreserve
 						if _rc {
 							local breakHit = 1
 						}
-						plugin call smap_block_mdap , "report_progress" `breakHit'
+						plugin call smap_block_mdap , "report_progress" "`breakHit'"
 					}
 				}
 
 				plugin call smap_block_mdap `co_x_p', "collect_results"
-				timer off 99
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -1070,7 +1047,6 @@ end
 
 program define edmXmap, eclass sortpreserve
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
-	timer on 65
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1403,20 +1379,18 @@ program define edmXmap, eclass sortpreserve
 		/* di "usable"
 		sum `usable' */
 		if `parsed_dt' {
-			if `parsed_dtw' ==0 {
+			if `parsed_dtw' == 0 {
 				qui sum `x' if `usable'
 				local xsd = r(sd)
 				qui sum `dt_value' if `usable'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
-				if `tsd' ==0 {
+				if `tsd' == 0 {
 					// if there is no variance, no sampling required
-					/* noi di "No sampling variation detected, dt option ignored" */
 					local parsed_dtw = 0
 					local parsed_dt = 0
 				}
 			}
-			// TODO: Ask if this is meant to go somewhere.
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
 		* If allow missing, use a wide definition of usable when generating manifold
@@ -1442,7 +1416,6 @@ program define edmXmap, eclass sortpreserve
 				/* di "incorporate lag `i' in dt mapping"
 				sum l`=`i'-1'.`dt_value' `t_`i''
 				di "`mapping_`i'_name'" */
-
 			}
 		}
 
@@ -1638,7 +1611,6 @@ program define edmXmap, eclass sortpreserve
 		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
 		mat r`direction_num' = J(`num_tasks', 4, .)
 
-		timer off 65
 
 		if `mata_mode' == 0 {
 			// Setup variables which the plugin will modify
@@ -1646,13 +1618,11 @@ program define edmXmap, eclass sortpreserve
 
 			// Fill in any gaps in the time series (temporarily).
 			tempvar before_tsfill
-			timer on 66
 			if `parsed_dt' == 0 {
 				qui tsset
 				qui gen `before_tsfill' = 1
 				qui tsfill
 			}
-			timer off 66
 
 			// Print out some of these gibberish tempvar names if requested
 			if `verbosity' > 1 {
@@ -1664,15 +1634,13 @@ program define edmXmap, eclass sortpreserve
 			local full_mode = 0
 			local crossfold = 0
 			plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable', "transfer_manifold_data" ///
-					`zcount' `parsed_dtw' "`algorithm'" "`force'" `missingdistance' `nthreads' `verbosity' `num_tasks' ///
-					`explore_mode' `full_mode' `crossfold'
+					"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+					"`explore_mode'" "`full_mode'" "`crossfold'"
 
-			timer on 66
 			if `parsed_dt' == 0 {
 				qui keep if `before_tsfill' != .
 				drop `before_tsfill'
 			}
-			timer off 66
  					
 			// Collect a list of all the variables created to store the SMAP coefficients
 			// across all the 'replicate's for this xmap direction.
@@ -1682,26 +1650,19 @@ program define edmXmap, eclass sortpreserve
 		qui gen double `u' = .
 	
 		forvalues rep =1/`replicate' {
-			timer on 60 
 
-			timer on 62
 			qui replace `u' = runiform() if `usable'
-			timer off 62
 			
-			timer on 63
 			
 			if `mata_mode' {
 				cap drop `urank'
 				qui egen double `urank' =rank(`u') if `usable', unique
 			}
-			timer off 63
-			timer off 60
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
 				foreach j of numlist `theta' {
 					foreach lib_size of numlist `library' {
-						timer on 61
 						if `lib_size' > `num_usable' {
 							di as error "Library size exceeds the limit."
 							error 1
@@ -1716,7 +1677,6 @@ program define edmXmap, eclass sortpreserve
 							error 1
 						}
 
-						timer on 64
 						
 						if `mata_mode' {
 							qui replace `train_set' = `urank' <= `lib_size' & `usable'
@@ -1724,7 +1684,6 @@ program define edmXmap, eclass sortpreserve
 
 						local train_size = min(`lib_size',`num_usable')
 
-						timer off 64
 
 						// detect k size
 						if `k' > 0 {
@@ -1781,7 +1740,6 @@ program define edmXmap, eclass sortpreserve
 
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
-						timer off 61
 						if `mata_mode' {
 							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance')
 
@@ -1802,13 +1760,11 @@ program define edmXmap, eclass sortpreserve
 							local save_smap_coeffs = ("`savesmap'" != "")
 
 							// Fill in any gaps in the time series (temporarily).
-							timer on 66
 							if `parsed_dt' == 0 {
 								qui tsset
 								qui gen `before_tsfill' = 1
 								qui tsfill
 							}
-							timer off 66
 
 							if `verbosity' > 1 {
 								di "launch_edm_task <`rep', `i', `j', `k_size', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
@@ -1817,14 +1773,12 @@ program define edmXmap, eclass sortpreserve
 							}
 
 							plugin call smap_block_mdap `u', "launch_edm_task" ///
-									`rep' `i' `j' `k_size' `lib_size' `save_prediction' `save_smap_coeffs' `saveinputs'
+									"`rep'" "`i'" "`j'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 
-							timer on 66
 							if `parsed_dt' == 0 {
 								qui keep if `before_tsfill' != .
 								drop `before_tsfill'
 							}
-							timer off 66
 						}
 						drop `overlap'
 						local ++task_num
@@ -1866,7 +1820,6 @@ program define edmXmap, eclass sortpreserve
 
 		// Collect all the asynchronous predictions from the plugin 
 		if `mata_mode' == 0 {
-			timer on 99
 			plugin call smap_block_mdap , "report_progress"
 			nobreak {
 				local breakHit = 0
@@ -1875,13 +1828,12 @@ program define edmXmap, eclass sortpreserve
 					if _rc {
 						local breakHit = 1
 					}
-					plugin call smap_block_mdap , "report_progress" `breakHit'
+					plugin call smap_block_mdap , "report_progress" "`breakHit'"
 				}
 			}
 
 			local result_matrix = "r`direction_num'"
-			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" `result_matrix'
-			timer off 99
+			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
 		}
 	}
 	if `mata_mode' & `replicate' > 1 & `dot' > 0 {
@@ -1908,13 +1860,11 @@ program define edmXmap, eclass sortpreserve
 				scalar plugin_finished = 0
 
 				// Fill in any gaps in the time series (temporarily).
-				timer on 66
 				if `parsed_dt' == 0 {
 					qui tsset
 					qui gen `before_tsfill' = 1
 					qui tsfill
 				}
-				timer off 66
 
 				if `verbosity' > 1 {
 					di "launch_coprediction_task <`max_e', `theta', `k_size', `saveinputs'>"
@@ -1923,16 +1873,13 @@ program define edmXmap, eclass sortpreserve
 				}
 
 				plugin call smap_block_mdap `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						`max_e' `theta' `k_size' `saveinputs'
+						"`max_e'" "`theta'" "`k_size'" "`saveinputs'"
  
-				timer on 66
 				if `parsed_dt' == 0 {
 					qui keep if `before_tsfill' != .
 					drop `before_tsfill'
 				}
-				timer off 66
 
-				timer on 99
 				plugin call smap_block_mdap , "report_progress"
 				nobreak {
 					local breakHit = 0
@@ -1941,12 +1888,11 @@ program define edmXmap, eclass sortpreserve
 						if _rc {
 							local breakHit = 1
 						}
-						plugin call smap_block_mdap , "report_progress" `breakHit'
+						plugin call smap_block_mdap , "report_progress" "`breakHit'"
 					}
 				}
 
 				plugin call smap_block_mdap `co_x_p', "collect_results"
-				timer off 99
 			}
 
 			qui gen double `copredict' = `co_x_p'
