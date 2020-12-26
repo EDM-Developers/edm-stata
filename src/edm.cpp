@@ -248,7 +248,7 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, si
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
                             void all_tasks_finished(void))
 {
-  bool serial = (opts.numTasks > 1);
+  bool serial = (opts.numTasks > opts.nthreads);
 
   workerPool.set_num_workers(opts.nthreads);
   if (!serial) {
@@ -404,7 +404,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   pred->numCoeffCols = numCoeffCols;
 
   if (opts.numTasks > 1) {
-    io->print_async(".");
+    io->print_async(".", true);
   }
   numTasksRunning -= 1;
   if (numTasksRunning <= 0) {

@@ -690,7 +690,7 @@ STDLL stata_call(int argc, char* argv[])
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
     } else if (command == "report_progress") {
-      io.print(io.get_and_clear_async_buffer());
+      io.print(io.get_and_clear_async_buffer(), true);
 
       bool breakHit = (argc == 2) && atoi(argv[1]);
       if (breakHit) {

@@ -50,17 +50,17 @@ class IO
 public:
   int verbosity = 0;
 
-  virtual void print(std::string s)
+  virtual void print(std::string s, bool force=false)
   {
-    if (verbosity > 0) {
+    if (verbosity > 0 || force) {
       out(s.c_str());
       flush();
     }
   }
 
-  virtual void print_async(std::string s)
+  virtual void print_async(std::string s, bool force=false)
   {
-    if (verbosity > 0) {
+    if (verbosity > 0 || force) {
       std::lock_guard<std::mutex> guard(bufferMutex);
       buffer += s;
     }
@@ -68,23 +68,18 @@ public:
 
   virtual std::string get_and_clear_async_buffer()
   {
-    if (verbosity > 0) {
-      std::lock_guard<std::mutex> guard(bufferMutex);
-      std::string ret = buffer;
-      buffer = "";
-      return ret;
-    }
-    return "";
+    std::lock_guard<std::mutex> guard(bufferMutex);
+    std::string ret = buffer;
+    buffer = "";
+    return ret;
   }
 
   virtual void progress_bar(double progress)
   {
-    if (verbosity < 1) {
-      return;
-    }
-
+    std::lock_guard<std::mutex> guard(bufferMutex);
+      
     if (progress == 0.0) {
-      print_async("Percent complete: 0");
+      buffer += "Percent complete: 0";
       nextMessage = 1.0 / 40;
       dots = 0;
       tens = 0;
@@ -93,18 +88,18 @@ public:
 
     while (progress >= nextMessage) {
       if (dots < 3) {
-        print_async(".");
+        buffer += ".";
         dots += 1;
       } else {
         tens += 1;
-        print_async(std::to_string(tens * 10));
+        buffer += std::to_string(tens * 10);
         dots = 0;
       }
       nextMessage += 1.0 / 40;
     }
 
     if (progress >= 1.0) {
-      print_async("\n");
+      buffer += "\n";
     }
   }
 
