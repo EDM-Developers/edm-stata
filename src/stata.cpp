@@ -447,6 +447,8 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   if (argc > 12) {
     return TOO_MANY_VARIABLES;
   }
+  
+  io.get_and_clear_async_buffer();
 
   breakButtonPressed = false;
   allTasksFinished = false;
@@ -706,6 +708,8 @@ STDLL stata_call(int argc, char* argv[])
         SF_scal_save(FINISHED_SCALAR, 1.0);
       }
     } else if (command == "collect_results") {
+      io.print(io.get_and_clear_async_buffer(), true);
+
       rc = save_all_task_results_to_stata(argc - 1, argv + 1);
     } else if (command == "launch_coprediction_task") {
       rc = launch_coprediction_task(argc - 1, argv + 1);

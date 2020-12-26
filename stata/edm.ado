@@ -896,7 +896,7 @@ program define edmExplore, eclass sortpreserve
 		nobreak {
 			local breakHit = 0
 			while !plugin_finished {
-				capture noi break sleep 1
+				capture noi break sleep 0.1
 				if _rc {
 					local breakHit = 1
 				}
@@ -949,7 +949,7 @@ program define edmExplore, eclass sortpreserve
 				nobreak {
 					local breakHit = 0
 					while !plugin_finished {
-						capture noi break sleep 1
+						capture noi break sleep 0.1
 						if _rc {
 							local breakHit = 1
 						}
@@ -1824,7 +1824,7 @@ program define edmXmap, eclass sortpreserve
 			nobreak {
 				local breakHit = 0
 				while !plugin_finished {
-					capture noi break sleep 1
+					capture noi break sleep 0.1
 					if _rc {
 						local breakHit = 1
 					}
@@ -1884,7 +1884,7 @@ program define edmXmap, eclass sortpreserve
 				nobreak {
 					local breakHit = 0
 					while !plugin_finished {
-						capture noi break sleep 1
+						capture noi break sleep 0.1
 						if _rc {
 							local breakHit = 1
 						}
