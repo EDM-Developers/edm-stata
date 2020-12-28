@@ -404,7 +404,7 @@ program define edmExplore, eclass sortpreserve
 					else {
 						gen `co_x_new' = `co_x' if `touse'
 					}
-					keep if `co_`v'_new' !=.
+					keep if `co_x_new' !=.
 				}
 
 				tempvar newt_co
