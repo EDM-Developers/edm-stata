@@ -582,6 +582,7 @@ program define edmExplore, eclass sortpreserve
 				local co_zlist "`co_zlist' `z`co_zcount''"
 			}
 		}
+		qui replace `co_usable' = 0 if `co_zusable' == 0
 
 		local co_mapping_0 "`co_x' `co_zlist'"
 		qui replace `co_usable' = 0 if `co_x'==.
@@ -1503,6 +1504,7 @@ program define edmXmap, eclass sortpreserve
 					local co_zlist "`co_zlist' `z`co_zcount''"
 				}
 			}
+			qui replace `co_usable' = 0 if `co_zusable' == 0
 
 			* manifold of coprediction
 			local co_mapping_0 "`co_x' `co_zlist'"
