@@ -119,7 +119,7 @@ perf-mac:
 build-ubuntu:
   stage: build
   before_script:
-    - export VCPKG_ROOT=~/vcpkg/
+    - export VCPKG_ROOT=/usr/local/vcpkg/
   script:
     - mkdir build
     - cd build
@@ -135,7 +135,7 @@ build-ubuntu:
       - stata/edm_Unix_x64.plugin
       - stata/gbench
   tags:
-    - ubuntu-stata-runner
+    - ubuntu-runner
 
 test-ubuntu:
   stage: test
@@ -148,7 +148,7 @@ test-ubuntu:
     - stata -e -q cut-down-test.do
     - diff -B reference.log cut-down-test.log
   tags:
-    - ubuntu-stata-runner
+    - ubuntu-runner
 
 dropbox-deploy-ubuntu:
   variables:
@@ -164,7 +164,7 @@ dropbox-deploy-ubuntu:
     - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
     - cp edm.ado ~/Dropbox/ci-builds-master/
   tags:
-    - ubuntu-stata-runner
+    - ubuntu-runner
 
 perf-ubuntu:
   stage: deploy
@@ -175,4 +175,4 @@ perf-ubuntu:
   script:
     - ./gbench
   tags:
-    - ubuntu-stata-runner
+    - ubuntu-runner
