@@ -6,7 +6,7 @@ stages:
 build-windows:
   stage: build
   script:
-    - cmake -B build -S . -DBUILD_GBENCH=TRUE
+    - cmake -B build -S . #-DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
@@ -14,8 +14,8 @@ build-windows:
   artifacts:
     paths:
     - stata/edm_Windows_x64.plugin
-    - stata/gbench.exe
-    - build/Release/*.dll
+    # - stata/gbench.exe
+    # - build/Release/*.dll
   tags:
     - windows-runner
 
@@ -52,10 +52,11 @@ perf-windows:
   dependencies:
     - build-windows
   before_script:
-    - cp build/Release/*.dll stata
+    # - cp build/Release/*.dll stata
     - cd stata
   script:
-    - ./gbench.exe
+    - echo "Need to fix benchmarking"
+    # - ./gbench.exe
   tags:
     - windows-runner
 
@@ -63,19 +64,20 @@ build-mac:
   stage: build
   before_script:
     - export VCPKG_ROOT=~/vcpkg/
-    - export PATH="/Users/user175910/bin:$PATH"
+    - export VCPKG_TARGET_TRIPLET=arm64-osx
+    - export VCPKG_DEFAULT_TRIPLET=arm64-osx
   script:
-    - cmake -B build -S . -DBUILD_GBENCH=TRUE
+    - cmake -B build -S . # -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/ci-builds
+    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
       - stata/edm_MacOSX_x64.plugin
-      - stata/gbench
+      # - stata/gbench
   tags:
-    - mac-runner
+    - mac-arm64
 
 test-mac:
   stage: test
@@ -85,10 +87,10 @@ test-mac:
     - cd stata
     - mv cut-down-test.log reference.log
   script:
-    - ~/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
+    - /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
     - diff -B reference.log cut-down-test.log
   tags:
-    - mac-runner
+    - mac-arm64
 
 dropbox-deploy-mac:
   variables:
@@ -101,9 +103,9 @@ dropbox-deploy-mac:
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
+    - cp "${PLUGIN_FILE}" ~/Dropbox/EDM/ci-builds-master/
   tags:
-    - mac-runner
+    - mac-arm64
 
 perf-mac:
   stage: deploy
@@ -112,18 +114,20 @@ perf-mac:
   before_script:
     - cd stata
   script:
-    - ./gbench
+    - echo "Need to fix benchmarking"
+    # - ./gbench
   tags:
-    - mac-runner
+    - mac-arm64
 
 build-ubuntu:
   stage: build
   before_script:
     - export VCPKG_ROOT=/usr/local/vcpkg/
+    - export CMAKE_PREFIX_PATH=/usr/local/vcpkg/installed/
   script:
     - mkdir build
     - cd build
-    - cmake .. -DBUILD_GBENCH=TRUE
+    - cmake .. #-DBUILD_GBENCH=TRUE
     - cd ..
     - cmake --build build --config release
     - cmake --build build --config release --target install
@@ -133,7 +137,7 @@ build-ubuntu:
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
-      - stata/gbench
+      # - stata/gbench
   tags:
     - ubuntu-runner
 
@@ -173,6 +177,7 @@ perf-ubuntu:
   before_script:
     - cd stata
   script:
-    - ./gbench
+    - echo "Need to fix benchmarking"
+    # - ./gbench
   tags:
     - ubuntu-runner
