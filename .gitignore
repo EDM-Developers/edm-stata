@@ -2,11 +2,16 @@
 compile_commands.json
 vendor/stplugin.*
 stata/*.plugin
-stata/smap_driver*
+stata/driver*
+stata/gbench*
 build
 .clangd
 *.h5
 vcpkg_installed
+*desktop.ini
+*.DS_Store
+*Icon*
+.vscode*
 
 # Prerequisites
 *.d

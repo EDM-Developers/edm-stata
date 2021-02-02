@@ -12,6 +12,7 @@
 #define INVALID_ALGORITHM 400
 #define INSUFFICIENT_UNIQUE 503
 #define NOT_IMPLEMENTED 908
+#define CANNOT_SAVE_RESULTS 1000
 #define UNKNOWN_ERROR 8000
 
 /* global variable placeholder for missing values */
@@ -50,17 +51,17 @@ class IO
 public:
   int verbosity = 0;
 
-  virtual void print(std::string s, bool force=false)
+  virtual void print(std::string s)
   {
-    if (verbosity > 0 || force) {
+    if (verbosity > 0) {
       out(s.c_str());
       flush();
     }
   }
 
-  virtual void print_async(std::string s, bool force=false)
+  virtual void print_async(std::string s)
   {
-    if (verbosity > 0 || force) {
+    if (verbosity > 0) {
       std::lock_guard<std::mutex> guard(bufferMutex);
       buffer += s;
     }
@@ -77,7 +78,7 @@ public:
   virtual void progress_bar(double progress)
   {
     std::lock_guard<std::mutex> guard(bufferMutex);
-      
+
     if (progress == 0.0) {
       buffer += "Percent complete: 0";
       nextMessage = 1.0 / 40;

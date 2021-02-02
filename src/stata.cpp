@@ -447,7 +447,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   if (argc > 12) {
     return TOO_MANY_VARIABLES;
   }
-  
+
   io.get_and_clear_async_buffer();
 
   breakButtonPressed = false;
@@ -649,13 +649,17 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       if (pred.stats.calcRhoMAE) {
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 3, pred.stats.rho)) {
-          io.print(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix,
-                               pred.stats.taskNum + 1, 3));
+          io.error(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix,
+                               pred.stats.taskNum + 1, 3)
+                     .c_str());
+          rc = CANNOT_SAVE_RESULTS;
         }
 
         if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 4, pred.stats.mae)) {
-          io.print(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix,
-                               pred.stats.taskNum + 1, 4));
+          io.error(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix,
+                               pred.stats.taskNum + 1, 4)
+                     .c_str());
+          rc = CANNOT_SAVE_RESULTS;
         }
       }
 
@@ -692,7 +696,7 @@ STDLL stata_call(int argc, char* argv[])
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
     } else if (command == "report_progress") {
-      io.print(io.get_and_clear_async_buffer(), true);
+      io.print(io.get_and_clear_async_buffer());
 
       bool breakHit = (argc == 2) && atoi(argv[1]);
       if (breakHit) {
@@ -708,7 +712,7 @@ STDLL stata_call(int argc, char* argv[])
         SF_scal_save(FINISHED_SCALAR, 1.0);
       }
     } else if (command == "collect_results") {
-      io.print(io.get_and_clear_async_buffer(), true);
+      io.print(io.get_and_clear_async_buffer());
 
       rc = save_all_task_results_to_stata(argc - 1, argv + 1);
     } else if (command == "launch_coprediction_task") {

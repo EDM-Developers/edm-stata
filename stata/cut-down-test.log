@@ -15,7 +15,7 @@ number of observations (_N) was 0, now 500
 . }
 
 . 
-. global EDM_VERBOSITY=0
+. global EDM_VERBOSITY=1
 
 . global EDM_NTHREADS=4
 

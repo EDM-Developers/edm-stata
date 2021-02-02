@@ -252,7 +252,7 @@ program define edmCoremap, eclass
 
 
 program define edmExplore, eclass sortpreserve
-	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -485,7 +485,7 @@ program define edmExplore, eclass sortpreserve
 	local e_size = wordcount("`=r(numlist)'")
 	local max_e : word `e_size' of `e'
 
-	local mapping_0 "`x' `y' `zlist'"
+	local mapping_0 "`x' `zlist'"
 	if `parsed_dt' {
 		if `parsed_dtw' == 0 {
 			qui sum `x' if `usable'
@@ -564,6 +564,7 @@ program define edmExplore, eclass sortpreserve
 			foreach v of local parsed_extravars {
 				tempvar z`++co_zcount'
 				/* noi di "extra embeding: `v'" */
+				// TODO: Call new normalize function
 				if substr("`v'",1,2) == "z." {
 					sum `=substr("`v'",3,.)' if `touse'
 					gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
@@ -1047,7 +1048,7 @@ end
 
 
 program define edmXmap, eclass sortpreserve
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 0)]
+	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1707,9 +1708,38 @@ program define edmXmap, eclass sortpreserve
 						}
 
 						if "`savesmap'" != "" {
+							local xx = "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
+							local yy = "`=cond(`direction_num'==1,"`ori_y'","`ori_x'")'"
+
 							qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
-							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `=cond(`direction_num'==1,"`ori_x'","`ori_y'")' predicting `=cond(`direction_num'==1,"`ori_y'","`ori_x'")' S-map equation (rep `rep')"
+							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
 							local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
+
+							// The plugin orders the variables in the manifold in a different manner.
+							// To ensure that the savesmap coefficients have the correct labels, we reorder
+							// the mapping's name list.
+							if `mata_mode' == 0 {
+								local mapping_reordered_name "`xx'" 
+
+								forvalues ii=1/`=`e'-1' {
+									local mapping_reordered_name "`mapping_reordered_name' l`=`ii'*`tau''.`xx'"
+								}
+
+								if `parsed_dt' {
+									forvalues ii=1/`=`e'-1' {
+										local mapping_reordered_name "`mapping_reordered_name' dt`ii'"
+									}
+								}
+
+								local mapping_reordered_name "`mapping_reordered_name' `zlist_name'"
+
+								if `verbosity' > 2 {
+									di "Original mapping names: <`mapping_`=`e'-1'_name'>"
+									di "New mapping names     : <`mapping_reordered_name'>"
+								}
+
+								local mapping_`=`e'-1'_name = "`mapping_reordered_name'"
+							}
 
 							local ii = 1
 							foreach name of local mapping_`=`e'-1'_name {

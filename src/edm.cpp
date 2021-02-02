@@ -277,7 +277,6 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
               void all_tasks_finished(void), bool serial)
 {
-
   Manifold M, Mp;
   if (serial) {
     M = generator->create_manifold(E, trainingRows, false);
@@ -404,7 +403,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   pred->numCoeffCols = numCoeffCols;
 
   if (opts.numTasks > 1) {
-    io->print_async(".", true);
+    io->print_async(".");
   }
   numTasksRunning -= 1;
   if (numTasksRunning <= 0) {
