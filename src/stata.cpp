@@ -219,7 +219,7 @@ void all_tasks_finished()
 void print_error(std::string command, ST_retcode rc)
 {
   // Don't print header if rc=SUCCESS or rc=1 (when Break button pressed)
-  if (rc > 1) {
+  if (rc > 1 && io.verbosity > 1) {
     io.error((char*)fmt::format("Error in edm '{}': ", command).c_str());
   }
   switch (rc) {
@@ -448,7 +448,13 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
+  // In case we have some remnants of previous runs still
+  // in the system (e.g. after a 'break'), clear our past results.
   io.get_and_clear_async_buffer();
+  while (!predictions.empty()) {
+    predictions.pop();
+    futures.pop();
+  }
 
   breakButtonPressed = false;
   allTasksFinished = false;
