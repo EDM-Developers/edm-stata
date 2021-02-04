@@ -437,7 +437,8 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
 
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
-void reset_global_state() {
+void reset_global_state()
+{
   io.get_and_clear_async_buffer();
   while (!predictions.empty()) {
     predictions.pop();

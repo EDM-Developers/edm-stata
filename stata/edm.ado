@@ -147,6 +147,29 @@ program define edmPreprocessVariable, eclass
 	}
 end
 
+program define edmPrintPluginResults, eclass
+	plugin call smap_block_mdap , "report_progress"
+	nobreak {
+		local breakHit = 0
+		local sleepTime = 0.001
+		local numSleeps = 0
+
+		while !plugin_finished {
+			local ++numSleeps
+			capture noi break sleep `sleepTime'
+			
+			if _rc {
+				local breakHit = 1
+			}
+			plugin call smap_block_mdap , "report_progress" "`breakHit'"
+			
+			if `numSleeps' == 1000 {
+				local sleepTime = 1
+			}
+		}
+	}
+end
+
 program define edmParser, eclass
 
 	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending)] [theta(numlist ascending)] [manifold(string)] [converge] */
@@ -894,18 +917,7 @@ program define edmExplore, eclass sortpreserve
 
 	// Collect all the asynchronous predictions from the plugin
 	if `mata_mode' == 0 {
-		plugin call smap_block_mdap , "report_progress"
-		nobreak {
-			local breakHit = 0
-			while !plugin_finished {
-				capture noi break sleep 0.1
-				if _rc {
-					local breakHit = 1
-				}
-				plugin call smap_block_mdap , "report_progress" "`breakHit'"
-			}
-		}
-
+		edmPrintPluginResults
 		local result_matrix = "r"
 		plugin call smap_block_mdap `predict', "collect_results" "`result_matrix'"
 	}
@@ -946,19 +958,7 @@ program define edmExplore, eclass sortpreserve
 					qui keep if `before_tsfill' != .
 					drop `before_tsfill'
 				}
-
-				plugin call smap_block_mdap , "report_progress"
-				nobreak {
-					local breakHit = 0
-					while !plugin_finished {
-						capture noi break sleep 0.1
-						if _rc {
-							local breakHit = 1
-						}
-						plugin call smap_block_mdap , "report_progress" "`breakHit'"
-					}
-				}
-
+				edmPrintPluginResults
 				plugin call smap_block_mdap `co_x_p', "collect_results"
 			}
 
@@ -1852,18 +1852,7 @@ program define edmXmap, eclass sortpreserve
 
 		// Collect all the asynchronous predictions from the plugin 
 		if `mata_mode' == 0 {
-			plugin call smap_block_mdap , "report_progress"
-			nobreak {
-				local breakHit = 0
-				while !plugin_finished {
-					capture noi break sleep 0.1
-					if _rc {
-						local breakHit = 1
-					}
-					plugin call smap_block_mdap , "report_progress" "`breakHit'"
-				}
-			}
-
+			edmPrintPluginResults
 			local result_matrix = "r`direction_num'"
 			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
 		}
@@ -1912,18 +1901,7 @@ program define edmXmap, eclass sortpreserve
 					drop `before_tsfill'
 				}
 
-				plugin call smap_block_mdap , "report_progress"
-				nobreak {
-					local breakHit = 0
-					while !plugin_finished {
-						capture noi break sleep 0.1
-						if _rc {
-							local breakHit = 1
-						}
-						plugin call smap_block_mdap , "report_progress" "`breakHit'"
-					}
-				}
-
+				edmPrintPluginResults
 				plugin call smap_block_mdap `co_x_p', "collect_results"
 			}
 
