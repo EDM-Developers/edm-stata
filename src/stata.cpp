@@ -435,6 +435,19 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
   }
 }
 
+// In case we have some remnants of previous runs still
+// in the system (e.g. after a 'break'), clear our past results.
+void reset_global_state() {
+  io.get_and_clear_async_buffer();
+  while (!predictions.empty()) {
+    predictions.pop();
+    futures.pop();
+  }
+
+  breakButtonPressed = false;
+  allTasksFinished = false;
+}
+
 /*
  * Read that information needed for the edm tasks which is doesn't change across
  * the various tasks, and store it in the 'opts' and 'generator' global variables.
@@ -448,16 +461,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
-  // In case we have some remnants of previous runs still
-  // in the system (e.g. after a 'break'), clear our past results.
-  io.get_and_clear_async_buffer();
-  while (!predictions.empty()) {
-    predictions.pop();
-    futures.pop();
-  }
-
-  breakButtonPressed = false;
-  allTasksFinished = false;
+  reset_global_state();
 
   opts.calcRhoMAE = true;
 
@@ -585,6 +589,8 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   if (argc > 4) {
     return TOO_MANY_VARIABLES;
   }
+
+  reset_global_state();
 
   Options taskOpts = opts;
 

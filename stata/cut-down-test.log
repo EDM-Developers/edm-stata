@@ -192,6 +192,7 @@ Note: The embedding dimension E is 2
 . 
 . edm explore x, copredict(teste) copredictvar(y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -235,6 +236,7 @@ Note: The embedding dimension E is 2
 . 
 . edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -250,6 +252,7 @@ Note: The embedding dimension E is 2
 . 
 . edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -264,6 +267,7 @@ Note: The embedding dimension E is 2
 
 . 
 . edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -582,6 +586,7 @@ Note: The embedding dimension E is 2
 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -626,6 +631,7 @@ Note: Full sample used for the computation
 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -651,6 +657,7 @@ Note: Full sample used for the computation
 
 . edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -674,6 +681,7 @@ Note: The embedding dimension E is 2
 . //copredict with dt
 . edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -692,6 +700,7 @@ Note: Embedding includes the delta of the time variable with a weight of .88
 
 . 
 . edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -713,6 +722,7 @@ Note: Full sample used for the computation
 . 
 . edm explore x, copredict(dx2) copredictvar(d.x)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -726,6 +736,7 @@ Note: Random 50/50 split for training and validation data
 
 . 
 . edm explore x, predict(predicted_x) copredict(predicted_y_from_mx) copredictvar(y) full
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling

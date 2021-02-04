@@ -71,7 +71,7 @@ public:
   {
     std::lock_guard<std::mutex> guard(bufferMutex);
     std::string ret = buffer;
-    buffer = "";
+    buffer.clear();
     return ret;
   }
 
