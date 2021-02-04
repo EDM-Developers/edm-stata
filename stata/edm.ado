@@ -752,7 +752,10 @@ program define edmExplore, eclass sortpreserve
 
 		local explore_mode = 1
 		local full_mode = ("`full'" == "full")
-		plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable' `crossfoldu', "transfer_manifold_data" ///
+		if `parsed_dt' {
+			local time = "`original_t'"
+		}
+		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `crossfoldu', "transfer_manifold_data" ///
 				"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'"
 
@@ -1636,7 +1639,10 @@ program define edmXmap, eclass sortpreserve
 			local explore_mode = 0
 			local full_mode = 0
 			local crossfold = 0
-			plugin call smap_block_mdap `x' `x_f' `zlist' `original_t' `usable', "transfer_manifold_data" ///
+			if `parsed_dt' {
+				local time = "`original_t'"
+			}
+			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable', "transfer_manifold_data" ///
 					"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'"
 

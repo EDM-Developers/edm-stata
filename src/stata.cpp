@@ -440,9 +440,12 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
 void reset_global_state()
 {
   io.get_and_clear_async_buffer();
+
+  while (!futures.empty()) {
+    futures.pop();
+  }
   while (!predictions.empty()) {
     predictions.pop();
-    futures.pop();
   }
 
   breakButtonPressed = false;
