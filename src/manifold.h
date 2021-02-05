@@ -28,8 +28,8 @@ public:
   double operator()(size_t i, size_t j) const { return _flat[i * _E_actual + j]; }
 
   double x(size_t i, size_t j) const { return _flat[i * _E_actual + j]; }
-  double dt(size_t i, size_t j) const { return _flat[i * _E_actual + (j - _E_x)]; }
-  double extras(size_t i, size_t j) const { return _flat[i * _E_actual + (j - _E_x - _E_dt)]; }
+  double dt(size_t i, size_t j) const { return _flat[i * _E_actual + _E_x + j]; }
+  double extras(size_t i, size_t j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
   bool any_missing(size_t obsNum) const
   {
     if (_y[obsNum] == _missing) {
@@ -89,6 +89,7 @@ public:
     , _y(y)
     , _extras(extras)
     , _missing(missing)
+    , _tau(tau)
     , _E_extras(extras.size())
   {}
 
@@ -109,7 +110,7 @@ public:
 
   size_t E_actual(size_t E) const
   {
-    size_t E_dt = (_use_dt) * (E - 1);
+    size_t E_dt = (_use_dt)*E;
     return E + E_dt + _E_extras;
   }
 };

@@ -503,7 +503,6 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   std::vector<ST_double> y = stata_columns<ST_double>(2);
 
   // Read in the extras
-  // TODO: Check that 'dt' isn't thrown in here in the edm.ado script
   std::vector<std::vector<ST_double>> extras(numExtras);
 
   for (int z = 0; z < numExtras; z++) {
@@ -515,11 +514,35 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   // Handle 'dt' flag
   if (dtMode) {
     std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
+
+    if (io.verbosity > 2) {
+      io.print("Time:\n");
+      for (int i = 0; i < t.size(); i++) {
+        io.print(fmt::format("{} ", t[i]));
+        if (i > 10) {
+          break;
+        }
+      }
+      io.print("\n");
+    }
+
     generator.add_dt_data(t, dtWeight);
   }
 
   // The stata variable named `usable'
   std::vector<bool> usable = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 1);
+
+  if (io.verbosity > 2) {
+    io.print("Usable:\n");
+    for (int i = 0; i < usable.size(); i++) {
+      io.print(fmt::format("{} ", usable[i]));
+      if (i > 10) {
+        break;
+      }
+    }
+    io.print("\n");
+  }
+
   std::vector<ST_double> crossfoldU;
   if (crossfold > 0) {
     crossfoldU = stata_columns<ST_double>(2 + numExtras + (dtWeight > 0) + 2);
@@ -579,6 +602,56 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 #endif
 
   predictions.push({});
+
+  if (io.verbosity > 2) {
+    auto M = generator.create_manifold(E, trainingRows, false);
+    auto Mp = generator.create_manifold(E, predictionRows, true);
+
+    io.print("training rows\n");
+    for (int i = 0; i < M.nobs(); i++) {
+      io.print(fmt::format("{} ", trainingRows[i]));
+      if (i > 10) {
+        break;
+      }
+    }
+    io.print("\n");
+
+    io.print("prediction rows\n");
+    for (int i = 0; i < M.nobs(); i++) {
+      io.print(fmt::format("{} ", predictionRows[i]));
+      if (i > 10) {
+        break;
+      }
+    }
+    io.print("\n");
+
+    io.print("dt\n");
+    for (int i = 0; i < M.nobs(); i++) {
+      io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i,1)));
+      if (i > 5) {
+        break;
+      }
+    }
+    io.print("\n");
+
+    io.print("M Manifold\n");
+    for (int i = 0; i < M.nobs(); i++) {
+      for (int j = 0; j < M.E_actual(); j++) {
+        io.print(fmt::format("{} ", M(i, j)));
+      }
+      io.print("\n");
+    }
+    io.print("\n");
+
+    io.print("Mp Manifold\n");
+    for (int i = 0; i < Mp.nobs(); i++) {
+      for (int j = 0; j < Mp.E_actual(); j++) {
+        io.print(fmt::format("{} ", Mp(i, j)));
+      }
+      io.print("\n");
+    }
+  }
+
   futures.push(edm_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going,
                          all_tasks_finished));
 
@@ -632,6 +705,27 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
     write_dumpfile(argv[3], taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
 #endif
+
+  if (io.verbosity > 2) {
+    auto M = generator.create_manifold(E, coTrainingRows, false);
+    auto Mp = generator.create_manifold(E, coPredictionRows, true);
+    io.print("Coprediction M Manifold\n");
+    for (int i = 0; i < M.nobs(); i++) {
+      for (int j = 0; j < M.E_actual(); j++) {
+        io.print(fmt::format("{} ", M(i, j)));
+      }
+      io.print("\n");
+    }
+    io.print("\n");
+
+    io.print("Coprediction  Mp Manifold\n");
+    for (int i = 0; i < Mp.nobs(); i++) {
+      for (int j = 0; j < Mp.E_actual(); j++) {
+        io.print(fmt::format("{} ", Mp(i, j)));
+      }
+      io.print("\n");
+    }
+  }
 
   predictions.push({});
   futures.push(edm_async(taskOpts, &generator, E, coTrainingRows, coPredictionRows, &io, &(predictions.back()),

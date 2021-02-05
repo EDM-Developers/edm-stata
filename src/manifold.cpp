@@ -2,7 +2,7 @@
 
 Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const
 {
-  size_t E_dt = (_use_dt) * (E - 1);
+  size_t E_dt = (_use_dt)*E;
   size_t E_actual = E + E_dt + _E_extras;
 
   std::vector<size_t> inds;
@@ -49,30 +49,31 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
 
 double ManifoldGenerator::find_x(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
-  size_t index = inds.at(i);
-  if (index < j) {
+  int index = inds.at(i) - j * _tau;
+  if (index < 0) {
     return _missing;
   }
-  return _x[index - j];
+  return _x[index];
 }
 
 double ManifoldGenerator::find_co_x(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
-  size_t index = inds.at(i);
-  if (index < j) {
+  int index = inds.at(i) - j * _tau;
+  if (index < 0) {
     return _missing;
   }
-  return _co_x[index - j];
+  return _co_x[index];
 }
 
 double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
-  size_t index = inds.at(i);
-  if (index < j + 1 || _t[index - 1] == _missing || _t[index] == _missing) {
+  int ind1 = inds.at(i) - (j - 1) * _tau;
+  int ind2 = ind1 - _tau;
+
+  if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing)) {
     return _missing;
   }
-  index -= j;
-  return _dtWeight * (_t[index] - _t[index - 1]);
+  return _dtWeight * (_t[ind1] - _t[ind2]);
 }
 
 double ManifoldGenerator::find_extras(const std::vector<size_t>& inds, size_t i, size_t j) const

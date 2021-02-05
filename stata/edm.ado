@@ -536,9 +536,14 @@ program define edmExplore, eclass sortpreserve
 		if `parsed_dt' {
 			tempvar t_`i'
 			// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-			/* di "dt descript"
-			sum `dt_value' l`=`i'-1'.`dt_value' if `usable' */
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw'
+			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable'
+			if `i' == 1 {
+				//add additionally dt value for the initial round
+				tempvar t_0
+				qui gen double `t_0' = f.`dt_value'* `parsed_dtw' if `usable'
+				qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
+				local mapping_`i' "`mapping_`i'' `t_0'"
+			}
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 			/* di "mapping_`i': `mapping_`i''" */
 			/* di "incorporate lag `i' in dt mapping" */
@@ -630,6 +635,13 @@ program define edmExplore, eclass sortpreserve
 
 				// parsed _dtw should match copredict
 				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
+				if `i' == 1 {
+					//add additionally dt value for the initial round
+					tempvar t_0
+					qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
+					qui replace `co_usable' = 0 if f.`dt_value_co' == . & `co_usable'
+					local co_mapping_`i' "`co_mapping_`i'' `t_0'"
+				}
 				local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
 				/* di "incorporate lag `i' in dt mapping"
@@ -806,10 +818,10 @@ program define edmExplore, eclass sortpreserve
 		// N.B. This is min(sum(train_set), sum(predict_set)))
 		if `crossfold' > 0 {
 			// TODO: Try to clean up this part a bit.
-			cap drop counting_up in_crossfold_t
-			qui gen counting_up = _n if _n <= `num_usable'
-			qui gen in_crossfold_t = mod(counting_up,`crossfold') == (`t' - 1) 
-			qui count if in_crossfold_t
+			tempvar counting_up in_crossfold_t
+			qui gen `counting_up' = _n if _n <= `num_usable'
+			qui gen `in_crossfold_t' = mod(`counting_up',`crossfold') == (`t' - 1) 
+			qui count if `in_crossfold_t'
 			local train_size = r(N)
 			local max_lib_size = min(`train_size,', `num_usable' - `train_size')
 		}
@@ -1357,32 +1369,19 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		/* for additional variables */
-		/* if "`addition'" !="" {
-			tempvar addition
-			qui gen double `added_x' = `addition'
-		} */
-
-		/* local x = "`1'"
-		local y = "`2'" */
+		* mapping include variables and specified multivariates
+		local mapping_0 "`x' `zlist'"
+		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
 
 		tempvar usable
 
 		qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable'
 
-		* mapping include variables and specified multivariates
-		local mapping_0 "`x' `zlist'"
-		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
-		/* di "`mapping_0_name'" */
-		qui {
-			if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
-				/* di "Reset usable due to allow missing" */
-				qui replace `usable' = `touse'
-				/* sum `mapping_0' if `usable' */
-			}
+		* If allow missing, use a wide definition of usable when generating manifold
+		if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+			qui replace `usable' = `touse'
 		}
-		/* di "usable"
-		sum `usable' */
+
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
 				qui sum `x' if `usable'
@@ -1398,10 +1397,7 @@ program define edmXmap, eclass sortpreserve
 			}
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
-		* If allow missing, use a wide definition of usable when generating manifold
-		if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
-			qui replace `usable' = `touse'
-		}
+
 		forvalues i=1/`=`e'-1' {
 			tempvar x_`i'
 			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
@@ -1416,6 +1412,14 @@ program define edmXmap, eclass sortpreserve
 				tempvar t_`i'
 				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
 				qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable'
+				if `i' == 1 {
+					//add additionally dt value for the initial round
+					tempvar t_0
+					qui gen double `t_0' = f.`dt_value'* `parsed_dtw' if `usable'
+					qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
+					local mapping_`i' "`mapping_`i'' `t_0'"
+					local mapping_`i'_name "`mapping_`i'_name' dt0"
+				}
 				local mapping_`i' "`mapping_`i'' `t_`i''"
 				local mapping_`i'_name "`mapping_`i'_name' dt`i'"
 				/* di "incorporate lag `i' in dt mapping"
@@ -1540,6 +1544,13 @@ program define edmXmap, eclass sortpreserve
 
 					// parsed _dtw should match copredict
 					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
+					if `i' == 1 {
+						//add additionally dt value for the initial round
+						tempvar t_0
+						qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
+						qui replace `co_usable' = 0 if f.`dt_value_co' == . & `co_usable'
+						local co_mapping_`i' "`co_mapping_`i'' `t_0'"
+					}
 					local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
 					/* di "incorporate lag `i' in dt mapping"
@@ -1732,7 +1743,7 @@ program define edmXmap, eclass sortpreserve
 								}
 
 								if `parsed_dt' {
-									forvalues ii=1/`=`e'-1' {
+									forvalues ii=0/`=`e'-1' {
 										local mapping_reordered_name "`mapping_reordered_name' dt`ii'"
 									}
 								}
