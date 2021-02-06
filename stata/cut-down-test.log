@@ -396,7 +396,7 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .90231         .044818 
+                 3               1          .58186          .13183 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
@@ -474,10 +474,10 @@ Missing values are assumed to have a distance of .25 with all values.
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124           .8861          .06106 
-     x ~ x|M(l.x)             150          .15287          .25302 
+   l.x ~ l.x|M(x)             124          .88581         .056787 
+     x ~ x|M(l.x)             150          .22176          .30935 
 -------------------------------------------------------------------
-Note: The embedding dimension E is 11 (including 6 extras)
+Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55 and .54
 
 . 
@@ -491,9 +491,9 @@ Missing values are assumed to have a distance of .25 with all values.
 ---------------------------------------------------------------------
             Mapping    Library size             rho             MAE
 ---------------------------------------------------------------------
-   l3.x ~ l3.x|M(x)             123          .80525         .075343 
+   l3.x ~ l3.x|M(x)             123          .69907         .075825 
 ---------------------------------------------------------------------
-Note: The embedding dimension E is 11 (including 6 extras)
+Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55
 
 . 
@@ -508,7 +508,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        5        1       .90989       .04662      .057076      .014451
+        4        1       .60892      .075603       .12527      .020011
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras
@@ -526,7 +526,7 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .78281          .13869 
+                 3               1          .78058          .15644 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
@@ -689,14 +689,14 @@ Additional variables in the embedding: (time delta)
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             187          .48944          .13688 
+   y ~ y|M(x)             188          .51527          .13499 
 ---------------------------------------------------------------
-Note: The embedding dimension E is 4 (including 2 extras)
+Note: The embedding dimension E is 3 (including 1 extra)
 Note: Embedding includes the delta of the time variable with a weight of .88
 
 . assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
 
-. assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=.
+. assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
 
 . 
 . edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full
@@ -729,7 +729,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99754        .0083352 
+                 2               1          .99847        .0089172 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -863,7 +863,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99878        .0080318 
+                 2               1          .99846        .0083042 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -873,7 +873,7 @@ Note: Random 50/50 split for training and validation data
              |              Jackknife
              |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
 -------------+----------------------------------------------------------------
-           x |   .9987774   .0080174   124.58   0.000     .9829668    1.014588
+           x |   .9984628   .0106503    93.75   0.000     .9774601    1.019465
 ------------------------------------------------------------------------------
 
 . 

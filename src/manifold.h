@@ -61,6 +61,7 @@ class ManifoldGenerator
 private:
   bool _copredict = false;
   bool _use_dt = false;
+  bool _add_dt0 = false;
   int _tau;
   double _missing;
   size_t _nobs, _E_extras;
@@ -99,18 +100,23 @@ public:
     _copredict = true;
   }
 
-  void add_dt_data(const std::vector<double>& t, double dtWeight)
+  void add_dt_data(const std::vector<double>& t, double dtWeight, bool dt0)
   {
     _t = t;
     _dtWeight = dtWeight;
     _use_dt = true;
+    _add_dt0 = dt0;
   }
 
   Manifold create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const;
 
+  size_t E_dt(size_t E) const
+  {
+    return (_use_dt)*(E-1+_add_dt0);
+  }
+
   size_t E_actual(size_t E) const
   {
-    size_t E_dt = (_use_dt)*E;
-    return E + E_dt + _E_extras;
+    return E + E_dt(E) + _E_extras;
   }
 };

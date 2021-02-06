@@ -275,7 +275,7 @@ program define edmCoremap, eclass
 
 
 program define edmExplore, eclass sortpreserve
-	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
+	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [newdt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -361,7 +361,8 @@ program define edmExplore, eclass sortpreserve
 	edmExtractExtra `extraembed'
 
 	local parsed_extravars = strtrim(r(extravars))
-	local parsed_dt = "`dt'" =="dt"
+	local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
+	local parsed_dt0 = ("`newdt'" == "newdt")
 	local parsed_dtw = "`dtweight'"
 	if "`dtsave'" != ""{
 		confirm new variable `dtsave'
@@ -405,7 +406,6 @@ program define edmExplore, eclass sortpreserve
 
 			tempvar dt_value
 			qui gen double `dt_value' = d.`original_t'
-			/* sum `dt_value' */
 			keep `original_id' `original_t' `newt' `dt_value'
 			/* assert `original_id' !=. & `original_t' !=. */
 			tempfile updatedt_main
@@ -520,6 +520,7 @@ program define edmExplore, eclass sortpreserve
 				// if there is no variance, no sampling required
 				local parsed_dtw = 0
 				local parsed_dt = 0
+				local parsed_dt0 = 0
 			}
 		}
 	}
@@ -536,18 +537,15 @@ program define edmExplore, eclass sortpreserve
 		if `parsed_dt' {
 			tempvar t_`i'
 			// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable'
-			if `i' == 1 {
+			qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `usable'
+			if `parsed_dt0' & (`i' == 1) {
 				//add additionally dt value for the initial round
 				tempvar t_0
-				qui gen double `t_0' = f.`dt_value'* `parsed_dtw' if `usable'
+				qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `usable'
 				qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
 				local mapping_`i' "`mapping_`i'' `t_0'"
 			}
 			local mapping_`i' "`mapping_`i'' `t_`i''"
-			/* di "mapping_`i': `mapping_`i''" */
-			/* di "incorporate lag `i' in dt mapping" */
-			/* sum l`=`i'-1'.`dt_value' `t_`i'' */
 		}
 	}
 
@@ -635,7 +633,7 @@ program define edmExplore, eclass sortpreserve
 
 				// parsed _dtw should match copredict
 				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
-				if `i' == 1 {
+				if `parsed_dt0' & `i' == 1 {
 					//add additionally dt value for the initial round
 					tempvar t_0
 					qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
@@ -768,7 +766,7 @@ program define edmExplore, eclass sortpreserve
 			local time = "`original_t'"
 		}
 		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `crossfoldu', "transfer_manifold_data" ///
-				"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
 
 		if `parsed_dt' == 0 {
@@ -1043,7 +1041,7 @@ program define edmExplore, eclass sortpreserve
 	else {
 		ereturn local extraembed = "`parsed_extravars'"
 	}
-	if "`dt'" =="dt" {
+	if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
 		sort `original_id' `original_t'
 		qui xtset `original_id' `original_t'
 		if "`original_id'" != ""{
@@ -1063,7 +1061,7 @@ end
 
 
 program define edmXmap, eclass sortpreserve
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
+	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [newdt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1207,7 +1205,8 @@ program define edmXmap, eclass sortpreserve
 		edmExtractExtra `extraembed'
 		/* return list */
 		local parsed_extravars = strtrim(r(extravars))
-		local parsed_dt = "`dt'" =="dt"
+		local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
+		local parsed_dt0 = ("`newdt'" == "newdt")
 		local parsed_dtw = "`dtweight'"
 		if "`dtsave'" != ""{
 			confirm new variable `dtsave'
@@ -1251,7 +1250,6 @@ program define edmXmap, eclass sortpreserve
 
 				tempvar dt_value
 				gen double `dt_value' = d.`original_t'
-				/* sum `dt_value' */
 				keep `original_id' `original_t' `newt' `dt_value'
 				tempfile updatedt_main
 				save `updatedt_main'
@@ -1393,6 +1391,7 @@ program define edmXmap, eclass sortpreserve
 					// if there is no variance, no sampling required
 					local parsed_dtw = 0
 					local parsed_dt = 0
+					local parsed_dt0 = 0
 				}
 			}
 			local parsed_dtw`direction_num' = `parsed_dtw'
@@ -1411,20 +1410,17 @@ program define edmXmap, eclass sortpreserve
 			if `parsed_dt' {
 				tempvar t_`i'
 				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value'* `parsed_dtw' if `usable'
-				if `i' == 1 {
+				qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `usable'
+				if `parsed_dt0' & (`i' == 1) {
 					//add additionally dt value for the initial round
 					tempvar t_0
-					qui gen double `t_0' = f.`dt_value'* `parsed_dtw' if `usable'
+					qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `usable'
 					qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
 					local mapping_`i' "`mapping_`i'' `t_0'"
 					local mapping_`i'_name "`mapping_`i'_name' dt0"
 				}
 				local mapping_`i' "`mapping_`i'' `t_`i''"
 				local mapping_`i'_name "`mapping_`i'_name' dt`i'"
-				/* di "incorporate lag `i' in dt mapping"
-				sum l`=`i'-1'.`dt_value' `t_`i''
-				di "`mapping_`i'_name'" */
 			}
 		}
 
@@ -1544,7 +1540,7 @@ program define edmXmap, eclass sortpreserve
 
 					// parsed _dtw should match copredict
 					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
-					if `i' == 1 {
+					if `parsed_dt0' & `i' == 1 {
 						//add additionally dt value for the initial round
 						tempvar t_0
 						qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
@@ -1654,9 +1650,8 @@ program define edmXmap, eclass sortpreserve
 				local time = "`original_t'"
 			}
 			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable', "transfer_manifold_data" ///
-					"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
-
 			if `parsed_dt' == 0 {
 				qui keep if `before_tsfill' != .
 				drop `before_tsfill'
@@ -1672,7 +1667,6 @@ program define edmXmap, eclass sortpreserve
 		forvalues rep =1/`replicate' {
 
 			qui replace `u' = runiform() if `usable'
-			
 			
 			if `mata_mode' {
 				cap drop `urank'
@@ -1741,13 +1735,11 @@ program define edmXmap, eclass sortpreserve
 								forvalues ii=1/`=`e'-1' {
 									local mapping_reordered_name "`mapping_reordered_name' l`=`ii'*`tau''.`xx'"
 								}
-
 								if `parsed_dt' {
-									forvalues ii=0/`=`e'-1' {
+									forvalues ii=`=(1 - `parsed_dt0')'/`=`e'-1' {
 										local mapping_reordered_name "`mapping_reordered_name' dt`ii'"
 									}
 								}
-
 								local mapping_reordered_name "`mapping_reordered_name' `zlist_name'"
 
 								if `verbosity' > 2 {
@@ -1847,7 +1839,7 @@ program define edmXmap, eclass sortpreserve
 		}
 
 		* reset the panel structure
-		if "`dt'" =="dt" {
+		if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
 			sort `original_id' `original_t'
 			qui xtset `original_id' `original_t'
 			if "`original_id'" != ""{

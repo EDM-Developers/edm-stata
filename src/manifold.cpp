@@ -2,9 +2,6 @@
 
 Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const
 {
-  size_t E_dt = (_use_dt)*E;
-  size_t E_actual = E + E_dt + _E_extras;
-
   std::vector<size_t> inds;
   std::vector<double> y;
 
@@ -17,34 +14,34 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
     }
   }
 
-  auto flat = std::make_unique<double[]>(nobs * E_actual);
+  auto flat = std::make_unique<double[]>(nobs * E_actual(E));
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < E; j++) {
       if (prediction && _copredict) {
-        flat[i * E_actual + j] = find_co_x(inds, i, j);
+        flat[i * E_actual(E) + j] = find_co_x(inds, i, j);
       } else {
-        flat[i * E_actual + j] = find_x(inds, i, j);
+        flat[i * E_actual(E) + j] = find_x(inds, i, j);
       }
     }
   }
 
   // Put the lagged embedding of dt in the next columns
   for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < E_dt; j++) {
-      flat[i * E_actual + E + j] = find_dt(inds, i, j);
+    for (size_t j = 0; j < E_dt(E); j++) {
+      flat[i * E_actual(E) + E + j] = find_dt(inds, i, j);
     }
   }
 
   // Finally put the unlagged extras in the last columns
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < _E_extras; j++) {
-      flat[i * E_actual + E + E_dt + j] = find_extras(inds, i, j);
+      flat[i * E_actual(E) + E + E_dt(E) + j] = find_extras(inds, i, j);
     }
   }
 
-  return { flat, y, nobs, E, E_dt, _E_extras, E_actual, _missing };
+  return { flat, y, nobs, E, E_dt(E), _E_extras, E_actual(E), _missing };
 }
 
 double ManifoldGenerator::find_x(const std::vector<size_t>& inds, size_t i, size_t j) const
@@ -67,7 +64,7 @@ double ManifoldGenerator::find_co_x(const std::vector<size_t>& inds, size_t i, s
 
 double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
-  int ind1 = inds.at(i) - (j - 1) * _tau;
+  int ind1 = inds.at(i) + _add_dt0 * _tau  - j * _tau;
   int ind2 = ind1 - _tau;
 
   if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing)) {

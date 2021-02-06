@@ -458,31 +458,31 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 {
-  if (argc < 13) {
+  if (argc < 14) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 13) {
+  if (argc > 14) {
     return TOO_MANY_VARIABLES;
   }
 
   reset_global_state();
 
   opts.calcRhoMAE = true;
-
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
-  double dtWeight = atof(argv[2]);
-  opts.algorithm = std::string(argv[3]);
-  opts.forceCompute = (std::string(argv[4]) == "force");
-  opts.missingdistance = atof(argv[5]);
-  char* reqThreads = argv[6];
+  bool dt0 = atoi(argv[2]);
+  double dtWeight = atof(argv[3]);
+  opts.algorithm = std::string(argv[4]);
+  opts.forceCompute = (std::string(argv[5]) == "force");
+  opts.missingdistance = atof(argv[6]);
+  char* reqThreads = argv[7];
   opts.nthreads = atoi(reqThreads);
-  io.verbosity = atoi(argv[7]);
-  opts.numTasks = atoi(argv[8]);
-  bool explore = atoi(argv[9]);
-  bool full = atoi(argv[10]);
-  int crossfold = atoi(argv[11]);
-  int tau = atoi(argv[12]);
+  io.verbosity = atoi(argv[8]);
+  opts.numTasks = atoi(argv[9]);
+  bool explore = atoi(argv[10]);
+  bool full = atoi(argv[11]);
+  int crossfold = atoi(argv[12]);
+  int tau = atoi(argv[13]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -527,7 +527,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
       io.print("\n");
     }
 
-    generator.add_dt_data(t, dtWeight);
+    generator.add_dt_data(t, dtWeight, dt0);
   }
 
   // The stata variable named `usable'
