@@ -458,10 +458,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
 {
-  if (argc < 12) {
+  if (argc < 13) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 12) {
+  if (argc > 13) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -482,6 +482,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   bool explore = atoi(argv[9]);
   bool full = atoi(argv[10]);
   int crossfold = atoi(argv[11]);
+  int tau = atoi(argv[12]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -509,7 +510,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(3 + z);
   }
 
-  generator = ManifoldGenerator(x, y, extras, MISSING);
+  generator = ManifoldGenerator(x, y, extras, MISSING, tau);
 
   // Handle 'dt' flag
   if (dtMode) {

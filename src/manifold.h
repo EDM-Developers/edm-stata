@@ -84,7 +84,7 @@ public:
 
   // TODO: Add 'tau' != 1 support
   ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<std::vector<double>>& extras, double missing, size_t tau = 1)
+                    const std::vector<std::vector<double>>& extras, double missing, size_t tau)
     : _x(x)
     , _y(y)
     , _extras(extras)

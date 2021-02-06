@@ -769,7 +769,7 @@ program define edmExplore, eclass sortpreserve
 		}
 		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `crossfoldu', "transfer_manifold_data" ///
 				"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
 
 		if `parsed_dt' == 0 {
 			qui keep if `before_tsfill' != .
@@ -1655,7 +1655,7 @@ program define edmXmap, eclass sortpreserve
 			}
 			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable', "transfer_manifold_data" ///
 					"`zcount'" "`parsed_dt'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
 
 			if `parsed_dt' == 0 {
 				qui keep if `before_tsfill' != .
