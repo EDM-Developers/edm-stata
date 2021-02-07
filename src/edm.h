@@ -44,6 +44,7 @@ struct Options
   std::string algorithm;
   size_t taskNum = 1, numTasks = 1;
   bool calcRhoMAE = false;
+  int parMode = 0;
 };
 
 class IO
@@ -87,7 +88,7 @@ public:
       return;
     }
 
-    while (progress >= nextMessage) {
+    while (progress >= nextMessage && nextMessage < 1.0) {
       if (dots < 3) {
         buffer += ".";
         dots += 1;

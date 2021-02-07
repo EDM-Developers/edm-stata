@@ -64,7 +64,7 @@ double ManifoldGenerator::find_co_x(const std::vector<size_t>& inds, size_t i, s
 
 double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
 {
-  int ind1 = inds.at(i) + _add_dt0 * _tau  - j * _tau;
+  int ind1 = inds.at(i) + _add_dt0 * _tau - j * _tau;
   int ind2 = ind1 - _tau;
 
   if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing)) {

@@ -59,7 +59,8 @@ number of observations (_N) was 0, now 500
 . 
 . * identify optimal E
 . edm explore x, e(2/10)
-.........
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
@@ -113,7 +114,8 @@ Note: The embedding dimension E is 6
 . 
 . edm explore x, k(5) crossfold(10)
 10-fold cross-validation progress (10 in total)
-..........
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 ----------------------------------------------------------------------
@@ -128,7 +130,8 @@ Note: 10-fold cross validation results reported
 
 . 
 . edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
-...................
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
@@ -499,7 +502,8 @@ Note: Embedding includes the delta of the time variable with a weight of .55
 . 
 . edm explore x, extraembed(u) allowmissing dt crossfold(5)
 5-fold cross-validation progress (5 in total)
-.....
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Multivariate mapping with x and its lag values
 Additional variables in the embedding: u (+ time delta)
@@ -536,7 +540,8 @@ Note: Embedding includes the delta of the time variable with a weight of .27
 . 
 . edm explore x, rep(20) ci(95)
 Replication progress (20 in total)
-....................
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 ----------------------------------------------------------------------
@@ -555,7 +560,9 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, lib(50) rep(20) ci(95)
 Replication progress (40 in total)
-........................................
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------

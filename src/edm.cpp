@@ -248,7 +248,12 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, si
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
                             void all_tasks_finished(void))
 {
-  bool serial = (opts.numTasks > opts.nthreads);
+  bool serial;
+  if (opts.parMode == -1) {
+    serial = (opts.numTasks > opts.nthreads);
+  } else {
+    serial = opts.parMode;
+  }
 
   workerPool.set_num_workers(opts.nthreads);
   if (!serial) {
@@ -301,6 +306,10 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
+
+  if (opts.numTasks > 1 && opts.taskNum == 0) {
+    io->progress_bar(0.0);
+  }
 
   if (serial) {
     if (opts.numTasks == 1) {
@@ -402,10 +411,11 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   pred->numPredictions = numPredictions;
   pred->numCoeffCols = numCoeffCols;
 
-  if (opts.numTasks > 1) {
-    io->print_async(".");
-  }
   numTasksRunning -= 1;
+  if (opts.numTasks > 1) {
+    io->progress_bar((opts.numTasks - numTasksRunning) / ((double)opts.numTasks));
+  }
+
   if (numTasksRunning <= 0) {
     if (all_tasks_finished != nullptr) {
       all_tasks_finished();

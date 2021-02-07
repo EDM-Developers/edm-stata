@@ -83,7 +83,6 @@ public:
 public:
   ManifoldGenerator(){};
 
-  // TODO: Add 'tau' != 1 support
   ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
                     const std::vector<std::vector<double>>& extras, double missing, size_t tau)
     : _x(x)
@@ -110,13 +109,7 @@ public:
 
   Manifold create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const;
 
-  size_t E_dt(size_t E) const
-  {
-    return (_use_dt)*(E-1+_add_dt0);
-  }
+  size_t E_dt(size_t E) const { return (_use_dt) * (E - 1 + _add_dt0); }
 
-  size_t E_actual(size_t E) const
-  {
-    return E + E_dt(E) + _E_extras;
-  }
+  size_t E_actual(size_t E) const { return E + E_dt(E) + _E_extras; }
 };

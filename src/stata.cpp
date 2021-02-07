@@ -456,12 +456,12 @@ void reset_global_state()
  * Read that information needed for the edm tasks which is doesn't change across
  * the various tasks, and store it in the 'opts' and 'generator' global variables.
  */
-ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
+ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 14) {
+  if (argc < 15) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 14) {
+  if (argc > 15) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -483,6 +483,7 @@ ST_retcode read_manifold_data_from_stata(int argc, char* argv[])
   bool full = atoi(argv[11]);
   int crossfold = atoi(argv[12]);
   int tau = atoi(argv[13]);
+  opts.parMode = atoi(argv[14]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -628,7 +629,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
     io.print("dt\n");
     for (int i = 0; i < M.nobs(); i++) {
-      io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i,1)));
+      io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i, 1)));
       if (i > 5) {
         break;
       }
@@ -803,7 +804,7 @@ STDLL stata_call(int argc, char* argv[])
     std::string command(argv[0]);
 
     if (command == "transfer_manifold_data") {
-      rc = read_manifold_data_from_stata(argc - 1, argv + 1);
+      rc = read_manifold_data(argc - 1, argv + 1);
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
     } else if (command == "report_progress") {

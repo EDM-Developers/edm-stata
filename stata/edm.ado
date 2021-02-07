@@ -275,7 +275,13 @@ program define edmCoremap, eclass
 
 
 program define edmExplore, eclass sortpreserve
-	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] [REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [newdt] [DTWeight(real 0)] [DTSave(name)] [reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
+	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
+			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
+			[Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] ///
+			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
+			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
+			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
+			[saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -767,7 +773,7 @@ program define edmExplore, eclass sortpreserve
 		}
 		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `crossfoldu', "transfer_manifold_data" ///
 				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"
 
 		if `parsed_dt' == 0 {
 			qui keep if `before_tsfill' != .
@@ -1061,7 +1067,13 @@ end
 
 
 program define edmXmap, eclass sortpreserve
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] [k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] [SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] [tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [newdt] [DTWeight(real 0)] [DTSave(name)] [oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)]
+	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
+			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
+			[SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] ///
+			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] ///
+			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
+			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
+			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1651,7 +1663,7 @@ program define edmXmap, eclass sortpreserve
 			}
 			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable', "transfer_manifold_data" ///
 					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"
 			if `parsed_dt' == 0 {
 				qui keep if `before_tsfill' != .
 				drop `before_tsfill'
