@@ -332,7 +332,7 @@ program define edmExplore, eclass sortpreserve
 	local timevar "`=r(timevar)'"
 
 	edmPluginCheck, `mata'
-	/* return list */
+
 	local mata_mode = r(mata_mode)
 	if "${EDM_VERBOSITY}"!="" {
 		local verbosity=${EDM_VERBOSITY}
@@ -340,6 +340,8 @@ program define edmExplore, eclass sortpreserve
 	if "${EDM_NTHREADS}"!="" {
 		local nthreads=${EDM_NTHREADS}
 	}
+
+	local missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 
 	* create manifold as variables
 	tokenize "`anything'"
@@ -385,12 +387,12 @@ program define edmExplore, eclass sortpreserve
 		qui {
 			preserve
 			keep if `touse'
-			if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+			if !`missing_mode' {
 				keep if `x' != .
 			}
 			xtset
 			local original_t = r(timevar)
-			/* keep if `original_t' !=. */
+
 			if "`=r(panelvar)'" == "." {
 				local original_id = ""
 				local byori =""
@@ -423,7 +425,7 @@ program define edmExplore, eclass sortpreserve
 				preserve
 				keep if `touse'
 				// this part is for filtering only
-				if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+				if !`missing_mode' {
 					tokenize "`copredictvar'"
 					local co_x "`1'"
 					tempvar co_x_new
@@ -496,18 +498,19 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	tempvar usable
-
 	/*
 	include missing algorithm:
 	1. more relaxed usable
 	2. deal within mata
 	*/
-	qui gen byte `usable' = `x'!=. & `touse' & `zusable'
 
-	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
-		/* di "Reset usable due to allow missing" */
-		qui replace `usable' = `touse'
+	tempvar usable
+	if `missing_mode' {
+		* If allow missing, use a wide definition of usable when generating manifold
+		qui gen byte `usable' = `touse'
+	}
+	else {
+		qui gen byte `usable' = `x'!=. & `touse' & `zusable'
 	}
 
 	numlist "`e'"
@@ -529,10 +532,6 @@ program define edmExplore, eclass sortpreserve
 				local parsed_dt0 = 0
 			}
 		}
-	}
-	* If allow missing, use a wide definition of usable when generating manifold
-	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
-		qui replace `usable' = `touse'
 	}
 
 	forvalues i=1/`=`max_e'-1' {
@@ -683,7 +682,7 @@ program define edmExplore, eclass sortpreserve
 		qui gen double `x_p' = .
 	}
 
-	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+	if `missing_mode' {
 		qui {
 			/* di "Reset usable due to allow missing" */
 			replace `usable' = 0
@@ -1030,7 +1029,7 @@ program define edmExplore, eclass sortpreserve
 	ereturn scalar force_compute = "`force'" =="force"
 	ereturn scalar panel =`ispanel'
 	ereturn scalar dt =`parsed_dt'
-	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+	if `missing_mode' {
 		ereturn scalar missingdistance = `missingdistance'
 	}
 	if `parsed_dt' {
@@ -1167,6 +1166,8 @@ program define edmXmap, eclass sortpreserve
 		local nthreads=${EDM_NTHREADS}
 	}
 
+	local missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
+
 	* create manifold as variables
 	tokenize "`anything'"
 
@@ -1237,7 +1238,7 @@ program define edmXmap, eclass sortpreserve
 				// update main mainfold
 				preserve
 				keep if `touse'
-				if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+				if !`missing_mode' {
 					keep if `x' != .
 				}
 				qui xtset
@@ -1271,7 +1272,7 @@ program define edmXmap, eclass sortpreserve
 				if "`copredictvar'" != "" {
 					preserve
 					keep if `touse'
-					if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+					if !`missing_mode' {
 						tokenize "`copredictvar'"
 						local co_x "`1'"
 						local co_y "`2'"
@@ -1384,14 +1385,14 @@ program define edmXmap, eclass sortpreserve
 		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
 
 		tempvar usable
-
-		qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable'
-
-		* If allow missing, use a wide definition of usable when generating manifold
-		if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
-			qui replace `usable' = `touse'
+		if `missing_mode' {
+			* If allow missing, use a wide definition of usable when generating manifold
+			qui gen byte `usable' = `touse'
 		}
-
+		else {
+			qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable'
+		}
+		
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
 				qui sum `x' if `usable'
@@ -1413,7 +1414,7 @@ program define edmXmap, eclass sortpreserve
 			tempvar x_`i'
 			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
 
-			if !(`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+			if !`missing_mode' {
 				qui replace `usable' = 0 if `x_`i'' ==.
 			}
 
@@ -1981,7 +1982,7 @@ program define edmXmap, eclass sortpreserve
 	ereturn local extraembed = "`extraembed'"
 	ereturn scalar panel =`ispanel'
 	ereturn scalar dt =`parsed_dt'
-	if (`missingdistance' !=0 | "`allowmissing'"=="allowmissing") {
+	if `missing_mode' {
 		ereturn scalar missingdistance = `missingdistance1'
 		ereturn scalar missingdistance1 = `missingdistance1'
 		if "`direction'" == "both" {
