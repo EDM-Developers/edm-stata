@@ -584,9 +584,9 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 	else {
-		tempvar manifoldHasMissing
-		hasMissingValues `mapping_`=`max_e'-1'', out(`manifoldHasMissing')
-		gen byte `usable' = `touse' & !`manifoldHasMissing' & `x_f' != .
+		tempvar any_missing_in_manifold
+		hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+		gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 	}
 
 	if "`copredictvar'" != "" {
@@ -1362,22 +1362,23 @@ program define edmXmap, eclass sortpreserve
 		local mapping_0 "`x' `zlist'"
 		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
 
-		tempvar usable
+		// TODO: Check whether we shouldn't be using the final `usable' for the default `dtweight'
+		tempvar dt_usable
 		if `allow_missing_mode' {
-			* If allow missing, use a wide definition of usable when generating manifold
-			qui gen byte `usable' = `touse'
+			qui gen byte `dt_usable' = `touse'
 		}
 		else {
 			tempvar any_extras_missing
 			hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
-			qui gen byte `usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
+			qui gen byte `dt_usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
 		}
 		
+		// Calculate the default value for `dtweight'
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
-				qui sum `x' if `usable'
+				qui sum `x' if `dt_usable'
 				local xsd = r(sd)
-				qui sum `dt_value' if `usable'
+				qui sum `dt_value' if `dt_usable'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
 				if `tsd' == 0 {
@@ -1390,13 +1391,14 @@ program define edmXmap, eclass sortpreserve
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
 
-		forvalues i=1/`=`e'-1' {
+		numlist "`e'"
+		local e_size = wordcount("`=r(numlist)'")
+		local max_e : word `e_size' of `e'
+
+		// Generate the main manifold
+		forvalues i=1/`=`max_e'-1' {
 			tempvar x_`i'
 			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
-
-			if !`allow_missing_mode' {
-				qui replace `usable' = 0 if `x_`i'' ==.
-			}
 
 			local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 			local mapping_`i'_name "`mapping_`=`i'-1'_name' l`=`i'*`tau''.`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
@@ -1416,21 +1418,30 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		qui {
-			if `allow_missing_mode' {
-				/* di "Reset usable due to allow missing" */
-				replace `usable' = 0
-				foreach v of local mapping_`=`e'-1' {
-					replace `usable' =1 if `v' !=. & `touse'
-				}
-				if `missingdistance' <= 0 {
-					sum `x' if `usable'
-					local missingdistance = 2/sqrt(c(pi))*r(sd)
-				}
-				replace `usable' = 0 if f`tp'.`y' ==.
-				di "missing distance: `missingdistance'"
-				local missingdistance`direction_num' = `missingdistance'
+		// Get the vector of values which we'll try to predict
+		tempvar x_f
+		qui gen double `x_f' = f`tp'.`y' if `touse'
+
+		// Select the rows which we'll use in the analysis
+		tempvar usable
+		if `allow_missing_mode' {
+			qui gen byte `usable' = 0
+			foreach v of local mapping_`=`max_e'-1' {
+				qui replace `usable' = 1 if `v' !=. & `touse'
 			}
+			// TODO: Check whether `missingdistance' ought to use the final `usable'
+			if `missingdistance' <= 0 {
+				qui sum `x' if `usable'
+				local missingdistance = 2/sqrt(c(pi))*r(sd)
+			}
+			local missingdistance`direction_num' = `missingdistance'
+			
+			qui replace `usable' = 0 if `x_f' == .
+		}
+		else {
+			tempvar any_missing_in_manifold
+			hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 		}
 
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
@@ -1495,7 +1506,7 @@ program define edmXmap, eclass sortpreserve
 			* manifold of coprediction
 			local co_mapping_0 "`co_x' `co_zlist'"
 			qui replace `co_usable' = 0 if `co_x'==.
-			forvalues i=1/`=`e'-1' {
+			forvalues i=1/`=`max_e'-1' {
 				tempvar co_x_`i'
 				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `touse'
 				qui replace `co_usable' = 0 if `co_x_`i'' ==.
@@ -1553,9 +1564,7 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		tempvar x_f train_set predict_set
-
-		qui gen double `x_f' = f`tp'.`y' if `touse'
+		tempvar train_set predict_set
 
 		if "`predict'" != "" {
 			cap gen double `predict' = .
@@ -1588,10 +1597,6 @@ program define edmXmap, eclass sortpreserve
 			local library = `num_usable'
 		}
 
-		numlist "`e'"
-		local e_size = wordcount("`=r(numlist)'")
-		local max_e : word `e_size' of `e'
-		
 		numlist "`theta'"
 		local theta_size = wordcount("`=r(numlist)'")
 		numlist "`library'"
@@ -1656,24 +1661,20 @@ program define edmXmap, eclass sortpreserve
 						if `lib_size' > `num_usable' {
 							di as error "Library size exceeds the limit."
 							error 1
-							/* di "max triggered lib size `lib_size' , rankmax `num_usable'" */
 							// TODO: Does the next line ever get reached?
 							// TODO: Can easily check these lib_size constraints earlier in the function.
 							continue, break
 						}
 						else if `lib_size' <= `i' + 1 {
-							/* noi display "Skipped library size `lib_size'" */
 							di as error "Cannot estimate under the current library specification"
 							error 1
 						}
 
-						
 						if `mata_mode' {
 							qui replace `train_set' = `urank' <= `lib_size' & `usable'
 						}
 
 						local train_size = min(`lib_size',`num_usable')
-
 
 						// detect k size
 						if `k' > 0 {
