@@ -142,8 +142,8 @@ program define edmPreprocessVariable, eclass
 		local unnormalized = substr("`1'", 3, .)
 		qui egen `varname' = std(`unnormalized')
 	}
-	else if strpos("`1'", ".") >0 {
-		qui gen double `varname' = `1' if `touse'
+	else {
+		qui gen double `varname' = `1' 
 	}
 end
 
@@ -356,12 +356,8 @@ program define edmExplore, eclass sortpreserve
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 
-	local x "`1'"
-	if  strpos("`x'", ".") > 0 {
-		tempvar x_processed
-		edmPreprocessVariable `x' , touse(`touse') varname(`x_processed')
-		local x `x_processed'
-	}
+	tempvar x
+	edmPreprocessVariable "`1'", touse(`touse') varname(`x')
 
 	local zcount = 0
 	local zlist ""
@@ -578,12 +574,8 @@ program define edmExplore, eclass sortpreserve
 
 		* build prediction manifold
 		tokenize "`copredictvar'"
-		local co_x "`1'"
-		if  strpos("`co_x'", ".") > 0 {
-			tempvar co_x_processed
-			edmPreprocessVariable `co_x' , touse(`touse') varname(`co_x_processed')
-			local co_x `co_x_processed'
-		}
+		tempvar co_x
+		edmPreprocessVariable "`1'", touse(`touse') varname(`co_x')
 
 		* z list
 		tempvar co_zusable
@@ -1181,18 +1173,9 @@ program define edmXmap, eclass sortpreserve
 		error 102
 	}
 
-	local x "`1'"
-	local y "`2'"
-	if  strpos("`x'", ".") > 0 {
-		tempvar x_processed
-		edmPreprocessVariable `x' , touse(`touse') varname(`x_processed')
-		local x `x_processed'
-	}
-	if  strpos("`y'", ".") > 0 {
-		tempvar y_processed
-		edmPreprocessVariable `y' , touse(`touse') varname(`y_processed')
-		local y `y_processed'
-	}
+	tempvar x y
+	edmPreprocessVariable "`1'", touse(`touse') varname(`x')
+	edmPreprocessVariable "`2'", touse(`touse') varname(`y')
 
 	if (`e' < 1) {
 		dis as error "Some of the proposed number of dimensions for embedding is too small."
@@ -1473,24 +1456,15 @@ program define edmXmap, eclass sortpreserve
 			gen byte `co_usable' = `touse'
 			* build prediction manifold
 			tokenize "`copredictvar'"
-			local co_x "`1'"
-			local co_y "`2'"
 
-			if ("`co_y'" == "") |  ("`co_x'" == "") {
+			if ("`1'" == "") |  ("`2'" == "") {
 				di as error "Coprediction does not match the main manifold construct"
 				error 111
 			}
 
-			if  strpos("`co_x'", ".") > 0 {
-				tempvar co_x_processed
-				edmPreprocessVariable `co_x' , touse(`touse') varname(`co_x_processed')
-				local co_x `co_x_processed'
-			}
-			if  strpos("`co_y'", ".") > 0 {
-				tempvar co_y_processed
-				edmPreprocessVariable `co_y' , touse(`touse') varname(`co_y_processed')
-				local co_y `co_y_processed'
-			}
+			tempvar co_x co_y
+			edmPreprocessVariable "`1'", touse(`touse') varname(`co_x')
+			edmPreprocessVariable "`2'", touse(`touse') varname(`co_y')
 
 			* z list
 			tempvar co_zusable
