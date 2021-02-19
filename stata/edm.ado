@@ -152,9 +152,8 @@ program define hasMissingValues
 	qui gen byte `out' = 0
 	
 	if "`anything'" != "" {
-		/* tokenize `anything' */
-		foreach var in varlist "`anything'" {
-			replace `out' = 1 if `var' == .
+		foreach var in `anything' {
+			qui replace `out' = 1 if `var' == .
 		}
 	}
 end
@@ -504,21 +503,18 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	/*
-	include missing algorithm:
-	1. more relaxed usable
-	2. deal within mata
-	*/
-
-	tempvar usable
+	// TODO: Check whether this `dt_usable' filter which is used when
+	// calculating the default value for `dtweight' ought not simply be
+	// the `usable' which is used in the actual analysis.
+	tempvar dt_usable
 	if `missing_mode' {
 		* If allow missing, use a wide definition of usable when generating manifold
-		qui gen byte `usable' = `touse'
+		qui gen byte `dt_usable' = `touse'
 	}
 	else {
 		tempvar any_extras_missing
 		hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
-		qui gen byte `usable' = `x'!=. & `touse' & !`any_extras_missing'
+		qui gen byte `dt_usable' = `x'!=. & `touse' & !`any_extras_missing'
 	}
 
 	numlist "`e'"
@@ -526,11 +522,13 @@ program define edmExplore, eclass sortpreserve
 	local max_e : word `e_size' of `e'
 
 	local mapping_0 "`x' `zlist'"
+
+	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
 		if `parsed_dtw' == 0 {
-			qui sum `x' if `usable'
+			qui sum `x' if `dt_usable'
 			local xsd = r(sd)
-			qui sum `dt_value' if `usable'
+			qui sum `dt_value' if `dt_usable'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
 			if `tsd' == 0 {
@@ -542,27 +540,54 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
+	// Generate the main manifold
 	forvalues i=1/`=`max_e'-1' {
 		tempvar x_`i'
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
-		qui replace `usable' = 0 if `x_`i'' ==.
+		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
 		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
 		if `parsed_dt' {
 			tempvar t_`i'
 			// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `usable'
+			qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `touse'
 			if `parsed_dt0' & (`i' == 1) {
 				//add additionally dt value for the initial round
 				tempvar t_0
-				qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `usable'
-				qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
+				qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `touse'
 				local mapping_`i' "`mapping_`i'' `t_0'"
 			}
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 		}
 	}
 
-	qui replace `usable' = 0 if f`future_step'.`x' ==. & `usable'
+	// Get the vector of future values which we'll be trying to predict
+	tempvar x_f
+	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
+	qui gen double `x_f' = f`future_step'.`x' if `touse'
+	
+	// Choose which rows of the manifold we will use for the analysis
+	// (this mainly depends on whether we're keeping or discarding rows 
+	// with some missing values).
+	tempvar usable
+	if `missing_mode' {
+		// Work on any row of the manifold with >= 1 non-missing value
+		qui {
+			qui gen byte `usable' = 0
+			foreach v of local mapping_`=`max_e'-1' {
+				replace `usable' = 1 if `v' != . & `touse'
+			}
+			// TODO: Check whether this ought to be done after the following line
+			if `missingdistance' <=0 {
+				qui sum `x' if `usable'
+				local missingdistance = 2/sqrt(c(pi))*r(sd)
+			}
+			qui replace `usable' =0 if `x_f' ==.
+		}
+	}
+	else {
+		tempvar manifoldHasMissing
+		hasMissingValues `mapping_`=`max_e'-1'', out(`manifoldHasMissing')
+		gen byte `usable' = `touse' & !`manifoldHasMissing' & `x_f' != .
+	}
 
 	if "`copredictvar'" != "" {
 		if "`copredict'" == "" {
@@ -598,7 +623,6 @@ program define edmExplore, eclass sortpreserve
 		qui {
 			foreach v of local parsed_extravars {
 				tempvar z`++co_zcount'
-				/* noi di "extra embeding: `v'" */
 				// TODO: Call new normalize function
 				if substr("`v'",1,2) == "z." {
 					sum `=substr("`v'",3,.)' if `touse'
@@ -623,7 +647,7 @@ program define edmExplore, eclass sortpreserve
 
 		forvalues i=1/`=`max_e'-1' {
 			tempvar co_x_`i'
-			qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable'
+			qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `touse'
 			qui replace `co_usable' = 0 if `co_x_`i'' ==.
 			local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 			local co_mapping "`co_mapping_`i''"
@@ -636,12 +660,12 @@ program define edmExplore, eclass sortpreserve
 				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
 
 				// parsed _dtw should match copredict
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
+				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `touse'
 				if `parsed_dt0' & `i' == 1 {
 					//add additionally dt value for the initial round
 					tempvar t_0
-					qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
-					qui replace `co_usable' = 0 if f.`dt_value_co' == . & `co_usable'
+					qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `touse'
+					qui replace `co_usable' = 0 if f.`dt_value_co' == . & `touse'
 					local co_mapping_`i' "`co_mapping_`i'' `t_0'"
 				}
 				local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
@@ -663,34 +687,10 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	tempvar x_f
 	if `mata_mode' {
 		tempvar train_set predict_set
-	}
-	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
-	qui gen double `x_f' = f`future_step'.`x' if `usable'
-	qui replace `usable' =0 if `x_f' ==.
-
-	if `mata_mode' {
 		tempvar x_p
 		qui gen double `x_p' = .
-	}
-
-	if `missing_mode' {
-		qui {
-			/* di "Reset usable due to allow missing" */
-			replace `usable' = 0
-			foreach v of local mapping_`=`max_e'-1' {
-				replace `usable' = 1 if `v' != . & `touse'
-			}
-			if `missingdistance' <=0 {
-				qui sum `x' if `usable'
-				local missingdistance = 2/sqrt(c(pi))*r(sd)
-			}
-			replace `x_f' = f`future_step'.`x' if `usable'
-			replace `usable' = 0 if `x_f' == .
-			/* di "missing distance: `missingdistance'" */
-		}
 	}
 
 	qui count if `usable'
@@ -1392,7 +1392,7 @@ program define edmXmap, eclass sortpreserve
 
 		forvalues i=1/`=`e'-1' {
 			tempvar x_`i'
-			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `usable'
+			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
 
 			if !`missing_mode' {
 				qui replace `usable' = 0 if `x_`i'' ==.
@@ -1403,12 +1403,11 @@ program define edmXmap, eclass sortpreserve
 			if `parsed_dt' {
 				tempvar t_`i'
 				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `usable'
+				qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `touse'
 				if `parsed_dt0' & (`i' == 1) {
 					//add additionally dt value for the initial round
 					tempvar t_0
-					qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `usable'
-					qui replace `usable' = 0 if f.`dt_value' ==. & `usable'
+					qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `touse'
 					local mapping_`i' "`mapping_`i'' `t_0'"
 					local mapping_`i'_name "`mapping_`i'_name' dt0"
 				}
@@ -1418,7 +1417,7 @@ program define edmXmap, eclass sortpreserve
 		}
 
 		qui {
-			if ((`missingdistance' !=0) | ("`allowmissing'"=="allowmissing")) {
+			if `missing_mode' {
 				/* di "Reset usable due to allow missing" */
 				replace `usable' = 0
 				foreach v of local mapping_`=`e'-1' {
@@ -1498,7 +1497,7 @@ program define edmXmap, eclass sortpreserve
 			qui replace `co_usable' = 0 if `co_x'==.
 			forvalues i=1/`=`e'-1' {
 				tempvar co_x_`i'
-				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `co_usable'
+				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `touse'
 				qui replace `co_usable' = 0 if `co_x_`i'' ==.
 				local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 				local co_mapping "`co_mapping_`i''"
@@ -1522,12 +1521,12 @@ program define edmXmap, eclass sortpreserve
 					// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
 
 					// parsed _dtw should match copredict
-					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `co_usable'
+					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `touse'
 					if `parsed_dt0' & `i' == 1 {
 						//add additionally dt value for the initial round
 						tempvar t_0
-						qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `co_usable'
-						qui replace `co_usable' = 0 if f.`dt_value_co' == . & `co_usable'
+						qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `touse'
+						qui replace `co_usable' = 0 if f.`dt_value_co' == . & `touse'
 						local co_mapping_`i' "`co_mapping_`i'' `t_0'"
 					}
 					local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
@@ -1556,7 +1555,7 @@ program define edmXmap, eclass sortpreserve
 
 		tempvar x_f train_set predict_set
 
-		qui gen double `x_f' = f`tp'.`y' if `usable'
+		qui gen double `x_f' = f`tp'.`y' if `touse'
 
 		if "`predict'" != "" {
 			cap gen double `predict' = .
@@ -1588,9 +1587,6 @@ program define edmXmap, eclass sortpreserve
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
 			local library = `num_usable'
 		}
-
-		qui count if `usable'
-		local num_usable = r(N)
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
