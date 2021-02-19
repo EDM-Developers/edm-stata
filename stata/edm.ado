@@ -135,15 +135,27 @@ program define edmDisplayCI, rclass
 
 end
 
-program define edmPreprocessVariable, eclass
-	syntax anything , touse(name) varname(name)
+program define edmPreprocessVariable
+	syntax anything , touse(name) out(name)
 
 	if substr("`1'", 1, 2) == "z." {
 		local unnormalized = substr("`1'", 3, .)
-		qui egen `varname' = std(`unnormalized')
+		qui egen `out' = std(`unnormalized') if `touse'
 	}
 	else {
-		qui gen double `varname' = `1' 
+		qui gen double `out' = `1' 
+	}
+end
+
+program define hasMissingValues
+	syntax [anything] , out(name)
+	qui gen byte `out' = 0
+	
+	if "`anything'" != "" {
+		/* tokenize `anything' */
+		foreach var in varlist "`anything'" {
+			replace `out' = 1 if `var' == .
+		}
 	}
 end
 
@@ -357,11 +369,11 @@ program define edmExplore, eclass sortpreserve
 	markout `touse' `timevar' `panel_id'
 
 	tempvar x
-	edmPreprocessVariable "`1'", touse(`touse') varname(`x')
+	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
 	local zcount = 0
 	local zlist ""
-	tempvar zusable
+
 	edmExtractExtra `extraembed'
 
 	local parsed_extravars = strtrim(r(extravars))
@@ -471,15 +483,14 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 	}
+
 	qui {
-		gen byte `zusable' = `touse'
 		foreach v of local parsed_extravars {
 			tempvar z`++zcount'
 			/* noi di "extra embeding: `v'" */
 			if substr("`v'",1,2) == "z." {
 				sum `=substr("`v'",3,.)' if `touse'
 				gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-				replace `zusable' = 0 if `z`zcount'' ==.
 			}
 			else {
 				if real("`v'") !=. {
@@ -487,7 +498,6 @@ program define edmExplore, eclass sortpreserve
 					error 198
 				}
 				gen double `z`zcount'' = `v' if `touse'
-				replace `zusable' = 0 if `z`zcount'' ==.
 			}
 
 			local zlist "`zlist' `z`zcount''"
@@ -506,7 +516,9 @@ program define edmExplore, eclass sortpreserve
 		qui gen byte `usable' = `touse'
 	}
 	else {
-		qui gen byte `usable' = `x'!=. & `touse' & `zusable'
+		tempvar any_extras_missing
+		hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
+		qui gen byte `usable' = `x'!=. & `touse' & !`any_extras_missing'
 	}
 
 	numlist "`e'"
@@ -568,18 +580,18 @@ program define edmExplore, eclass sortpreserve
 		}
 
 		confirm new variable `copredict'
-		tempvar co_train_set co_predict_set co_usable
+		tempvar co_train_set co_predict_set
 		gen byte `co_train_set' = `usable'
-		gen byte `co_usable' = `touse'
 
 		* build prediction manifold
 		tokenize "`copredictvar'"
 		tempvar co_x
-		edmPreprocessVariable "`1'", touse(`touse') varname(`co_x')
+		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
 
 		* z list
-		tempvar co_zusable
-		qui gen byte `co_zusable' = `touse'
+		tempvar any_co_extras_missing
+		hasMissingValues "`parsed_extravars'", out(`any_co_extras_missing')
+
 		local co_zlist_name ""
 		local co_zlist ""
 		local co_zcount = 0
@@ -591,8 +603,6 @@ program define edmExplore, eclass sortpreserve
 				if substr("`v'",1,2) == "z." {
 					sum `=substr("`v'",3,.)' if `touse'
 					gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-					replace `co_zusable' = 0 if `z`co_zcount'' ==.
-					/* replace `z`co_zcount'' = 0 if `touse' != 1 */
 				}
 				else {
 					if real("`v'") !=. {
@@ -600,16 +610,16 @@ program define edmExplore, eclass sortpreserve
 						error 198
 					}
 					gen double `z`co_zcount'' = `v' if `touse'
-					replace `co_zusable' = 0 if `z`co_zcount'' ==.
 				}
 				local co_zlist_name "`co_zlist_name' `v'"
 				local co_zlist "`co_zlist' `z`co_zcount''"
 			}
 		}
-		qui replace `co_usable' = 0 if `co_zusable' == 0
+
+		tempvar co_usable
+		gen byte `co_usable' = `touse' & `co_x' != . & !`any_co_extras_missing'
 
 		local co_mapping_0 "`co_x' `co_zlist'"
-		qui replace `co_usable' = 0 if `co_x'==.
 
 		forvalues i=1/`=`max_e'-1' {
 			tempvar co_x_`i'
@@ -617,9 +627,6 @@ program define edmExplore, eclass sortpreserve
 			qui replace `co_usable' = 0 if `co_x_`i'' ==.
 			local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
 			local co_mapping "`co_mapping_`i''"
-			/* di "i=`i', x= `co_x_`i'', co_mapping "
-			list `co_usable' */
-			/* di "co_mapping_`i' w/o dt: `co_mapping_`i''" */
 			if `parsed_dt' {
 				if `codtweight' ==0 {
 					local codtweight = `parsed_dtw'
@@ -639,12 +646,7 @@ program define edmExplore, eclass sortpreserve
 				}
 				local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
-				/* di "incorporate lag `i' in dt mapping"
-				sum l`=`i'-1'.`dt_value' `t_`i''
-				di "`mapping_`i'_name'" */
 				local co_mapping "`co_mapping_`i''"
-				/* di "co_mapping_`i' w dt: `co_mapping_`i''" */
-
 			}
 		}
 
@@ -689,7 +691,6 @@ program define edmExplore, eclass sortpreserve
 			replace `usable' = 0 if `x_f' == .
 			/* di "missing distance: `missingdistance'" */
 		}
-
 	}
 
 	qui count if `usable'
@@ -1174,8 +1175,8 @@ program define edmXmap, eclass sortpreserve
 	}
 
 	tempvar x y
-	edmPreprocessVariable "`1'", touse(`touse') varname(`x')
-	edmPreprocessVariable "`2'", touse(`touse') varname(`y')
+	edmPreprocessVariable "`1'", touse(`touse') out(`x')
+	edmPreprocessVariable "`2'", touse(`touse') out(`y')
 
 	if (`e' < 1) {
 		dis as error "Some of the proposed number of dimensions for embedding is too small."
@@ -1197,7 +1198,6 @@ program define edmXmap, eclass sortpreserve
 
 		local zcount = 0
 		local zlist ""
-		tempvar zusable
 		edmExtractExtra `extraembed'
 		/* return list */
 		local parsed_extravars = strtrim(r(extravars))
@@ -1336,19 +1336,15 @@ program define edmXmap, eclass sortpreserve
 
 		}
 
-		qui gen byte `zusable' = `touse'
 		local zlist_name ""
 		local zlist ""
 		qui {
 			foreach v of local parsed_extravars {
 				tempvar z`++zcount'
-				/* noi di "extra embeding: `v'" */
 				if substr("`v'",1,2) == "z." {
 
 					sum `=substr("`v'",3,.)' if `touse'
 					gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-					replace `zusable' = 0 if `z`zcount'' ==.
-					/* replace `z`zcount'' = 0 if `touse' != 1 */
 				}
 				else {
 					if real("`v'") !=. {
@@ -1356,7 +1352,6 @@ program define edmXmap, eclass sortpreserve
 						error 198
 					}
 					gen double `z`zcount'' = `v' if `touse'
-					replace `zusable' = 0 if `z`zcount'' ==.
 				}
 				local zlist_name "`zlist_name' `v'"
 				local zlist "`zlist' `z`zcount''"
@@ -1373,7 +1368,9 @@ program define edmXmap, eclass sortpreserve
 			qui gen byte `usable' = `touse'
 		}
 		else {
-			qui gen byte `usable' = `x'!=. & `touse' & f`tp'.`y' !=. & `zusable'
+			tempvar any_extras_missing
+			hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
+			qui gen byte `usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
 		}
 		
 		if `parsed_dt' {
@@ -1451,9 +1448,8 @@ program define edmXmap, eclass sortpreserve
 				}
 			}
 			confirm new variable `copredict'
-			tempvar co_train_set co_predict_set co_usable
+			tempvar co_train_set co_predict_set
 			gen byte `co_train_set' = `usable'
-			gen byte `co_usable' = `touse'
 			* build prediction manifold
 			tokenize "`copredictvar'"
 
@@ -1463,12 +1459,13 @@ program define edmXmap, eclass sortpreserve
 			}
 
 			tempvar co_x co_y
-			edmPreprocessVariable "`1'", touse(`touse') varname(`co_x')
-			edmPreprocessVariable "`2'", touse(`touse') varname(`co_y')
+			edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
+			edmPreprocessVariable "`2'", touse(`touse') out(`co_y')
 
 			* z list
-			tempvar co_zusable
-			qui gen byte `co_zusable' = `touse'
+			tempvar any_co_extras_missing
+			hasMissingValues "`parsed_extravars'", out(`any_co_extras_missing')
+
 			local co_zlist_name ""
 			local co_zlist ""
 			local co_zcount = 0
@@ -1477,10 +1474,8 @@ program define edmXmap, eclass sortpreserve
 					tempvar z`++co_zcount'
 					/* noi di "extra embeding: `v'" */
 					if substr("`v'",1,2) == "z." {
-
 						sum `=substr("`v'",3,.)' if `touse'
 						gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-						replace `co_zusable' = 0 if `z`co_zcount'' ==.
 						/* replace `z`co_zcount'' = 0 if `touse' != 1 */
 					}
 					else {
@@ -1489,13 +1484,14 @@ program define edmXmap, eclass sortpreserve
 							error 198
 						}
 						gen double `z`co_zcount'' = `v' if `touse'
-						replace `co_zusable' = 0 if `z`co_zcount'' == .
 					}
 					local co_zlist_name "`co_zlist_name' `v'"
 					local co_zlist "`co_zlist' `z`co_zcount''"
 				}
 			}
-			qui replace `co_usable' = 0 if `co_zusable' == 0
+
+			tempvar co_usable
+			gen byte `co_usable' = `touse' & !`any_co_extras_missing'
 
 			* manifold of coprediction
 			local co_mapping_0 "`co_x' `co_zlist'"
@@ -1536,15 +1532,12 @@ program define edmXmap, eclass sortpreserve
 					}
 					local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
 
-					/* di "incorporate lag `i' in dt mapping"
-					sum l`=`i'-1'.`dt_value' `t_`i''
-					di "`mapping_`i'_name'" */
 					local co_mapping "`co_mapping_`i''"
 
 				}
 			}
 
-			gen byte `co_predict_set' = `co_usable' == 1
+			gen byte `co_predict_set' = `co_usable'
 			local comap_constructed = 1
 
 
