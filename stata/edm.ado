@@ -152,7 +152,9 @@ program define hasMissingValues
 	qui gen byte `out' = 0
 	
 	if "`anything'" != "" {
-		foreach var in `anything' {
+		tsunab varlist : `anything'
+		
+		foreach var in `varlist' {
 			qui replace `out' = 1 if `var' == .
 		}
 	}
@@ -558,7 +560,7 @@ program define edmExplore, eclass sortpreserve
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 		}
 	}
-
+	
 	// Get the vector of future values which we'll be trying to predict
 	tempvar x_f
 	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
@@ -584,10 +586,23 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 	else {
+		// Find which rows of the manifold have any values which are missing
 		tempvar any_missing_in_manifold
-		hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+		if `mata_mode' {
+			hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+		}
+		else {
+			tempvar x_lagged_missing
+			local max_lags = `tau'*(`max_e'-1)
+			hasMissingValues L(0[`tau']`max_lags').`x' , out(`x_lagged_missing')
+			// TODO: Add dt & its lags?
+			gen byte `any_missing_in_manifold' = `x_lagged_missing' | `any_extras_missing'
+		}
+
 		gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 	}
+
+
 
 	if "`copredictvar'" != "" {
 		if "`copredict'" == "" {
@@ -1550,7 +1565,6 @@ program define edmXmap, eclass sortpreserve
 			gen byte `co_predict_set' = `co_usable'
 			local comap_constructed = 1
 
-
 			//restore t
 			if `parsed_dt' {
 				qui {
@@ -1588,8 +1602,8 @@ program define edmXmap, eclass sortpreserve
 			local finished_rep = 0
 		}
 
-		* Now that `usable' is defined, we can set the default library size to be sum(usable).
-		* N.B. For each direction of the xmap, we probably have a different sum(usable) value. 
+		// Now that `usable' is defined, we can set the default library size to be sum(usable).
+		// N.B. For each direction of the xmap, we probably have a different sum(usable) value. 
 		qui count if `usable'
 		local num_usable = r(N)
 
