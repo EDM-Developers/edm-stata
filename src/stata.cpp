@@ -432,6 +432,55 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
 
     io.print(fmt::format("E is {}\n", E));
     io.flush();
+
+    if (io.verbosity > 2) {
+      auto M = generator.create_manifold(E, trainingRows, false);
+      auto Mp = generator.create_manifold(E, predictionRows, true);
+
+      io.print("training rows\n");
+      for (int i = 0; i < M.nobs(); i++) {
+        io.print(fmt::format("{} ", trainingRows[i]));
+        if (i > 10) {
+          break;
+        }
+      }
+      io.print("\n");
+
+      io.print("prediction rows\n");
+      for (int i = 0; i < M.nobs(); i++) {
+        io.print(fmt::format("{} ", predictionRows[i]));
+        if (i > 10) {
+          break;
+        }
+      }
+      io.print("\n");
+
+      io.print("dt\n");
+      for (int i = 0; i < M.nobs(); i++) {
+        io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i, 1)));
+        if (i > 5) {
+          break;
+        }
+      }
+      io.print("\n");
+
+      io.print("M Manifold\n");
+      for (int i = 0; i < M.nobs(); i++) {
+        for (int j = 0; j < M.E_actual(); j++) {
+          io.print(fmt::format("{} ", M(i, j)));
+        }
+        io.print("\n");
+      }
+      io.print("\n");
+
+      io.print("Mp Manifold\n");
+      for (int i = 0; i < Mp.nobs(); i++) {
+        for (int j = 0; j < Mp.E_actual(); j++) {
+          io.print(fmt::format("{} ", Mp(i, j)));
+        }
+        io.print("\n");
+      }
+    }
   }
 }
 
@@ -605,54 +654,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   predictions.push({});
 
-  if (io.verbosity > 2) {
-    auto M = generator.create_manifold(E, trainingRows, false);
-    auto Mp = generator.create_manifold(E, predictionRows, true);
-
-    io.print("training rows\n");
-    for (int i = 0; i < M.nobs(); i++) {
-      io.print(fmt::format("{} ", trainingRows[i]));
-      if (i > 10) {
-        break;
-      }
-    }
-    io.print("\n");
-
-    io.print("prediction rows\n");
-    for (int i = 0; i < M.nobs(); i++) {
-      io.print(fmt::format("{} ", predictionRows[i]));
-      if (i > 10) {
-        break;
-      }
-    }
-    io.print("\n");
-
-    io.print("dt\n");
-    for (int i = 0; i < M.nobs(); i++) {
-      io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i, 1)));
-      if (i > 5) {
-        break;
-      }
-    }
-    io.print("\n");
-
-    io.print("M Manifold\n");
-    for (int i = 0; i < M.nobs(); i++) {
-      for (int j = 0; j < M.E_actual(); j++) {
-        io.print(fmt::format("{} ", M(i, j)));
-      }
-      io.print("\n");
-    }
-    io.print("\n");
-
-    io.print("Mp Manifold\n");
-    for (int i = 0; i < Mp.nobs(); i++) {
-      for (int j = 0; j < Mp.E_actual(); j++) {
-        io.print(fmt::format("{} ", Mp(i, j)));
-      }
-      io.print("\n");
-    }
-  }
+  print_launch_info(argc, argv, taskOpts, trainingRows, predictionRows, E);
 
   futures.push(edm_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going,
                          all_tasks_finished));

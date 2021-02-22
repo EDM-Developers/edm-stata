@@ -160,7 +160,7 @@ program define hasMissingValues
 	}
 end
 
-program define edmPrintPluginResults, eclass
+program define edmPrintPluginProgress, eclass
 	plugin call smap_block_mdap , "report_progress"
 	nobreak {
 		local breakHit = 0
@@ -505,29 +505,29 @@ program define edmExplore, eclass sortpreserve
 		}
 	}
 
-	// TODO: Check whether this `dt_usable' filter which is used when
-	// calculating the default value for `dtweight' ought not simply be
-	// the `usable' which is used in the actual analysis.
-	tempvar dt_usable
-	if `allow_missing_mode' {
-		* If allow missing, use a wide definition of usable when generating manifold
-		qui gen byte `dt_usable' = `touse'
-	}
-	else {
-		tempvar any_extras_missing
-		hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
-		qui gen byte `dt_usable' = `x'!=. & `touse' & !`any_extras_missing'
-	}
+	// Get the vector of future values which we'll be trying to predict
+	tempvar x_f
+	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
+	qui gen double `x_f' = f`future_step'.`x' if `touse'
 
-	numlist "`e'"
-	local e_size = wordcount("`=r(numlist)'")
-	local max_e : word `e_size' of `e'
-
-	local mapping_0 "`x' `zlist'"
+	tempvar any_extras_missing
+	hasMissingValues `parsed_extravars', out(`any_extras_missing')
 
 	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
 		if `parsed_dtw' == 0 {
+			// TODO: Check whether this `dt_usable' filter which is used when
+			// calculating the default value for `dtweight' ought not simply be
+			// the `usable' which is used in the actual analysis.
+			tempvar dt_usable
+			if `allow_missing_mode' {
+				* If allow missing, use a wide definition of usable when generating manifold
+				qui gen byte `dt_usable' = `touse'
+			}
+			else {
+				qui gen byte `dt_usable' = `x'!=. & `touse' & !`any_extras_missing'
+			}
+
 			qui sum `x' if `dt_usable'
 			local xsd = r(sd)
 			qui sum `dt_value' if `dt_usable'
@@ -541,6 +541,12 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 	}
+
+	numlist "`e'"
+	local e_size = wordcount("`=r(numlist)'")
+	local max_e : word `e_size' of `e'
+
+	local mapping_0 "`x' `zlist'"
 
 	// Generate the main manifold
 	forvalues i=1/`=`max_e'-1' {
@@ -560,11 +566,6 @@ program define edmExplore, eclass sortpreserve
 			local mapping_`i' "`mapping_`i'' `t_`i''"
 		}
 	}
-	
-	// Get the vector of future values which we'll be trying to predict
-	tempvar x_f
-	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
-	qui gen double `x_f' = f`future_step'.`x' if `touse'
 	
 	// Choose which rows of the manifold we will use for the analysis
 	// (this mainly depends on whether we're keeping or discarding rows 
@@ -630,7 +631,7 @@ program define edmExplore, eclass sortpreserve
 
 		* z list
 		tempvar any_co_extras_missing
-		hasMissingValues "`parsed_extravars'", out(`any_co_extras_missing')
+		hasMissingValues `parsed_extravars', out(`any_co_extras_missing')
 
 		local co_zlist_name ""
 		local co_zlist ""
@@ -943,7 +944,7 @@ program define edmExplore, eclass sortpreserve
 
 	// Collect all the asynchronous predictions from the plugin
 	if `mata_mode' == 0 {
-		edmPrintPluginResults
+		edmPrintPluginProgress
 		local result_matrix = "r"
 		plugin call smap_block_mdap `predict', "collect_results" "`result_matrix'"
 	}
@@ -984,7 +985,7 @@ program define edmExplore, eclass sortpreserve
 					qui keep if `before_tsfill' != .
 					drop `before_tsfill'
 				}
-				edmPrintPluginResults
+				edmPrintPluginProgress
 				plugin call smap_block_mdap `co_x_p', "collect_results"
 			}
 
@@ -1384,7 +1385,7 @@ program define edmXmap, eclass sortpreserve
 		}
 		else {
 			tempvar any_extras_missing
-			hasMissingValues "`parsed_extravars'", out(`any_extras_missing')
+			hasMissingValues `parsed_extravars', out(`any_extras_missing')
 			qui gen byte `dt_usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
 		}
 		
@@ -1489,7 +1490,7 @@ program define edmXmap, eclass sortpreserve
 
 			* z list
 			tempvar any_co_extras_missing
-			hasMissingValues "`parsed_extravars'", out(`any_co_extras_missing')
+			hasMissingValues `parsed_extravars', out(`any_co_extras_missing')
 
 			local co_zlist_name ""
 			local co_zlist ""
@@ -1829,6 +1830,13 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
+		// Collect all the asynchronous predictions from the plugin 
+		if `mata_mode' == 0 {
+			edmPrintPluginProgress
+			local result_matrix = "r`direction_num'"
+			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
+		}
+
 		* reset the panel structure
 		if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
 			sort `original_id' `original_t'
@@ -1850,12 +1858,6 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		// Collect all the asynchronous predictions from the plugin 
-		if `mata_mode' == 0 {
-			edmPrintPluginResults
-			local result_matrix = "r`direction_num'"
-			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
-		}
 	}
 	if `mata_mode' & `replicate' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
@@ -1901,7 +1903,7 @@ program define edmXmap, eclass sortpreserve
 					drop `before_tsfill'
 				}
 
-				edmPrintPluginResults
+				edmPrintPluginProgress
 				plugin call smap_block_mdap `co_x_p', "collect_results"
 			}
 
