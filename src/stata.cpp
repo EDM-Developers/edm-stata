@@ -391,7 +391,7 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
 
     io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
     io.print(fmt::format("force compute = {}\n\n", opts.forceCompute));
-    io.print(fmt::format("missing distance = {:.06f}\n\n", opts.missingdistance));
+    io.print(fmt::format("missing distance = {}\n\n", opts.missingdistance));
 
     io.print(fmt::format("We have {} 'extra' columns\n", numExtras));
     io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
@@ -615,7 +615,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   Options taskOpts = opts;
-
+  taskOpts.copredict = false;
   taskOpts.taskNum = futures.size();
 
   int iterationNumber = atoi(argv[0]);
@@ -674,6 +674,7 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   reset_global_state();
 
   Options taskOpts = opts;
+  taskOpts.copredict = true;
 
   // Just one task when in coprediction mode.
   taskOpts.taskNum = 0;

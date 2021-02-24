@@ -26,15 +26,22 @@
 /* minindex(v,k) returns the indices of the k minimums of v.  */
 std::vector<size_t> minindex(const std::vector<double>& v, int k)
 {
-  // initialize original index locations
+  // Initialize original index locations
   std::vector<size_t> idx(v.size());
   std::iota(idx.begin(), idx.end(), 0);
 
-  if (k >= (int)v.size()) {
-    k = (int)v.size();
-  }
+  auto stableComparator = [&v](size_t i1, size_t i2) {
+    if (v[i1] != v[i2])
+      return v[i1] < v[i2];
+    else
+      return i1 < i2;
+  };
 
-  std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), [&v](size_t i1, size_t i2) { return v[i1] < v[i2]; });
+  if (k >= (int)v.size()) {
+    std::sort(idx.begin(), idx.end(), stableComparator);
+  } else {
+    std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
+  }
 
   return idx;
 }
@@ -45,7 +52,7 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
           const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc);
 
 void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
-                    span_2d_retcode rc, span_2d_double coeffs, bool keep_going() = nullptr)
+                    span_2d_retcode rc, span_2d_double coeffs, int skipRow, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -73,11 +80,9 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
     }
     // If the distance between M_i and b is 0 before handling missing values,
     // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
+    dist += numMissingDims * opts.missingdistance * opts.missingdistance;
 
-    if (missing || dist == 0.) {
+    if (missing) {
       d[i] = MISSING;
     } else {
       d[i] = dist;
@@ -105,7 +110,20 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
     }
   }
 
-  std::vector<size_t> ind = minindex(d, k);
+  double d_min = *std::min_element(d.begin(), d.end());
+  bool skipFirst = (d_min > 0) && (skipRow >= 0);
+
+  for (int i = 0; i < d.size(); i++) {
+    if (d[i] == 0) {
+      d[i] = MISSING;
+    }
+  }
+
+  std::vector<size_t> ind = minindex(d, k + skipFirst);
+
+  if (skipFirst) {
+    ind.erase(ind.begin(), ind.begin() + 1);
+  }
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -297,6 +315,25 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   size_t numPredictions = Mp.nobs();
   size_t numCoeffCols = M.E_actual() + 1;
 
+  // If the same observation is in the training & prediction sets,
+  // then find the row index of the train manifold for a given prediction row.
+  std::vector<int> predToTrainSelfMap(numPredictions);
+  int M_i = 0, Mp_i = 0;
+  int numSelfToSkip = 0;
+  for (int r = 0; r < trainingRows.size(); r++) {
+    if (predictionRows[r]) {
+      if (trainingRows[r] && !opts.copredict) {
+        predToTrainSelfMap[Mp_i] = M_i;
+        numSelfToSkip += 1;
+      } else {
+        predToTrainSelfMap[Mp_i] = -1;
+      }
+    }
+
+    M_i += trainingRows[r];
+    Mp_i += predictionRows[r];
+  }
+
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
   auto ystarView = span_2d_double(ystar.get(), (int)numThetas, (int)numPredictions);
 
@@ -319,7 +356,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
       if (keep_going != nullptr && keep_going() == false) {
         *pred = { UNKNOWN_ERROR, {}, {} };
       }
-      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going);
+      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
       if (opts.numTasks == 1) {
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
@@ -331,8 +368,8 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
 
     std::vector<std::future<void>> results(numPredictions);
     for (int i = 0; i < numPredictions; i++) {
-      results[i] =
-        workerPool.enqueue([&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, keep_going); });
+      results[i] = workerPool.enqueue(
+        [&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going); });
     }
 
     if (opts.numTasks == 1) {

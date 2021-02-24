@@ -585,12 +585,13 @@ program define edmExplore, eclass sortpreserve
 			foreach v of local mapping_`=`max_e'-1' {
 				replace `usable' = 1 if `v' != . & `touse'
 			}
+			
 			// TODO: Check whether this ought to be done after the following line
-			if `missingdistance' <=0 {
+			if `missingdistance' <= 0 {
 				qui sum `x' if `usable'
 				local missingdistance = 2/sqrt(c(pi))*r(sd)
 			}
-			qui replace `usable' =0 if `x_f' ==.
+			qui replace `usable' = 0 if `x_f' ==.
 		}
 	}
 	else {
@@ -1432,6 +1433,7 @@ program define edmXmap, eclass sortpreserve
 			}
 			// TODO: Check whether `missingdistance' ought to use the final `usable'
 			if `missingdistance' <= 0 {
+				// TODO: Give this temporary var a different name
 				qui sum `x' if `usable'
 				local missingdistance = 2/sqrt(c(pi))*r(sd)
 			}
