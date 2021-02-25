@@ -511,7 +511,7 @@ program define edmExplore, eclass sortpreserve
 	qui gen double `x_f' = f`future_step'.`x' if `touse'
 
 	tempvar any_extras_missing
-	hasMissingValues `parsed_extravars', out(`any_extras_missing')
+	hasMissingValues `zlist', out(`any_extras_missing')
 
 	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
@@ -553,25 +553,29 @@ program define edmExplore, eclass sortpreserve
 	local e_size = wordcount("`=r(numlist)'")
 	local max_e : word `e_size' of `e'
 
-	local mapping_0 "`x' `zlist'"
-
-	// Generate the main manifold
-	forvalues i=1/`=`max_e'-1' {
+	// Generate lags for 'x' data
+	forvalues i=0/`=`max_e'-1' {
 		tempvar x_`i'
 		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
-		local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
-		if `parsed_dt' {
+	}
+
+	// Generate lags for the 'dt' if requested
+	if `parsed_dt' {
+		forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
 			tempvar t_`i'
-			// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-			qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `touse'
-			if `parsed_dt0' & (`i' == 1) {
-				//add additionally dt value for the initial round
-				tempvar t_0
-				qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `touse'
-				local mapping_`i' "`mapping_`i'' `t_0'"
-			}
-			local mapping_`i' "`mapping_`i'' `t_`i''"
+			qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
 		}
+	}
+
+	// Put the manifold together
+	forvalues i=1/`=`max_e'-1' {
+		forvalues j=0/`i' {
+			local mapping_`i' = "`mapping_`i'' `x_`j''"
+		}
+		forvalues j=0/`i' {
+			local mapping_`i' = "`mapping_`i'' `t_`j''"
+		}
+		local mapping_`i' = "`mapping_`i'' `zlist'"
 	}
 	
 	// Choose which rows of the manifold we will use for the analysis
@@ -640,9 +644,6 @@ program define edmExplore, eclass sortpreserve
 		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
 
 		* z list
-		tempvar any_co_extras_missing
-		hasMissingValues `parsed_extravars', out(`any_co_extras_missing')
-
 		local co_zlist_name ""
 		local co_zlist ""
 		local co_zcount = 0
@@ -666,38 +667,41 @@ program define edmExplore, eclass sortpreserve
 			}
 		}
 
+		tempvar any_co_extras_missing
+		hasMissingValues `co_zlist', out(`any_co_extras_missing')
+
 		tempvar co_usable
 		gen byte `co_usable' = `touse' & `co_x' != . & !`any_co_extras_missing'
 
-		local co_mapping_0 "`co_x' `co_zlist'"
-
-		forvalues i=1/`=`max_e'-1' {
+		// Generate lags for the comapping 'x' data
+		forvalues i=0/`=`max_e'-1' {
 			tempvar co_x_`i'
 			qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `touse'
-			qui replace `co_usable' = 0 if `co_x_`i'' ==.
-			local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
-			local co_mapping "`co_mapping_`i''"
-			if `parsed_dt' {
-				if `codtweight' ==0 {
-					local codtweight = `parsed_dtw'
-				}
+		}
 
-				tempvar t_`i'
-				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-
-				// parsed _dtw should match copredict
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `touse'
-				if `parsed_dt0' & `i' == 1 {
-					//add additionally dt value for the initial round
-					tempvar t_0
-					qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `touse'
-					qui replace `co_usable' = 0 if f.`dt_value_co' == . & `touse'
-					local co_mapping_`i' "`co_mapping_`i'' `t_0'"
-				}
-				local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
-
-				local co_mapping "`co_mapping_`i''"
+		// Generate lags for the comapping 'dt' if requested
+		if `parsed_dt' {
+			if `codtweight' == 0 {
+				local codtweight = `parsed_dtw'
 			}
+
+			forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
+				tempvar co_t_`i'
+				qui gen double `co_t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value_co' * `codtweight' if `touse'
+			}
+		}
+
+		// Put the comapping manifold together
+		forvalues j=0/`=`max_e'-1' {
+			local co_mapping = "`co_mapping' `co_x_`j''"
+		}
+		forvalues j=0/`=`max_e'-1' {
+			local co_mapping = "`co_mapping' `co_t_`j''"
+		}
+		local co_mapping = "`co_mapping' `co_zlist'"
+
+		forvalues i=1/`=`max_e'-1' {
+			qui replace `co_usable' = 0 if `co_x_`i'' ==.
 		}
 
 		gen byte `co_predict_set' = `co_usable'
@@ -1360,9 +1364,6 @@ program define edmXmap, eclass sortpreserve
 			}
 		}
 
-		* mapping include variables and specified multivariates
-		local mapping_0 "`x' `zlist'"
-		local mapping_0_name "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")' `zlist_name'"
 
 		// TODO: Check whether we shouldn't be using the final `usable' for the default `dtweight'
 		tempvar dt_usable
@@ -1371,7 +1372,7 @@ program define edmXmap, eclass sortpreserve
 		}
 		else {
 			tempvar any_extras_missing
-			hasMissingValues `parsed_extravars', out(`any_extras_missing')
+			hasMissingValues `zlist', out(`any_extras_missing')
 			qui gen byte `dt_usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
 		}
 		
@@ -1397,27 +1398,30 @@ program define edmXmap, eclass sortpreserve
 		local e_size = wordcount("`=r(numlist)'")
 		local max_e : word `e_size' of `e'
 
-		// Generate the main manifold
-		forvalues i=1/`=`max_e'-1' {
+		// Generate lags for 'x' data
+		forvalues i=0/`=`max_e'-1' {
 			tempvar x_`i'
 			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+		}
 
-			local mapping_`i' "`mapping_`=`i'-1'' `x_`i''"
-			local mapping_`i'_name "`mapping_`=`i'-1'_name' l`=`i'*`tau''.`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
-			if `parsed_dt' {
+		// Generate lags for the 'dt' if requested
+		if `parsed_dt' {
+			forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
 				tempvar t_`i'
-				// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-				qui gen double `t_`i'' = l`=`i'-1'.`dt_value' * `parsed_dtw' if `touse'
-				if `parsed_dt0' & (`i' == 1) {
-					//add additionally dt value for the initial round
-					tempvar t_0
-					qui gen double `t_0' = f.`dt_value' * `parsed_dtw' if `touse'
-					local mapping_`i' "`mapping_`i'' `t_0'"
-					local mapping_`i'_name "`mapping_`i'_name' dt0"
-				}
-				local mapping_`i' "`mapping_`i'' `t_`i''"
-				local mapping_`i'_name "`mapping_`i'_name' dt`i'"
+				qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
 			}
+		}
+
+		// Put the manifold together
+		forvalues i=1/`=`max_e'-1' {
+			local mapping_`i' = ""
+			forvalues j=0/`i' {
+				local mapping_`i' = "`mapping_`i'' `x_`j''"
+			}
+			forvalues j=0/`i' {
+				local mapping_`i' = "`mapping_`i'' `t_`j''"
+			}
+			local mapping_`i' = "`mapping_`i'' `zlist'"
 		}
 
 		// Get the vector of values which we'll try to predict
@@ -1480,9 +1484,6 @@ program define edmXmap, eclass sortpreserve
 			edmPreprocessVariable "`2'", touse(`touse') out(`co_y')
 
 			* z list
-			tempvar any_co_extras_missing
-			hasMissingValues `parsed_extravars', out(`any_co_extras_missing')
-
 			local co_zlist_name ""
 			local co_zlist ""
 			local co_zcount = 0
@@ -1507,51 +1508,43 @@ program define edmXmap, eclass sortpreserve
 				}
 			}
 
+			tempvar any_co_extras_missing
+			hasMissingValues `co_zlist', out(`any_co_extras_missing')
+
 			tempvar co_usable
 			gen byte `co_usable' = `touse' & !`any_co_extras_missing'
 
-			* manifold of coprediction
-			local co_mapping_0 "`co_x' `co_zlist'"
-			qui replace `co_usable' = 0 if `co_x'==.
-			forvalues i=1/`=`max_e'-1' {
+			// Generate lags for the comapping 'x' data
+			forvalues i=0/`=`max_e'-1' {
 				tempvar co_x_`i'
 				qui gen double `co_x_`i'' = l`=`i'*`tau''.`co_x' if `touse'
-				qui replace `co_usable' = 0 if `co_x_`i'' ==.
-				local co_mapping_`i' "`co_mapping_`=`i'-1'' `co_x_`i''"
-				local co_mapping "`co_mapping_`i''"
-				if `parsed_dt' {
-					// TODO: Get codtweight working (currently it is ignored, like in this codtweight=0 default case).
-					if `codtweight' == 0 {
-						// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
-						/* qui sum `co_x' if `co_usable'
-						local xsd = r(sd)
-						qui sum `dt_value_co' if `co_usable'
-						local tsd = r(sd)
-						local codtweight = `xsd'/`tsd'
-						if `tsd' ==0 {
-							// if there is no variance, no sampling required
-							local codtweight = 0
-						} */
-						local codtweight = `parsed_dtw'
-					}
+			}
 
-					tempvar t_`i'
-					// note: embedding does not include the status itself, it includes the gap between current obs with the last obs
-
-					// parsed _dtw should match copredict
-					qui gen double `t_`i'' = l`=`i'-1'.`dt_value_co'* `codtweight' if `touse'
-					if `parsed_dt0' & `i' == 1 {
-						//add additionally dt value for the initial round
-						tempvar t_0
-						qui gen double `t_0' = f.`dt_value_co'* `codtweight' if `touse'
-						qui replace `co_usable' = 0 if f.`dt_value_co' == . & `touse'
-						local co_mapping_`i' "`co_mapping_`i'' `t_0'"
-					}
-					local co_mapping_`i' "`co_mapping_`i'' `t_`i''"
-
-					local co_mapping "`co_mapping_`i''"
-
+			// Generate lags for the comapping 'dt' if requested
+			if `parsed_dt' {
+				if `codtweight' == 0 {
+					// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
+					local codtweight = `parsed_dtw'
 				}
+
+				forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
+					tempvar co_t_`i'
+					qui gen double `co_t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value_co' * `codtweight' if `touse'
+				}
+			}
+
+			// Put the comapping manifold together
+			forvalues j=0/`=`max_e'-1' {
+				local co_mapping = "`co_mapping' `co_x_`j''"
+			}
+			forvalues j=0/`=`max_e'-1' {
+				local co_mapping = "`co_mapping' `co_t_`j''"
+			}
+			local co_mapping = "`co_mapping' `co_zlist'"
+
+			qui replace `co_usable' = 0 if `co_x'==.
+			forvalues i=1/`=`max_e'-1' {
+				qui replace `co_usable' = 0 if `co_x_`i'' ==.
 			}
 
 			gen byte `co_predict_set' = `co_usable'
@@ -1697,29 +1690,24 @@ program define edmXmap, eclass sortpreserve
 							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
 							local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
 
-							// The plugin orders the variables in the manifold in a different manner.
-							// To ensure that the savesmap coefficients have the correct labels, we reorder
-							// the mapping's name list.
-							if `mata_mode' == 0 {
-								local mapping_reordered_name "`xx'" 
+							local mapping_name "`xx'" 
 
-								forvalues ii=1/`=`e'-1' {
-									local mapping_reordered_name "`mapping_reordered_name' l`=`ii'*`tau''.`xx'"
-								}
-								if `parsed_dt' {
-									forvalues ii=`=(1 - `parsed_dt0')'/`=`e'-1' {
-										local mapping_reordered_name "`mapping_reordered_name' dt`ii'"
-									}
-								}
-								local mapping_reordered_name "`mapping_reordered_name' `zlist_name'"
-
-								if `verbosity' > 2 {
-									di "Original mapping names: <`mapping_`=`e'-1'_name'>"
-									di "New mapping names     : <`mapping_reordered_name'>"
-								}
-
-								local mapping_`=`e'-1'_name = "`mapping_reordered_name'"
+							forvalues ii=1/`=`e'-1' {
+								local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
 							}
+							if `parsed_dt' {
+								forvalues ii=`=(1 - `parsed_dt0')'/`=`e'-1' {
+									local mapping_name "`mapping_name' dt`ii'"
+								}
+							}
+							local mapping_name "`mapping_name' `zlist_name'"
+
+							if `verbosity' > 2 {
+								di "x = <`x'> xx=<`xx'> y = <`y'> yy=<`yy'>"
+								di "Mapping names: <`mapping_name'>"
+							}
+
+							local mapping_`=`e'-1'_name = "`mapping_name'"
 
 							local ii = 1
 							foreach name of local mapping_`=`e'-1'_name {
