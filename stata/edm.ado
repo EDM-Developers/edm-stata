@@ -602,17 +602,7 @@ program define edmExplore, eclass
 	else {
 		// Find which rows of the manifold have any values which are missing
 		tempvar any_missing_in_manifold
-		if `mata_mode' {
-			hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
-		}
-		else {
-			tempvar x_lagged_missing
-			local max_lags = `tau'*(`max_e'-1)
-			hasMissingValues L(0[`tau']`max_lags').`x' , out(`x_lagged_missing')
-			// TODO: Add dt & its lags?
-			gen byte `any_missing_in_manifold' = `x_lagged_missing' | `any_extras_missing'
-		}
-
+		hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
 		gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 	}
 
@@ -782,9 +772,9 @@ program define edmExplore, eclass
 		if `parsed_dt' {
 			local time = "`original_t'"
 		}
-		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `crossfoldu', "transfer_manifold_data" ///
+		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse' `crossfoldu', "transfer_manifold_data" ///
 				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'"
 	}
 
 	forvalues t=1/`round' {
@@ -1613,9 +1603,9 @@ program define edmXmap, eclass
 			if `parsed_dt' {
 				local time = "`original_t'"
 			}
-			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable', "transfer_manifold_data" ///
+			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'"
  					
 			// Collect a list of all the variables created to store the SMAP coefficients
 			// across all the 'replicate's for this xmap direction.

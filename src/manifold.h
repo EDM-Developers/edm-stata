@@ -32,18 +32,22 @@ public:
   double extras(size_t i, size_t j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
   bool any_missing(size_t obsNum) const
   {
-    if (_y[obsNum] == _missing) {
-      return true;
-    }
-
-    bool missing = false;
     for (size_t j = 0; j < _E_actual; j++) {
       if (operator()(obsNum, j) == _missing) {
-        missing = true;
-        break;
+        return true;
       }
     }
-    return missing;
+    return false;
+  }
+
+  bool any_not_missing(size_t obsNum) const
+  {
+    for (size_t j = 0; j < _E_actual; j++) {
+      if (operator()(obsNum, j) != _missing) {
+        return true;
+      }
+    }
+    return false;
   }
 
   double y(size_t i) const { return _y[i]; }

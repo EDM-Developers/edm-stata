@@ -67,7 +67,7 @@ double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, siz
   int ind1 = inds.at(i) + _add_dt0 * _tau - j * _tau;
   int ind2 = ind1 - _tau;
 
-  if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing)) {
+  if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing) || (_t[ind1] < _t[ind2])) {
     return _missing;
   }
   return _dtWeight * (_t[ind1] - _t[ind2]);

@@ -484,6 +484,25 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
   }
 }
 
+template<typename T>
+void print_vector(std::string name, std::vector<T> vec)
+{
+  if (io.verbosity > 2) {
+    io.print(fmt::format("{} [{}]:\n", name, vec.size()));
+    for (int i = 0; i < vec.size(); i++) {
+      if (i == 10) {
+        io.print("... ");
+        continue;
+      }
+      if (i > 10 & i < vec.size() - 10) {
+        continue;
+      }
+      io.print(fmt::format("{} ", vec[i]));
+    }
+    io.print("\n");
+  }
+}
+
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
@@ -507,10 +526,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 15) {
+  if (argc < 16) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 15) {
+  if (argc > 16) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -533,6 +552,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   int crossfold = atoi(argv[12]);
   int tau = atoi(argv[13]);
   opts.parMode = atoi(argv[14]);
+  int maxE = atoi(argv[15]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -565,42 +585,50 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   // Handle 'dt' flag
   if (dtMode) {
     std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
-
-    if (io.verbosity > 2) {
-      io.print("Time:\n");
-      for (int i = 0; i < t.size(); i++) {
-        io.print(fmt::format("{} ", t[i]));
-        if (i > 10) {
-          break;
-        }
-      }
-      io.print("\n");
-    }
-
+    print_vector("t", t);
     generator.add_dt_data(t, dtWeight, dt0);
   }
 
   // The stata variable named `usable'
-  std::vector<bool> usable = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 1);
+  std::vector<bool> originalUsable = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 1);
+  print_vector("usable (mata)", originalUsable);
 
-  if (io.verbosity > 2) {
-    io.print("Usable:\n");
-    for (int i = 0; i < usable.size(); i++) {
-      io.print(fmt::format("{} ", usable[i]));
-      if (i > 10) {
-        break;
-      }
-    }
-    io.print("\n");
+  // The stata variable named `touse'
+  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 2);
+  print_vector("touse", touse);
+
+  // Make the largest manifold we'll need in order to find missing values for 'usable'
+  std::vector<bool> allTrue(touse.size());
+  for (int i = 0; i < allTrue.size(); i++) {
+    allTrue[i] = true;
   }
+
+  Manifold M = generator.create_manifold(maxE, allTrue, false);
+
+  // Generate the 'usable' variable   
+  std::vector<bool> usable(touse.size());
+  for (int i = 0; i < usable.size(); i++) {
+    if (opts.missingdistance == 0) {
+      usable[i] = touse[i] & !M.any_missing(i) & M.y(i) != MISSING;
+    } else {
+      usable[i] = touse[i] & M.any_not_missing(i) & M.y(i) != MISSING;
+    }
+  }
+
+  print_vector("usable", usable);
+
 
   std::vector<ST_double> crossfoldU;
   if (crossfold > 0) {
-    crossfoldU = stata_columns<ST_double>(2 + numExtras + (dtWeight > 0) + 2);
+    crossfoldU = stata_columns<ST_double>(2 + numExtras + (dtWeight > 0) + 3);
   }
   splitter = TrainPredictSplitter(explore, full, crossfold, usable, crossfoldU);
 
   print_setup_info(argc, argv, reqThreads, numExtras, dtWeight);
+
+  for (int i = 0; i < usable.size(); i++) {
+    assert(usable[i] == originalUsable[i]);
+  }
 
   return SUCCESS;
 }
