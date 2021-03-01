@@ -547,6 +547,7 @@ program define edmExplore, eclass
 		qui tsset
 		qui gen `before_tsfill' = 1
 		qui tsfill
+		qui replace `touse' = 0 if !`before_tsfill'
 	}
 
 	numlist "`e'"
@@ -613,10 +614,6 @@ program define edmExplore, eclass
 		}
 
 		gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
-	}
-
-	if !`parsed_dt' {
-		qui replace `usable' = 0 if !`before_tsfill'
 	}
 
 	if "`copredictvar'" != "" {
@@ -1339,6 +1336,7 @@ program define edmXmap, eclass
 			qui tsset
 			qui gen `before_tsfill' = 1
 			qui tsfill
+			qui replace `touse' = 0 if !`before_tsfill'
 		}
 
 		local zlist_name ""
@@ -1450,12 +1448,7 @@ program define edmXmap, eclass
 			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 		}
 
-		if !`parsed_dt' {
-			qui replace `usable' = 0 if !`before_tsfill'
-		}
-
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
-
 			// temporary move to newt_co
 			if `parsed_dt' {
 				qui {
