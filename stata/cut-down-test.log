@@ -97,7 +97,6 @@ Note: Number of neighbours (k) is adjusted to 5
 Note: The embedding dimension E is 2
 
 . 
-. // TODO: It sometimes crashed on this next line; look closer if not already fixed.
 . edm xmap x y, e(6) lib(8)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -413,11 +412,11 @@ Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
-Missing values are assumed to have a distance of .25 with all values.
+Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99682         .011804 
+                 2               1          .99682         .011803 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -442,12 +441,12 @@ Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l.x
-Missing values are assumed to have a distance of .25 with all values.
+Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
    l.x ~ l.x|M(x)             124           .9998        .0027684 
-     x ~ x|M(l.x)             118           .9983        .0093729 
+     x ~ x|M(l.x)             118           .9983        .0093727 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -474,12 +473,12 @@ Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l.x
 Additional variables in the embedding: u (+ time delta)
-Missing values are assumed to have a distance of .25 with all values.
+Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124          .88581         .056787 
-     x ~ x|M(l.x)             150          .22176          .30935 
+   l.x ~ l.x|M(x)             124           .8993         .052723 
+     x ~ x|M(l.x)             150          .18922          .31581 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55 and .54
@@ -491,11 +490,11 @@ Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and l3.x
 Additional variables in the embedding: u (+ time delta)
-Missing values are assumed to have a distance of .25 with all values.
+Missing values are assumed to have a distance of .24 with all values.
 ---------------------------------------------------------------------
             Mapping    Library size             rho             MAE
 ---------------------------------------------------------------------
-   l3.x ~ l3.x|M(x)             123          .69907         .075825 
+   l3.x ~ l3.x|M(x)             123          .69908         .075833 
 ---------------------------------------------------------------------
 Note: The embedding dimension E is 10 (including 5 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55
@@ -513,7 +512,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        4        1       .60892      .075603       .12527      .020011
+        4        1       .60894      .075592       .12527      .020009
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras

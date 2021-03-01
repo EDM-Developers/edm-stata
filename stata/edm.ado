@@ -554,6 +554,14 @@ program define edmExplore, eclass
 	local e_size = wordcount("`=r(numlist)'")
 	local max_e : word `e_size' of `e'
 
+	numlist "`theta'"
+	local theta_size = wordcount("`=r(numlist)'")
+	local round = max(`crossfold', `replicate')
+	
+	local task_num = 1
+	local num_tasks = `round'*`theta_size'*`e_size'
+	mat r = J(`num_tasks', 4, .)	
+
 	// Generate lags for 'x' data
 	forvalues i=0/`=`max_e'-1' {
 		tempvar x_`i'
@@ -583,27 +591,58 @@ program define edmExplore, eclass
 	// (this mainly depends on whether we're keeping or discarding rows 
 	// with some missing values).
 	tempvar usable
-	if `allow_missing_mode' {
-		// Work on any row of the manifold with >= 1 non-missing value
-		qui {
-			qui gen byte `usable' = 0
-			foreach v of local mapping_`=`max_e'-1' {
-				replace `usable' = 1 if `v' != . & `touse'
+
+	if `mata_mode' {	
+		if `allow_missing_mode' {
+			// Work on any row of the manifold with >= 1 non-missing value
+			qui {
+				qui gen byte `usable' = 0
+				foreach v of local mapping_`=`max_e'-1' {
+					replace `usable' = 1 if `v' != . & `touse'
+				}
+				qui replace `usable' = 0 if `x_f' ==.
+
+				if `missingdistance' <= 0 {
+					qui sum `x' if `usable'
+					local missingdistance = 2/sqrt(c(pi))*r(sd)
+				}
 			}
-			
-			// TODO: Check whether this ought to be done after the following line
-			if `missingdistance' <= 0 {
-				qui sum `x' if `usable'
-				local missingdistance = 2/sqrt(c(pi))*r(sd)
-			}
-			qui replace `usable' = 0 if `x_f' ==.
+		}
+		else {
+			// Find which rows of the manifold have any values which are missing
+			tempvar any_missing_in_manifold
+			hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 		}
 	}
-	else {
-		// Find which rows of the manifold have any values which are missing
-		tempvar any_missing_in_manifold
-		hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
-		gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
+	if `mata_mode' == 0 {
+		// TODO: Check that `savesmap' is not needed in explore mode.
+
+		qui gen double `usable' = .
+
+		// Setup variables which the plugin will modify
+		scalar plugin_finished = 0
+
+		// Print out some of these gibberish tempvar names if requested
+		if `verbosity' > 1 {
+			di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
+			pause
+		}
+
+		local explore_mode = 1
+		local full_mode = ("`full'" == "full")
+		if `parsed_dt' {
+			local time = "`original_t'"
+		}
+
+		local missing_dist_used = ""
+
+		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
+				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
+
+		local missingdistance = `missing_dist_used'
+		qui compress `usable'
 	}
 
 	if "`copredictvar'" != "" {
@@ -713,7 +752,6 @@ program define edmExplore, eclass
 	qui count if `usable'
 	local num_usable = r(N)
 
-	local round = max(`crossfold', `replicate')
 	if `crossfold' > 0 {
 		if `crossfold' > `num_usable' / `max_e' {
 			di as error "Not enough observations for cross-validations"
@@ -747,34 +785,6 @@ program define edmExplore, eclass
 
 	if (`crossfold' == 0 & "`full'" != "full") {
 		tempvar u
-	}
-
-	numlist "`theta'"
-	local theta_size = wordcount("`=r(numlist)'")
-
-	local task_num = 1
-	local num_tasks = `round'*`theta_size'*`e_size'
-	mat r = J(`num_tasks', 4, .)
-	
-	// TODO: Check that `savesmap' is not needed in explore mode.		
-	if `mata_mode' == 0 {
-		// Setup variables which the plugin will modify
-		scalar plugin_finished = 0
-
-		// Print out some of these gibberish tempvar names if requested
-		if `verbosity' > 1 {
-			di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
-			pause
-		}
-
-		local explore_mode = 1
-		local full_mode = ("`full'" == "full")
-		if `parsed_dt' {
-			local time = "`original_t'"
-		}
-		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse' `crossfoldu', "transfer_manifold_data" ///
-				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'"
 	}
 
 	forvalues t=1/`round' {
@@ -891,11 +901,11 @@ program define edmExplore, eclass
 
 					if `verbosity' > 1 {
 						di "launch_edm_task <`t', `i', `j', `k_adj', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-						di "train_set <`train_set'> predict_set <`predict_set'> u <`u'>"
+						di "train_set <`train_set'> predict_set <`predict_set'> u <`u'> crossfoldu = <`crossfoldu'>"
 						pause
 					}
 
-					plugin call smap_block_mdap `u', "launch_edm_task" ///
+					plugin call smap_block_mdap `u' `crossfoldu', "launch_edm_task" ///
 							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 				}
 				local ++task_num
@@ -1385,6 +1395,20 @@ program define edmXmap, eclass
 		local e_size = wordcount("`=r(numlist)'")
 		local max_e : word `e_size' of `e'
 
+		numlist "`theta'"
+		local theta_size = wordcount("`=r(numlist)'")
+
+		if "`l_ori'" == "" | "`l_ori'" == "0" {
+			local l_size = 1
+		}
+		else {
+			numlist "`library'"
+			local l_size = wordcount("`=r(numlist)'")
+		}
+
+		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
+		mat r`direction_num' = J(`num_tasks', 4, .)
+		
 		// Generate lags for 'x' data
 		forvalues i=0/`=`max_e'-1' {
 			tempvar x_`i'
@@ -1417,25 +1441,57 @@ program define edmXmap, eclass
 
 		// Select the rows which we'll use in the analysis
 		tempvar usable
-		if `allow_missing_mode' {
-			qui gen byte `usable' = 0
-			foreach v of local mapping_`=`max_e'-1' {
-				qui replace `usable' = 1 if `v' !=. & `touse'
+
+		local missingdistance`direction_num' = `missingdistance'
+		if `mata_mode' {
+			if `allow_missing_mode' {
+				qui gen byte `usable' = 0
+				foreach v of local mapping_`=`max_e'-1' {
+					qui replace `usable' = 1 if `v' !=. & `touse'
+				}
+				
+				qui replace `usable' = 0 if `x_f' == .
+
+				if `missingdistance' <= 0 {
+					qui sum `x' if `usable'
+					local defaultmissingdist = 2/sqrt(c(pi))*r(sd)
+					local missingdistance`direction_num' = `defaultmissingdist'
+				}
 			}
-			// TODO: Check whether `missingdistance' ought to use the final `usable'
-			if `missingdistance' <= 0 {
-				// TODO: Give this temporary var a different name
-				qui sum `x' if `usable'
-				local missingdistance = 2/sqrt(c(pi))*r(sd)
+			else {
+				tempvar any_missing_in_manifold
+				hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
+				gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 			}
-			local missingdistance`direction_num' = `missingdistance'
-			
-			qui replace `usable' = 0 if `x_f' == .
 		}
-		else {
-			tempvar any_missing_in_manifold
-			hasMissingValues `mapping_`=`max_e'-1'', out(`any_missing_in_manifold')
-			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
+		
+		if `mata_mode' == 0 {
+			// Setup variables which the plugin will modify
+			scalar plugin_finished = 0
+			qui gen double `usable' = .
+			local missing_dist_used = ""
+
+			// Print out some of these gibberish tempvar names if requested
+			if `verbosity' > 1 {
+				di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'> dtweight <`parsed_dtw'>"
+				pause
+			}
+
+			local explore_mode = 0
+			local full_mode = 0
+			local crossfold = 0
+			if `parsed_dt' {
+				local time = "`original_t'"
+			}
+
+			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
+					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
+
+			local missingdistance`direction_num' = `missing_dist_used'
+			// Collect a list of all the variables created to store the SMAP coefficients
+			// across all the 'replicate's for this xmap direction.
+			local all_savesmap_vars = ""
 		}
 
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
@@ -1578,40 +1634,6 @@ program define edmXmap, eclass
 			local library = `num_usable'
 		}
 
-		numlist "`theta'"
-		local theta_size = wordcount("`=r(numlist)'")
-		numlist "`library'"
-		local l_size = wordcount("`=r(numlist)'")
-
-		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
-		mat r`direction_num' = J(`num_tasks', 4, .)
-
-
-		if `mata_mode' == 0 {
-			// Setup variables which the plugin will modify
-			scalar plugin_finished = 0
-
-			// Print out some of these gibberish tempvar names if requested
-			if `verbosity' > 1 {
-				di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'> dtweight <`parsed_dtw'>"
-				pause
-			}
-
-			local explore_mode = 0
-			local full_mode = 0
-			local crossfold = 0
-			if `parsed_dt' {
-				local time = "`original_t'"
-			}
-			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
-					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'"
- 					
-			// Collect a list of all the variables created to store the SMAP coefficients
-			// across all the 'replicate's for this xmap direction.
-			local all_savesmap_vars = ""
-		}
-
 		qui gen double `u' = .
 	
 		forvalues rep =1/`replicate' {
@@ -1723,7 +1745,7 @@ program define edmXmap, eclass
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
 						if `mata_mode' {
-							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance')
+							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance`direction_num'')
 
 							qui corr `x_f' `x_p' if `predict_set'
 							mat r`direction_num'[`task_num',3] = r(rho)

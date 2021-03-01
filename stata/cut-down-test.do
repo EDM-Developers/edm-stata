@@ -40,7 +40,6 @@ edm explore x, e(2/10)
 
 edm xmap x y, k(5)
 
-// TODO: It sometimes crashed on this next line; look closer if not already fixed.
 edm xmap x y, e(6) lib(8)
 
 edm explore x, k(5) crossfold(10)

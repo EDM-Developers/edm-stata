@@ -14,6 +14,10 @@
 #endif
 #include <fmt/format.h>
 
+#define EIGEN_NO_DEBUG
+#define EIGEN_DONT_PARALLELIZE
+#include <Eigen/Core>
+
 #include <future>
 #include <numeric> // for std::accumulate
 #include <queue>
@@ -27,9 +31,12 @@
 #include "driver.h"
 #endif
 
+const double PI = 3.141592653589793238463;
+
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
 char* FINISHED_SCALAR = (char*)"plugin_finished";
+char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
 
 class StataIO : public IO
 {
@@ -101,18 +108,17 @@ private:
 
 public:
   TrainPredictSplitter() {}
-  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, std::vector<double> crossfoldU)
+  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable)
     : _explore(explore)
     , _full(full)
     , _crossfold(crossfold)
     , _usable(usable)
-  {
-    if (crossfold > 0) {
-      _crossfoldURank = rank(strip_missing(crossfoldU));
-    }
-  }
+  {}
 
-  bool requiresRandomNumbers() { return (_crossfold == 0) && !_full; }
+  void add_crossfold_rvs(std::vector<double> crossfoldU) { _crossfoldURank = rank(strip_missing(crossfoldU)); }
+
+  bool requiresRandomNumbersEachTask() { return (_crossfold == 0) && !_full; }
+  bool requiresCrossFoldRandomNumbers() { return _crossfold > 0; }
 
   std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library,
                                                                       int crossfoldIter)
@@ -299,8 +305,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
 
 /*
  * Write data to a column number 'j' in Stata (i.e. to a Stata 'variable').
- *
- * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
+ * If supplied, we consider each row 'i' only if filter[i] == true.
  */
 void write_stata_column(ST_double* data, size_t len, ST_int j, const std::vector<bool>& filter = {})
 {
@@ -309,7 +314,7 @@ void write_stata_column(ST_double* data, size_t len, ST_int j, const std::vector
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      if (useFilter && filter[r]) {
+      if ((useFilter && filter[r]) || !useFilter) {
         // Convert MISSING back to Stata's missing value
         ST_double value = (data[obs] == MISSING) ? SV_missval : data[obs];
         ST_retcode rc = SF_vstore(j, i, value);
@@ -328,7 +333,7 @@ void write_stata_column(ST_double* data, size_t len, ST_int j, const std::vector
 
 /*
  * Write data to columns ('variables') in Stata, starting from column number 'j0'.
- * If supplied, we consider each row 'i' only if 'filter.hasrow[i]' evaluates to true.
+ * If supplied, we consider each row 'i' only if filter[i] == true.
  */
 void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<bool>& filter = {})
 {
@@ -337,7 +342,7 @@ void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<boo
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      if (useFilter && filter[r]) {
+      if ((useFilter && filter[r]) || !useFilter) {
         for (ST_int j = j0; j < j0 + matrix.extent(1); j++) {
           // Convert MISSING back to Stata's missing value
           ST_double value = (matrix(obs, j - j0) == MISSING) ? SV_missval : matrix(obs, j - j0);
@@ -374,6 +379,25 @@ std::vector<double> stata_numlist(std::string macro)
   numlist.push_back(atof(list.c_str()));
 
   return numlist;
+}
+
+template<typename T>
+void print_vector(std::string name, std::vector<T> vec)
+{
+  if (io.verbosity > 1) {
+    io.print(fmt::format("{} [{}]:\n", name, vec.size()));
+    for (int i = 0; i < vec.size(); i++) {
+      if (i == 10) {
+        io.print("... ");
+        continue;
+      }
+      if (i > 10 && i < vec.size() - 10) {
+        continue;
+      }
+      io.print(fmt::format("{} ", vec[i]));
+    }
+    io.print("\n");
+  }
 }
 
 /* Print to the Stata console the inputs to the plugin  */
@@ -437,23 +461,8 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
       auto M = generator.create_manifold(E, trainingRows, false);
       auto Mp = generator.create_manifold(E, predictionRows, true);
 
-      io.print("training rows\n");
-      for (int i = 0; i < M.nobs(); i++) {
-        io.print(fmt::format("{} ", trainingRows[i]));
-        if (i > 10) {
-          break;
-        }
-      }
-      io.print("\n");
-
-      io.print("prediction rows\n");
-      for (int i = 0; i < M.nobs(); i++) {
-        io.print(fmt::format("{} ", predictionRows[i]));
-        if (i > 10) {
-          break;
-        }
-      }
-      io.print("\n");
+      print_vector<bool>("training rows", trainingRows);
+      print_vector<bool>("prediction rows", predictionRows);
 
       io.print("dt\n");
       for (int i = 0; i < M.nobs(); i++) {
@@ -484,23 +493,21 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
   }
 }
 
-template<typename T>
-void print_vector(std::string name, std::vector<T> vec)
+double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
 {
-  if (io.verbosity > 2) {
-    io.print(fmt::format("{} [{}]:\n", name, vec.size()));
-    for (int i = 0; i < vec.size(); i++) {
-      if (i == 10) {
-        io.print("... ");
-        continue;
-      }
-      if (i > 10 & i < vec.size() - 10) {
-        continue;
-      }
-      io.print(fmt::format("{} ", vec[i]));
+  std::vector<double> x_usable;
+  for (int i = 0; i < x.size(); i++) {
+    if (usable[i] && x[i] != MISSING) {
+      x_usable.push_back(x[i]);
     }
-    io.print("\n");
   }
+
+  Eigen::Map<const Eigen::ArrayXd> xMap(x_usable.data(), x_usable.size());
+  const Eigen::ArrayXd xCent = xMap - xMap.mean();
+  double xSD = std::sqrt((xCent * xCent).sum() / (xCent.size() - 1));
+  double defaultMissingDist = 2 / sqrt(PI) * xSD;
+
+  return defaultMissingDist;
 }
 
 // In case we have some remnants of previous runs still
@@ -526,10 +533,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 16) {
+  if (argc < 17) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 16) {
+  if (argc > 17) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -553,6 +560,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   int tau = atoi(argv[13]);
   opts.parMode = atoi(argv[14]);
   int maxE = atoi(argv[15]);
+  bool allowMissing = atoi(argv[16]);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -585,17 +593,13 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   // Handle 'dt' flag
   if (dtMode) {
     std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
-    print_vector("t", t);
+    print_vector<ST_double>("t", t);
     generator.add_dt_data(t, dtWeight, dt0);
   }
 
-  // The stata variable named `usable'
-  std::vector<bool> originalUsable = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 1);
-  print_vector("usable (mata)", originalUsable);
-
   // The stata variable named `touse'
   std::vector<bool> touse = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 2);
-  print_vector("touse", touse);
+  print_vector<bool>("touse", touse);
 
   // Make the largest manifold we'll need in order to find missing values for 'usable'
   std::vector<bool> allTrue(touse.size());
@@ -605,30 +609,33 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   Manifold M = generator.create_manifold(maxE, allTrue, false);
 
-  // Generate the 'usable' variable   
+  // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
   for (int i = 0; i < usable.size(); i++) {
-    if (opts.missingdistance == 0) {
-      usable[i] = touse[i] & !M.any_missing(i) & M.y(i) != MISSING;
+    if (allowMissing) {
+      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
     } else {
-      usable[i] = touse[i] & M.any_not_missing(i) & M.y(i) != MISSING;
+      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
     }
   }
 
-  print_vector("usable", usable);
+  print_vector<bool>("usable", usable);
 
-
-  std::vector<ST_double> crossfoldU;
-  if (crossfold > 0) {
-    crossfoldU = stata_columns<ST_double>(2 + numExtras + (dtWeight > 0) + 3);
+  if (allowMissing && opts.missingdistance == 0) {
+    opts.missingdistance = default_missing_distance(x, usable);
   }
-  splitter = TrainPredictSplitter(explore, full, crossfold, usable, crossfoldU);
+  SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
+
+  splitter = TrainPredictSplitter(explore, full, crossfold, usable);
 
   print_setup_info(argc, argv, reqThreads, numExtras, dtWeight);
 
+  ST_double* usableToSave = new ST_double[usable.size()];
   for (int i = 0; i < usable.size(); i++) {
-    assert(usable[i] == originalUsable[i]);
+    usableToSave[i] = usable[i];
   }
+  write_stata_column(usableToSave, usable.size(), 2 + numExtras + (dtWeight > 0) + 1);
+  delete[] usableToSave;
 
   return SUCCESS;
 }
@@ -664,8 +671,12 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   // Find which rows are used for training & which for prediction
   std::vector<ST_double> u;
-  if (splitter.requiresRandomNumbers()) {
+  if (splitter.requiresRandomNumbersEachTask()) {
     u = stata_columns<ST_double>(1);
+  }
+
+  if (splitter.requiresCrossFoldRandomNumbers() && taskOpts.taskNum == 0) {
+    splitter.add_crossfold_rvs(stata_columns<ST_double>((u.size() > 0) + 1));
   }
 
   std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
