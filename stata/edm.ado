@@ -39,7 +39,7 @@ Version history:
 
 /* global EDM_DEBUG = 0 */
 
-program define edm, eclass
+program define edm, eclass sortpreserve
 	version 14
 
 	if replay() {
@@ -287,7 +287,7 @@ program define edmCoremap, eclass
  */
 
 
-program define edmExplore, eclass sortpreserve
+program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
 			[Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] ///
@@ -1053,11 +1053,10 @@ program define edmExplore, eclass sortpreserve
 	}
 	ereturn local mode = cond(`mata_mode', "mata","plugin")
 	edmDisplay
-
 end
 
 
-program define edmXmap, eclass sortpreserve
+program define edmXmap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
 			[SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] ///
