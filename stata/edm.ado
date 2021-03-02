@@ -286,6 +286,13 @@ program define edmCoremap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
  */
 
+program define edmManifoldSize, rclass
+	syntax , e(int) dt(int) dt0(int) num_extras(int) [num_eextras(int 0)]
+	local num_xs = 1 + `e'-1
+	local num_dts = `dt' * (`dt0' + `e'-1)
+	local num_extras = `num_extras' + `num_eextras'*(`e'-1)
+	return local manifold_size = `num_xs' + `num_dts' + `num_extras'
+end
 
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
@@ -562,31 +569,33 @@ program define edmExplore, eclass
 	local num_tasks = `round'*`theta_size'*`e_size'
 	mat r = J(`num_tasks', 4, .)	
 
-	// Generate lags for 'x' data
-	forvalues i=0/`=`max_e'-1' {
-		tempvar x_`i'
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+	if `mata_mode' {
+		// Generate lags for 'x' data
+		forvalues i=0/`=`max_e'-1' {
+			tempvar x_`i'
+			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+		}
+
+		// Generate lags for the 'dt' if requested
+		if `parsed_dt' {
+			forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
+				tempvar t_`i'
+				qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
+			}
+		}
+
+		// Put the manifold together
+		forvalues i=1/`=`max_e'-1' {
+			forvalues j=0/`i' {
+				local mapping_`i' = "`mapping_`i'' `x_`j''"
+			}
+			forvalues j=0/`i' {
+				local mapping_`i' = "`mapping_`i'' `t_`j''"
+			}
+			local mapping_`i' = "`mapping_`i'' `zlist'"
+		}
 	}
 
-	// Generate lags for the 'dt' if requested
-	if `parsed_dt' {
-		forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
-			tempvar t_`i'
-			qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
-		}
-	}
-
-	// Put the manifold together
-	forvalues i=1/`=`max_e'-1' {
-		forvalues j=0/`i' {
-			local mapping_`i' = "`mapping_`i'' `x_`j''"
-		}
-		forvalues j=0/`i' {
-			local mapping_`i' = "`mapping_`i'' `t_`j''"
-		}
-		local mapping_`i' = "`mapping_`i'' `zlist'"
-	}
-	
 	// Choose which rows of the manifold we will use for the analysis
 	// (this mainly depends on whether we're keeping or discarding rows 
 	// with some missing values).
@@ -601,11 +610,6 @@ program define edmExplore, eclass
 					replace `usable' = 1 if `v' != . & `touse'
 				}
 				qui replace `usable' = 0 if `x_f' ==.
-
-				if `missingdistance' <= 0 {
-					qui sum `x' if `usable'
-					local missingdistance = 2/sqrt(c(pi))*r(sd)
-				}
 			}
 		}
 		else {
@@ -615,13 +619,12 @@ program define edmExplore, eclass
 			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 		}
 	}
-	if `mata_mode' == 0 {
+	else {
 		// TODO: Check that `savesmap' is not needed in explore mode.
-
-		qui gen double `usable' = .
-
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
+		qui gen double `usable' = .
+		local missing_dist_used = ""
 
 		// Print out some of these gibberish tempvar names if requested
 		if `verbosity' > 1 {
@@ -635,14 +638,18 @@ program define edmExplore, eclass
 			local time = "`original_t'"
 		}
 
-		local missing_dist_used = ""
-
 		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
 				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
+	}
+
+	// Default value for 'missingdistance'
+	if `mata_mode' & `allow_missing_mode' & `missingdistance' <= 0 {
+		qui sum `x' if `usable'
+		local missingdistance = 2/sqrt(c(pi))*r(sd)
 	}
 
 	if "`copredictvar'" != "" {
@@ -846,8 +853,14 @@ program define edmExplore, eclass
 
 
 		foreach i of numlist `e' {
-			local manifold "mapping_`=`i'-1'"
-			local e_offset = wordcount("``manifold''") - `i'
+			if `mata_mode' {
+				local manifold "mapping_`=`i'-1'"
+				local e_offset = wordcount("``manifold''") - `i'
+			}
+			else {
+				edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+				local e_offset = `r(manifold_size)' - `i'
+			}
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
 			foreach j of numlist `theta' {
@@ -1408,33 +1421,35 @@ program define edmXmap, eclass
 
 		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
 		mat r`direction_num' = J(`num_tasks', 4, .)
+
+		if `mata_mode' {	
+			// Generate lags for 'x' data
+			forvalues i=0/`=`max_e'-1' {
+				tempvar x_`i'
+				qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+			}
+
+			// Generate lags for the 'dt' if requested
+			if `parsed_dt' {
+				forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
+					tempvar t_`i'
+					qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
+				}
+			}
+
+			// Put the manifold together
+			forvalues i=1/`=`max_e'-1' {
+				local mapping_`i' = ""
+				forvalues j=0/`i' {
+					local mapping_`i' = "`mapping_`i'' `x_`j''"
+				}
+				forvalues j=0/`i' {
+					local mapping_`i' = "`mapping_`i'' `t_`j''"
+				}
+				local mapping_`i' = "`mapping_`i'' `zlist'"
+			}
+		}
 		
-		// Generate lags for 'x' data
-		forvalues i=0/`=`max_e'-1' {
-			tempvar x_`i'
-			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
-		}
-
-		// Generate lags for the 'dt' if requested
-		if `parsed_dt' {
-			forvalues i=`=(1 - `parsed_dt0')'/`=`max_e'-1' {
-				tempvar t_`i'
-				qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `parsed_dtw' if `touse'
-			}
-		}
-
-		// Put the manifold together
-		forvalues i=1/`=`max_e'-1' {
-			local mapping_`i' = ""
-			forvalues j=0/`i' {
-				local mapping_`i' = "`mapping_`i'' `x_`j''"
-			}
-			forvalues j=0/`i' {
-				local mapping_`i' = "`mapping_`i'' `t_`j''"
-			}
-			local mapping_`i' = "`mapping_`i'' `zlist'"
-		}
-
 		// Get the vector of values which we'll try to predict
 		tempvar x_f
 		qui gen double `x_f' = f`tp'.`y' if `touse'
@@ -1464,8 +1479,7 @@ program define edmXmap, eclass
 				gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 			}
 		}
-		
-		if `mata_mode' == 0 {
+		else {
 			// Setup variables which the plugin will modify
 			scalar plugin_finished = 0
 			qui gen double `usable' = .
@@ -1727,7 +1741,7 @@ program define edmXmap, eclass
 						local last_theta =  `j'
 
 						// TODO: currently `savemanifold' does nothing in the plugin. 
-						if "`savemanifold'" !="" {
+						if `mata_mode' & "`savemanifold'" !="" {
 							local counter = 1
 							foreach v of varlist ``manifold'' {
 								cap gen double `savemanifold'`direction_num'_`counter' = `v'
@@ -1896,8 +1910,15 @@ program define edmXmap, eclass
 	}
 	// the actual size of e should be main e + dt + extras
 	ereturn scalar e_main = `e'
-	ereturn scalar e_actual = wordcount("``manifold''")
-	ereturn scalar e_offset = wordcount("``manifold''") - `e'
+	if `mata_mode' {
+		ereturn scalar e_actual = wordcount("``manifold''")
+		ereturn scalar e_offset = wordcount("``manifold''") - `e'
+	}
+	else {
+			edmManifoldSize, e(`e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+			ereturn scalar e_actual = `r(manifold_size)'
+			ereturn scalar e_offset = `r(manifold_size)' - `e'
+	}
 	ereturn scalar theta = `theta'
 	ereturn local x "`ori_x'"
 	ereturn local y "`ori_y'"
