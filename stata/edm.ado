@@ -329,6 +329,53 @@ program define edmConstructManifolds, rclass
 	return local max_e_manifold = "`max_e_manifold'"
 end
 
+program define edmCountExtras, rclass
+	syntax [anything]
+
+	local extravars = strtrim("`anything'")
+	local zcount = 0
+	local z_e_varying_count = 0
+
+	foreach v of local extravars {
+		local ++zcount
+		if strpos("`v'", "(e)") {
+			local ++z_e_varying_count
+		}
+	}
+	return local zcount = `zcount'
+	return local z_e_varying_count = `z_e_varying_count'
+end
+
+program define edmExtractExtra, rclass
+	syntax [anything] , touse(name) [zlist(string)]
+
+	local zcount = wordcount("`zlist'")
+	local extravars = strtrim("`anything'")
+	local zlist_names ""
+
+	forvalues i = 1/`zcount' {
+		local v : word `i' of `extravars'
+		local zvar : word `i' of `zlist'
+
+		if substr("`v'",1,2) == "z." {
+			qui sum `=substr("`v'",3,.)' if `touse'
+			qui gen double `zvar' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
+		}
+		else {
+			//if real("`v'") !=. {
+			//	noi di as error "`v' is not a variable name"
+			//	error 198
+			//}
+			qui gen double `zvar' = `v' if `touse'
+		}
+		// TODO: This zlist_names needs more work
+		local zlist_names "`zlist_names' `v'"
+	}
+
+	return local zlist_names = strtrim("`zlist_names'")
+	return local zlist = strtrim("`zlist'")
+end
+
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
@@ -419,12 +466,6 @@ program define edmExplore, eclass
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
-	local zcount = 0
-	local zlist ""
-
-	edmExtractExtra `extraembed'
-
-	local parsed_extravars = strtrim(r(extravars))
 	local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
 	local parsed_dt0 = ("`newdt'" == "newdt")
 	local parsed_dtw = "`dtweight'"
@@ -532,26 +573,6 @@ program define edmExplore, eclass
 		}
 	}
 
-	qui {
-		foreach v of local parsed_extravars {
-			tempvar z`++zcount'
-			/* noi di "extra embeding: `v'" */
-			if substr("`v'",1,2) == "z." {
-				sum `=substr("`v'",3,.)' if `touse'
-				gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-			}
-			else {
-				if real("`v'") !=. {
-					noi di as error "`v' is not a variable name"
-					error 198
-				}
-				gen double `z`zcount'' = `v' if `touse'
-			}
-
-			local zlist "`zlist' `z`zcount''"
-		}
-	}
-
 	// Get the vector of future values which we'll be trying to predict
 	tempvar x_f
 	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
@@ -581,6 +602,17 @@ program define edmExplore, eclass
 		qui tsfill
 		qui replace `touse' = 0 if !`before_tsfill'
 	}
+
+	edmCountExtras `extraembed'
+	local zcount = `r(zcount)'
+	local zlist = ""
+	forvalues i = 1/`zcount' {
+		tempvar z
+		local zlist = "`zlist' `z'"
+	}
+
+	edmExtractExtra `extraembed' , touse(`touse') zlist(`zlist')
+	local zlist_names = "`r(zlist_names)'"
 
 	numlist "`e'"
 	local e_size = wordcount("`=r(numlist)'")
@@ -693,28 +725,12 @@ program define edmExplore, eclass
 		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
 
 		* z list
-		local co_zlist_name ""
-		local co_zlist ""
-		local co_zcount = 0
-		qui {
-			foreach v of local parsed_extravars {
-				tempvar z`++co_zcount'
-				// TODO: Call new normalize function
-				if substr("`v'",1,2) == "z." {
-					sum `=substr("`v'",3,.)' if `touse'
-					gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-				}
-				else {
-					if real("`v'") !=. {
-						noi di as error "`v' is not a variable name"
-						error 198
-					}
-					gen double `z`co_zcount'' = `v' if `touse'
-				}
-				local co_zlist_name "`co_zlist_name' `v'"
-				local co_zlist "`co_zlist' `z`co_zcount''"
-			}
+		local co_zlist= ""
+		forvalues i = 1/`zcount' {
+			tempvar z
+			local co_zlist = "`co_zlist' `z'"
 		}
+		edmExtractExtra `extraembed' , touse(`touse') zlist(`co_zlist')
 
 		tempvar any_co_extras_missing
 		hasMissingValues `co_zlist', out(`any_co_extras_missing')
@@ -1036,8 +1052,8 @@ program define edmExplore, eclass
 	if `parsed_dt' {
 		ereturn scalar dtw =`parsed_dtw'
 		ereturn local dtsave "`parsed_dtsave'"
-		if "`parsed_extravars'" != "" {
-			ereturn local extraembed = "`parsed_extravars' (+ time delta)"
+		if "`zlist_names'" != "" {
+			ereturn local extraembed = "`zlist_names' (+ time delta)"
 		}
 		else {
 			ereturn local extraembed = "(time delta)"
@@ -1045,7 +1061,7 @@ program define edmExplore, eclass
 
 	}
 	else {
-		ereturn local extraembed = "`parsed_extravars'"
+		ereturn local extraembed = "`zlist_names'"
 	}
 	if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
 		sort `original_id' `original_t'
@@ -1203,11 +1219,7 @@ program define edmXmap, eclass
 			local y "`swap'"
 		}
 
-		local zcount = 0
-		local zlist ""
-		edmExtractExtra `extraembed'
 		/* return list */
-		local parsed_extravars = strtrim(r(extravars))
 		local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
 		local parsed_dt0 = ("`newdt'" == "newdt")
 		local parsed_dtw = "`dtweight'"
@@ -1215,8 +1227,7 @@ program define edmXmap, eclass
 			confirm new variable `dtsave'
 		}
 		local parsed_dtsave = "`dtsave'"
-		/* di "`parsed_dtsave'"
-		di "parsed extra:`parsed_extravars':" */
+
 		if `parsed_dt' {
 			/* general algorithm for generating t patterns
 			1. keep only touse
@@ -1343,39 +1354,6 @@ program define edmXmap, eclass
 
 		}
 
-		if !`parsed_dt' & `direction_num' == 1 {
-			tempvar before_tsfill
-			qui tsset
-			qui gen `before_tsfill' = 1
-			qui tsfill
-			qui replace `touse' = 0 if !`before_tsfill'
-		}
-
-		local zlist_name ""
-		local zlist ""
-		qui {
-			foreach v of local parsed_extravars {
-				tempvar z`++zcount'
-				if substr("`v'",1,2) == "z." {
-
-					sum `=substr("`v'",3,.)' if `touse'
-					gen double `z`zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-				}
-				else {
-					if real("`v'") !=. {
-						noi di as error "`v' is not a variable name"
-						error 198
-					}
-					gen double `z`zcount'' = `v' if `touse'
-				}
-				local zlist_name "`zlist_name' `v'"
-				local zlist "`zlist' `z`zcount''"
-			}
-		}
-
-
-		// TODO: Check whether we shouldn't be using the final `usable' for the default `dtweight'
-
 		// Calculate the default value for `dtweight'
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
@@ -1393,6 +1371,25 @@ program define edmXmap, eclass
 			}
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
+
+		if !`parsed_dt' & `direction_num' == 1 {
+			tempvar before_tsfill
+			qui tsset
+			qui gen `before_tsfill' = 1
+			qui tsfill
+			qui replace `touse' = 0 if !`before_tsfill'
+		}
+
+		edmCountExtras `extraembed'
+		local zcount = `r(zcount)'
+		local zlist = ""
+		forvalues i = 1/`zcount' {
+			tempvar z
+			local zlist = "`zlist' `z'"
+		}
+
+		edmExtractExtra `extraembed' , touse(`touse') zlist(`zlist')
+		local zlist_names = "`r(zlist_names)'"
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
@@ -1516,29 +1513,12 @@ program define edmXmap, eclass
 			edmPreprocessVariable "`2'", touse(`touse') out(`co_y')
 
 			* z list
-			local co_zlist_name ""
-			local co_zlist ""
-			local co_zcount = 0
-			qui {
-				foreach v of local parsed_extravars {
-					tempvar z`++co_zcount'
-					/* noi di "extra embeding: `v'" */
-					if substr("`v'",1,2) == "z." {
-						sum `=substr("`v'",3,.)' if `touse'
-						gen double `z`co_zcount'' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
-						/* replace `z`co_zcount'' = 0 if `touse' != 1 */
-					}
-					else {
-						if real("`v'") !=. {
-							noi di as error "`v' is not a variable name"
-							error 198
-						}
-						gen double `z`co_zcount'' = `v' if `touse'
-					}
-					local co_zlist_name "`co_zlist_name' `v'"
-					local co_zlist "`co_zlist' `z`co_zcount''"
-				}
+			local co_zlist = ""
+			forvalues i = 1/`zcount' {
+				tempvar z
+				local co_zlist = "`co_zlist' `z'"
 			}
+			edmExtractExtra `extraembed' , touse(`touse') zlist(`co_zlist')
 
 			tempvar any_co_extras_missing
 			hasMissingValues `co_zlist', out(`any_co_extras_missing')
@@ -1683,7 +1663,7 @@ program define edmXmap, eclass
 									local mapping_name "`mapping_name' dt`ii'"
 								}
 							}
-							local mapping_name "`mapping_name' `zlist_name'"
+							local mapping_name "`mapping_name' `zlist_names'"
 
 							if `verbosity' > 2 {
 								di "x = <`x'> xx=<`xx'> y = <`y'> yy=<`yy'>"
@@ -1908,16 +1888,15 @@ program define edmXmap, eclass
 			ereturn scalar dtw2 =`parsed_dtw2'
 		}
 		ereturn local dtsave "`parsed_dtsave'"
-		if "`parsed_extravars'" != "" {
-			ereturn local extraembed = "`parsed_extravars' (+ time delta)"
+		if "`zlist_names'" != "" {
+			ereturn local extraembed = "`zlist_names' (+ time delta)"
 		}
 		else {
 			ereturn local extraembed = "(time delta)"
 		}
-
 	}
 	else {
-		ereturn local extraembed = "`parsed_extravars'"
+		ereturn local extraembed = "`zlist_names'"
 	}
 	ereturn local mode = cond(`mata_mode', "mata","plugin")
 	edmDisplay
@@ -2249,13 +2228,6 @@ Univariate simplex projection with manifold construct x and its lag values
 	/* di as txt "For more information, please refer to {help edm:help file} and the article." */
 end
 
-
-program define edmExtractExtra, rclass
-	syntax [anything]
-	/* di "anything: `anything'" */
-	return local extravars = " `anything'"
-
-end
 
 capture mata mata drop smap_block()
 mata:
