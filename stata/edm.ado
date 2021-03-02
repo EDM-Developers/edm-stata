@@ -557,27 +557,12 @@ program define edmExplore, eclass
 	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
 	qui gen double `x_f' = f`future_step'.`x' if `touse'
 
-	tempvar any_extras_missing
-	hasMissingValues `zlist', out(`any_extras_missing')
-
 	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
 		if `parsed_dtw' == 0 {
-			// TODO: Check whether this `dt_usable' filter which is used when
-			// calculating the default value for `dtweight' ought not simply be
-			// the `usable' which is used in the actual analysis.
-			tempvar dt_usable
-			if `allow_missing_mode' {
-				* If allow missing, use a wide definition of usable when generating manifold
-				qui gen byte `dt_usable' = `touse'
-			}
-			else {
-				qui gen byte `dt_usable' = `x'!=. & `touse' & !`any_extras_missing'
-			}
-
-			qui sum `x' if `dt_usable'
+			qui sum `x' if `touse'
 			local xsd = r(sd)
-			qui sum `dt_value' if `dt_usable'
+			qui sum `dt_value' if `touse'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
 			if `tsd' == 0 {
@@ -1390,22 +1375,13 @@ program define edmXmap, eclass
 
 
 		// TODO: Check whether we shouldn't be using the final `usable' for the default `dtweight'
-		tempvar dt_usable
-		if `allow_missing_mode' {
-			qui gen byte `dt_usable' = `touse'
-		}
-		else {
-			tempvar any_extras_missing
-			hasMissingValues `zlist', out(`any_extras_missing')
-			qui gen byte `dt_usable' = `touse' & `x'!=. & f`tp'.`y' !=. & !`any_extras_missing'
-		}
-		
+
 		// Calculate the default value for `dtweight'
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
-				qui sum `x' if `dt_usable'
+				qui sum `x' if `touse'
 				local xsd = r(sd)
-				qui sum `dt_value' if `dt_usable'
+				qui sum `dt_value' if `touse'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
 				if `tsd' == 0 {
