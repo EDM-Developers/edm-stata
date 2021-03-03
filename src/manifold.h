@@ -68,12 +68,11 @@ private:
   bool _add_dt0 = false;
   int _tau;
   double _missing;
-  size_t _nobs, _E_extras;
+  size_t _nobs;
+  size_t _num_extras, _num_extras_varying;
 
-  double find_x(const std::vector<size_t>& inds, size_t i, size_t j) const;
-  double find_co_x(const std::vector<size_t>& inds, size_t i, size_t j) const;
+  double lagged(const std::vector<double>& vec, const std::vector<size_t>& inds, size_t i, size_t j) const;
   double find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const;
-  double find_extras(const std::vector<size_t>& inds, size_t i, size_t j) const;
 
   // The following variables are normally private, but in the dev mode builds
   // they are made public so we can more easily save them to a dump file.
@@ -83,19 +82,27 @@ public:
   double _dtWeight;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
+  std::vector<bool> _extrasEVarying;
 
 public:
   ManifoldGenerator(){};
 
   ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<std::vector<double>>& extras, double missing, size_t tau)
+                    const std::vector<std::vector<double>>& extras, const std::vector<bool>& extrasEVarying,
+                    double missing, size_t tau)
     : _x(x)
     , _y(y)
     , _extras(extras)
+    , _extrasEVarying(extrasEVarying)
     , _missing(missing)
     , _tau(tau)
-    , _E_extras(extras.size())
-  {}
+  {
+    _num_extras = extras.size();
+    _num_extras_varying = 0;
+    for (const bool& eVarying : extrasEVarying) {
+      _num_extras_varying += eVarying;
+    }
+  }
 
   void add_coprediction_data(const std::vector<double>& co_x)
   {
@@ -114,6 +121,6 @@ public:
   Manifold create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const;
 
   size_t E_dt(size_t E) const { return (_use_dt) * (E - 1 + _add_dt0); }
-
-  size_t E_actual(size_t E) const { return E + E_dt(E) + _E_extras; }
+  size_t E_extras(size_t E) const { return _num_extras + _num_extras_varying * (E - 1); }
+  size_t E_actual(size_t E) const { return E + E_dt(E) + E_extras(E); }
 };

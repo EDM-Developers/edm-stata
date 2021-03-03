@@ -20,9 +20,9 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < E; j++) {
       if (prediction && _copredict) {
-        flat[i * E_actual(E) + j] = find_co_x(inds, i, j);
+        flat[i * E_actual(E) + j] = lagged(_co_x, inds, i, j);
       } else {
-        flat[i * E_actual(E) + j] = find_x(inds, i, j);
+        flat[i * E_actual(E) + j] = lagged(_x, inds, i, j);
       }
     }
   }
@@ -34,32 +34,29 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
     }
   }
 
-  // Finally put the unlagged extras in the last columns
+  // Finally put the extras in the last columns
   for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < _E_extras; j++) {
-      flat[i * E_actual(E) + E + E_dt(E) + j] = find_extras(inds, i, j);
+    int offset = 0;
+    for (size_t k = 0; k < _num_extras; k++) {
+      int numLags = _extrasEVarying[k] ? E : 1;
+      for (size_t j = 0; j < numLags; j++) {
+        flat[i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
+      }
+      offset += numLags;
     }
   }
 
-  return { flat, y, nobs, E, E_dt(E), _E_extras, E_actual(E), _missing };
+  return { flat, y, nobs, E, E_dt(E), E_extras(E), E_actual(E), _missing };
 }
 
-double ManifoldGenerator::find_x(const std::vector<size_t>& inds, size_t i, size_t j) const
+double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<size_t>& inds, size_t i,
+                                 size_t j) const
 {
   int index = inds.at(i) - j * _tau;
   if (index < 0) {
     return _missing;
   }
-  return _x[index];
-}
-
-double ManifoldGenerator::find_co_x(const std::vector<size_t>& inds, size_t i, size_t j) const
-{
-  int index = inds.at(i) - j * _tau;
-  if (index < 0) {
-    return _missing;
-  }
-  return _co_x[index];
+  return vec[index];
 }
 
 double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
@@ -71,10 +68,4 @@ double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, siz
     return _missing;
   }
   return _dtWeight * (_t[ind1] - _t[ind2]);
-}
-
-double ManifoldGenerator::find_extras(const std::vector<size_t>& inds, size_t i, size_t j) const
-{
-  size_t index = inds.at(i);
-  return _extras.at(j).at(index);
 }

@@ -361,9 +361,10 @@ void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<boo
   }
 }
 
-std::vector<double> stata_numlist(std::string macro)
+template<typename T>
+std::vector<T> stata_numlist(std::string macro)
 {
-  std::vector<double> numlist;
+  std::vector<T> numlist;
 
   char buffer[1000];
   SF_macro_use((char*)("_" + macro).c_str(), buffer, 1000);
@@ -376,7 +377,7 @@ std::vector<double> stata_numlist(std::string macro)
     list = list.substr(found + 1);
     found = list.find(' ');
   }
-  numlist.push_back(atof(list.c_str()));
+  numlist.push_back((T)atof(list.c_str()));
 
   return numlist;
 }
@@ -590,7 +591,9 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(3 + z);
   }
 
-  generator = ManifoldGenerator(x, y, extras, MISSING, tau);
+  auto extrasEVarying = stata_numlist<bool>("z_e_varying");
+
+  generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
 
   // Handle 'dt' flag
   if (dtMode) {

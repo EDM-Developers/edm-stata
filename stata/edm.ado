@@ -135,54 +135,6 @@ program define edmDisplayCI, rclass
 
 end
 
-program define edmPreprocessVariable
-	syntax anything , touse(name) out(name)
-
-	if substr("`1'", 1, 2) == "z." {
-		local unnormalized = substr("`1'", 3, .)
-		qui egen `out' = std(`unnormalized') if `touse'
-	}
-	else {
-		qui gen double `out' = `1' 
-	}
-end
-
-program define hasMissingValues
-	syntax [anything] , out(name)
-	qui gen byte `out' = 0
-	
-	if "`anything'" != "" {
-		tsunab varlist : `anything'
-		
-		foreach var in `varlist' {
-			qui replace `out' = 1 if `var' == .
-		}
-	}
-end
-
-program define edmPrintPluginProgress, eclass
-	plugin call smap_block_mdap , "report_progress"
-	nobreak {
-		local breakHit = 0
-		local sleepTime = 0.001
-		local numSleeps = 0
-
-		while !plugin_finished {
-			local ++numSleeps
-			capture noi break sleep `sleepTime'
-			
-			if _rc {
-				local breakHit = 1
-			}
-			plugin call smap_block_mdap , "report_progress" "`breakHit'"
-			
-			if `numSleeps' == 1000 {
-				local sleepTime = 1
-			}
-		}
-	}
-end
-
 program define edmParser, eclass
 
 	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending)] [theta(numlist ascending)] [manifold(string)] [converge] */
@@ -285,6 +237,31 @@ end
 program define edmCoremap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
  */
+
+program define hasMissingValues
+	syntax [anything] , out(name)
+	qui gen byte `out' = 0
+
+	if "`anything'" != "" {
+		tsunab varlist : `anything'
+
+		foreach var in `varlist' {
+			qui replace `out' = 1 if `var' == .
+		}
+	}
+end
+
+program define edmPreprocessVariable
+	syntax anything , touse(name) out(name)
+
+	if substr("`1'", 1, 2) == "z." {
+		local unnormalized = substr("`1'", 3, .)
+		qui egen `out' = std(`unnormalized') if `touse'
+	}
+	else {
+		qui gen double `out' = `1'
+	}
+end
 
 program define edmManifoldSize, rclass
 	syntax , e(int) dt(int) dt0(int) num_extras(int) [num_eextras(int 0)]
@@ -389,7 +366,9 @@ program define edmCountExtras, rclass
 		forvalues i = 1/`v_count' {
 			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'``i''`=cond(`e_varying', "(e)", "")'"
 			local ++z_count
-			local z_e_varying = "`z_e_varying' 0"
+			if !`e_varying' {
+					local z_e_varying = "`z_e_varying' 0"
+			}
 		}
 	}
 
@@ -418,6 +397,29 @@ program define edmPreprocessExtras, rclass
 		edmPreprocessVariable `z_name' , touse(`touse') out(`z_var')
 	}
 end 
+
+program define edmPrintPluginProgress, eclass
+	plugin call smap_block_mdap , "report_progress"
+	nobreak {
+		local breakHit = 0
+		local sleepTime = 0.001
+		local numSleeps = 0
+
+		while !plugin_finished {
+			local ++numSleeps
+			capture noi break sleep `sleepTime'
+
+			if _rc {
+				local breakHit = 1
+			}
+			plugin call smap_block_mdap , "report_progress" "`breakHit'"
+
+			if `numSleeps' == 1000 {
+				local sleepTime = 1
+			}
+		}
+	}
+end
 
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
@@ -1706,19 +1708,33 @@ program define edmXmap, eclass
 									local mapping_name "`mapping_name' dt`ii'"
 								}
 							}
-							local mapping_name "`mapping_name' `z_names'"
+
+							forvalues kk=1/`z_count' {
+								local z_name : word `kk' of `z_names'
+
+								local e_varying = strpos("`z_name'", "(e)")
+								if `e_varying' {
+									local suffix_ind = strlen("`z_name'")-3+1
+									local z_name = substr("`z_name'", 1, `suffix_ind'-1)
+								}
+
+								local mapping_name = "`mapping_name' `z_name'"
+								forvalues ii=1/`=(`e_varying'>0)*(`e'-1)' {
+									local lagged_z_name = "l`=`ii'*`tau''.`z_name'"
+									local mapping_name = "`mapping_name' `lagged_z_name'"
+								}
+							}
 
 							if `verbosity' > 2 {
 								di "x = <`x'> xx=<`xx'> y = <`y'> yy=<`yy'>"
 								di "Mapping names: <`mapping_name'>"
 							}
 
-							local mapping_`=`e'-1'_name = "`mapping_name'"
-
 							local ii = 1
-							foreach name of local mapping_`=`e'-1'_name {
+							local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
+							foreach name of local mapping_name {
 								qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
-								qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' predicting `=cond(`direction_num'==1,"`ori_y'","`ori_x'")' or `=cond(`direction_num'==1,"`ori_y'","`ori_x'")'|M(`=cond(`direction_num'==1,"`ori_x'","`ori_y'")') S-map coefficient (rep `rep')"
+								qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' `label'"
 								local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
 								local ++ii
 							}
