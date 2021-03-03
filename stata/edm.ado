@@ -295,7 +295,7 @@ program define edmManifoldSize, rclass
 end
 
 program define edmConstructManifolds, rclass
-	syntax anything , x(name) touse(name) [dt_value(name)] [zlist(string)] ///
+	syntax anything , x(name) touse(name) [dt_value(name)] [z_vars(string)] ///
 			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)]
 
 	// Generate lags for 'x' data
@@ -321,7 +321,7 @@ program define edmConstructManifolds, rclass
 		forvalues j=0/`i' {
 			local mapping_`i' = "`mapping_`i'' `t_`j''"
 		}
-		local mapping_`i' = strtrim("`mapping_`i'' `zlist'")
+		local mapping_`i' = strtrim("`mapping_`i'' `z_vars'")
 		return local mapping_`i' = "`mapping_`i''"
 	}
 
@@ -333,48 +333,68 @@ program define edmCountExtras, rclass
 	syntax [anything]
 
 	local extravars = strtrim("`anything'")
-	local zcount = 0
+	local z_names = ""
+	local z_count = 0
 	local z_e_varying_count = 0
 
 	foreach v of local extravars {
-		local ++zcount
-		if strpos("`v'", "(e)") {
-			local ++z_e_varying_count
+		local z_prefix = strpos("`v'", "z.")
+		if `z_prefix' {
+			if `z_prefix' > 1 {
+				noi di as error "Extra '`v'' must have 'z.' prefix come first"
+				error 198
+			}
+			local v = substr("`v'",3,.)
+		}
+
+		local e_varying = strpos("`v'", "(e)")
+		if `e_varying' {
+			local suffix_ind = strlen("`v'")-3+1
+			if `e_varying' != `suffix_ind' {
+				noi di as error "Extra '`v'' must have '(e)' suffix come last"
+				error 198
+			}
+			local v = substr("`v'", 1, `suffix_ind'-1)
+			local ++z_e_varying_count 
+		}
+
+		tsunab v_list : `v'
+		local v_count = wordcount("`v_list'")
+		if `v_count' > 1 & `e_varying' {
+			noi di as error "Extra '`v'' can't combine '(e)' suffix to a time-series varlist"
+			error 198
+		}
+		tokenize `v_list'
+		forvalues i = 1/`v_count' {
+			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'``i''`=cond(`e_varying', "(e)", "")'"
+			local ++z_count
 		}
 	}
-	return local zcount = `zcount'
+
+	return local z_names = strtrim("`z_names'")
+	return local z_count = `z_count'
 	return local z_e_varying_count = `z_e_varying_count'
 end
 
-program define edmExtractExtra, rclass
-	syntax [anything] , touse(name) [zlist(string)]
+program define edmGenerateExtras, rclass
+	syntax [anything] , touse(name) [z_vars(string)]
 
-	local zcount = wordcount("`zlist'")
-	local extravars = strtrim("`anything'")
-	local zlist_names ""
+	local z_names = strtrim("`anything'")
+	local z_count = wordcount("`z_names'")
 
-	forvalues i = 1/`zcount' {
-		local v : word `i' of `extravars'
-		local zvar : word `i' of `zlist'
+	forvalues i = 1/`z_count' {
+		local z_name : word `i' of `z_names'
+		local z_var : word `i' of `z_vars'
 
-		if substr("`v'",1,2) == "z." {
-			qui sum `=substr("`v'",3,.)' if `touse'
-			qui gen double `zvar' = (`=substr("`v'",3,.)' - r(mean))/r(sd)
+		local e_varying = strpos("`z_name'", "(e)")
+		if `e_varying' {
+			local suffix_ind = strlen("`z_name'")-3+1
+			local z_name = substr("`z_name'", 1, `suffix_ind'-1)
 		}
-		else {
-			//if real("`v'") !=. {
-			//	noi di as error "`v' is not a variable name"
-			//	error 198
-			//}
-			qui gen double `zvar' = `v' if `touse'
-		}
-		// TODO: This zlist_names needs more work
-		local zlist_names "`zlist_names' `v'"
+
+		edmPreprocessVariable `z_name' , touse(`touse') out(`z_var')
 	}
-
-	return local zlist_names = strtrim("`zlist_names'")
-	return local zlist = strtrim("`zlist'")
-end
+end 
 
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
@@ -604,15 +624,14 @@ program define edmExplore, eclass
 	}
 
 	edmCountExtras `extraembed'
-	local zcount = `r(zcount)'
-	local zlist = ""
-	forvalues i = 1/`zcount' {
+	local z_count = `r(z_count)'
+	local z_names = "`r(z_names)'"
+	local z_vars = ""
+	forvalues i = 1/`z_count' {
 		tempvar z
-		local zlist = "`zlist' `z'"
+		local z_vars = "`z_vars' `z'"
 	}
-
-	edmExtractExtra `extraembed' , touse(`touse') zlist(`zlist')
-	local zlist_names = "`r(zlist_names)'"
+	edmGenerateExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 	numlist "`e'"
 	local e_size = wordcount("`=r(numlist)'")
@@ -626,7 +645,7 @@ program define edmExplore, eclass
 	local num_tasks = `round'*`theta_size'*`e_size'
 	mat r = J(`num_tasks', 4, .)	
 
-	edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+	edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
 	local manifold_size = `r(manifold_size)'
 
 	if `mata_mode' {
@@ -635,7 +654,7 @@ program define edmExplore, eclass
 			tempvar manifold_var
 			local manifold_vars = "`manifold_vars' `manifold_var'"
 		}
-		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') zlist("`zlist'") ///
+		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') z_vars("`z_vars'") ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 		forvalues i=1/`=`max_e'-1' {
@@ -676,7 +695,7 @@ program define edmExplore, eclass
 
 		// Print out some of these gibberish tempvar names if requested
 		if `verbosity' > 1 {
-			di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
+			di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
 			pause
 		}
 
@@ -686,8 +705,8 @@ program define edmExplore, eclass
 			local time = "`original_t'"
 		}
 
-		plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
-				"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
 
 		local missingdistance = `missing_dist_used'
@@ -725,15 +744,9 @@ program define edmExplore, eclass
 		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
 
 		* z list
-		local co_zlist= ""
-		forvalues i = 1/`zcount' {
-			tempvar z
-			local co_zlist = "`co_zlist' `z'"
-		}
-		edmExtractExtra `extraembed' , touse(`touse') zlist(`co_zlist')
-
+		local co_z_vars = "`z_vars'"
 		tempvar any_co_extras_missing
-		hasMissingValues `co_zlist', out(`any_co_extras_missing')
+		hasMissingValues `co_z_vars', out(`any_co_extras_missing')
 
 		tempvar co_usable
 		gen byte `co_usable' = `touse' & `co_x' != . & !`any_co_extras_missing'
@@ -745,7 +758,7 @@ program define edmExplore, eclass
 			tempvar co_manifold_var
 			local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 		}
-		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') zlist("`co_zlist'") ///
+		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') z_vars("`co_z_vars'") ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 		local co_mapping = "`r(max_e_manifold)'"
@@ -874,7 +887,7 @@ program define edmExplore, eclass
 			if `mata_mode' {
 				local manifold "mapping_`=`i'-1'"
 			}
-			edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+			edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
 			local e_offset = `r(manifold_size)' - `i'
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
@@ -884,7 +897,7 @@ program define edmExplore, eclass
 					local lib_size = min(`k',`train_size')
 				}
 				else if `k' == 0 {
-					local lib_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+					local lib_size = `i' +`z_count' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 				}
 				else {
 					local lib_size = `max_lib_size'
@@ -896,7 +909,7 @@ program define edmExplore, eclass
 					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
 				else if `k' != `lib_size' & `k' == 0 {
-					local plus_amt = `zcount' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
+					local plus_amt = `z_count' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
 					local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 
@@ -1052,8 +1065,8 @@ program define edmExplore, eclass
 	if `parsed_dt' {
 		ereturn scalar dtw =`parsed_dtw'
 		ereturn local dtsave "`parsed_dtsave'"
-		if "`zlist_names'" != "" {
-			ereturn local extraembed = "`zlist_names' (+ time delta)"
+		if "`z_names'" != "" {
+			ereturn local extraembed = "`z_names' (+ time delta)"
 		}
 		else {
 			ereturn local extraembed = "(time delta)"
@@ -1061,7 +1074,7 @@ program define edmExplore, eclass
 
 	}
 	else {
-		ereturn local extraembed = "`zlist_names'"
+		ereturn local extraembed = "`z_names'"
 	}
 	if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
 		sort `original_id' `original_t'
@@ -1381,15 +1394,14 @@ program define edmXmap, eclass
 		}
 
 		edmCountExtras `extraembed'
-		local zcount = `r(zcount)'
-		local zlist = ""
-		forvalues i = 1/`zcount' {
+		local z_count = `r(z_count)'
+		local z_names = "`r(z_names)'"
+		local z_vars = ""
+		forvalues i = 1/`z_count' {
 			tempvar z
-			local zlist = "`zlist' `z'"
+			local z_vars = "`z_vars' `z'"
 		}
-
-		edmExtractExtra `extraembed' , touse(`touse') zlist(`zlist')
-		local zlist_names = "`r(zlist_names)'"
+		edmGenerateExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
@@ -1409,7 +1421,7 @@ program define edmXmap, eclass
 		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
 		mat r`direction_num' = J(`num_tasks', 4, .)
 
-		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
 		local manifold_size = `r(manifold_size)'
 
 		if `mata_mode' {
@@ -1418,7 +1430,7 @@ program define edmXmap, eclass
 				tempvar manifold_var
 				local manifold_vars = "`manifold_vars' `manifold_var'"
 			}
-			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') zlist("`zlist'") ///
+			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') z_vars("`z_vars'") ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 			forvalues i=1/`=`max_e'-1' {
@@ -1464,7 +1476,7 @@ program define edmXmap, eclass
 
 			// Print out some of these gibberish tempvar names if requested
 			if `verbosity' > 1 {
-				di "x <`x'> x_f <`x_f'> zlist <`zlist'> original_t <`original_t'> dtweight <`parsed_dtw'>"
+				di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'> dtweight <`parsed_dtw'>"
 				pause
 			}
 
@@ -1475,8 +1487,8 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
-			plugin call smap_block_mdap `x' `x_f' `zlist' `time' `usable' `touse', "transfer_manifold_data" ///
-					"`zcount'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
+			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
@@ -1513,15 +1525,9 @@ program define edmXmap, eclass
 			edmPreprocessVariable "`2'", touse(`touse') out(`co_y')
 
 			* z list
-			local co_zlist = ""
-			forvalues i = 1/`zcount' {
-				tempvar z
-				local co_zlist = "`co_zlist' `z'"
-			}
-			edmExtractExtra `extraembed' , touse(`touse') zlist(`co_zlist')
-
+			local co_z_vars = "`z_vars'"
 			tempvar any_co_extras_missing
-			hasMissingValues `co_zlist', out(`any_co_extras_missing')
+			hasMissingValues `co_z_vars', out(`any_co_extras_missing')
 
 			tempvar co_usable
 			gen byte `co_usable' = `touse' & !`any_co_extras_missing'
@@ -1534,7 +1540,7 @@ program define edmXmap, eclass
 				tempvar co_manifold_var
 				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') zlist("`co_zlist'") ///
+			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') z_vars("`co_z_vars'") ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 			local co_mapping = "`r(max_e_manifold)'"
@@ -1631,7 +1637,7 @@ program define edmXmap, eclass
 							local k_size = min(`k',`train_size' -1)
 						}
 						else if `k' == 0{
-							local k_size = `i' +`zcount' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+							local k_size = `i' +`z_count' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 						}
 						else if `k' < 0  {
 							local k_size = `train_size' - 1
@@ -1663,7 +1669,7 @@ program define edmXmap, eclass
 									local mapping_name "`mapping_name' dt`ii'"
 								}
 							}
-							local mapping_name "`mapping_name' `zlist_names'"
+							local mapping_name "`mapping_name' `z_names'"
 
 							if `verbosity' > 2 {
 								di "x = <`x'> xx=<`xx'> y = <`y'> yy=<`yy'>"
@@ -1855,7 +1861,7 @@ program define edmXmap, eclass
 	}
 	// the actual size of e should be main e + dt + extras
 	ereturn scalar e_main = `e'
-	edmManifoldSize, e(`e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`zcount')
+	edmManifoldSize, e(`e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
 	ereturn scalar e_actual = `r(manifold_size)'
 	ereturn scalar e_offset = `r(manifold_size)' - `e'
 	ereturn scalar theta = `theta'
@@ -1888,15 +1894,15 @@ program define edmXmap, eclass
 			ereturn scalar dtw2 =`parsed_dtw2'
 		}
 		ereturn local dtsave "`parsed_dtsave'"
-		if "`zlist_names'" != "" {
-			ereturn local extraembed = "`zlist_names' (+ time delta)"
+		if "`z_names'" != "" {
+			ereturn local extraembed = "`z_names' (+ time delta)"
 		}
 		else {
 			ereturn local extraembed = "(time delta)"
 		}
 	}
 	else {
-		ereturn local extraembed = "`zlist_names'"
+		ereturn local extraembed = "`z_names'"
 	}
 	ereturn local mode = cond(`mata_mode', "mata","plugin")
 	edmDisplay
