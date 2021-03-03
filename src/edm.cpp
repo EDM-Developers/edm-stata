@@ -353,6 +353,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
   auto coeffsView = span_2d_double(coeffs.get(), (int)numPredictions, (int)numCoeffCols);
+  std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);

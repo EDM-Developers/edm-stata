@@ -401,7 +401,7 @@ void print_vector(std::string name, std::vector<T> vec)
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, ST_double dtWeight)
+void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight)
 {
   if (io.verbosity > 1) {
     // Overview of variables and arguments passed and observations in sample
@@ -418,7 +418,9 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
     io.print(fmt::format("missing distance = {}\n\n", opts.missingdistance));
 
     io.print(fmt::format("We have {} 'extra' columns\n", numExtras));
-    io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
+    if (dtMode) {
+      io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
+    }
 
     io.print(fmt::format("Requested {} threads\n", reqThreads));
     io.print(fmt::format("Using {} threads\n\n", opts.nthreads));
@@ -598,7 +600,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   }
 
   // The stata variable named `touse'
-  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + (dtWeight > 0) + 2);
+  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 2);
   print_vector<bool>("touse", touse);
 
   // Make the largest manifold we'll need in order to find missing values for 'usable'
@@ -628,13 +630,13 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   splitter = TrainPredictSplitter(explore, full, crossfold, usable);
 
-  print_setup_info(argc, argv, reqThreads, numExtras, dtWeight);
+  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
 
   ST_double* usableToSave = new ST_double[usable.size()];
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
-  write_stata_column(usableToSave, usable.size(), 2 + numExtras + (dtWeight > 0) + 1);
+  write_stata_column(usableToSave, usable.size(), 2 + numExtras + dtMode + 1);
   delete[] usableToSave;
 
   return SUCCESS;
