@@ -290,12 +290,14 @@ program define edmManifoldSize, rclass
 	syntax , e(int) dt(int) dt0(int) num_extras(int) [num_eextras(int 0)]
 	local num_xs = 1 + `e'-1
 	local num_dts = `dt' * (`dt0' + `e'-1)
-	local num_extras = `num_extras' + `num_eextras'*(`e'-1)
-	return local manifold_size = `num_xs' + `num_dts' + `num_extras'
+	local total_num_extras = `num_extras' + `num_eextras'*(`e'-1)
+	return local total_num_extras = `total_num_extras'
+	return local manifold_size = `num_xs' + `num_dts' + `total_num_extras'
 end
 
 program define edmConstructManifolds, rclass
-	syntax anything , x(name) touse(name) [dt_value(name)] [z_vars(string)] ///
+	syntax anything , x(name) touse(name) [dt_value(name)] ///
+			[z_vars(string)] [z_e_varying(string)] ///
 			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)]
 
 	// Generate lags for 'x' data
@@ -313,6 +315,18 @@ program define edmConstructManifolds, rclass
 		}
 	}
 
+	// Generate extra variables & their lags if requested
+	local z_count = wordcount("`z_vars'")
+	forvalues k=1/`z_count' {
+		local z_k : word `k' of `z_vars'
+		local z_k_varying : word `k' of `z_e_varying'
+
+		forvalues i=0/`=`z_k_varying'*(`max_e'-1)' {
+			local z_`k'_`i' = "``++manifold_index''"
+			qui gen double `z_`k'_`i'' = l`=`i'*`tau''.`z_k' if `touse'
+		}
+	}
+
 	// Put the manifolds together
 	forvalues i=1/`=`max_e'-1' {
 		forvalues j=0/`i' {
@@ -321,7 +335,12 @@ program define edmConstructManifolds, rclass
 		forvalues j=0/`i' {
 			local mapping_`i' = "`mapping_`i'' `t_`j''"
 		}
-		local mapping_`i' = strtrim("`mapping_`i'' `z_vars'")
+
+		forvalues k=1/`z_count' {
+			forvalues j=0/`i' {
+				local mapping_`i' = "`mapping_`i'' `z_`k'_`j''"
+			}
+		}
 		return local mapping_`i' = "`mapping_`i''"
 	}
 
@@ -335,6 +354,7 @@ program define edmCountExtras, rclass
 	local extravars = strtrim("`anything'")
 	local z_names = ""
 	local z_count = 0
+	local z_e_varying = ""
 	local z_e_varying_count = 0
 
 	foreach v of local extravars {
@@ -356,6 +376,7 @@ program define edmCountExtras, rclass
 			}
 			local v = substr("`v'", 1, `suffix_ind'-1)
 			local ++z_e_varying_count 
+			local z_e_varying = "`z_e_varying' 1"
 		}
 
 		tsunab v_list : `v'
@@ -368,15 +389,17 @@ program define edmCountExtras, rclass
 		forvalues i = 1/`v_count' {
 			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'``i''`=cond(`e_varying', "(e)", "")'"
 			local ++z_count
+			local z_e_varying = "`z_e_varying' 0"
 		}
 	}
 
 	return local z_names = strtrim("`z_names'")
 	return local z_count = `z_count'
 	return local z_e_varying_count = `z_e_varying_count'
+	return local z_e_varying = strtrim("`z_e_varying'")
 end
 
-program define edmGenerateExtras, rclass
+program define edmPreprocessExtras, rclass
 	syntax [anything] , touse(name) [z_vars(string)]
 
 	local z_names = strtrim("`anything'")
@@ -626,12 +649,14 @@ program define edmExplore, eclass
 	edmCountExtras `extraembed'
 	local z_count = `r(z_count)'
 	local z_names = "`r(z_names)'"
+	local z_e_varying_count = `r(z_e_varying_count)'
+	local z_e_varying = "`r(z_e_varying)'"
 	local z_vars = ""
 	forvalues i = 1/`z_count' {
 		tempvar z
 		local z_vars = "`z_vars' `z'"
 	}
-	edmGenerateExtras `z_names' , touse(`touse') z_vars(`z_vars')
+	edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 	numlist "`e'"
 	local e_size = wordcount("`=r(numlist)'")
@@ -645,8 +670,10 @@ program define edmExplore, eclass
 	local num_tasks = `round'*`theta_size'*`e_size'
 	mat r = J(`num_tasks', 4, .)	
 
-	edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
+	edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') ///
+		num_extras(`z_count') num_eextras(`z_e_varying_count')
 	local manifold_size = `r(manifold_size)'
+	local total_num_extras = `r(total_num_extras)'
 
 	if `mata_mode' {
 		local manifold_vars = ""
@@ -654,7 +681,8 @@ program define edmExplore, eclass
 			tempvar manifold_var
 			local manifold_vars = "`manifold_vars' `manifold_var'"
 		}
-		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') z_vars("`z_vars'") ///
+		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
+			z_vars("`z_vars'") z_e_varying("`z_e_varying'") ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 		forvalues i=1/`=`max_e'-1' {
@@ -887,7 +915,9 @@ program define edmExplore, eclass
 			if `mata_mode' {
 				local manifold "mapping_`=`i'-1'"
 			}
-			edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
+			edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') ///
+				num_extras(`z_count') num_eextras(`z_e_varying_count')
+			local total_num_extras = `r(total_num_extras)'
 			local e_offset = `r(manifold_size)' - `i'
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
@@ -897,7 +927,7 @@ program define edmExplore, eclass
 					local lib_size = min(`k',`train_size')
 				}
 				else if `k' == 0 {
-					local lib_size = `i' +`z_count' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+					local lib_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 				}
 				else {
 					local lib_size = `max_lib_size'
@@ -909,7 +939,7 @@ program define edmExplore, eclass
 					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 				}
 				else if `k' != `lib_size' & `k' == 0 {
-					local plus_amt = `z_count' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
+					local plus_amt = `total_num_extras' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
 					local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 				}
 
@@ -1396,12 +1426,14 @@ program define edmXmap, eclass
 		edmCountExtras `extraembed'
 		local z_count = `r(z_count)'
 		local z_names = "`r(z_names)'"
+		local z_e_varying_count = `r(z_e_varying_count)'
+		local z_e_varying = "`r(z_e_varying)'"
 		local z_vars = ""
 		forvalues i = 1/`z_count' {
 			tempvar z
 			local z_vars = "`z_vars' `z'"
 		}
-		edmGenerateExtras `z_names' , touse(`touse') z_vars(`z_vars')
+		edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")
@@ -1421,8 +1453,10 @@ program define edmXmap, eclass
 		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
 		mat r`direction_num' = J(`num_tasks', 4, .)
 
-		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
+		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') ///
+			num_extras(`z_count') num_eextras(`z_e_varying_count')
 		local manifold_size = `r(manifold_size)'
+		local total_num_extras = `r(total_num_extras)'
 
 		if `mata_mode' {
 			local manifold_vars = ""
@@ -1430,7 +1464,8 @@ program define edmXmap, eclass
 				tempvar manifold_var
 				local manifold_vars = "`manifold_vars' `manifold_var'"
 			}
-			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') z_vars("`z_vars'") ///
+			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
+				z_vars("`z_vars'") z_e_varying("`z_e_varying'") ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 			forvalues i=1/`=`max_e'-1' {
@@ -1526,6 +1561,7 @@ program define edmXmap, eclass
 
 			* z list
 			local co_z_vars = "`z_vars'"
+			local co_z_e_varying = "`z_e_varying'"
 			tempvar any_co_extras_missing
 			hasMissingValues `co_z_vars', out(`any_co_extras_missing')
 
@@ -1540,7 +1576,8 @@ program define edmXmap, eclass
 				tempvar co_manifold_var
 				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') z_vars("`co_z_vars'") ///
+			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
+				z_vars("`co_z_vars'") z_e_varying("`co_z_e_varying'") ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 			local co_mapping = "`r(max_e_manifold)'"
@@ -1637,7 +1674,7 @@ program define edmXmap, eclass
 							local k_size = min(`k',`train_size' -1)
 						}
 						else if `k' == 0{
-							local k_size = `i' +`z_count' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+							local k_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 						}
 						else if `k' < 0  {
 							local k_size = `train_size' - 1
@@ -1861,7 +1898,8 @@ program define edmXmap, eclass
 	}
 	// the actual size of e should be main e + dt + extras
 	ereturn scalar e_main = `e'
-	edmManifoldSize, e(`e') dt(`parsed_dt') dt0(`parsed_dt0') num_extras(`z_count')
+	edmManifoldSize, e(`e') dt(`parsed_dt') dt0(`parsed_dt0') ///
+		num_extras(`z_count') num_eextras(`z_e_varying_count')
 	ereturn scalar e_actual = `r(manifold_size)'
 	ereturn scalar e_offset = `r(manifold_size)' - `e'
 	ereturn scalar theta = `theta'
