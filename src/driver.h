@@ -131,7 +131,13 @@ ManifoldGenerator read_manifold_generator(hid_t fid)
     }
   }
 
-  ManifoldGenerator generator(x, y, extras, MISSING);
+  // TODO: Add tau and e-varying info to the dump files.
+  int tau = 1;
+  std::vector<bool> extrasEVarying(extras.size());
+  for (int i = 0; i < extras.size(); i++) {
+    extrasEVarying[i] = false;
+  }
+  ManifoldGenerator generator(x, y, extras, extrasEVarying, MISSING, tau);
 
   if (H5LTfind_dataset(fid, "co_x")) {
     std::vector<double> co_x = std::vector<double>(size);
@@ -142,13 +148,15 @@ ManifoldGenerator read_manifold_generator(hid_t fid)
   // Bug in "H5LTfind_dataset" which return true for the column "t"
   // even when that dataset doesn't exist in the HDF5 file.
   if (H5LTfind_dataset(fid, "time")) {
+    // TODO: Add dt0
+    bool dt0 = false;
     std::vector<double> t = std::vector<double>(size);
     H5LTread_dataset_double(fid, "time", t.data());
 
     double dtWeight;
     H5LTget_attribute_double(fid, "/", "dtWeight", &dtWeight);
 
-    generator.add_dt_data(t, dtWeight);
+    generator.add_dt_data(t, dtWeight, dt0);
   }
 
   return generator;

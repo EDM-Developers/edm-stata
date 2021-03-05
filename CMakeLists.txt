@@ -34,7 +34,6 @@ if(WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI")
   set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ox")
 else()
-  set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
   set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fsanitize=undefined" "-fno-common" "-fno-omit-frame-pointer")
@@ -65,6 +64,7 @@ set(COMMON_SRC src/cpu.cpp src/cpu.h src/edm.cpp src/edm.h src/manifold.cpp src/
 # plugin build and installation
 add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
 set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
+set_target_properties(edm PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
 
 if(WIN32)
   set_target_properties(edm PROPERTIES SUFFIX _Windows_x64.plugin)

@@ -6,7 +6,7 @@ stages:
 build-windows:
   stage: build
   script:
-    - cmake -B build -S . #-DBUILD_GBENCH=TRUE
+    - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
@@ -14,8 +14,8 @@ build-windows:
   artifacts:
     paths:
     - stata/edm_Windows_x64.plugin
-    # - stata/gbench.exe
-    # - build/Release/*.dll
+    - stata/gbench.exe
+    - build/Release/*.dll
   tags:
     - windows-runner
 
@@ -52,11 +52,10 @@ perf-windows:
   dependencies:
     - build-windows
   before_script:
-    # - cp build/Release/*.dll stata
+    - cp build/Release/*.dll stata
     - cd stata
   script:
-    - echo "Need to fix benchmarking"
-    # - ./gbench.exe
+    - ./gbench.exe
   tags:
     - windows-runner
 
@@ -67,7 +66,7 @@ build-mac:
     - export VCPKG_TARGET_TRIPLET=arm64-osx
     - export VCPKG_DEFAULT_TRIPLET=arm64-osx
   script:
-    - cmake -B build -S . # -DBUILD_GBENCH=TRUE
+    - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
@@ -75,7 +74,7 @@ build-mac:
   artifacts:
     paths:
       - stata/edm_MacOSX_x64.plugin
-      # - stata/gbench
+      - stata/gbench
   tags:
     - mac-arm64
 
@@ -114,8 +113,7 @@ perf-mac:
   before_script:
     - cd stata
   script:
-    - echo "Need to fix benchmarking"
-    # - ./gbench
+    - ./gbench
   tags:
     - mac-arm64
 
@@ -127,7 +125,7 @@ build-ubuntu:
   script:
     - mkdir build
     - cd build
-    - cmake .. #-DBUILD_GBENCH=TRUE
+    - cmake .. -DBUILD_GBENCH=TRUE
     - cd ..
     - cmake --build build --config release
     - cmake --build build --config release --target install
@@ -137,7 +135,7 @@ build-ubuntu:
   artifacts:
     paths:
       - stata/edm_Unix_x64.plugin
-      # - stata/gbench
+      - stata/gbench
   tags:
     - ubuntu-runner
 
@@ -177,7 +175,6 @@ perf-ubuntu:
   before_script:
     - cd stata
   script:
-    - echo "Need to fix benchmarking"
-    # - ./gbench
+    - ./gbench
   tags:
     - ubuntu-runner

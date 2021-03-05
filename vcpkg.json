@@ -2,6 +2,6 @@
     "name": "edm",
     "version-string": "1.4.0",
     "dependencies": [
-        "eigen3", "fmt"
+        "benchmark", "eigen3", "fmt", "hdf5"
     ]
 }
