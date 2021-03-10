@@ -15,6 +15,12 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   }
 
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
+  // auto missingMasks = std::make_unique<boost::dynamic_bitset<>[]>(nobs);
+  auto missingMasks = std::make_unique<std::bitset<MAX_MANIFOLD_SIZE>[]>(nobs);
+
+  // for (size_t i = 0; i < nobs; i++) {
+  //   missingMasks[i].resize(E_actual(E));
+  // }
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (size_t i = 0; i < nobs; i++) {
@@ -24,6 +30,7 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
       } else {
         flat[i * E_actual(E) + j] = lagged(_x, inds, i, j);
       }
+      missingMasks[i].set(j, flat[i * E_actual(E) + j] == _missing);
     }
   }
 
@@ -31,6 +38,7 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   for (size_t i = 0; i < nobs; i++) {
     for (size_t j = 0; j < E_dt(E); j++) {
       flat[i * E_actual(E) + E + j] = find_dt(inds, i, j);
+      missingMasks[i].set(E + j, flat[i * E_actual(E) + E + j] == _missing);
     }
   }
 
@@ -41,12 +49,13 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
       int numLags = _extrasEVarying[k] ? E : 1;
       for (size_t j = 0; j < numLags; j++) {
         flat[i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
+        missingMasks[i].set(E + E_dt(E) + offset + j, flat[i * E_actual(E) + E + E_dt(E) + offset + j] == _missing);
       }
       offset += numLags;
     }
   }
 
-  return { flat, y, nobs, E, E_dt(E), E_extras(E), E_actual(E), _missing };
+  return { flat, missingMasks, y, nobs, E, E_dt(E), E_extras(E), E_actual(E), _missing };
 }
 
 double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<size_t>& inds, size_t i,

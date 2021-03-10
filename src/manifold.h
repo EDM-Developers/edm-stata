@@ -3,19 +3,31 @@
 #include <memory>
 #include <vector>
 
+// #include <boost/dynamic_bitset.hpp>
+#include <bitset>
+
+const size_t MAX_MANIFOLD_SIZE = 20;
+
 class Manifold
 {
-  std::unique_ptr<double[]> _flat = nullptr;
+
   std::vector<double> _y;
   size_t _nobs, _E_x, _E_dt, _E_extras, _E_actual;
   double _missing;
 
 public:
+  std::unique_ptr<double[]> _flat = nullptr;
+  // std::unique_ptr<boost::dynamic_bitset<>[]> _missingMasks = nullptr;
+  std::unique_ptr<std::bitset<MAX_MANIFOLD_SIZE>[]> _missingMasks = nullptr;
+
   Manifold(){};
 
-  Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, size_t nobs, size_t E_x, size_t E_dt,
-           size_t E_extras, size_t E_actual, double missing)
+  // Manifold(std::unique_ptr<double[]>& flat, std::unique_ptr<boost::dynamic_bitset<>[]>& missingMasks,
+  Manifold(std::unique_ptr<double[]>& flat, std::unique_ptr<std::bitset<MAX_MANIFOLD_SIZE>[]>& missingMasks,
+           std::vector<double> y, size_t nobs, size_t E_x, size_t E_dt, size_t E_extras, size_t E_actual,
+           double missing)
     : _flat(std::move(flat))
+    , _missingMasks(std::move(missingMasks))
     , _y(y)
     , _nobs(nobs)
     , _E_x(E_x)
@@ -30,24 +42,17 @@ public:
   double x(size_t i, size_t j) const { return _flat[i * _E_actual + j]; }
   double dt(size_t i, size_t j) const { return _flat[i * _E_actual + _E_x + j]; }
   double extras(size_t i, size_t j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
-  bool any_missing(size_t obsNum) const
-  {
-    for (size_t j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) == _missing) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool any_missing(size_t obsNum) const { return _missingMasks[obsNum].any(); }
 
-  bool any_not_missing(size_t obsNum) const
+  bool any_not_missing(size_t obsNum) const { return !_missingMasks[obsNum].all(); }
+
+  // boost::dynamic_bitset<> get_missing_mask(size_t obsNum) const { return _missingMasks[obsNum]; }
+  std::bitset<MAX_MANIFOLD_SIZE> get_missing_mask(size_t obsNum) const { return _missingMasks[obsNum]; }
+
+  // friend boost::dynamic_bitset<> either_missing(const Manifold & M, const Manifold & Mp, size_t i, size_t j) {
+  friend std::bitset<MAX_MANIFOLD_SIZE> either_missing(const Manifold& M, const Manifold& Mp, size_t i, size_t j)
   {
-    for (size_t j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != _missing) {
-        return true;
-      }
-    }
-    return false;
+    return M._missingMasks[i] | Mp._missingMasks[j];
   }
 
   double y(size_t i) const { return _y[i]; }

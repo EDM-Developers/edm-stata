@@ -63,32 +63,35 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
   int validDistances = 0;
   std::vector<double> d(M.nobs());
 
+  auto MpMask = Mp.get_missing_mask(Mp_i);
+
+  // #pragma clang loop vectorize(enable)
   for (int i = 0; i < M.nobs(); i++) {
+    // if (i == skipRow) {
+    //   d[i] = MISSING;
+    //   continue;
+    // }
+    // auto MMask = M.get_missing_mask(i);
+    // auto eitherMissing = MMask | MpMask;
+    auto eitherMissing = either_missing(M, Mp, i, Mp_i);
     double dist = 0.;
-    bool missing = false;
+    // bool missing = false;
     int numMissingDims = 0;
+    // #pragma clang loop vectorize(enable)
     for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
-      }
+      dist += (1 - eitherMissing[j]) * (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
     }
 
     // If the distance between M_i and b is 0 before handling missing values,
     // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
     dist += numMissingDims * opts.missingdistance * opts.missingdistance;
 
-    if (!missing) {
+    // if (!missing) {
       d[i] = sqrt(dist);
       validDistances += 1;
-    } else {
-      d[i] = MISSING;
-    }
+    // } else {
+      // d[i] = MISSING;
+    // }
   }
 
   // If we only look at distances which are non-zero and non-missing,

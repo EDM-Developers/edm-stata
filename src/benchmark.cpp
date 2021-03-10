@@ -115,7 +115,110 @@ static void bm_get_distances(benchmark::State& state)
   }
 }
 
-BENCHMARK(bm_get_distances)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
+void get_distances_not_allowing_missing(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp)
+{
+  int validDistances = 0;
+  std::vector<double> d(M.nobs());
+
+  for (int i = 0; i < M.nobs(); i++) {
+    double dist = 0.;
+    bool missing = false;
+
+    for (int j = 0; j < M.E_actual(); j++) {
+      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
+        missing = true;
+        break;
+      } else {
+        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
+      }
+    }
+
+    if (missing || dist == 0.) {
+      d[i] = MISSING;
+    } else {
+      d[i] = dist;
+      validDistances += 1;
+    }
+  }
+}
+
+static void bm_get_distances_not_allowing_missing(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
+
+  int Mp_i = 0;
+  for (auto _ : state) {
+    get_distances_not_allowing_missing(Mp_i, vars.opts, M, Mp);
+    Mp_i = (Mp_i + 1) % Mp.nobs();
+  }
+}
+
+BENCHMARK(bm_get_distances_not_allowing_missing)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
+
+void get_distances_not_allowing_missing_avx(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp)
+{
+  // int validDistances = 0;
+  // std::vector<double> d(M.nobs());
+  // TODO: actually filter out missing values beforehand.
+  // For now, just try to get something going which uses AVX instructions; pretend nothing missing.
+
+  // std::vector<bool> missing(M.nobs());
+
+  // for (int i = 0; i < M.nobs(); i++) {
+  //   for (int j = 0; j < M.E_actual(); j++) {
+  //     missing[i] = missing[i] || (M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING);
+  //   }
+  // }
+  const int M_nobs = M.nobs();
+  const int E = M.E_actual();
+
+  double* sqrDist = new double[M_nobs * E];
+
+  // for (int i = 0; i < M_nobs*E; i++) {
+  //   sqrDist[i] = 0;
+  // }
+
+  // for (int i = 0; i < M.nobs(); i++) {
+  //   d[i] = 0;
+  // }
+
+  const double* M_flat = M._flat.get();
+  const double* Mp_flat = Mp._flat.get();
+
+  for (int i = 0; i < M_nobs * E; i++) {
+    double M_ij = M_flat[i];
+    double Mp_ij = Mp_flat[i];
+    double diff = (M_ij - Mp_ij);
+    sqrDist[i] += diff * diff;
+  }
+
+  delete[] sqrDist;
+}
+
+static void bm_get_distances_not_allowing_missing_avx(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
+
+  int Mp_i = 0;
+  for (auto _ : state) {
+    get_distances_not_allowing_missing_avx(Mp_i, vars.opts, M, Mp);
+    Mp_i = (Mp_i + 1) % Mp.nobs();
+  }
+}
+
+BENCHMARK(bm_get_distances_not_allowing_missing_avx)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
 
 static void bm_nearest_neighbours(benchmark::State& state)
 {
