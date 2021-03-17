@@ -517,7 +517,6 @@ program define edmExplore, eclass
 	if "`dtsave'" != ""{
 		confirm new variable `dtsave'
 	}
-	local parsed_dtsave = "`dtsave'"
 
 	if `parsed_dt' {
 		/* general algorithm for generating t patterns
@@ -611,9 +610,9 @@ program define edmExplore, eclass
 			else {
 				qui tsset `newt'
 			}
-			if !inlist("`parsed_dtsave'","",".") {
-				clonevar `parsed_dtsave' = `dt_value'
-				qui label variable `parsed_dtsave' "Time delta (`original_t')"
+			if "`dtsave'" != "" {
+				clonevar `dtsave' = `dt_value'
+				qui label variable `dtsave' "Time delta (`original_t')"
 			}
 		}
 	}
@@ -735,7 +734,7 @@ program define edmExplore, eclass
 			local time = "`original_t'"
 		}
 
-		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `touse' `usable' `dtsave', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
 
@@ -1096,7 +1095,7 @@ program define edmExplore, eclass
 	}
 	if `parsed_dt' {
 		ereturn scalar dtw =`parsed_dtw'
-		ereturn local dtsave "`parsed_dtsave'"
+		ereturn local dtsave "`dtsave'"
 		if "`z_names'" != "" {
 			ereturn local extraembed = "`z_names' (+ time delta)"
 		}
@@ -1271,7 +1270,6 @@ program define edmXmap, eclass
 		if "`dtsave'" != ""{
 			confirm new variable `dtsave'
 		}
-		local parsed_dtsave = "`dtsave'"
 
 		if `parsed_dt' {
 			/* general algorithm for generating t patterns
@@ -1391,9 +1389,9 @@ program define edmXmap, eclass
 				else {
 					qui tsset `newt'
 				}
-				if !inlist("`parsed_dtsave'","",".") {
-					clonevar `parsed_dtsave' = `dt_value'
-					qui label variable `parsed_dtsave' "Time delta (`original_t')"
+				if "`dtsave'" != "" {
+					clonevar `dtsave' = `dt_value'
+					qui label variable `dtsave' "Time delta (`original_t')"
 				}
 			}
 
@@ -1524,7 +1522,7 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
-			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `touse' `usable' `dtsave', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
 
@@ -1947,7 +1945,7 @@ program define edmXmap, eclass
 		if "`direction'" == "both" {
 			ereturn scalar dtw2 =`parsed_dtw2'
 		}
-		ereturn local dtsave "`parsed_dtsave'"
+		ereturn local dtsave "`dtsave'"
 		if "`z_names'" != "" {
 			ereturn local extraembed = "`z_names' (+ time delta)"
 		}

@@ -603,7 +603,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   }
 
   // The stata variable named `touse'
-  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 2);
+  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 1);
   print_vector<bool>("touse", touse);
 
   // Make the largest manifold we'll need in order to find missing values for 'usable'
@@ -635,12 +635,37 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
 
+  // Write out some variables, like 'usable' and 'dtsave', which Stata
+  // needs to report back to the calling function.
   ST_double* usableToSave = new ST_double[usable.size()];
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
-  write_stata_column(usableToSave, usable.size(), 2 + numExtras + dtMode + 1);
+  write_stata_column(usableToSave, usable.size(), 2 + numExtras + dtMode + 2);
   delete[] usableToSave;
+
+  if (dtMode) {
+    // We don't always want to save the dt values to a variable.
+    // Try to just save one thing to this column to see if it gives an error.
+    ST_int dtSaveIndex = 2 + numExtras + dtMode + 3;
+    ST_retcode rc = SF_vstore(dtSaveIndex, 1, SV_missval);
+    if (rc == 0) {
+      // Note, the ado script doesn't store the scaled dt values into this
+      // variable, but just the raw values. So we have to divide by the dtWeight
+      // to undo this scaling.
+      // TODO: Check if this 'raw' dt value is actually desired behaviour?
+      ST_double* dtToSave = new ST_double[usable.size()];
+      for (int i = 0; i < usable.size(); i++) {
+        dtToSave[i] = M.dt(i, 0);
+        
+        if (dtToSave[i] != MISSING) {
+            dtToSave[i] /= dtWeight;
+        }
+      }
+      write_stata_column(dtToSave, usable.size(), dtSaveIndex);
+      delete[] dtToSave;
+    }
+  }
 
   return SUCCESS;
 }
