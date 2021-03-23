@@ -383,16 +383,16 @@ std::vector<T> stata_numlist(std::string macro)
 }
 
 template<typename T>
-void print_vector(std::string name, std::vector<T> vec)
+void print_vector(std::string name, std::vector<T> vec, int numDigits = 20)
 {
   if (io.verbosity > 1) {
     io.print(fmt::format("{} [{}]:\n", name, vec.size()));
     for (int i = 0; i < vec.size(); i++) {
-      if (i == 10) {
-        io.print("... ");
+      if (i == numDigits) {
+        io.print("...\n");
         continue;
       }
-      if (i > 10 && i < vec.size() - 10) {
+      if (i > numDigits && i < vec.size() - numDigits) {
         continue;
       }
       io.print(fmt::format("{} ", vec[i]));
@@ -402,7 +402,8 @@ void print_vector(std::string name, std::vector<T> vec)
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight)
+void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight,
+                      ST_double origDTWeight)
 {
   if (io.verbosity > 1) {
     // Overview of variables and arguments passed and observations in sample
@@ -421,6 +422,11 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
     io.print(fmt::format("We have {} 'extra' columns\n", numExtras));
     if (dtMode) {
       io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
+
+      double error = std::abs(dtWeight - origDTWeight) / (dtWeight);
+      if (error > 0.1) {
+        io.print(fmt::format("Problem! Originally had {} but instead got {}\n", origDTWeight, dtWeight));
+      }
     }
 
     io.print(fmt::format("Requested {} threads\n", reqThreads));
@@ -496,7 +502,38 @@ void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<boo
   }
 }
 
-double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
+double default_dt_weight(const std::vector<double>& x, const std::vector<double>& t, const std::vector<bool>& touse)
+{
+  std::vector<double> xUsable, dtUsable;
+  for (int i = 0; i < x.size(); i++) {
+    if (touse[i]) {
+      if (x[i] != MISSING) {
+        xUsable.push_back(x[i]);
+      }
+      if (i > 0 && t[i] != MISSING && t[i - 1] != MISSING && t[i] > t[i - 1]) {
+        dtUsable.push_back(t[i] - t[i - 1]);
+      }
+    }
+  }
+  print_vector<ST_double>("dtFiltered", dtUsable);
+
+  Eigen::Map<const Eigen::ArrayXd> xMap(xUsable.data(), xUsable.size());
+  Eigen::Map<const Eigen::ArrayXd> dtMap(dtUsable.data(), dtUsable.size());
+
+  const Eigen::ArrayXd xCent = xMap - xMap.mean();
+  const Eigen::ArrayXd dtCent = dtMap - dtMap.mean();
+
+  double xSD = std::sqrt((xCent * xCent).sum() / (xCent.size() - 1));
+  double dtSD = std::sqrt((dtCent * dtCent).sum() / (dtCent.size() - 1));
+
+  if (io.verbosity > 1) {
+    io.print(fmt::format("Default dtweight is {} = {} / {}\n", xSD / dtSD, xSD, dtSD));
+  }
+
+  return xSD / dtSD;
+}
+
+double default_missing_distance(const std::vector<double>& x, const std::vector<bool>& usable)
 {
   std::vector<double> x_usable;
   for (int i = 0; i < x.size(); i++) {
@@ -595,16 +632,22 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
 
+  // The stata variable named 'touse'
+  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 1);
+  print_vector<bool>("touse", touse);
+
   // Handle 'dt' flag
+  double origDTWeight = dtWeight;
   if (dtMode) {
     std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
     print_vector<ST_double>("t", t);
+
+    if (dtWeight == 0.0) {
+      io.print("Calculating the default dt weight!\n");
+      dtWeight = default_dt_weight(x, t, touse);
+    }
     generator.add_dt_data(t, dtWeight, dt0);
   }
-
-  // The stata variable named `touse'
-  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 1);
-  print_vector<bool>("touse", touse);
 
   // Make the largest manifold we'll need in order to find missing values for 'usable'
   std::vector<bool> allTrue(touse.size());
@@ -633,7 +676,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   splitter = TrainPredictSplitter(explore, full, crossfold, usable);
 
-  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
+  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight, origDTWeight);
 
   // Write out some variables, like 'usable' and 'dtsave', which Stata
   // needs to report back to the calling function.
@@ -650,20 +693,49 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     ST_int dtSaveIndex = 2 + numExtras + dtMode + 3;
     ST_retcode rc = SF_vstore(dtSaveIndex, 1, SV_missval);
     if (rc == 0) {
+      io.print("dtsave is on!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
+      ST_double* dtToSave = new ST_double[usable.size()];
+      if (allowMissing) {
+        for (int i = 0; i < usable.size(); i++) {
+          dtToSave[i] = M.dt(i, 0);
+        }
+      } else {
+        std::vector<bool> x_is_not_missing(touse.size());
+        for (int i = 0; i < touse.size(); i++) {
+          x_is_not_missing[i] = touse[i] && (x[i] != MISSING);
+        }
+
+        // If we don't have allowmissing on, then the value of 'dt' depends on usable.
+        // I.e. if a row is unusable, then the dt value will be a larger to jump over that row.
+        // Manifold M_usable = generator.create_manifold(maxE, usable, false);
+        Manifold M_usable = generator.create_manifold(maxE, x_is_not_missing, false);
+        int obsNum = 0;
+        for (int i = 0; i < usable.size(); i++) {
+          if (usable[i]) {
+            dtToSave[i] = M_usable.dt(obsNum, 0);
+            obsNum += 1;
+          } else {
+            dtToSave[i] = MISSING;
+            continue;
+          }
+        }
+      }
+
       // Note, the ado script doesn't store the scaled dt values into this
       // variable, but just the raw values. So we have to divide by the dtWeight
       // to undo this scaling.
-      // TODO: Check if this 'raw' dt value is actually desired behaviour?
-      ST_double* dtToSave = new ST_double[usable.size()];
       for (int i = 0; i < usable.size(); i++) {
-        dtToSave[i] = M.dt(i, 0);
-        
         if (dtToSave[i] != MISSING) {
-            dtToSave[i] /= dtWeight;
+          dtToSave[i] /= dtWeight;
         }
       }
+      // TODO: Check if this 'raw' dt value is actually desired behaviour?
+
       write_stata_column(dtToSave, usable.size(), dtSaveIndex);
       delete[] dtToSave;
+    } else {
+      io.print("dtsave is off....!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     }
   }
 

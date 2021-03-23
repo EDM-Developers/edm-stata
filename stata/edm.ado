@@ -135,6 +135,12 @@ program define edmDisplayCI, rclass
 
 end
 
+program define edmGetTimeAndPanelVariables, rclass sortpreserve
+	qui xtset
+	return local timevar = "`r(timevar)'"
+	return local panelvar = "`r(panelvar)'"
+end
+
 program define edmParser, eclass
 
 	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending)] [theta(numlist ascending)] [manifold(string)] [converge] */
@@ -153,14 +159,19 @@ program define edmParser, eclass
 		edmVersion `subargs'
 	}
 	else {
-		qui xtset
+		edmGetTimeAndPanelVariables
+		local original_t = "`r(timevar)'"
+		local original_id = "`r(panelvar)'"
+	/* di "timevar = <`original_t'> and panel_id = <`original_id'>" */
+		/* qui xtset
 		local original_t = r(timevar)
 		if "`=r(panelvar)'" == "." {
 			local original_id = ""
 		}
 		else {
 			local original_id = r(panelvar)
-		}
+		} */
+		pause
 
 		ereturn clear
 		if inlist("`subcommand'","explore","xmap") {
@@ -270,6 +281,13 @@ program define edmManifoldSize, rclass
 	local total_num_extras = `num_extras' + `num_eextras'*(`e'-1)
 	return local total_num_extras = `total_num_extras'
 	return local manifold_size = `num_xs' + `num_dts' + `total_num_extras'
+end
+
+program define edmGetForwardStep, rclass sortpreserve
+	syntax anything , x(name) touse(name) tp(int) tau(int)
+	qui xtset
+	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
+	qui gen double `1' = f`future_step'.`x' if `touse'
 end
 
 program define edmConstructManifolds, rclass
@@ -430,6 +448,8 @@ program define edmExplore, eclass
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
 			[saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
 	* set seed
+	di "inside edmExplore"
+	pause
 	if `seed' != 0 {
 		set seed `seed'
 	}
@@ -463,15 +483,6 @@ program define edmExplore, eclass
 		local theta = 1
 	}
 
-	* identify data structure
-	qui xtset
-	if "`=r(panelvar)'" != "." {
-		local ispanel =1
-		local panel_id = r(panelvar)
-	}
-	else {
-		local ispanel =0
-	}
 	if !inlist("`algorithm'","smap","simplex","llr","") {
 		dis as error "Not valid algorithm specification"
 		error 121
@@ -480,8 +491,13 @@ program define edmExplore, eclass
 		local algorithm "simplex"
 	}
 
-	qui xtset
-	local timevar "`=r(timevar)'"
+	* identify data structure
+	edmGetTimeAndPanelVariables
+	local timevar = "`r(timevar)'"
+	local panel_id = "`r(panelvar)'"
+	local ispanel = ("`panel_id'" != "")
+	/* di "timevar = <`timevar'> and panel_id = <`panel_id'> ispanel = <`ispanel'>" */
+	pause
 
 	edmPluginCheck, `mata'
 
@@ -517,8 +533,10 @@ program define edmExplore, eclass
 	if "`dtsave'" != ""{
 		confirm new variable `dtsave'
 	}
+	di "before dt_value"
+	pause
 
-	if `parsed_dt' {
+	if `parsed_dt' & `mata_mode' {
 		/* general algorithm for generating t patterns
 		1. keep only touse
 		2. drop all missings
@@ -597,18 +615,27 @@ program define edmExplore, eclass
 				save `updatedt_co'
 				restore
 			}
-
+		noi di "after restore"
+		pause
 			merge m:1 `original_id' `original_t' using `updatedt_main', assert(master match) nogen
 			if "`copredictvar'" != "" {
 				merge m:1 `original_id' `original_t' using `updatedt_co', assert(master match) nogen
 			}
 
+			/* noi di "after merge"
+			pause */
+
 			sort `original_id' `newt'
+			/* tsset */
 			if "`original_id'" != ""{
+				/* noi di "original_id = <`original_id'> newt = <`newt'>" */
 				qui xtset `original_id' `newt'
+				/* pause */
 			}
 			else {
+				/* noi di "newt = <`newt'>" */
 				qui tsset `newt'
+				/* pause */
 			}
 			if "`dtsave'" != "" {
 				clonevar `dtsave' = `dt_value'
@@ -616,20 +643,38 @@ program define edmExplore, eclass
 			}
 		}
 	}
+	if `parsed_dt' & !`mata_mode' {
+			/* xtset */
+			/* tsset
+			local original_t = r(timevar) */
+			local original_t = "t"
+			if "`dtsave'" != "" {
+				qui gen `dtsave' = -1
+				qui label variable `dtsave' "Time delta (`original_t')"
+			}
+	}
 
+	di "after dt_value"
+	pause
 	// Get the vector of future values which we'll be trying to predict
 	tempvar x_f
-	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
-	qui gen double `x_f' = f`future_step'.`x' if `touse'
+	edmGetForwardStep `x_f' , x(`x') touse(`touse') tp(`tp') tau(`tau')
+	/* local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
+	qui gen double `x_f' = f`future_step'.`x' if `touse' */
 
 	// Calculate the default value for 'dtweight'
-	if `parsed_dt' {
+	if `parsed_dt' & `mata_mode' {
 		if `parsed_dtw' == 0 {
+				/* sum `touse'
+				qui count if `touse'
+				local num_touse = r(N)
+				di "num_touse = `num_touse'" */
 			qui sum `x' if `touse'
 			local xsd = r(sd)
 			qui sum `dt_value' if `touse'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
+			di "parsed_dtw = <`parsed_dtw'> = <`xsd'> / <`tsd'>"
 			if `tsd' == 0 {
 				// if there is no variance, no sampling required
 				local parsed_dtw = 0
@@ -724,6 +769,7 @@ program define edmExplore, eclass
 
 		// Print out some of these gibberish tempvar names if requested
 		if `verbosity' > 1 {
+		di "touse = <`touse'>"
 			di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
 			pause
 		}
@@ -733,7 +779,6 @@ program define edmExplore, eclass
 		if `parsed_dt' {
 			local time = "`original_t'"
 		}
-
 		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `touse' `usable' `dtsave', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
@@ -1108,13 +1153,15 @@ program define edmExplore, eclass
 		ereturn local extraembed = "`z_names'"
 	}
 	if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
-		sort `original_id' `original_t'
-		qui xtset `original_id' `original_t'
-		if "`original_id'" != ""{
+		if `mata_mode' {
+			sort `original_id' `original_t'
 			qui xtset `original_id' `original_t'
-		}
-		else {
-			qui tsset `original_t'
+			if "`original_id'" != ""{
+				qui xtset `original_id' `original_t'
+			}
+			else {
+				qui tsset `original_t'
+			}
 		}
 		if `parsed_dt' ==0 {
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
@@ -1134,6 +1181,7 @@ program define edmXmap, eclass
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
 	* set seed
+	pause
 	if `seed' != 0 {
 		set seed `seed'
 	}
@@ -1400,11 +1448,16 @@ program define edmXmap, eclass
 		// Calculate the default value for `dtweight'
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
+				/* sum `touse'
+				qui count if `touse'
+				local num_touse = r(N)
+				di "num_touse = `num_touse'" */
 				qui sum `x' if `touse'
 				local xsd = r(sd)
 				qui sum `dt_value' if `touse'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
+				di "parsed_dtw = <`parsed_dtw'> = <`xsd'> / <`tsd'>"
 				if `tsd' == 0 {
 					// if there is no variance, no sampling required
 					local parsed_dtw = 0
@@ -1511,6 +1564,7 @@ program define edmXmap, eclass
 
 			// Print out some of these gibberish tempvar names if requested
 			if `verbosity' > 1 {
+				di "touse = <`touse'>"
 				di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'> dtweight <`parsed_dtw'>"
 				pause
 			}
@@ -1521,7 +1575,6 @@ program define edmXmap, eclass
 			if `parsed_dt' {
 				local time = "`original_t'"
 			}
-
 			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `touse' `usable' `dtsave', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
