@@ -62,32 +62,46 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
   }
   int validDistances = 0;
   std::vector<double> d(M.nobs());
+  std::vector<int> numMissing(M.nobs());
+
+  bool allowMissing = (opts.missingdistance > 0);
+
+  const Eigen::Map<const Eigen::ArrayXd> target(Mp.obs(Mp_i), Mp.E_actual());
+  const Eigen::Array<bool, Eigen::Dynamic, 1> targetValid = (target != MISSING);
+
+  // Some easily auto-vectorizable code.
+  // const auto testSetSize = 50;
+  // std::vector<int> increasing(testSetSize);
+  // std::iota(increasing.begin(), increasing.end(), 0);
+
+  // int* x = increasing.data();
+  // int* y = increasing.data();
+  // auto result = new int[testSetSize];
+  // for (auto i = 0; i < testSetSize; i++) {
+  //   result[i] = x[i] + y[i];
+  // }
+  // delete[] result;
 
   for (int i = 0; i < M.nobs(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
+    const Eigen::Map<const Eigen::ArrayXd> proposal(M.obs(i), M.E_actual());
+    auto diff = (target - proposal).square();
+    const Eigen::Array<bool, Eigen::Dynamic, 1> isValid = targetValid && (proposal != MISSING);
+    d[i] = (diff * isValid.cast<double>()).sum();
+    numMissing[i] = M.E_actual() - isValid.count();
+  }
+
+  if (allowMissing) {
+    Eigen::Map<Eigen::ArrayXd> dView(d.data(), d.size());
+    Eigen::Map<const Eigen::ArrayXi> numMissingView(numMissing.data(), numMissing.size());
+    dView = dView + numMissingView.cast<double>() * opts.missingdistance * opts.missingdistance;
+    validDistances = d.size();
+  } else {
+    for (int i = 0; i < M.nobs(); i++) {
+      if (numMissing[i]) {
+        d[i] = MISSING;
       } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
+        validDistances += 1;
       }
-    }
-
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-
-    if (!missing) {
-      d[i] = sqrt(dist);
-      validDistances += 1;
-    } else {
-      d[i] = MISSING;
     }
   }
 

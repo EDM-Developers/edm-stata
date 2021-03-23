@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
   if (argc > 2) {
     vars.opts.nthreads = atoi(argv[2]);
   } else {
-    vars.opts.nthreads = 4;
+    vars.opts.nthreads = 1;
   }
   vars.opts.numTasks = 1;
   vars.opts.taskNum = 1;
