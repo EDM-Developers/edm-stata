@@ -30,16 +30,16 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   std::vector<size_t> idx(v.size());
   std::iota(idx.begin(), idx.end(), 0);
 
-  auto stableComparator = [&v](size_t i1, size_t i2) {
-    if (v[i1] != v[i2])
-      return v[i1] < v[i2];
-    else
-      return i1 < i2;
-  };
-
-  if (k >= (int)v.size()) {
-    std::sort(idx.begin(), idx.end(), stableComparator);
+  if (k >= (int)(v.size() / 2)) {
+    auto comparator = [&v](size_t i1, size_t i2) { return v[i1] < v[i2]; };
+    std::stable_sort(idx.begin(), idx.end(), comparator);
   } else {
+    auto stableComparator = [&v](size_t i1, size_t i2) {
+      if (v[i1] != v[i2])
+        return v[i1] < v[i2];
+      else
+        return i1 < i2;
+    };
     std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
   }
 
