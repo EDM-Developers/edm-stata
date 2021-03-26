@@ -439,7 +439,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
+			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -520,8 +520,8 @@ program define edmExplore, eclass
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
-	local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
-	local parsed_dt0 = ("`newdt'" == "newdt")
+	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+	local parsed_dt0 = ("`olddt'" != "olddt")
 	local parsed_dtw = "`dtweight'"
 	if "`dtsave'" != ""{
 		confirm new variable `dtsave'
@@ -1106,7 +1106,7 @@ program define edmExplore, eclass
 	else {
 		ereturn local extraembed = "`z_names'"
 	}
-	if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
+	if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
 		sort `original_id' `original_t'
 		qui xtset `original_id' `original_t'
 		if "`original_id'" != ""{
@@ -1131,7 +1131,7 @@ program define edmXmap, eclass
 			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
-			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
+			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1262,8 +1262,8 @@ program define edmXmap, eclass
 		}
 
 		/* return list */
-		local parsed_dt = ("`dt'" == "dt") | ("`newdt'" == "newdt")
-		local parsed_dt0 = ("`newdt'" == "newdt")
+		local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+		local parsed_dt0 = ("`olddt'" != "olddt")
 		local parsed_dtw = "`dtweight'"
 		if "`dtsave'" != ""{
 			confirm new variable `dtsave'
@@ -1809,7 +1809,7 @@ program define edmXmap, eclass
 		}
 
 		* reset the panel structure
-		if ("`dt'" == "dt") | ("`newdt'" == "newdt") {
+		if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
 			sort `original_id' `original_t'
 			qui xtset `original_id' `original_t'
 			if "`original_id'" != ""{
