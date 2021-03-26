@@ -2504,4 +2504,4 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 end
 
 //smap block C implementation
-cap program smap_block_mdap, plugin using(edm_`=c(os)'_x`=c(bit)'.plugin)
+cap program smap_block_mdap, plugin using(edm_`=c(os)'.plugin)

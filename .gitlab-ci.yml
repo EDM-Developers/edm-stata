@@ -10,10 +10,10 @@ build-windows:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp "stata/edm_Windows_x64.plugin" "C:\Users\EDM\Dropbox\ci-builds"
+    - cp "stata/edm_Windows.plugin" "C:\Users\EDM\Dropbox\ci-builds"
   artifacts:
     paths:
-    - stata/edm_Windows_x64.plugin
+    - stata/edm_Windows.plugin
     - stata/gbench.exe
     - build/Release/*.dll
   tags:
@@ -34,7 +34,7 @@ test-windows:
 
 dropbox-deploy-windows:
   variables:
-    PLUGIN_FILE: "edm_Windows_x64.plugin"
+    PLUGIN_FILE: "edm_Windows.plugin"
   stage: deploy
   dependencies:
     - build-windows
@@ -70,10 +70,10 @@ build-mac:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/EDM/ci-builds
+    - cp stata/edm_MacOSX.plugin ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
-      - stata/edm_MacOSX_x64.plugin
+      - stata/edm_MacOSX.plugin
       - stata/gbench
   tags:
     - mac-arm64
@@ -93,7 +93,7 @@ test-mac:
 
 dropbox-deploy-mac:
   variables:
-    PLUGIN_FILE: "edm_MacOSX_x64.plugin"
+    PLUGIN_FILE: "edm_MacOSX.plugin"
   stage: deploy
   dependencies:
     - build-mac
@@ -130,11 +130,11 @@ build-ubuntu:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_Unix_x64.plugin ~/Dropbox/ci-builds
+    - cp stata/edm_Unix.plugin ~/Dropbox/ci-builds
     - cp stata/edm.ado ~/Dropbox/ci-builds
   artifacts:
     paths:
-      - stata/edm_Unix_x64.plugin
+      - stata/edm_Unix.plugin
       - stata/gbench
   tags:
     - ubuntu-runner
@@ -154,7 +154,7 @@ test-ubuntu:
 
 dropbox-deploy-ubuntu:
   variables:
-    PLUGIN_FILE: "edm_Unix_x64.plugin"
+    PLUGIN_FILE: "edm_Unix.plugin"
   stage: deploy
   dependencies:
     - build-ubuntu
