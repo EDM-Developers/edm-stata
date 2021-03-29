@@ -15,7 +15,6 @@ build-windows:
     paths:
     - stata/edm_Windows.plugin
     - stata/gbench.exe
-    - build/Release/*.dll
   tags:
     - windows-runner
 
@@ -52,7 +51,6 @@ perf-windows:
   dependencies:
     - build-windows
   before_script:
-    - cp build/Release/*.dll stata
     - cd stata
   script:
     - ./gbench.exe

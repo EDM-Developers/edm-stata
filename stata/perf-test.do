@@ -33,7 +33,7 @@ keep in 300/50000
 timer clear
 timer on 1
 
-edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge.h5) verbosity(1)
+edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge.json) verbosity(1)
 
 timer off 1
 timer list
@@ -43,7 +43,7 @@ keep in 1/5000
 timer clear
 timer on 1
 
-edm explore x, e(10) saveinputs(logmapsmall.h5)
+edm explore x, e(10) saveinputs(logmapsmall.json)
 
 timer off 1
 timer list
@@ -56,7 +56,7 @@ keep in 1/5000
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall.h5) 
+edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall.json) 
 timer off 1
 timer list 1
 
@@ -64,6 +64,6 @@ keep in 1/5000
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige.h5)
+edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige.json)
 timer off 1
 timer list 1

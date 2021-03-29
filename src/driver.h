@@ -1,9 +1,13 @@
 #define DRIVER_MODE 1
 
 #include "edm.h"
-#include <hdf5.h>
-#include <hdf5_hl.h>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 class ConsoleIO : public IO
 {
@@ -24,142 +28,125 @@ struct Inputs
   std::vector<bool> trainingRows, predictionRows;
 };
 
-void save_options(hid_t fid, Options opts)
+void to_json(json& j, const Options& o)
 {
-  char boolVar = (char)opts.forceCompute;
-  H5LTset_attribute_char(fid, "/", "forceCompute", &boolVar, 1);
-  boolVar = (char)opts.saveSMAPCoeffs;
-  H5LTset_attribute_char(fid, "/", "saveSMAPCoeffs", &boolVar, 1);
-  boolVar = (char)opts.distributeThreads;
-  H5LTset_attribute_char(fid, "/", "distributeThreads", &boolVar, 1);
-
-  H5LTset_attribute_int(fid, "/", "k", &opts.k, 1);
-
-  H5LTset_attribute_double(fid, "/", "theta", &opts.thetas[0], 1);
-  H5LTset_attribute_double(fid, "/", "missingdistance", &opts.missingdistance, 1);
-
-  H5LTset_attribute_string(fid, "/", "algorithm", opts.algorithm.c_str());
-
-  H5LTset_attribute_int(fid, "/", "nthreads", &opts.nthreads, 1);
+  j = json{ { "copredict", o.copredict },
+            { "forceCompute", o.forceCompute },
+            { "savePrediction", o.savePrediction },
+            { "saveSMAPCoeffs", o.saveSMAPCoeffs },
+            { "distributeThreads", o.distributeThreads },
+            { "k", o.k },
+            { "nthreads", o.nthreads },
+            { "missingdistance", o.missingdistance },
+            { "thetas", o.thetas },
+            { "algorithm", o.algorithm },
+            { "taskNum", o.taskNum },
+            { "numTasks", o.numTasks },
+            { "calcRhoMAE", o.calcRhoMAE },
+            { "parMode", o.parMode } };
 }
 
-Options read_options(hid_t fid)
+void from_json(const json& j, Options& o)
 {
-  Options opts;
-
-  char boolVar;
-  H5LTget_attribute_char(fid, "/", "forceCompute", &boolVar);
-  opts.forceCompute = (bool)boolVar;
-  H5LTget_attribute_char(fid, "/", "saveSMAPCoeffs", &boolVar);
-  opts.saveSMAPCoeffs = (bool)boolVar;
-  H5LTget_attribute_char(fid, "/", "distributeThreads", &boolVar);
-  opts.distributeThreads = (bool)boolVar;
-
-  H5LTget_attribute_int(fid, "/", "k", &(opts.k));
-
-  double theta;
-  H5LTget_attribute_double(fid, "/", "theta", &theta);
-  opts.thetas.push_back(theta);
-
-  H5LTget_attribute_double(fid, "/", "missingdistance", &(opts.missingdistance));
-
-  char temps[100];
-  H5LTget_attribute_string(fid, "/", "algorithm", temps);
-  opts.algorithm = std::string(temps);
-
-  H5LTget_attribute_int(fid, "/", "nthreads", &opts.nthreads);
-
-  return opts;
+  j.at("copredict").get_to(o.copredict);
+  j.at("forceCompute").get_to(o.forceCompute);
+  j.at("savePrediction").get_to(o.savePrediction);
+  j.at("saveSMAPCoeffs").get_to(o.saveSMAPCoeffs);
+  j.at("distributeThreads").get_to(o.distributeThreads);
+  j.at("k").get_to(o.k);
+  j.at("nthreads").get_to(o.nthreads);
+  j.at("missingdistance").get_to(o.missingdistance);
+  j.at("thetas").get_to(o.thetas);
+  j.at("algorithm").get_to(o.algorithm);
+  j.at("taskNum").get_to(o.taskNum);
+  j.at("numTasks").get_to(o.numTasks);
+  j.at("calcRhoMAE").get_to(o.calcRhoMAE);
+  j.at("parMode").get_to(o.parMode);
 }
 
-void save_manifold_generator(const hid_t& fid, const ManifoldGenerator& generator)
+void to_json(json& j, const ManifoldGenerator& g)
 {
-  hsize_t size = generator._x.size();
-  H5LTmake_dataset_double(fid, "x", 1, &size, generator._x.data());
-
-  H5LTmake_dataset_double(fid, "y", 1, &size, generator._y.data());
-
-  if (generator._co_x.size() > 0) {
-    H5LTmake_dataset_double(fid, "co_x", 1, &size, generator._co_x.data());
-  }
-
-  hsize_t numExtras = generator._extras.size();
-  if (numExtras > 0 && generator._extras[0].size() > 0) {
-    hsize_t numObs = generator._extras[0].size();
-    hsize_t extrasSize = numExtras * numObs;
-
-    std::vector<double> extrasFlat(extrasSize);
-    for (int i = 0; i < numObs; i++) {
-      for (int j = 0; j < numExtras; j++) {
-        extrasFlat[i * numObs + j] = generator._extras[j][i];
-      }
-    }
-
-    H5LTmake_dataset_double(fid, "extras", 1, &extrasSize, extrasFlat.data());
-  }
-
-  if (generator._t.size() > 0) {
-    H5LTmake_dataset_double(fid, "time", 1, &size, generator._t.data());
-  }
-
-  H5LTset_attribute_double(fid, "/", "dtWeight", &generator._dtWeight, 1);
+  j = json{ { "_copredict", g._copredict },
+            { "_use_dt", g._use_dt },
+            { "_add_dt0", g._add_dt0 },
+            { "_tau", g._tau },
+            { "_missing", g._missing },
+            { "_nobs", g._nobs },
+            { "_num_extras", g._num_extras },
+            { "_num_extras_varying", g._num_extras_varying },
+            { "_dtWeight", g._dtWeight },
+            { "_x", g._x },
+            { "_y", g._y },
+            { "_co_x", g._co_x },
+            { "_t", g._t },
+            { "_extras", g._extras },
+            { "_extrasEVarying", g._extrasEVarying } };
 }
 
-ManifoldGenerator read_manifold_generator(hid_t fid)
+void from_json(const json& j, ManifoldGenerator& g)
 {
-  hsize_t size;
-  H5LTget_dataset_info(fid, "x", &size, NULL, NULL);
+  j.at("_copredict").get_to(g._copredict);
+  j.at("_use_dt").get_to(g._use_dt);
+  j.at("_add_dt0").get_to(g._add_dt0);
+  j.at("_tau").get_to(g._tau);
+  j.at("_missing").get_to(g._missing);
+  j.at("_nobs").get_to(g._nobs);
+  j.at("_num_extras").get_to(g._num_extras);
+  j.at("_num_extras_varying").get_to(g._num_extras_varying);
+  j.at("_dtWeight").get_to(g._dtWeight);
+  j.at("_x").get_to(g._x);
+  j.at("_y").get_to(g._y);
+  j.at("_co_x").get_to(g._co_x);
+  j.at("_t").get_to(g._t);
+  j.at("_extras").get_to(g._extras);
+  j.at("_extrasEVarying").get_to(g._extrasEVarying);
+}
 
-  std::vector<double> x(size);
-  H5LTread_dataset_double(fid, "x", x.data());
+void to_json(json& j, const PredictionStats& s)
+{
+  j = json{ { "mae", s.mae }, { "rho", s.rho }, { "taskNum", s.taskNum }, { "calcRhoMAE", s.calcRhoMAE } };
+}
 
-  std::vector<double> y(size);
-  H5LTread_dataset_double(fid, "y", y.data());
+void from_json(const json& j, PredictionStats& s)
+{
+  j.at("mae").get_to(s.mae);
+  j.at("rho").get_to(s.rho);
+  j.at("taskNum").get_to(s.taskNum);
+  j.at("calcRhoMAE").get_to(s.calcRhoMAE);
+}
 
-  std::vector<std::vector<double>> extras;
-  if (H5LTfind_dataset(fid, "extras")) {
-    hsize_t extrasSize[2];
-    H5LTget_dataset_info(fid, "extras", extrasSize, NULL, NULL);
-    std::vector<double> extrasFlat(extrasSize[0] * extrasSize[1]);
-    H5LTread_dataset_double(fid, "extras", extrasFlat.data());
-    extras = std::vector<std::vector<double>>(extrasSize[1]);
-    for (int j = 0; j < extras.size(); j++) {
-      extras[j] = std::vector<double>(extrasSize[0]);
-      for (int i = 0; i < extras[0].size(); i++) {
-        extras[j][i] = extrasFlat[i * extras[0].size() + j];
-      }
-    }
+void to_json(json& j, const Prediction& p)
+{
+  std::vector<double> yStarVec, coeffsVec;
+  if (p.ystar != nullptr) {
+    yStarVec = std::vector<double>(p.ystar.get(), p.ystar.get() + p.numThetas * p.numPredictions);
+  }
+  if (p.coeffs != nullptr) {
+    coeffsVec = std::vector<double>(p.coeffs.get(), p.coeffs.get() + p.numPredictions * p.numCoeffCols);
   }
 
-  // TODO: Add tau and e-varying info to the dump files.
-  int tau = 1;
-  std::vector<bool> extrasEVarying(extras.size());
-  for (int i = 0; i < extras.size(); i++) {
-    extrasEVarying[i] = false;
-  }
-  ManifoldGenerator generator(x, y, extras, extrasEVarying, MISSING, tau);
+  j = json{ { "rc", p.rc },
+            { "numThetas", p.numThetas },
+            { "numPredictions", p.numPredictions },
+            { "numCoeffCols", p.numCoeffCols },
+            { "ystar", yStarVec },
+            { "coeffs", coeffsVec },
+            { "stats", p.stats },
+            { "predictionRows", p.predictionRows } };
+}
 
-  if (H5LTfind_dataset(fid, "co_x")) {
-    std::vector<double> co_x = std::vector<double>(size);
-    H5LTread_dataset_double(fid, "co_x", co_x.data());
-    generator.add_coprediction_data(co_x);
-  }
-
-  // Bug in "H5LTfind_dataset" which return true for the column "t"
-  // even when that dataset doesn't exist in the HDF5 file.
-  if (H5LTfind_dataset(fid, "time")) {
-    // TODO: Add dt0
-    bool dt0 = false;
-    std::vector<double> t = std::vector<double>(size);
-    H5LTread_dataset_double(fid, "time", t.data());
-
-    double dtWeight;
-    H5LTget_attribute_double(fid, "/", "dtWeight", &dtWeight);
-
-    generator.add_dt_data(t, dtWeight, dt0);
-  }
-
-  return generator;
+// Eventually, we'll need a function like the following.
+// Currently it won't compile as the unique_ptrs aren't cooperating.
+void from_json(const json& j, Prediction& p)
+{
+  j.at("rc").get_to(p.rc);
+  j.at("numThetas").get_to(p.numThetas);
+  j.at("numPredictions").get_to(p.numPredictions);
+  j.at("numCoeffCols").get_to(p.numCoeffCols);
+  j.at("predictionRows").get_to(p.predictionRows);
+  j.at("stats").get_to(p.stats);
+  // j.at("ystar").get_to(p.ystar);
+  // j.at("coeffs").get_to(p.coeffs);
 }
 
 /*! \brief Read in a dump file.
@@ -171,35 +158,15 @@ ManifoldGenerator read_manifold_generator(hid_t fid)
  */
 Inputs read_dumpfile(std::string fname_in)
 {
-  hid_t fid = H5Fopen(fname_in.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  std::ifstream i(fname_in);
+  json j;
+  i >> j;
 
-  Options opts = read_options(fid);
+  size_t E = j["E"];
+  Options opts = j["opts"];
+  ManifoldGenerator generator = j["generator"];
 
-  ManifoldGenerator generator = read_manifold_generator(fid);
-
-  unsigned Eint;
-  H5LTget_attribute_uint(fid, "/", "E", &Eint);
-  size_t E = (size_t)Eint;
-
-  // Read in the training/prediction filters
-  hsize_t size;
-  H5LTget_dataset_info(fid, "trainingRows", &size, NULL, NULL);
-
-  std::vector<char> filterChar(size);
-  H5LTread_dataset_char(fid, "trainingRows", filterChar.data());
-
-  std::vector<bool> trainingRows(size);
-  for (int i = 0; i < size; i++) {
-    trainingRows[i] = (bool)filterChar[i];
-  }
-
-  H5LTread_dataset_char(fid, "predictionRows", filterChar.data());
-  std::vector<bool> predictionRows(size);
-  for (int i = 0; i < size; i++) {
-    predictionRows[i] = (bool)filterChar[i];
-  }
-
-  H5Fclose(fid);
+  std::vector<bool> trainingRows = j["trainingRows"], predictionRows = j["predictionRows"];
 
   return { opts, generator, E, trainingRows, predictionRows };
 }
@@ -207,45 +174,20 @@ Inputs read_dumpfile(std::string fname_in)
 void write_dumpfile(const char* fname, const Options& opts, const ManifoldGenerator& generator, int E,
                     const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows)
 {
-  hid_t fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  json j;
+  j["opts"] = opts;
+  j["generator"] = generator;
+  j["E"] = E;
+  j["trainingRows"] = trainingRows;
+  j["predictionRows"] = predictionRows;
 
-  save_options(fid, opts);
-
-  save_manifold_generator(fid, generator);
-
-  unsigned Eint = (unsigned)E;
-  H5LTset_attribute_uint(fid, "/", "E", &Eint, 1);
-
-  hsize_t size = (hsize_t)trainingRows.size();
-  std::vector<char> filterChar(size);
-  for (int i = 0; i < size; i++) {
-    filterChar[i] = (char)trainingRows[i];
-  }
-  H5LTmake_dataset_char(fid, "trainingRows", 1, &size, filterChar.data());
-  for (int i = 0; i < size; i++) {
-    filterChar[i] = (char)predictionRows[i];
-  }
-  H5LTmake_dataset_char(fid, "predictionRows", 1, &size, filterChar.data());
-
-  H5Fclose(fid);
+  std::ofstream o(fname);
+  o << std::setw(4) << j << std::endl;
 }
 
 void write_results(std::string fname_out, const Prediction& pred)
 {
-  hid_t fid = H5Fcreate(fname_out.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-  H5LTset_attribute_int(fid, "/", "rc", &(pred.rc), 1);
-
-  hsize_t ystarLen[] = { (hsize_t)pred.numPredictions };
-  H5LTmake_dataset_double(fid, "ystar", 1, ystarLen, pred.ystar.get());
-
-  if (pred.numCoeffCols > 0) {
-    hsize_t Bi_mapLen[] = { (hsize_t)pred.numPredictions, (hsize_t)pred.numCoeffCols };
-    H5LTmake_dataset_double(fid, "coeffs", 2, Bi_mapLen, pred.coeffs.get());
-  }
-
-  H5LTset_attribute_double(fid, "/", "mae", &pred.stats.mae, 1);
-  H5LTset_attribute_double(fid, "/", "rho", &pred.stats.rho, 1);
-
-  H5Fclose(fid);
+  json j = pred;
+  std::ofstream o(fname_out);
+  o << std::setw(4) << j << std::endl;
 }

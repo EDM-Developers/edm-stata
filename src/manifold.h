@@ -3,6 +3,11 @@
 #include <memory>
 #include <vector>
 
+#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+#endif
+
 class Manifold
 {
   std::unique_ptr<double[]> _flat = nullptr;
@@ -74,17 +79,17 @@ private:
   double lagged(const std::vector<double>& vec, const std::vector<size_t>& inds, size_t i, size_t j) const;
   double find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const;
 
-  // The following variables are normally private, but in the dev mode builds
-  // they are made public so we can more easily save them to a dump file.
-#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
-public:
-#endif
   double _dtWeight;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
   std::vector<bool> _extrasEVarying;
 
 public:
+#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
+  friend void to_json(json& j, const ManifoldGenerator& g);
+  friend void from_json(const json& j, ManifoldGenerator& g);
+#endif
+
   ManifoldGenerator(){};
 
   ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,

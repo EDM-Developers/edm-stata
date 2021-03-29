@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
   std::size_t ext = fnameIn.find_last_of(".");
   fnameIn = fnameIn.substr(0, ext);
-  std::string fnameOut = fnameIn + "-out.h5";
+  std::string fnameOut = fnameIn + "-out.json";
 
   write_results(fnameOut, pred);
 
