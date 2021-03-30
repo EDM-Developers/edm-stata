@@ -855,21 +855,21 @@ STDLL stata_call(int argc, char* argv[])
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
     } else if (command == "report_progress") {
-      io.print(io.get_and_clear_async_buffer());
+      if (!breakButtonPressed) {
+        io.print(io.get_and_clear_async_buffer());
+      }
 
       bool breakHit = (argc == 2) && atoi(argv[1]);
       if (breakHit) {
         breakButtonPressed = true;
-        allTasksFinished = true;
-        rc = 1;
-        io.out("Aborting edm run\n");
-      } else {
-        rc = SUCCESS;
+        io.out("Aborting edm run (this may take a few seconds).\n");
       }
 
       if (allTasksFinished) {
         SF_scal_save(FINISHED_SCALAR, 1.0);
       }
+
+      rc = SUCCESS;
     } else if (command == "collect_results") {
       io.print(io.get_and_clear_async_buffer());
 

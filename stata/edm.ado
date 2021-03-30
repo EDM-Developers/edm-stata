@@ -165,11 +165,13 @@ program define edmParser, eclass
 		ereturn clear
 		if inlist("`subcommand'","explore","xmap") {
 			cap noi {
-				if "`subcommand'" == "explore" {
-					edmExplore `subargs'
-				}
-				else if "`subcommand'" == "xmap" {
-					edmXmap `subargs'
+				nobreak {
+					if "`subcommand'" == "explore" {
+						edmExplore `subargs'
+					}
+					else if "`subcommand'" == "xmap" {
+						edmXmap `subargs'
+					}
 				}
 			}
 			if _rc !=0 {
@@ -398,26 +400,35 @@ program define edmPreprocessExtras, rclass
 	}
 end 
 
-program define edmPrintPluginProgress, eclass
+program define edmPrintPluginProgress
 	plugin call smap_block_mdap , "report_progress"
-	nobreak {
-		local breakHit = 0
-		local sleepTime = 0.001
-		local numSleeps = 0
 
-		while !plugin_finished {
-			local ++numSleeps
-			capture noi break sleep `sleepTime'
+	local breakJustHit = 0
+	local breakEverHit = 0
+	local sleepTime = 0.001
+	local numSleeps = 0
 
-			if _rc {
-				local breakHit = 1
-			}
-			plugin call smap_block_mdap , "report_progress" "`breakHit'"
+	while !plugin_finished {
+		local ++numSleeps
 
-			if `numSleeps' == 1000 {
-				local sleepTime = 1
-			}
+		// This is the only time when the plugin will accept the 'break' button
+		capture break sleep `sleepTime'
+
+		if _rc {
+			local breakJustHit = 1
+			local breakEverHit = 1
 		}
+		plugin call smap_block_mdap , "report_progress" "`breakJustHit'"
+
+		local breakJustHit = 0
+
+		if `numSleeps' == 1000 {
+			local sleepTime = 1
+		}
+	}
+
+	if `breakEverHit' {
+		exit 1
 	}
 end
 
@@ -952,7 +963,7 @@ program define edmExplore, eclass
 
 				if `mata_mode' {
 					local savesmap_vars ""
-					mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`savesmap_vars'","`force'", `missingdistance')
+					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`overlap'", "`algorithm'", "`savesmap_vars'","`force'", `missingdistance')
 
 					qui corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -1019,7 +1030,7 @@ program define edmExplore, eclass
 			qui gen double `co_x_p'=.
 
 			if `mata_mode' {
-				mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
+				break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 			}
 			else {
 				scalar plugin_finished = 0
@@ -1763,7 +1774,7 @@ program define edmXmap, eclass
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
 						if `mata_mode' {
-							mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance`direction_num'')
+							break mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`overlap'", "`algorithm'","`savesmap_vars'","`force'",`missingdistance`direction_num'')
 
 							qui corr `x_f' `x_p' if `predict_set'
 							mat r`direction_num'[`task_num',3] = r(rho)
@@ -1854,7 +1865,7 @@ program define edmXmap, eclass
 			// extract t for copredict variables -> add to copredict extras
 			// set to new id t for mainfold construction
 			if `mata_mode' {
-				mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
+				break mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 			}
 			else {
 				scalar plugin_finished = 0

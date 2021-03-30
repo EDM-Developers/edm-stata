@@ -55,9 +55,6 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
                     span_2d_retcode rc, span_2d_double coeffs, int skipRow, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
-    for (int t = 0; t < opts.thetas.size(); t++) {
-      rc(t, Mp_i) = UNKNOWN_ERROR;
-    }
     return;
   }
   int validDistances = 0;
@@ -89,6 +86,10 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
     } else {
       d[i] = MISSING;
     }
+  }
+
+  if (keep_going != nullptr && keep_going() == false) {
+    return;
   }
 
   // If we only look at distances which are non-zero and non-missing,
@@ -124,6 +125,10 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
 
   if (skipFirst) {
     ind.erase(ind.begin(), ind.begin() + 1);
+  }
+
+  if (keep_going != nullptr && keep_going() == false) {
+    return;
   }
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
@@ -272,7 +277,8 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
   }
 }
 
-std::atomic<int> numTasksRunning = 0;
+std::atomic<int> numTasksStarted = 0;
+std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, masterPool;
 
 std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
@@ -291,9 +297,12 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, si
     masterPool.set_num_workers(opts.nthreads);
   }
 
-  if (numTasksRunning == 0) {
-    numTasksRunning = (int)opts.numTasks;
+  if (opts.taskNum == 0) {
+    numTasksStarted = 0;
+    numTasksFinished = 0;
   }
+
+  numTasksStarted += 1;
 
   if (serial) {
     return workerPool.enqueue(
@@ -368,7 +377,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
     }
     for (int i = 0; i < numPredictions; i++) {
       if (keep_going != nullptr && keep_going() == false) {
-        *pred = { UNKNOWN_ERROR, {}, {} };
+        break;
       }
       mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
       if (opts.numTasks == 1) {
@@ -395,82 +404,82 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
     }
-
-    if (keep_going != nullptr && keep_going() == false) {
-      *pred = { UNKNOWN_ERROR, {}, {} };
-    }
   }
 
-  // Calculate the MAE & rho of prediction, if requested
-  PredictionStats stats;
-  stats.mae = MISSING;
-  stats.rho = MISSING;
+  // Store the results, so long as we weren't interrupted by a 'break'.
+  if (keep_going != nullptr && keep_going() == true) {
 
-  if (opts.calcRhoMAE) {
-    std::vector<double> y1, y2;
-    for (int i = 0; i < Mp.ySize(); i++) {
-      if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
-        y1.push_back(Mp.y(i));
-        y2.push_back(ystar[i]);
+    // Calculate the MAE & rho of prediction, if requested
+    PredictionStats stats;
+    stats.mae = MISSING;
+    stats.rho = MISSING;
+
+    if (opts.calcRhoMAE) {
+      std::vector<double> y1, y2;
+      for (int i = 0; i < Mp.ySize(); i++) {
+        if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
+          y1.push_back(Mp.y(i));
+          y2.push_back(ystar[i]);
+        }
       }
+
+      Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
+      Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
+
+      const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
+      const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
+
+      stats.mae = (y1Map - y2Map).abs().mean();
+      stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
     }
 
-    Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
-    Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
+    stats.taskNum = (int)opts.taskNum;
+    stats.calcRhoMAE = opts.calcRhoMAE;
+    pred->stats = stats;
 
-    const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
-    const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
+    // Check if any mf_smap_single call failed, and if so find the most serious error
+    pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
 
-    stats.mae = (y1Map - y2Map).abs().mean();
-    stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
-  }
-
-  stats.taskNum = (int)opts.taskNum;
-  stats.calcRhoMAE = opts.calcRhoMAE;
-  pred->stats = stats;
-
-  // Check if any mf_smap_single call failed, and if so find the most serious error
-  pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
-
-  // If we're storing the prediction and/or the SMAP coefficients, put them
-  // into the resulting Prediction struct. Otherwise, let them be deleted.
-  if (opts.savePrediction) {
-    // Take only the predictions for the largest theta value.
-    if (numThetas == 1) {
-      pred->ystar = std::move(ystar);
+    // If we're storing the prediction and/or the SMAP coefficients, put them
+    // into the resulting Prediction struct. Otherwise, let them be deleted.
+    if (opts.savePrediction) {
+      // Take only the predictions for the largest theta value.
+      if (numThetas == 1) {
+        pred->ystar = std::move(ystar);
+      } else {
+        pred->ystar = std::make_unique<double[]>(numPredictions);
+        for (int i = 0; i < numPredictions; i++) {
+          pred->ystar[i] = ystarView(numThetas - 1, i);
+        }
+      }
     } else {
-      pred->ystar = std::make_unique<double[]>(numPredictions);
-      for (int i = 0; i < numPredictions; i++) {
-        pred->ystar[i] = ystarView(numThetas - 1, i);
-      }
+      pred->ystar = nullptr;
     }
-  } else {
-    pred->ystar = nullptr;
+
+    if (opts.saveSMAPCoeffs) {
+      pred->coeffs = std::move(coeffs);
+    } else {
+      pred->coeffs = nullptr;
+    }
+
+    if (opts.savePrediction || opts.saveSMAPCoeffs) {
+      pred->predictionRows = predictionRows;
+    }
+
+    pred->numThetas = numThetas;
+    pred->numPredictions = numPredictions;
+    pred->numCoeffCols = numCoeffCols;
+
+    if (opts.numTasks > 1) {
+      io->progress_bar((numTasksFinished + 1) / ((double)opts.numTasks));
+    }
   }
 
-  if (opts.saveSMAPCoeffs) {
-    pred->coeffs = std::move(coeffs);
-  } else {
-    pred->coeffs = nullptr;
-  }
+  numTasksFinished += 1;
 
-  if (opts.savePrediction || opts.saveSMAPCoeffs) {
-    pred->predictionRows = predictionRows;
-  }
-
-  pred->numThetas = numThetas;
-  pred->numPredictions = numPredictions;
-  pred->numCoeffCols = numCoeffCols;
-
-  numTasksRunning -= 1;
-  if (opts.numTasks > 1) {
-    io->progress_bar((opts.numTasks - numTasksRunning) / ((double)opts.numTasks));
-  }
-
-  if (numTasksRunning <= 0) {
+  if (numTasksFinished == opts.numTasks) {
     if (all_tasks_finished != nullptr) {
       all_tasks_finished();
     }
-    numTasksRunning = 0;
   }
 }
