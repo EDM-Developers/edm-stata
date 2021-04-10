@@ -7,7 +7,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-set(DUMP_INPUT TRUE CACHE BOOL "Dump plugin input data to json")
+set(DUMP_INPUT FALSE CACHE BOOL "Dump plugin input data to json")
 set(BUILD_DRIVER FALSE CACHE BOOL "Generate command-line executable for the plugin")
 set(BUILD_GBENCH FALSE CACHE BOOL "Generate google benchmark executable")
 
@@ -36,7 +36,9 @@ if(WIN32)
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+  # N.B. Seem to be problems building using "-fsanitize=undefined" when Xcode generator is chosen.
   set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fsanitize=undefined" "-fno-common" "-fno-omit-frame-pointer")
+  #set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fno-common" "-fno-omit-frame-pointer")
 endif()
 
 include(CheckCXXCompilerFlag)
@@ -58,23 +60,31 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
 endif()
 
 # source list
-set(COMMON_SRC src/cpu.cpp src/cpu.h src/edm.cpp src/edm.h src/manifold.cpp src/manifold.h
-               src/ThreadPool.cpp src/ThreadPool.h)
+set(COMMON_SRC src/common.cpp src/common.h src/cpu.cpp src/cpu.h src/manifold.cpp src/manifold.h
+               src/ThreadPool.cpp src/ThreadPool.h src/httplib.h)
 
 # plugin build and installation
 add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
 set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
 set_target_properties(edm PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
 
+add_executable(edm_server ${COMMON_SRC} src/server.cpp src/edm.cpp src/edm.h)
+set_target_properties(edm_server PROPERTIES CXX_STANDARD 17)
+set_target_properties(edm_server PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
+target_include_directories(edm_server PRIVATE include)
+
 if(WIN32)
   set_target_properties(edm PROPERTIES SUFFIX _Windows.plugin)
+  set_target_properties(edm_server PROPERTIES SUFFIX _Windows.exe)
 elseif(APPLE)
   set_target_properties(edm PROPERTIES SUFFIX _MacOSX.plugin)
+  set_target_properties(edm_server PROPERTIES SUFFIX _MacOSX)
 else()
   set_target_properties(edm PROPERTIES SUFFIX _Unix.plugin)
+  set_target_properties(edm_server PROPERTIES SUFFIX _Unix)
 endif()
 
-install(TARGETS edm DESTINATION .)
+install(TARGETS edm edm_server DESTINATION .)
 
 # grab vendored files
 include(vendor/CMakeLists.txt)
@@ -85,6 +95,7 @@ target_include_directories(edm PRIVATE vendor)
 find_package(Eigen3 REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+# find_package(ZLIB REQUIRED)
 
 if(NOT WIN32)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -94,30 +105,38 @@ find_package(Threads REQUIRED)
 target_include_directories(edm PRIVATE ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(edm PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm PRIVATE Threads::Threads)
+target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
+# target_link_libraries(edm PRIVATE ZLIB::ZLIB)
+
+target_include_directories(edm_server PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_link_libraries(edm_server PRIVATE fmt::fmt-header-only)
+target_link_libraries(edm_server PRIVATE Threads::Threads)
+target_link_libraries(edm_server PRIVATE nlohmann_json::nlohmann_json)
+# target_link_libraries(edm_server PRIVATE ZLIB::ZLIB)
 
 # ↓↓↓ dev builds ↓↓↓
 if (DUMP_INPUT OR BUILD_DRIVER OR BUILD_GBENCH)
 
   if (DUMP_INPUT)
-    target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
     set_target_properties(edm PROPERTIES COMPILE_DEFINITIONS DUMP_INPUT=TRUE)
+    set_target_properties(edm_server PROPERTIES COMPILE_DEFINITIONS DUMP_INPUT=TRUE)
   endif()
 
   if (BUILD_DRIVER)
-    add_executable(driver ${COMMON_SRC} src/driver.cpp src/driver.h)
+    add_executable(driver ${COMMON_SRC} src/driver.cpp src/driver.h src/edm.cpp src/edm.h)
     set_target_properties(driver PROPERTIES CXX_STANDARD 17)
     set_target_properties(driver PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
     target_include_directories(driver PRIVATE include)
     target_include_directories(driver PRIVATE ${EIGEN3_INCLUDE_DIR})
     target_link_libraries(driver PRIVATE fmt::fmt-header-only)
     target_link_libraries(driver PRIVATE Threads::Threads)
-    target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
+    target_link_libraries(driver PRIVATE nlohmann_json::nlohmann_json)
     install(TARGETS driver DESTINATION .)
   endif()
 
   # Google Benchmarks
   if (BUILD_GBENCH)
-    add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/driver.h)
+    add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/driver.h src/edm.cpp src/edm.h)
     set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
     if(WIN32)
       target_compile_options(gbench PRIVATE "/MD")
@@ -139,4 +158,4 @@ endif()
 
 # ↓↓↓ formatting with clang-format ↓↓↓
 include(ClangFormat)
-clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/driver.cpp src/driver.h src/stata.cpp)
+clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/driver.cpp src/driver.h src/stata.cpp src/server.cpp src/edm.cpp src/edm.h)

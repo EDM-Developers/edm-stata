@@ -11,9 +11,11 @@ build-windows:
     - cmake --build build --config release --target install
   after_script:
     - cp "stata/edm_Windows.plugin" "C:\Users\EDM\Dropbox\ci-builds"
+    - cp "stata/edm_server_Windows.exe" "C:\Users\EDM\Dropbox\ci-builds"
   artifacts:
     paths:
     - stata/edm_Windows.plugin
+    - stata/edm_server_Windows.exe
     - stata/gbench.exe
   tags:
     - windows-runner
@@ -26,7 +28,9 @@ test-windows:
     - cd stata
     - move-item -force cut-down-test.log reference.log
   script:
+    - cmd.exe /c "start /b edm_server_Windows.exe 8123"
     - cmd.exe /c "C:\Program Files\Stata16\StataMP-64.exe" -e -q cut-down-test.do
+    - cmd.exe /c "curl http://localhost:8123/stop"
     - cmd.exe /c "fc /W reference.log cut-down-test.log"
   tags:
     - windows-runner
@@ -43,6 +47,7 @@ dropbox-deploy-windows:
     - cd stata
   script:
     - cp "${PLUGIN_FILE}" "C:\Users\EDM\Dropbox\ci-builds-master"
+    - cp "edm_server_Windows.exe" "C:\Users\EDM\Dropbox\ci-builds-master"
   tags:
     - windows-runner
 
@@ -69,9 +74,11 @@ build-mac:
     - cmake --build build --config release --target install
   after_script:
     - cp stata/edm_MacOSX.plugin ~/Dropbox/EDM/ci-builds
+    - cp stata/edm_server_MacOSX ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
       - stata/edm_MacOSX.plugin
+      - stata/edm_server_MacOSX
       - stata/gbench
   tags:
     - mac-arm64
@@ -84,7 +91,9 @@ test-mac:
     - cd stata
     - mv cut-down-test.log reference.log
   script:
+    - ./edm_server_MacOSX 8123 &
     - /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
+    - curl http://localhost:8123/stop
     - diff -B reference.log cut-down-test.log
   tags:
     - mac-arm64
@@ -101,6 +110,7 @@ dropbox-deploy-mac:
     - cd stata
   script:
     - cp "${PLUGIN_FILE}" ~/Dropbox/EDM/ci-builds-master/
+    - cp "edm_server_MacOSX" ~/Dropbox/EDM/ci-builds-master/
   tags:
     - mac-arm64
 
@@ -129,10 +139,12 @@ build-ubuntu:
     - cmake --build build --config release --target install
   after_script:
     - cp stata/edm_Unix.plugin ~/Dropbox/ci-builds
+    - cp stata/edm_server_Unix ~/Dropbox/ci-builds
     - cp stata/edm.ado ~/Dropbox/ci-builds
   artifacts:
     paths:
       - stata/edm_Unix.plugin
+      - stata/edm_server_Unix
       - stata/gbench
   tags:
     - ubuntu-runner
@@ -145,7 +157,9 @@ test-ubuntu:
     - cd stata
     - mv cut-down-test.log reference.log
   script:
+    - ./edm_server_Unix 8123 &
     - stata -e -q cut-down-test.do
+    - curl http://localhost:8123/stop
     - diff -B reference.log cut-down-test.log
   tags:
     - ubuntu-runner
@@ -162,6 +176,7 @@ dropbox-deploy-ubuntu:
     - cd stata
   script:
     - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
+    - cp "edm_server_Unix" ~/Dropbox/ci-builds-master/
     - cp edm.ado ~/Dropbox/ci-builds-master/
   tags:
     - ubuntu-runner

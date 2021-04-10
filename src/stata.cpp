@@ -5,8 +5,8 @@
 #endif
 #endif
 
+#include "common.h"
 #include "cpu.h"
-#include "edm.h"
 #include "stplugin.h"
 
 #ifndef FMT_HEADER_ONLY
@@ -27,9 +27,18 @@
 #include <string>
 #include <vector>
 
-#ifdef DUMP_INPUT
-#include "driver.h"
-#endif
+// TODO: fix compression (zlib hangs & requires dll on Windows)
+// #define CPPHTTPLIB_ZLIB_SUPPORT
+
+#include "httplib.h"
+
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+// #ifdef DUMP_INPUT
+// #include "driver.h"
+// #endif
 
 const double PI = 3.141592653589793238463;
 
@@ -202,25 +211,11 @@ public:
 };
 
 // Global state, needed to persist between multiple edm calls
-
+int taskNum = 0;
+std::string remoteIP = "localhost:8123";
 Options opts;
 ManifoldGenerator generator;
 TrainPredictSplitter splitter;
-std::queue<Prediction> predictions;
-std::queue<std::future<void>> futures;
-
-std::atomic<bool> breakButtonPressed = false;
-std::atomic<bool> allTasksFinished = false;
-
-bool keep_going()
-{
-  return !breakButtonPressed;
-}
-
-void all_tasks_finished()
-{
-  allTasksFinished = true;
-}
 
 void print_error(std::string command, ST_retcode rc)
 {
@@ -517,17 +512,9 @@ double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
 {
+  taskNum = 0;
+  // remoteIP = "localhost:8123";
   io.get_and_clear_async_buffer();
-
-  while (!futures.empty()) {
-    futures.pop();
-  }
-  while (!predictions.empty()) {
-    predictions.pop();
-  }
-
-  breakButtonPressed = false;
-  allTasksFinished = false;
 }
 
 /*
@@ -536,10 +523,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 17) {
+  if (argc < 18) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 17) {
+  if (argc > 18) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -564,6 +551,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   opts.parMode = atoi(argv[14]);
   int maxE = atoi(argv[15]);
   bool allowMissing = atoi(argv[16]);
+  remoteIP = argv[17];
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -571,12 +559,12 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     opts.nthreads = npcores;
   }
 
-  // Restrict going over the number of logical cores available
-  ST_int nlcores = (ST_int)num_logical_cores();
-  if (opts.nthreads > nlcores) {
-    io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
-    opts.nthreads = nlcores;
-  }
+  // // Restrict going over the number of logical cores available
+  // ST_int nlcores = (ST_int)num_logical_cores();
+  // if (opts.nthreads > nlcores) {
+  //   io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
+  //   opts.nthreads = nlcores;
+  // }
 
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(1);
@@ -656,7 +644,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   Options taskOpts = opts;
   taskOpts.copredict = false;
-  taskOpts.taskNum = futures.size();
+  taskOpts.taskNum = taskNum++;
 
   int iterationNumber = atoi(argv[0]);
   int E = atoi(argv[1]);
@@ -690,20 +678,36 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
 #ifdef DUMP_INPUT
   if (std::string(argv[7]).size() > 0) {
-    io.print("Dumping inputs to hdf5 file\n");
+    io.print("Dumping inputs to JSON file\n");
     io.flush();
     write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);
   }
 #endif
-
-  predictions.push({});
-
   print_launch_info(argc, argv, taskOpts, trainingRows, predictionRows, E);
 
-  futures.push(edm_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going,
-                         all_tasks_finished));
+  json j;
+  j["taskOpts"] = taskOpts;
+  j["generator"] = generator;
+  j["E"] = E;
+  j["trainingRows"] = trainingRows;
+  j["predictionRows"] = predictionRows;
 
-  return SUCCESS;
+  httplib::Client cli(remoteIP.c_str());
+  // cli.set_compress(true);
+  std::string data = j.dump();
+
+  httplib::Error err = cli.Post("/launch_edm_task", data, "application/json").error();
+
+  for (int attempt = 0; attempt < 10; attempt++) {
+    if (!err) {
+      break;
+    }
+
+    err = cli.Post("/launch_edm_task", data, "application/json").error();
+  }
+
+  return err;
+  // return cli.Post("/launch_edm_task", j.dump(), "plain/text").error();
 }
 
 ST_retcode launch_coprediction_task(int argc, char* argv[])
@@ -776,11 +780,29 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
     }
   }
 
-  predictions.push({});
-  futures.push(edm_async(taskOpts, &generator, E, coTrainingRows, coPredictionRows, &io, &(predictions.back()),
-                         keep_going, all_tasks_finished));
+  json j;
+  j["taskOpts"] = taskOpts;
+  j["generator"] = generator;
+  j["E"] = E;
+  j["trainingRows"] = coTrainingRows;
+  j["predictionRows"] = coPredictionRows;
 
-  return SUCCESS;
+  httplib::Client cli(remoteIP.c_str());
+  // cli.set_compress(true);
+
+  std::string data = j.dump();
+
+  httplib::Error err = cli.Post("/launch_edm_task", data, "application/json").error();
+
+  for (int attempt = 0; attempt < 10; attempt++) {
+    if (!err) {
+      break;
+    }
+
+    err = cli.Post("/launch_edm_task", data, "application/json").error();
+  }
+
+  return err;
 }
 
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
@@ -797,13 +819,31 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   ST_retcode rc = 0;
   size_t numCoeffColsSaved = 0;
 
-  while (predictions.size() > 0) {
-    std::future<void>& fut = futures.front();
-    fut.get();
-    futures.pop();
+  httplib::Client cli(remoteIP.c_str());
+  // cli.set_compress(true);
+
+  httplib::Result res = cli.Get("/collect_results");
+  httplib::Error err = res.error();
+
+  for (int attempt = 0; attempt < 10; attempt++) {
+    if (!err) {
+      break;
+    }
+    res = cli.Get("/collect_results");
+    ;
+    err = res.error();
+  }
+
+  if (err) {
+    return err;
+  }
+
+  json j = json::parse(res->body);
+
+  for (int taskNum = 0; taskNum < opts.numTasks; taskNum++) {
+    Prediction pred = j[taskNum];
 
     // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
-    const Prediction& pred = predictions.front();
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       if (pred.stats.calcRhoMAE) {
@@ -837,8 +877,6 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     if (pred.rc > rc) {
       rc = pred.rc;
     }
-
-    predictions.pop();
   }
 
   return rc;
@@ -855,21 +893,35 @@ STDLL stata_call(int argc, char* argv[])
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
     } else if (command == "report_progress") {
-      if (!breakButtonPressed) {
-        io.print(io.get_and_clear_async_buffer());
+      rc = SUCCESS;
+
+      httplib::Client cli(remoteIP.c_str());
+      // cli.set_compress(true);
+
+      auto res = cli.Get("/report_progress");
+      if (res.error()) {
+        io.print(fmt::format("Network error {}", res.error()));
+        // return res.error();
+        return rc;
       }
+
+      json j = json::parse(res->body);
+      io.print(j["progress"]);
 
       bool breakHit = (argc == 2) && atoi(argv[1]);
       if (breakHit) {
-        breakButtonPressed = true;
-        io.out("Aborting edm run (this may take a few seconds).\n");
+        io.out("Aborting edm run\n");
+
+        // TODO: If running remotely, send "/break" to server.
+        // If running locally, send kill signal to process.
+        cli.Get("/stop");
+        SF_scal_save(FINISHED_SCALAR, 1.0);
+        rc = 1;
       }
 
-      if (allTasksFinished) {
+      if (j["finished"]) {
         SF_scal_save(FINISHED_SCALAR, 1.0);
       }
-
-      rc = SUCCESS;
     } else if (command == "collect_results") {
       io.print(io.get_and_clear_async_buffer());
 

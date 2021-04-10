@@ -69,3 +69,41 @@ double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, siz
   }
   return _dtWeight * (_t[ind1] - _t[ind2]);
 }
+
+void to_json(json& j, const ManifoldGenerator& g)
+{
+  j = json{ { "_copredict", g._copredict },
+            { "_use_dt", g._use_dt },
+            { "_add_dt0", g._add_dt0 },
+            { "_tau", g._tau },
+            { "_missing", g._missing },
+            { "_nobs", g._nobs },
+            { "_num_extras", g._num_extras },
+            { "_num_extras_varying", g._num_extras_varying },
+            { "_dtWeight", g._dtWeight },
+            { "_x", g._x },
+            { "_y", g._y },
+            { "_co_x", g._co_x },
+            { "_t", g._t },
+            { "_extras", g._extras },
+            { "_extrasEVarying", g._extrasEVarying } };
+}
+
+void from_json(const json& j, ManifoldGenerator& g)
+{
+  j.at("_copredict").get_to(g._copredict);
+  j.at("_use_dt").get_to(g._use_dt);
+  j.at("_add_dt0").get_to(g._add_dt0);
+  j.at("_tau").get_to(g._tau);
+  j.at("_missing").get_to(g._missing);
+  j.at("_nobs").get_to(g._nobs);
+  j.at("_num_extras").get_to(g._num_extras);
+  j.at("_num_extras_varying").get_to(g._num_extras_varying);
+  j.at("_dtWeight").get_to(g._dtWeight);
+  j.at("_x").get_to(g._x);
+  j.at("_y").get_to(g._y);
+  j.at("_co_x").get_to(g._co_x);
+  j.at("_t").get_to(g._t);
+  j.at("_extras").get_to(g._extras);
+  j.at("_extrasEVarying").get_to(g._extrasEVarying);
+}

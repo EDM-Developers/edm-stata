@@ -439,7 +439,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
+			[saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)] [remote(string)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -448,6 +448,11 @@ program define edmExplore, eclass
 		di as error "tp must be greater than or equal to 1"
 		error 9
 	}
+
+	if "`remote'" == "" {
+		local remote = "localhost:8123"
+	}
+
 	* check predict
 	if "`predict'" !="" {
 		confirm new variable `predict'
@@ -748,7 +753,7 @@ program define edmExplore, eclass
 
 		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`remote'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -847,7 +852,7 @@ program define edmExplore, eclass
 	}
 
 	tempvar overlap
-	if `round' > 1 & `dot' > 0 {
+	if `round' > 1 & `dot' > 0 & `mata_mode' {
 		if `replicate' > 1 {
 			di "Replication progress (`replicate' in total)"
 		}
@@ -1144,7 +1149,8 @@ program define edmXmap, eclass
 			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
-			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)]
+			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [newdt] [parmode(integer 0)] ///
+			[remote(string)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1152,6 +1158,10 @@ program define edmXmap, eclass
 	if `tp' < 0 {
 		di as error "tp must be greater than or equal to 0"
 		error 9
+	}
+
+	if "`remote'" == "" {
+		local remote = "localhost:8123"
 	}
 
 	if "`oneway'" =="oneway" {
@@ -1537,7 +1547,7 @@ program define edmXmap, eclass
 
 			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`remote'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients
@@ -1635,7 +1645,7 @@ program define edmXmap, eclass
 		tempvar overlap
 
 		local task_num = 1
-		if `replicate' > 1 & `direction_num' == 1 & `dot' > 0 {
+		if `replicate' > 1 & `direction_num' == 1 & `dot' > 0 & `mata_mode' {
 			di "Replication progress (`=`replicate'*`num_directions'' in total)"
 			local finished_rep = 0
 		}

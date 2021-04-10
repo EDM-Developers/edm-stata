@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   Prediction pred;
 
   std::future<void> fut =
-    edm_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred, keep_going);
+    edm_async(vars.opts, vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred, keep_going);
   fut.get();
 
   std::size_t ext = fnameIn.find_last_of(".");

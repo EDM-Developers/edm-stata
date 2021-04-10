@@ -383,7 +383,7 @@ static void bm_edm_task(benchmark::State& state)
   Prediction pred;
 
   for (auto _ : state) {
-    edm_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred).get();
+    edm_async(vars.opts, vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred).get();
   }
 }
 

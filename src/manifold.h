@@ -3,10 +3,8 @@
 #include <memory>
 #include <vector>
 
-#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
-#endif
 
 class Manifold
 {
@@ -85,10 +83,8 @@ private:
   std::vector<bool> _extrasEVarying;
 
 public:
-#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);
-#endif
 
   ManifoldGenerator(){};
 

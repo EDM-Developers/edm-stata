@@ -281,7 +281,7 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, masterPool;
 
-std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+std::future<void> edm_async(Options opts, ManifoldGenerator generator, size_t E, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
                             void all_tasks_finished(void))
 {
@@ -318,17 +318,17 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, si
 }
 
 // Don't call this directly. The thread pools won't be setup correctly.
-void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+void edm_task(Options opts, ManifoldGenerator generator, size_t E, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
               void all_tasks_finished(void), bool serial)
 {
   Manifold M, Mp;
   if (serial) {
-    M = generator->create_manifold(E, trainingRows, false);
-    Mp = generator->create_manifold(E, predictionRows, true);
+    M = generator.create_manifold(E, trainingRows, false);
+    Mp = generator.create_manifold(E, predictionRows, true);
   } else {
-    std::future<void> f1 = workerPool.enqueue([&] { M = generator->create_manifold(E, trainingRows, false); });
-    std::future<void> f2 = workerPool.enqueue([&] { Mp = generator->create_manifold(E, predictionRows, true); });
+    std::future<void> f1 = workerPool.enqueue([&] { M = generator.create_manifold(E, trainingRows, false); });
+    std::future<void> f2 = workerPool.enqueue([&] { Mp = generator.create_manifold(E, predictionRows, true); });
     f1.get();
     f2.get();
   }
