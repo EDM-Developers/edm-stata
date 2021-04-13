@@ -78,15 +78,16 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
         dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
       }
     }
+
     // If the distance between M_i and b is 0 before handling missing values,
     // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
     dist += numMissingDims * opts.missingdistance * opts.missingdistance;
 
-    if (missing) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
+    if (!missing) {
+      d[i] = sqrt(dist);
       validDistances += 1;
+    } else {
+      d[i] = MISSING;
     }
   }
 
@@ -155,7 +156,11 @@ void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std:
   double sumw = 0., r = 0.;
 
   for (int j = 0; j < k; j++) {
-    w[j] = exp(-theta * sqrt(d[ind[j]] / d_base));
+    if (d[ind[j]] != MISSING) {
+      w[j] = exp(-theta * (d[ind[j]] / d_base));
+    } else {
+      w[j] = 0;
+    }
     sumw = sumw + w[j];
   }
 
@@ -170,7 +175,6 @@ void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std:
 void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
           const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc)
 {
-
   double d_base = d[ind[0]];
   std::vector<double> w(k);
 
@@ -178,16 +182,25 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
   std::vector<double> y_ls(k), w_ls(k);
 
   double mean_w = 0.;
+  int kValid = 0;
   for (int j = 0; j < k; j++) {
-    w[j] = sqrt(d[ind[j]]);
-    mean_w = mean_w + w[j];
+    if (d[ind[j]] != MISSING) {
+      mean_w = mean_w + d[ind[j]];
+      kValid += 1;
+    }
   }
-  mean_w = mean_w / (double)k;
+  mean_w = mean_w / (double)kValid;
 
   double theta = opts.thetas[t];
 
+  // Need to check for missing values because e^(-theta*w[j]) = e^(-0 * MISSING) = 1
+  // will still gives weight to missing values.
   for (int j = 0; j < k; j++) {
-    w[j] = exp(-theta * (w[j] / mean_w));
+    if (d[ind[j]] != MISSING) {
+      w[j] = exp(-theta * (d[ind[j]] / mean_w));
+    } else {
+      w[j] = 0;
+    }
   }
 
   int rowc = -1;
