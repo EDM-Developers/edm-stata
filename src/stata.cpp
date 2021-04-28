@@ -882,6 +882,8 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   return rc;
 }
 
+pid_t processId = -1;
+
 STDLL stata_call(int argc, char* argv[])
 {
   try {
@@ -889,6 +891,33 @@ STDLL stata_call(int argc, char* argv[])
     std::string command(argv[0]);
 
     if (command == "transfer_manifold_data") {
+      // If we don't have a server running, start it up
+      if (processId == -1) {
+        if ((processId = fork()) == 0) {
+          char app[] = "edm_server_MacOSX";
+          char* const argv[] = { app, NULL };
+          if (execv(app, argv) < 0) {
+            io.error("execv error");
+          }
+        } else if (processId < 0) {
+          io.error("fork error");
+        } else {
+
+          // sleep(1);
+          usleep(100 * 1000); // 100 ms in microseconds
+
+          httplib::Client cli(remoteIP.c_str());
+
+          auto res = cli.Get("/test");
+          if (res.error()) {
+            io.print(fmt::format("Couldn't get a response from newly started server: {}", res.error()));
+            rc = 1234;
+          } else {
+            rc = SUCCESS;
+          }
+        }
+      }
+
       rc = read_manifold_data(argc - 1, argv + 1);
     } else if (command == "launch_edm_task") {
       rc = launch_edm_task(argc - 1, argv + 1);
@@ -913,8 +942,11 @@ STDLL stata_call(int argc, char* argv[])
         io.out("Aborting edm run\n");
 
         // TODO: If running remotely, send "/break" to server.
-        // If running locally, send kill signal to process.
-        cli.Get("/stop");
+        if (kill(processId, SIGKILL) < 0) {
+          rc = 1234;
+        }
+        processId = -1;
+        // cli.Get("/stop");
         SF_scal_save(FINISHED_SCALAR, 1.0);
         rc = 1;
       }
