@@ -6,7 +6,7 @@
 . set linesize 255
 
 . set obs 500
-number of observations (_N) was 0, now 500
+Number of observations (_N) was 0, now 500.
 
 . set seed 12345678
 
@@ -23,8 +23,9 @@ number of observations (_N) was 0, now 500
 . gen t = _n
 
 . tsset t
-        time variable:  t, 1 to 500
-                delta:  1 unit
+
+Time variable: t, 1 to 500
+        Delta: 1 unit
 
 . 
 . gen double x = 0.2 if _n==1
@@ -652,7 +653,7 @@ Note: Full sample used for the computation
 
 . sum x_p xc_p
 
-    Variable |        Obs        Mean    Std. Dev.       Min        Max
+    Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
          x_p |        198    .6434232    .2159587   .3039276   .8967989
         xc_p |        200    .6436226    .2154685   .3039276   .8967989
@@ -848,7 +849,7 @@ Note: The embedding dimension E is 2
 . ereturn display
 ------------------------------------------------------------------------------
              |              Jackknife
-             |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+             | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
       y|M(x) |    .542135   .0914957     5.93   0.000     .3617095    .7225605
       x|M(y) |   .9427227   .0140109    67.29   0.000     .9150939    .9703515
@@ -878,7 +879,7 @@ Note: Random 50/50 split for training and validation data
 . ereturn display
 ------------------------------------------------------------------------------
              |              Jackknife
-             |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+             | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
            x |   .9984628   .0106503    93.75   0.000     .9774601    1.019465
 ------------------------------------------------------------------------------
