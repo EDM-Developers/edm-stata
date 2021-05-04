@@ -18,6 +18,7 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/Core>
 
+#include <cstdlib>
 #include <future>
 #include <numeric> // for std::accumulate
 #include <queue>
@@ -216,6 +217,11 @@ std::string remoteIP = "localhost:8123";
 Options opts;
 ManifoldGenerator generator;
 TrainPredictSplitter splitter;
+pid_t processId = -1;
+
+// A flag to make sure we set a callback to run when Stata closes.
+// Without this flag, we may accidentally set the callback to run heaps of times.
+bool atExitCallbackRegistered = false;
 
 void print_error(std::string command, ST_retcode rc)
 {
@@ -882,10 +888,23 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   return rc;
 }
 
-pid_t processId = -1;
+void exiting()
+{
+  std::cout << "Exiting Stata, shut down edm server" << std::endl;
+
+  if (processId >= 0) {
+    kill(processId, SIGINT);
+    waitpid(-1, 0, WNOHANG);
+  }
+}
 
 STDLL stata_call(int argc, char* argv[])
 {
+  if (!atExitCallbackRegistered) {
+    std::atexit(exiting);
+    atExitCallbackRegistered = true;
+  }
+
   try {
     ST_retcode rc = UNKNOWN_ERROR + 1;
     std::string command(argv[0]);
@@ -903,14 +922,19 @@ STDLL stata_call(int argc, char* argv[])
           io.error("fork error");
         } else {
 
-          // sleep(1);
-          usleep(100 * 1000); // 100 ms in microseconds
-
           httplib::Client cli(remoteIP.c_str());
+          httplib::Error err = cli.Get("/test").error();
 
-          auto res = cli.Get("/test");
-          if (res.error()) {
-            io.print(fmt::format("Couldn't get a response from newly started server: {}", res.error()));
+          for (int attempt = 0; attempt < 1000; attempt++) {
+            if (!err) {
+              break;
+            }
+            usleep(10 * 1000); // 10 ms in microseconds
+            err = cli.Get("/test").error();
+          }
+
+          if (err) {
+            io.print(fmt::format("Couldn't get a response from newly started server: {}", err));
             rc = 1234;
           } else {
             rc = SUCCESS;
@@ -942,13 +966,14 @@ STDLL stata_call(int argc, char* argv[])
         io.out("Aborting edm run\n");
 
         // TODO: If running remotely, send "/break" to server.
-        if (kill(processId, SIGKILL) < 0) {
+        if (kill(processId, SIGINT) < 0) {
           rc = 1234;
         }
         processId = -1;
         // cli.Get("/stop");
         SF_scal_save(FINISHED_SCALAR, 1.0);
         rc = 1;
+        waitpid(-1, 0, WNOHANG);
       }
 
       if (j["finished"]) {

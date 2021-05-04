@@ -43,6 +43,7 @@ public:
 };
 
 ServerIO io;
+httplib::Server svr;
 
 // Global state, needed to persist between multiple edm calls
 std::queue<Prediction> predictions;
@@ -118,10 +119,15 @@ json get_all_task_results()
   return j;
 }
 
+void signal_handler(int signum)
+{
+  io.print("Interrupt/shutdown signal received by edm server!\n");
+  breakButtonPressed = true;
+  svr.stop();
+}
+
 int main(int argc, char* argv[])
 {
-  using namespace httplib;
-
   int port = 8123;
   if (argc > 1) {
     port = atoi(argv[1]);
@@ -130,15 +136,13 @@ int main(int argc, char* argv[])
   io.verbosity = 1;
   std::cout << "Starting EDM server on port " << port << std::endl;
 
-  Server svr;
-
-  svr.Post("/launch_edm_task", [](const Request& req, Response& res) {
+  svr.Post("/launch_edm_task", [](const httplib::Request& req, httplib::Response& res) {
     json j = json::parse(req.body);
     launch_edm_task(j);
     res.set_content("Task launched", "text/plain");
   });
 
-  svr.Get("/report_progress", [&](const Request& req, Response& res) {
+  svr.Get("/report_progress", [&](const httplib::Request& req, httplib::Response& res) {
     std::string progress = io.get_and_clear_async_buffer();
     bool finished = allTasksFinished;
 
@@ -153,7 +157,7 @@ int main(int argc, char* argv[])
     res.set_content(j.dump(), "application/json");
   });
 
-  svr.Get("/collect_results", [](const Request& req, Response& res) {
+  svr.Get("/collect_results", [](const httplib::Request& req, httplib::Response& res) {
     io.print("/collect_results\n");
 
     // In case of a failure in transmission, keep the previous results around
@@ -167,15 +171,18 @@ int main(int argc, char* argv[])
     res.set_content(previousResults.dump(), "application/json");
   });
 
-  svr.Get("/stop", [&](const Request& req, Response& res) {
+  svr.Get("/stop", [&](const httplib::Request& req, httplib::Response& res) {
     io.print("/stop\n");
     svr.stop();
   });
 
-  svr.Get("/test", [](const Request& req, Response& res) {
+  svr.Get("/test", [](const httplib::Request& req, httplib::Response& res) {
     io.print("/test\n");
     res.set_content("EDM server running!", "text/plain");
   });
+
+  // register signal SIGINT and signal handler
+  signal(SIGINT, signal_handler);
 
   svr.listen("localhost", port);
 
