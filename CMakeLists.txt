@@ -6,6 +6,11 @@ endif()
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
+if(DEFINED ENV{ARMMODE})
+  set(ARMMODE TRUE CACHE BOOL "Compiling to ARM")
+else()
+  set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
+endif()
 
 set(DUMP_INPUT TRUE CACHE BOOL "Dump plugin input data to json")
 set(BUILD_DRIVER FALSE CACHE BOOL "Generate command-line executable for the plugin")
@@ -64,15 +69,23 @@ set(COMMON_SRC src/cpu.cpp src/cpu.h src/edm.cpp src/edm.h src/manifold.cpp src/
 # plugin build and installation
 add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
 set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
-set_target_properties(edm PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
 
 if(WIN32)
-  set_target_properties(edm PROPERTIES SUFFIX _Windows.plugin)
+  set(BUILD_SUFFIX "_Windows")
 elseif(APPLE)
-  set_target_properties(edm PROPERTIES SUFFIX _MacOSX.plugin)
+  set(BUILD_SUFFIX "_MacOSX")
 else()
-  set_target_properties(edm PROPERTIES SUFFIX _Unix.plugin)
+  set(BUILD_SUFFIX "_Unix")
 endif()
+
+if (ARMMODE)
+  set(BUILD_SUFFIX "${BUILD_SUFFIX}_arm")
+else()
+  set(BUILD_SUFFIX "${BUILD_SUFFIX}_x64")
+endif()
+
+set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plugin")
+set_target_properties(edm PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
 
 install(TARGETS edm DESTINATION .)
 

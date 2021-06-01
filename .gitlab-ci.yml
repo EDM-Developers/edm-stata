@@ -10,10 +10,10 @@ build-windows:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp "stata/edm_Windows.plugin" "C:\Users\EDM\Dropbox\ci-builds"
+    - cp "stata/edm_Windows_x64.plugin" "C:\Users\EDM\Dropbox\ci-builds"
   artifacts:
     paths:
-    - stata/edm_Windows.plugin
+    - stata/edm_Windows_x64.plugin
     - stata/gbench.exe
   tags:
     - windows-runner
@@ -24,16 +24,17 @@ test-windows:
     - build-windows
   before_script:
     - cd stata
+    - cp edm_Windows_x64.plugin edm.plugin
     - move-item -force cut-down-test.log reference.log
   script:
-    - cmd.exe /c "C:\Program Files\Stata16\StataMP-64.exe" -e -q cut-down-test.do
+    - cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q cut-down-test.do
     - cmd.exe /c "fc /W reference.log cut-down-test.log"
   tags:
     - windows-runner
 
 dropbox-deploy-windows:
   variables:
-    PLUGIN_FILE: "edm_Windows.plugin"
+    PLUGIN_FILE: "edm_Windows_x64.plugin"
   stage: deploy
   dependencies:
     - build-windows
@@ -57,31 +58,54 @@ perf-windows:
   tags:
     - windows-runner
 
-build-mac:
+build-mac-arm:
   stage: build
   before_script:
     - export VCPKG_ROOT=~/vcpkg/
     - export VCPKG_TARGET_TRIPLET=arm64-osx
     - export VCPKG_DEFAULT_TRIPLET=arm64-osx
+    - export ARMMODE
   script:
     - cmake -B build -S . -DBUILD_GBENCH=TRUE
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_MacOSX.plugin ~/Dropbox/EDM/ci-builds
+    - cp stata/edm_MacOSX_arm.plugin ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
-      - stata/edm_MacOSX.plugin
+      - stata/edm_MacOSX_arm.plugin
       - stata/gbench
   tags:
     - mac-arm64
 
-test-mac:
+build-mac-x64:
+  stage: build
+  before_script:
+    - export VCPKG_ROOT=~/vcpkg/
+    - export VCPKG_TARGET_TRIPLET=x64-osx
+    - export VCPKG_DEFAULT_TRIPLET=x64-osx
+    - unset ARMMODE
+  script:
+    - env /usr/bin/arch -x86_64 cmake -B build -S . -DBUILD_GBENCH=TRUE
+    - env /usr/bin/arch -x86_64 cmake --build build --config release
+    - env /usr/bin/arch -x86_64 cmake --build build --config release --target install
+  after_script:
+    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/EDM/ci-builds
+  artifacts:
+    paths:
+      - stata/edm_MacOSX_x64.plugin
+      - stata/gbench
+  tags:
+    - mac-arm64
+
+
+test-mac-arm:
   stage: test
   dependencies:
-    - build-mac
+    - build-mac-arm
   before_script:
     - cd stata
+    - cp edm_MacOSX_arm.plugin edm.plugin
     - mv cut-down-test.log reference.log
   script:
     - /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
@@ -89,20 +113,32 @@ test-mac:
   tags:
     - mac-arm64
 
-dropbox-deploy-mac:
-  variables:
-    PLUGIN_FILE: "edm_MacOSX.plugin"
+dropbox-deploy-mac-arm:
   stage: deploy
   dependencies:
-    - build-mac
+    - build-mac-arm
   only:
     - master
   before_script:
     - cd stata
   script:
-    - cp "${PLUGIN_FILE}" ~/Dropbox/EDM/ci-builds-master/
+    - cp "edm_MacOSX_arm.plugin" ~/Dropbox/EDM/ci-builds-master/
   tags:
     - mac-arm64
+
+dropbox-deploy-mac-x64:
+  stage: deploy
+  dependencies:
+    - build-mac-x64
+  only:
+    - master
+  before_script:
+    - cd stata
+  script:
+    - cp "edm_MacOSX_x64.plugin" ~/Dropbox/EDM/ci-builds-master/
+  tags:
+    - mac-arm64
+
 
 perf-mac:
   stage: deploy
@@ -128,11 +164,11 @@ build-ubuntu:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_Unix.plugin ~/Dropbox/ci-builds
+    - cp stata/edm_Unix_x64.plugin ~/Dropbox/ci-builds
     - cp stata/edm.ado ~/Dropbox/ci-builds
   artifacts:
     paths:
-      - stata/edm_Unix.plugin
+      - stata/edm_Unix_x64.plugin
       - stata/gbench
   tags:
     - ubuntu-runner
@@ -143,6 +179,7 @@ test-ubuntu:
     - build-ubuntu
   before_script:
     - cd stata
+    - cp edm_Unix_x64.plugin edm.plugin
     - mv cut-down-test.log reference.log
   script:
     - stata -e -q cut-down-test.do
@@ -152,7 +189,7 @@ test-ubuntu:
 
 dropbox-deploy-ubuntu:
   variables:
-    PLUGIN_FILE: "edm_Unix.plugin"
+    PLUGIN_FILE: "edm_Unix_x64.plugin"
   stage: deploy
   dependencies:
     - build-ubuntu
