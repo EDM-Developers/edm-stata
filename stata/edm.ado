@@ -1,7 +1,7 @@
-*! version 1.4.1, 29Oct2020, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick Laub
+*! version 1.5.0, 01Jun2021, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick Laub
 *! conact: <jinjing.li@canberra.edu.au>
 
-global EDM_VERSION = "1.4.1"
+global EDM_VERSION = "1.5.0"
 /* Empirical dynamic modelling
 
 Version history:
@@ -204,7 +204,7 @@ program define edmUpdate
 	syntax , [DEVELOPment] [replace]
 	if "`development'" == "development" {
 		di "Updating edm from the development channel"
-		net install edm, from("https://jinjingli.github.io/edm/") `replace'
+		net install edm, from("https://raw.githubusercontent.com/EDM-Developers/edm-releases/master/") `replace'
 	}
 	else {
 		di "Updating edm from SSC"
