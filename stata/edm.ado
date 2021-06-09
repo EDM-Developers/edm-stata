@@ -959,7 +959,7 @@ program define edmExplore, eclass
 				mat r[`task_num',1] = `current_e'
 				mat r[`task_num',2] = `j'
 
-				local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
+				local save_prediction = ("`predict'" != "") & ((`crossfold' > 0)  | (`task_num' == `num_tasks'))
 
 				if `mata_mode' {
 					local savesmap_vars ""
