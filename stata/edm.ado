@@ -903,26 +903,23 @@ program define edmExplore, eclass
 			}
 		}
 
-		// Find the maximum library size.
-		// N.B. This is min(sum(train_set), sum(predict_set)))
 		if `crossfold' > 0 {
 			// TODO: Try to clean up this part a bit.
-			tempvar counting_up in_crossfold_t
+			tempvar counting_up not_in_crossfold_t
 			qui gen `counting_up' = _n if _n <= `num_usable'
-			qui gen `in_crossfold_t' = mod(`counting_up',`crossfold') == (`t' - 1) 
-			qui count if `in_crossfold_t'
+			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1) 
+			qui count if `not_in_crossfold_t'
 			local train_size = r(N)
-			local max_lib_size = min(`train_size,', `num_usable' - `train_size')
 		}
 		else if "`full'" == "full"  {
 			local train_size = `num_usable'
-			local max_lib_size = `train_size'
 		}
 		else {
 			local train_size = floor(`num_usable'/2)
-			local max_lib_size = `train_size'
 		}
 
+		// Set the maximum library size to be the size of the training set
+		local max_lib_size = `train_size'
 
 		foreach i of numlist `e' {
 			if `mata_mode' {
