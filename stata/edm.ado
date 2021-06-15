@@ -1,4 +1,4 @@
-*! version 1.5.0, 01Jun2021, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick Laub
+*! version 1.5.0, 01Jun2021, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick J. Laub
 *! conact: <jinjing.li@canberra.edu.au>
 
 global EDM_VERSION = "1.5.0"
@@ -227,7 +227,7 @@ program define edmPluginCheck, rclass
 
 	}
 	else {
-		cap smap_block_mdap
+		cap edm_plugin
 		if _rc == 199 {
 			di as text "Warning: Using slow (mata) edm implementation (failed to load the compiled plugin)"
 		}
@@ -401,7 +401,7 @@ program define edmPreprocessExtras, rclass
 end 
 
 program define edmPrintPluginProgress
-	plugin call smap_block_mdap , "report_progress"
+	plugin call edm_plugin , "report_progress"
 
 	local breakJustHit = 0
 	local breakEverHit = 0
@@ -418,7 +418,7 @@ program define edmPrintPluginProgress
 			local breakJustHit = 1
 			local breakEverHit = 1
 		}
-		plugin call smap_block_mdap , "report_progress" "`breakJustHit'"
+		plugin call edm_plugin , "report_progress" "`breakJustHit'"
 
 		local breakJustHit = 0
 
@@ -728,17 +728,11 @@ program define edmExplore, eclass
 		}
 	}
 	else {
-		// TODO: Check that `savesmap' is not needed in explore mode.
+		// PJL: Check that `savesmap' is not needed in explore mode.
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
 		qui gen double `usable' = .
 		local missing_dist_used = ""
-
-		// Print out some of these gibberish tempvar names if requested
-		if `verbosity' > 1 {
-			di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'>  dtweight <`parsed_dtw'>"
-			pause
-		}
 
 		local explore_mode = 1
 		local full_mode = ("`full'" == "full")
@@ -746,7 +740,7 @@ program define edmExplore, eclass
 			local time = "`original_t'"
 		}
 
-		plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+		plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
 
@@ -904,7 +898,7 @@ program define edmExplore, eclass
 		}
 
 		if `crossfold' > 0 {
-			// TODO: Try to clean up this part a bit.
+			// PJL: Try to clean up this part a bit.
 			tempvar counting_up not_in_crossfold_t
 			qui gen `counting_up' = _n if _n <= `num_usable'
 			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1) 
@@ -976,17 +970,10 @@ program define edmExplore, eclass
 					}
 				}
 				else {
-					// TODO: Check we never save SMAP coeffs in explore mode.
+					// PJL: Check we never save SMAP coeffs in explore mode.
 					local save_smap_coeffs = 0
 					local k_adj = `lib_size'
-
-					if `verbosity' > 1 {
-						di "launch_edm_task <`t', `i', `j', `k_adj', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-						di "train_set <`train_set'> predict_set <`predict_set'> u <`u'> crossfoldu = <`crossfoldu'>"
-						pause
-					}
-
-					plugin call smap_block_mdap `u' `crossfoldu', "launch_edm_task" ///
+					plugin call edm_plugin `u' `crossfoldu', "launch_edm_task" ///
 							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 				}
 				local ++task_num
@@ -1013,7 +1000,7 @@ program define edmExplore, eclass
 	if `mata_mode' == 0 {
 		edmPrintPluginProgress
 		local result_matrix = "r"
-		plugin call smap_block_mdap `predict', "collect_results" "`result_matrix'"
+		plugin call edm_plugin `predict', "collect_results" "`result_matrix'"
 	}
 
 	if "`copredictvar'" != ""  {
@@ -1032,17 +1019,11 @@ program define edmExplore, eclass
 			else {
 				scalar plugin_finished = 0
 
-				if `verbosity' > 1 {
-					di "launch_coprediction_task <`max_e', `theta', `lib_size', `saveinputs'>"
-					di "train_set <`co_train_set'> predict_set <`co_predict_set'>"
-					pause
-				}
-
-				plugin call smap_block_mdap `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
+				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
 						"`max_e'" "`theta'" "`lib_size'" "`saveinputs'"
  
 				edmPrintPluginProgress
-				plugin call smap_block_mdap `co_x_p', "collect_results"
+				plugin call edm_plugin `co_x_p', "collect_results"
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -1174,7 +1155,7 @@ program define edmXmap, eclass
 	}
 
 	* default values
-	// TODO: If these are varlists then it is fine. If they are real values, we can delete these defaults
+	// PJL: If these are varlists then it is fine. If they are real values, we can delete these defaults
 	if "`e'" =="" {
 		local e = "2"
 	}
@@ -1519,12 +1500,6 @@ program define edmXmap, eclass
 			qui gen double `usable' = .
 			local missing_dist_used = ""
 
-			// Print out some of these gibberish tempvar names if requested
-			if `verbosity' > 1 {
-				di "x <`x'> x_f <`x_f'> z_vars <`z_vars'> original_t <`original_t'> dtweight <`parsed_dtw'>"
-				pause
-			}
-
 			local explore_mode = 0
 			local full_mode = 0
 			local crossfold = 0
@@ -1532,7 +1507,7 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
-			plugin call smap_block_mdap `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+			plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
 					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
 
@@ -1664,8 +1639,8 @@ program define edmXmap, eclass
 						if `lib_size' > `num_usable' {
 							di as error "Library size exceeds the limit."
 							error 1
-							// TODO: Does the next line ever get reached?
-							// TODO: Can easily check these lib_size constraints earlier in the function.
+							// PJL: Does the next line ever get reached?
+							// PJL: Can easily check these lib_size constraints earlier in the function.
 							continue, break
 						}
 						else if `lib_size' <= `i' + 1 {
@@ -1733,11 +1708,6 @@ program define edmXmap, eclass
 								}
 							}
 
-							if `verbosity' > 2 {
-								di "x = <`x'> xx=<`xx'> y = <`y'> yy=<`yy'>"
-								di "Mapping names: <`mapping_name'>"
-							}
-
 							local ii = 1
 							local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
 							foreach name of local mapping_name {
@@ -1752,7 +1722,7 @@ program define edmXmap, eclass
 						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set'
 						local last_theta =  `j'
 
-						// TODO: currently `savemanifold' does nothing in the plugin. 
+						// PJL: currently `savemanifold' does nothing in the plugin. 
 						if `mata_mode' & "`savemanifold'" !="" {
 							local counter = 1
 							foreach v of varlist ``manifold'' {
@@ -1788,14 +1758,7 @@ program define edmXmap, eclass
 						}
 						else {
 							local save_smap_coeffs = ("`savesmap'" != "")
-
-							if `verbosity' > 1 {
-								di "launch_edm_task <`rep', `i', `j', `k_size', `lib_size', `save_prediction', `save_smap_coeffs', `saveinputs'>"
-								di "u <`u'>"
-								pause
-							}
-
-							plugin call smap_block_mdap `u', "launch_edm_task" ///
+							plugin call edm_plugin `u', "launch_edm_task" ///
 									"`rep'" "`i'" "`j'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 						}
 						drop `overlap'
@@ -1819,7 +1782,7 @@ program define edmXmap, eclass
 		if `mata_mode' == 0 {
 			edmPrintPluginProgress
 			local result_matrix = "r`direction_num'"
-			plugin call smap_block_mdap `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
+			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
 		}
 
 		* reset the panel structure
@@ -1866,18 +1829,10 @@ program define edmXmap, eclass
 			}
 			else {
 				scalar plugin_finished = 0
-
-				if `verbosity' > 1 {
-					di "launch_coprediction_task <`max_e', `theta', `k_size', `saveinputs'>"
-					di "co_train_set <`co_train_set'> co_predict_set <`co_predict_set'>"
-					pause
-				}
-
-				plugin call smap_block_mdap `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
+				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
 						"`max_e'" "`theta'" "`k_size'" "`saveinputs'"
-
 				edmPrintPluginProgress
-				plugin call smap_block_mdap `co_x_p', "collect_results"
+				plugin call edm_plugin `co_x_p', "collect_results"
 			}
 
 			qui gen double `copredict' = `co_x_p'
@@ -2512,4 +2467,13 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 end
 
 // Load the C++ implementation
-cap program smap_block_mdap, plugin using(edm.plugin)
+cap program edm_plugin, plugin using(edm.plugin)
+
+// The developers of this plugin often have the file by a different
+// name locally, so this will load the plugin based on the OS-specific
+// filenames.
+cap program edm_plugin, plugin using(edm_`=c(os)'_x64.plugin)
+cap program edm_plugin, plugin using("`=strlower("edm_`=c(os)'_x64.plugin")'")
+cap program edm_plugin, plugin using(edm_`=c(os)'_arm.plugin)
+cap program edm_plugin, plugin using("`=strlower("edm_`=c(os)'_arm.plugin")'")
+cap program edm_plugin, plugin using(edm_plugin.plugin)
