@@ -68,20 +68,20 @@ double median(std::vector<double> u)
   }
 }
 
-std::vector<size_t> rank(const std::vector<double>& v_temp)
+std::vector<int> rank(const std::vector<double>& v_temp)
 {
-  std::vector<std::pair<double, size_t>> v_sort(v_temp.size());
+  std::vector<std::pair<double, int>> v_sort(v_temp.size());
 
-  for (size_t i = 0U; i < v_sort.size(); ++i) {
+  for (int i = 0; i < v_sort.size(); ++i) {
     v_sort[i] = std::make_pair(v_temp[i], i);
   }
 
   sort(v_sort.begin(), v_sort.end());
 
-  std::vector<size_t> result(v_temp.size());
+  std::vector<int> result(v_temp.size());
 
   // N.B. Stata's rank starts at 1, not 0, so the "+1" is added here.
-  for (size_t i = 0; i < v_sort.size(); ++i) {
+  for (int i = 0; i < v_sort.size(); ++i) {
     result[v_sort[i].second] = i + 1;
   }
   return result;
@@ -93,7 +93,7 @@ private:
   bool _explore, _full;
   int _crossfold;
   std::vector<bool> _usable;
-  std::vector<size_t> _crossfoldURank;
+  std::vector<int> _crossfoldURank;
 
   std::vector<double> strip_missing(std::vector<double> vWithMissing)
   {
@@ -307,7 +307,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
  * Write data to a column number 'j' in Stata (i.e. to a Stata 'variable').
  * If supplied, we consider each row 'i' only if filter[i] == true.
  */
-void write_stata_column(ST_double* data, size_t len, ST_int j, const std::vector<bool>& filter = {})
+void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bool>& filter = {})
 {
   bool useFilter = (filter.size() > 0);
   int obs = 0;
@@ -639,7 +639,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
-  write_stata_column(usableToSave, usable.size(), 2 + numExtras + dtMode + 1);
+  write_stata_column(usableToSave, (int)usable.size(), 2 + numExtras + dtMode + 1);
   delete[] usableToSave;
 
   return SUCCESS;
@@ -656,7 +656,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   Options taskOpts = opts;
   taskOpts.copredict = false;
-  taskOpts.taskNum = futures.size();
+  taskOpts.taskNum = (int)futures.size();
 
   int iterationNumber = atoi(argv[0]);
   int E = atoi(argv[1]);
@@ -795,7 +795,7 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   }
 
   ST_retcode rc = 0;
-  size_t numCoeffColsSaved = 0;
+  int numCoeffColsSaved = 0;
 
   while (predictions.size() > 0) {
     std::future<void>& fut = futures.front();

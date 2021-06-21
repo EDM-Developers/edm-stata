@@ -42,7 +42,7 @@ struct Options
   double missingdistance;
   std::vector<double> thetas;
   std::string algorithm;
-  size_t taskNum = 1, numTasks = 1;
+  int taskNum = 1, numTasks = 1;
   bool calcRhoMAE = false;
   int parMode = 0;
 };
@@ -128,17 +128,17 @@ struct PredictionStats
 struct Prediction
 {
   retcode rc;
-  size_t numThetas, numPredictions, numCoeffCols;
+  int numThetas, numPredictions, numCoeffCols;
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
   PredictionStats stats;
   std::vector<bool> predictionRows;
 };
 
-std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
                             void all_tasks_finished(void) = nullptr);
 
-void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
               void all_tasks_finished(void) = nullptr, bool serial = false);

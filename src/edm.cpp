@@ -43,17 +43,17 @@
 // vector.
 //
 // N.B. The equivalent function in Stata/Mata is called 'minindex'.
-std::vector<size_t> kNearestNeighboursIndices(const std::vector<double>& dists, int k)
+std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k)
 {
   // Initialize original index locations
-  std::vector<size_t> idx(dists.size());
+  std::vector<int> idx(dists.size());
   std::iota(idx.begin(), idx.end(), 0);
 
   if (k >= (int)(dists.size() / 2)) {
-    auto comparator = [&dists](size_t i1, size_t i2) { return dists[i1] < dists[i2]; };
+    auto comparator = [&dists](int i1, int i2) { return dists[i1] < dists[i2]; };
     std::stable_sort(idx.begin(), idx.end(), comparator);
   } else {
-    auto stableComparator = [&dists](size_t i1, size_t i2) {
+    auto stableComparator = [&dists](int i1, int i2) {
       if (dists[i1] != dists[i2])
         return dists[i1] < dists[i2];
       else
@@ -66,9 +66,9 @@ std::vector<size_t> kNearestNeighboursIndices(const std::vector<double>& dists, 
 }
 
 void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
-                        const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
+                        const std::vector<int>& ind, span_2d_double ystar, span_2d_retcode rc);
 void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar,
+                     const std::vector<double>& d, const std::vector<int>& ind, span_2d_double ystar,
                      span_2d_double coeffs, span_2d_retcode rc);
 
 // Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
@@ -158,7 +158,7 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
     }
   }
 
-  std::vector<size_t> kNNInds = kNearestNeighboursIndices(dists, k + skipFirst);
+  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k + skipFirst);
 
   if (skipFirst) {
     kNNInds.erase(kNNInds.begin(), kNNInds.begin() + 1);
@@ -189,7 +189,7 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
 }
 
 void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& dists,
-                        const std::vector<size_t>& kNNInds, span_2d_double ystar, span_2d_retcode rc)
+                        const std::vector<int>& kNNInds, span_2d_double ystar, span_2d_retcode rc)
 {
   double theta = opts.thetas[t];
 
@@ -215,7 +215,7 @@ void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k,
 }
 
 void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& dists, const std::vector<size_t>& kNNInds, span_2d_double ystar,
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, span_2d_double ystar,
                      span_2d_double coeffs, span_2d_retcode rc)
 {
   std::vector<double> w(k);
@@ -321,8 +321,8 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
 
 // If the same observation is in the training & prediction sets,
 // then find the row index of the train manifold for a given prediction row.
-std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool>& predictionRows,
-                               size_t numPredictions, bool copredict)
+std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool>& predictionRows, int numPredictions,
+                               bool copredict)
 {
 
   std::vector<int> predToTrainSelfMap(numPredictions);
@@ -345,12 +345,11 @@ std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool
   return predToTrainSelfMap;
 }
 
-
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, masterPool;
 
-std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
                             std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
                             void all_tasks_finished(void))
 {
@@ -387,7 +386,7 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, si
 }
 
 // Don't call this directly. The thread pools won't be setup correctly.
-void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::vector<bool> trainingRows,
+void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
               void all_tasks_finished(void), bool serial)
 {
@@ -402,9 +401,9 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
     f2.get();
   }
 
-  size_t numThetas = opts.thetas.size();
-  size_t numPredictions = Mp.nobs();
-  size_t numCoeffCols = M.E_actual() + 1;
+  int numThetas = (int)opts.thetas.size();
+  int numPredictions = Mp.nobs();
+  int numCoeffCols = M.E_actual() + 1;
 
   auto predToTrainSelfMap = find_overlaps(trainingRows, predictionRows, numPredictions, opts.copredict);
 

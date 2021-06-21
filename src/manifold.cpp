@@ -1,12 +1,12 @@
 #include "manifold.h"
 
-Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& filter, bool prediction) const
+Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool prediction) const
 {
-  std::vector<size_t> inds;
+  std::vector<int> inds;
   std::vector<double> y;
 
-  size_t nobs = 0;
-  for (size_t i = 0; i < filter.size(); i++) {
+  int nobs = 0;
+  for (int i = 0; i < filter.size(); i++) {
     if (filter[i]) {
       inds.push_back(i);
       y.push_back(_y[i]);
@@ -17,8 +17,8 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
-  for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < E; j++) {
+  for (int i = 0; i < nobs; i++) {
+    for (int j = 0; j < E; j++) {
       if (prediction && _copredict) {
         flat[i * E_actual(E) + j] = lagged(_co_x, inds, i, j);
       } else {
@@ -28,18 +28,18 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   }
 
   // Put the lagged embedding of dt in the next columns
-  for (size_t i = 0; i < nobs; i++) {
-    for (size_t j = 0; j < E_dt(E); j++) {
+  for (int i = 0; i < nobs; i++) {
+    for (int j = 0; j < E_dt(E); j++) {
       flat[i * E_actual(E) + E + j] = find_dt(inds, i, j);
     }
   }
 
   // Finally put the extras in the last columns
-  for (size_t i = 0; i < nobs; i++) {
+  for (int i = 0; i < nobs; i++) {
     int offset = 0;
-    for (size_t k = 0; k < _num_extras; k++) {
+    for (int k = 0; k < _num_extras; k++) {
       int numLags = _extrasEVarying[k] ? E : 1;
-      for (size_t j = 0; j < numLags; j++) {
+      for (int j = 0; j < numLags; j++) {
         flat[i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
       }
       offset += numLags;
@@ -49,8 +49,7 @@ Manifold ManifoldGenerator::create_manifold(size_t E, const std::vector<bool>& f
   return { flat, y, nobs, E, E_dt(E), E_extras(E), E_actual(E), _missing };
 }
 
-double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<size_t>& inds, size_t i,
-                                 size_t j) const
+double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const
 {
   int index = inds.at(i) - j * _tau;
   if (index < 0) {
@@ -59,7 +58,7 @@ double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vect
   return vec[index];
 }
 
-double ManifoldGenerator::find_dt(const std::vector<size_t>& inds, size_t i, size_t j) const
+double ManifoldGenerator::find_dt(const std::vector<int>& inds, int i, int j) const
 {
   int ind1 = inds.at(i) + _add_dt0 * _tau - j * _tau;
   int ind2 = ind1 - _tau;
