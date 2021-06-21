@@ -319,6 +319,33 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
   }
 }
 
+// If the same observation is in the training & prediction sets,
+// then find the row index of the train manifold for a given prediction row.
+std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool>& predictionRows,
+                               size_t numPredictions, bool copredict)
+{
+
+  std::vector<int> predToTrainSelfMap(numPredictions);
+  int M_i = 0, Mp_i = 0;
+  int numSelfToSkip = 0;
+  for (int r = 0; r < trainingRows.size(); r++) {
+    if (predictionRows[r]) {
+      if (trainingRows[r] && !copredict) {
+        predToTrainSelfMap[Mp_i] = M_i;
+        numSelfToSkip += 1;
+      } else {
+        predToTrainSelfMap[Mp_i] = -1;
+      }
+    }
+
+    M_i += trainingRows[r];
+    Mp_i += predictionRows[r];
+  }
+
+  return predToTrainSelfMap;
+}
+
+
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, masterPool;
@@ -379,24 +406,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
   size_t numPredictions = Mp.nobs();
   size_t numCoeffCols = M.E_actual() + 1;
 
-  // If the same observation is in the training & prediction sets,
-  // then find the row index of the train manifold for a given prediction row.
-  std::vector<int> predToTrainSelfMap(numPredictions);
-  int M_i = 0, Mp_i = 0;
-  int numSelfToSkip = 0;
-  for (int r = 0; r < trainingRows.size(); r++) {
-    if (predictionRows[r]) {
-      if (trainingRows[r] && !opts.copredict) {
-        predToTrainSelfMap[Mp_i] = M_i;
-        numSelfToSkip += 1;
-      } else {
-        predToTrainSelfMap[Mp_i] = -1;
-      }
-    }
-
-    M_i += trainingRows[r];
-    Mp_i += predictionRows[r];
-  }
+  auto predToTrainSelfMap = find_overlaps(trainingRows, predictionRows, numPredictions, opts.copredict);
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
   auto ystarView = span_2d_double(ystar.get(), (int)numThetas, (int)numPredictions);
