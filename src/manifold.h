@@ -29,6 +29,7 @@ public:
   {}
 
   double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
+  double* obs(size_t i) const { return &_flat[i * _E_actual]; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }

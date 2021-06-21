@@ -97,38 +97,48 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
   }
   int validDistances = 0;
   std::vector<double> dists(M.nobs());
+  std::vector<int> numMissing(M.nobs());
 
+  bool allowMissing = (opts.missingdistance > 0);
+
+  // The 'target' is the observation in the prediction manifold which we want
+  // to find the nearest neighbour for (from the training manifold).
+  const Eigen::Map<const Eigen::ArrayXd> target(Mp.obs(Mp_i), Mp.E_actual());
+  const Eigen::Array<bool, Eigen::Dynamic, 1> targetValid = (target != MISSING);
+
+  // Calculate the L^2 differences from each 'proposal' observation in the
+  // training manifold to the 'target' observation in the 'Mp' prediction manifold.
   for (int i = 0; i < M.nobs(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
+    const Eigen::Map<const Eigen::ArrayXd> proposal(M.obs(i), M.E_actual());
+    auto diff = (target - proposal).square();
+
+    // In the distance, ignore missing values for now but count how many
+    // appear in either the proposal or the target.
+    const Eigen::Array<bool, Eigen::Dynamic, 1> isValid = targetValid && (proposal != MISSING);
+    dists[i] = (diff * isValid.cast<double>()).sum();
+    numMissing[i] = M.E_actual() - (int)isValid.count();
+  }
+
+  Eigen::Map<Eigen::ArrayXd> dView(dists.data(), dists.size());
+
+  // If the Stata package's 'allowmissing' option is enabled, we add in the supplied amount of
+  // distance into each slot where a missing value existed. If the option is disabled, the distances
+  // with missing values are themselves set as missing and ignored later on.
+  if (allowMissing) {
+    Eigen::Map<const Eigen::ArrayXi> numMissingView(numMissing.data(), numMissing.size());
+    dView = dView + numMissingView.cast<double>() * opts.missingdistance * opts.missingdistance;
+    validDistances = (int)dists.size();
+  } else {
+    for (int i = 0; i < M.nobs(); i++) {
+      if (numMissing[i]) {
+        dists[i] = MISSING;
       } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
+        validDistances += 1;
       }
     }
-
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-
-    if (!missing) {
-      dists[i] = sqrt(dist);
-      validDistances += 1;
-    } else {
-      dists[i] = MISSING;
-    }
   }
 
-  if (keep_going != nullptr && keep_going() == false) {
-    return;
-  }
+  dView = dView.sqrt();
 
   // If we only look at distances which are non-zero and non-missing,
   // do we have enough of them to find k neighbours?
