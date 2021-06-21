@@ -180,21 +180,19 @@ void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std:
 void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
           const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc)
 {
-  double d_base = d[ind[0]];
   std::vector<double> w(k);
-
   Eigen::MatrixXd X_ls(k, M.E_actual());
   std::vector<double> y_ls(k), w_ls(k);
 
-  double mean_w = 0.;
+  double mean_d = 0.;
   int kValid = 0;
   for (int j = 0; j < k; j++) {
     if (d[ind[j]] != MISSING) {
-      mean_w = mean_w + d[ind[j]];
+      mean_d = mean_d + d[ind[j]];
       kValid += 1;
     }
   }
-  mean_w = mean_w / (double)kValid;
+  mean_d = mean_d / (double)kValid;
 
   double theta = opts.thetas[t];
 
@@ -202,7 +200,7 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
   // will still gives weight to missing values.
   for (int j = 0; j < k; j++) {
     if (d[ind[j]] != MISSING) {
-      w[j] = exp(-theta * (d[ind[j]] / mean_w));
+      w[j] = exp(-theta * (d[ind[j]] / mean_d));
     } else {
       w[j] = 0;
     }
@@ -253,6 +251,12 @@ void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, 
   } else {
     Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::VectorXd ics = svd.solve(y_ls_cj);
+
+    // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
+    // see https://scicomp.stackexchange.com/a/33375
+    // TODO: Test whether this provides a faster and more reliable way to solve this system.
+    // Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    // Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls_cj);
 
     double r = ics(0);
     for (int j = 1; j < M.E_actual() + 1; j++) {
