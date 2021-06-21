@@ -46,13 +46,14 @@ std::vector<size_t> minindex(const std::vector<double>& v, int k)
   return idx;
 }
 
-void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
-             const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
-void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
-          const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc);
+void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
+                        const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc);
+void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
+                     const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar,
+                     span_2d_double coeffs, span_2d_retcode rc);
 
-void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
-                    span_2d_retcode rc, span_2d_double coeffs, int skipRow, bool keep_going() = nullptr)
+void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
+                     span_2d_retcode rc, span_2d_double coeffs, int skipRow, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -133,7 +134,7 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex(Mp_i, t, opts, M, k, d, ind, ystar, rc);
+      simplex_prediction(Mp_i, t, opts, M, k, d, ind, ystar, rc);
     }
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
     bool saveCoeffsForLargestTheta = opts.saveSMAPCoeffs;
@@ -142,7 +143,7 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
       if (t == opts.thetas.size() - 1) {
         opts.saveSMAPCoeffs = saveCoeffsForLargestTheta;
       }
-      smap(Mp_i, t, opts, M, Mp, k, d, ind, ystar, coeffs, rc);
+      smap_prediction(Mp_i, t, opts, M, Mp, k, d, ind, ystar, coeffs, rc);
     }
   } else {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -151,8 +152,8 @@ void mf_smap_single(int Mp_i, Options opts, const Manifold& M, const Manifold& M
   }
 }
 
-void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
-             const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc)
+void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
+                        const std::vector<size_t>& ind, span_2d_double ystar, span_2d_retcode rc)
 {
   double theta = opts.thetas[t];
 
@@ -177,8 +178,9 @@ void simplex(int Mp_i, int t, Options opts, const Manifold& M, int k, const std:
   rc(t, Mp_i) = SUCCESS;
 }
 
-void smap(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k, const std::vector<double>& d,
-          const std::vector<size_t>& ind, span_2d_double ystar, span_2d_double coeffs, span_2d_retcode rc)
+void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
+                     const std::vector<double>& d, const std::vector<size_t>& ind, span_2d_double ystar,
+                     span_2d_double coeffs, span_2d_retcode rc)
 {
   std::vector<double> w(k);
   Eigen::MatrixXd X_ls(k, M.E_actual());
@@ -383,7 +385,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
+      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
       if (opts.numTasks == 1) {
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
@@ -396,7 +398,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, size_t E, std::v
     std::vector<std::future<void>> results(numPredictions);
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
-        [&, i] { mf_smap_single(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going); });
+        [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going); });
     }
 
     if (opts.numTasks == 1) {
