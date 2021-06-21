@@ -66,10 +66,10 @@ std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int
 }
 
 void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
-                        const std::vector<int>& ind, span_2d_double ystar, span_2d_retcode rc);
+                        const std::vector<int>& ind, Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc);
 void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& d, const std::vector<int>& ind, span_2d_double ystar,
-                     span_2d_double coeffs, span_2d_retcode rc);
+                     const std::vector<double>& d, const std::vector<int>& ind, Eigen::Map<Eigen::MatrixXd> ystar,
+                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc);
 
 // Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
 // Specifically, predict the 'Mp_i'-th value of the prediction manifold 'Mp'.
@@ -88,8 +88,9 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
 // closest neighbour as it is probably cheating. 'skipRow' actually stores the specific index
 // of the training manifold which should not be used for this prediction, and in the future we will
 // use this directly, though some details need to be worked out.
-void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, span_2d_double ystar,
-                     span_2d_retcode rc, span_2d_double coeffs, int skipRow, bool keep_going() = nullptr)
+void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, Eigen::Map<Eigen::MatrixXd> ystar,
+                     Eigen::Map<Eigen::MatrixXi> rc, Eigen::Map<Eigen::MatrixXd> coeffs, int skipRow,
+                     bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -189,7 +190,8 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
 }
 
 void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, span_2d_double ystar, span_2d_retcode rc)
+                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                        Eigen::Map<Eigen::MatrixXi> rc)
 {
   double theta = opts.thetas[t];
 
@@ -215,8 +217,9 @@ void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k,
 }
 
 void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds, span_2d_double ystar,
-                     span_2d_double coeffs, span_2d_retcode rc)
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
+                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
+                     Eigen::Map<Eigen::MatrixXi> rc)
 {
   std::vector<double> w(k);
   Eigen::MatrixXd X_ls(k, M.E_actual());
@@ -408,15 +411,15 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
   auto predToTrainSelfMap = find_overlaps(trainingRows, predictionRows, numPredictions, opts.copredict);
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
-  auto ystarView = span_2d_double(ystar.get(), (int)numThetas, (int)numPredictions);
+  Eigen::Map<Eigen::MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
 
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
-  auto coeffsView = span_2d_double(coeffs.get(), (int)numPredictions, (int)numCoeffCols);
+  Eigen::Map<Eigen::MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
   std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
-  auto rcView = span_2d_retcode(rc.get(), (int)numThetas, (int)numPredictions);
+  Eigen::Map<Eigen::Matrix<retcode, -1, -1>> rcView(rc.get(), numThetas, numPredictions);
 
   if (opts.numTasks > 1 && opts.taskNum == 0) {
     io->progress_bar(0.0);
@@ -484,7 +487,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
       stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
     }
 
-    stats.taskNum = (int)opts.taskNum;
+    stats.taskNum = opts.taskNum;
     stats.calcRhoMAE = opts.calcRhoMAE;
     pred->stats = stats;
 

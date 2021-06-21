@@ -25,13 +25,6 @@ typedef int retcode;
 #include <string>
 #include <vector>
 
-#include <experimental/mdspan>
-
-namespace stdex = std::experimental;
-
-using span_2d_double = stdex::mdspan<double, stdex::dynamic_extent, stdex::dynamic_extent>;
-using span_2d_retcode = stdex::mdspan<retcode, stdex::dynamic_extent, stdex::dynamic_extent>;
-
 #include "manifold.h"
 
 struct Options

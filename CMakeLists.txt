@@ -91,7 +91,6 @@ install(TARGETS edm DESTINATION .)
 
 # grab vendored files
 include(vendor/CMakeLists.txt)
-target_include_directories(edm PRIVATE include)
 target_include_directories(edm PRIVATE vendor)
 
 # ↓↓↓ third-party code ↓↓↓

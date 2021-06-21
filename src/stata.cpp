@@ -335,7 +335,8 @@ void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bo
  * Write data to columns ('variables') in Stata, starting from column number 'j0'.
  * If supplied, we consider each row 'i' only if filter[i] == true.
  */
-void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<bool>& filter = {})
+void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, ST_int j0,
+                         const std::vector<bool>& filter = {})
 {
   bool useFilter = (filter.size() > 0);
   int obs = 0;
@@ -343,9 +344,12 @@ void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<boo
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
       if ((useFilter && filter[r]) || !useFilter) {
-        for (ST_int j = j0; j < j0 + matrix.extent(1); j++) {
+        for (ST_int j = j0; j < j0 + matrixNumCols; j++) {
           // Convert MISSING back to Stata's missing value
-          ST_double value = (matrix(obs, j - j0) == MISSING) ? SV_missval : matrix(obs, j - j0);
+          ST_double value = matrix[(j - j0) * matrixNumRows + obs];
+          if (value == MISSING) {
+            value = SV_missval;
+          }
           ST_retcode rc = SF_vstore(j, i, value);
           if (rc) {
             throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
@@ -354,7 +358,7 @@ void write_stata_columns(span_2d_double matrix, ST_int j0, const std::vector<boo
         obs += 1;
       }
       r += 1;
-      if (obs >= matrix.extent(0)) {
+      if (obs >= matrixNumRows) {
         break;
       }
     }
@@ -660,7 +664,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   int iterationNumber = atoi(argv[0]);
   int E = atoi(argv[1]);
-  int E_actual = (int)generator.E_actual(E);
+  int E_actual = generator.E_actual(E);
 
   taskOpts.thetas.push_back(atof(argv[2]));
   taskOpts.k = atoi(argv[3]);
@@ -732,7 +736,7 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   taskOpts.saveSMAPCoeffs = false;
 
   int E = atoi(argv[0]);
-  int E_actual = (int)generator.E_actual(E);
+  int E_actual = generator.E_actual(E);
 
   taskOpts.thetas.push_back(atof(argv[1]));
   taskOpts.k = atoi(argv[2]);
@@ -827,9 +831,8 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       }
 
       if (pred.coeffs != nullptr) {
-        auto coeffs = span_2d_double(pred.coeffs.get(), (int)pred.numPredictions, (int)pred.numCoeffCols);
-
-        write_stata_columns(coeffs, (pred.ystar != nullptr) + numCoeffColsSaved + 1, pred.predictionRows);
+        write_stata_columns(pred.coeffs.get(), pred.numPredictions, pred.numCoeffCols,
+                            (pred.ystar != nullptr) + numCoeffColsSaved + 1, pred.predictionRows);
         numCoeffColsSaved += pred.numCoeffCols;
       }
     }
