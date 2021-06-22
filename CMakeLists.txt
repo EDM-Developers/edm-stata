@@ -103,7 +103,7 @@ set_target_properties(edm_plugin PROPERTIES OUTPUT_NAME "edm")
 set_target_properties(edm_plugin PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
 
 install(TARGETS edm_plugin DESTINATION bin)
-install(TARGETS edm_plugin DESTINATION test)
+install(FILES bin/edm${BUILD_SUFFIX}.plugin DESTINATION test RENAME edm.plugin)
 install(FILES stata/edm.ado DESTINATION test)
 
 # Grab vendored files (e.g. the Stata/C interface files)
