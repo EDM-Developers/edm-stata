@@ -1,10 +1,12 @@
 # Project specific
 compile_commands.json
 vendor/stplugin.*
-stata/*.plugin
-stata/driver*
-stata/gbench*
+test/edm.ado
+test/*.plugin
+test/edm_cli*
+test/gbench*
 build
+bin
 .clangd
 *.h5
 vcpkg_installed

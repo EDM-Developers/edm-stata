@@ -14,16 +14,15 @@
 #endif
 #include <fmt/format.h>
 
+#include "cli.h"
 #include "cpu.h"
-#include "driver.h"
 #include "edm.h"
 
 #define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
-typedef Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> MatrixView;
 
-std::vector<size_t> minindex(const std::vector<double>& v, int k);
+std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k);
 
 // Compiler flags tried on Windows: "/GL" and "/GL /LTCG", both slightly worse. "/O2" is the default.
 
@@ -165,7 +164,7 @@ static void bm_nearest_neighbours(benchmark::State& state)
   int k = opts.k;
 
   for (auto _ : state) {
-    std::vector<size_t> ind = minindex(d, k);
+    std::vector<int> ind = kNearestNeighboursIndices(d, k);
   }
 }
 
@@ -218,7 +217,7 @@ static void bm_simplex(benchmark::State& state)
 
   int k = opts.k;
 
-  std::vector<size_t> ind = minindex(d, k);
+  std::vector<int> ind = kNearestNeighboursIndices(d, k);
 
   double d_base = d[ind[0]];
   std::vector<double> w(k);
@@ -285,7 +284,7 @@ static void bm_smap(benchmark::State& state)
 
   int k = opts.k;
 
-  std::vector<size_t> ind = minindex(d, k);
+  std::vector<int> ind = kNearestNeighboursIndices(d, k);
 
   double d_base = d[ind[0]];
   std::vector<double> w(k);

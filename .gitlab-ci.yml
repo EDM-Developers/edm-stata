@@ -10,11 +10,11 @@ build-windows:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp "stata/edm_Windows_x64.plugin" "C:\Users\EDM\Dropbox\ci-builds"
+    - cp "bin/edm_Windows_x64.plugin" "C:\Users\EDM\Dropbox\ci-builds"
   artifacts:
     paths:
-    - stata/edm_Windows_x64.plugin
-    - stata/gbench.exe
+    - bin/edm_Windows_x64.plugin
+    - test/gbench.exe
   tags:
     - windows-runner
 
@@ -23,7 +23,7 @@ test-windows:
   dependencies:
     - build-windows
   before_script:
-    - cd stata
+    - cd test
     - cp edm_Windows_x64.plugin edm.plugin
     - move-item -force cut-down-test.log reference.log
   script:
@@ -41,7 +41,7 @@ dropbox-deploy-windows:
   only:
     - master
   before_script:
-    - cd stata
+    - cd test
   script:
     - cp "${PLUGIN_FILE}" "C:\Users\EDM\Dropbox\ci-builds-master"
   tags:
@@ -52,7 +52,7 @@ perf-windows:
   dependencies:
     - build-windows
   before_script:
-    - cd stata
+    - cd test
   script:
     - ./gbench.exe
   tags:
@@ -70,11 +70,11 @@ build-mac-arm:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_MacOSX_arm.plugin ~/Dropbox/EDM/ci-builds
+    - cp bin/edm_MacOSX_arm.plugin ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
-      - stata/edm_MacOSX_arm.plugin
-      - stata/gbench
+      - bin/edm_MacOSX_arm.plugin
+      - test/gbench
   tags:
     - mac-arm64
 
@@ -90,11 +90,11 @@ build-mac-x64:
     - env /usr/bin/arch -x86_64 cmake --build build --config release
     - env /usr/bin/arch -x86_64 cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_MacOSX_x64.plugin ~/Dropbox/EDM/ci-builds
+    - cp bin/edm_MacOSX_x64.plugin ~/Dropbox/EDM/ci-builds
   artifacts:
     paths:
-      - stata/edm_MacOSX_x64.plugin
-      - stata/gbench
+      - bin/edm_MacOSX_x64.plugin
+      - test/gbench
   tags:
     - mac-arm64
 
@@ -104,7 +104,7 @@ test-mac-arm:
   dependencies:
     - build-mac-arm
   before_script:
-    - cd stata
+    - cd test
     - cp edm_MacOSX_arm.plugin edm.plugin
     - mv cut-down-test.log reference.log
   script:
@@ -120,7 +120,7 @@ dropbox-deploy-mac-arm:
   only:
     - master
   before_script:
-    - cd stata
+    - cd test
   script:
     - cp "edm_MacOSX_arm.plugin" ~/Dropbox/EDM/ci-builds-master/
   tags:
@@ -133,7 +133,7 @@ dropbox-deploy-mac-x64:
   only:
     - master
   before_script:
-    - cd stata
+    - cd test
   script:
     - cp "edm_MacOSX_x64.plugin" ~/Dropbox/EDM/ci-builds-master/
   tags:
@@ -145,7 +145,7 @@ perf-mac:
   dependencies:
     - build-mac
   before_script:
-    - cd stata
+    - cd test
   script:
     - ./gbench
   tags:
@@ -164,12 +164,12 @@ build-ubuntu:
     - cmake --build build --config release
     - cmake --build build --config release --target install
   after_script:
-    - cp stata/edm_Unix_x64.plugin ~/Dropbox/ci-builds
+    - cp bin/edm_Unix_x64.plugin ~/Dropbox/ci-builds
     - cp stata/edm.ado ~/Dropbox/ci-builds
   artifacts:
     paths:
-      - stata/edm_Unix_x64.plugin
-      - stata/gbench
+      - bin/edm_Unix_x64.plugin
+      - test/gbench
   tags:
     - ubuntu-runner
 
@@ -178,7 +178,7 @@ test-ubuntu:
   dependencies:
     - build-ubuntu
   before_script:
-    - cd stata
+    - cd test
     - cp edm_Unix_x64.plugin edm.plugin
     - mv cut-down-test.log reference.log
   script:
@@ -196,7 +196,7 @@ dropbox-deploy-ubuntu:
   only:
     - master
   before_script:
-    - cd stata
+    - cd test
   script:
     - cp "${PLUGIN_FILE}" ~/Dropbox/ci-builds-master/
     - cp edm.ado ~/Dropbox/ci-builds-master/
@@ -208,7 +208,7 @@ perf-ubuntu:
   dependencies:
     - build-ubuntu
   before_script:
-    - cd stata
+    - cd test
   script:
     - ./gbench
   tags:

@@ -27,9 +27,8 @@
 #include <string>
 #include <vector>
 
-#ifdef DUMP_INPUT
-#include "driver.h"
-#endif
+// To save the inputs to a local file for testing
+#include "cli.h"
 
 const double PI = 3.141592653589793238463;
 
@@ -692,13 +691,12 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   std::vector<bool> trainingRows = split.first;
   std::vector<bool> predictionRows = split.second;
 
-#ifdef DUMP_INPUT
+  // If requested, save the inputs to a local file for testing
   if (std::string(argv[7]).size() > 0) {
-    io.print("Dumping inputs to hdf5 file\n");
+    io.print(fmt::format("Saving inputs to '{}'\n", argv[7]));
     io.flush();
     write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);
   }
-#endif
 
   predictions.push({});
 
@@ -753,11 +751,9 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   std::vector<bool> coTrainingRows = stata_columns<bool>(2);
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
-#ifdef DUMP_INPUT
   if (std::string(argv[3]).size() > 0) {
     write_dumpfile(argv[3], taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
-#endif
 
   if (io.verbosity > 2) {
     auto M = generator.create_manifold(E, coTrainingRows, false);

@@ -3,10 +3,8 @@
 #include <memory>
 #include <vector>
 
-#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
-#endif
 
 class Manifold
 {
@@ -73,22 +71,19 @@ private:
   bool _add_dt0 = false;
   int _tau;
   double _missing;
-  int _nobs;
   int _num_extras, _num_extras_varying;
 
   double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
   double find_dt(const std::vector<int>& inds, int i, int j) const;
 
-  double _dtWeight;
+  double _dtWeight = 0.0;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
   std::vector<bool> _extrasEVarying;
 
 public:
-#if defined(DUMP_INPUT) || defined(DRIVER_MODE)
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);
-#endif
 
   ManifoldGenerator(){};
 

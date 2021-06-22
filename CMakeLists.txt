@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.12)
 
+# We require the environment variable VCPKG_ROOT to be set before
+# running cmake. This contains the path to the vcpkg install directory.
+#
+# Optionally, the ARM_MODE environment variable specifies whether we are
+# compiling for ARM or x86, though it defaults to x86 and can normally
+# be ignored.
+#
+# The cmake variables BUILD_CLI can be set to create a command-line executable
+# to run the core EDM algorithms by reading & saving data to JSON files.
+# This can be helpful as it doesn't require Stata (unlike the main plugin).
+#
+# The cmake variable BUILD_GBENCH creates a Google Benchmarks executable which
+# performs microbenchmarking on the core EDM methods.
+
 if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
 endif()
@@ -12,21 +26,20 @@ else()
   set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
 endif()
 
-set(DUMP_INPUT TRUE CACHE BOOL "Dump plugin input data to json")
-set(BUILD_DRIVER FALSE CACHE BOOL "Generate command-line executable for the plugin")
+set(BUILD_CLI FALSE CACHE BOOL "Generate command-line executable for the plugin")
 set(BUILD_GBENCH FALSE CACHE BOOL "Generate google benchmark executable")
 
-project(edm-mdap CXX)
+project(edm-stata-package CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# output paths
-set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/stata)
+# Output paths
+set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR})
 
-# write compile_commands.json file
+# Write compile_commands.json file (used by IDEs & static analysers)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-# compile flags
+# Compiler flags
 if(WIN32)
   set(SYSTEM "STWIN32" CACHE STRING "Stata plugin SYSTEM option")
 else()
@@ -55,21 +68,22 @@ foreach(FLAG IN LISTS REQUESTED_DEBUG_FLAGS)
   endif()
 endforeach()
 
-# set the default build type if not set by user
+# Set the default build type if not set by user
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
   endif()
 endif()
 
-# source list
+# Source files common to all targets
 set(COMMON_SRC src/cpu.cpp src/cpu.h src/edm.cpp src/edm.h src/manifold.cpp src/manifold.h
-               src/ThreadPool.cpp src/ThreadPool.h)
+               src/thread_pool.cpp src/thread_pool.h)
 
-# plugin build and installation
-add_library(edm SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
-set_target_properties(edm PROPERTIES CXX_STANDARD 17 PREFIX "")
+# The main EDM plugin for Stata
+add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
+set_target_properties(edm_plugin PROPERTIES CXX_STANDARD 17 PREFIX "")
 
+# Rename the output plugin to 'edm_Windows_x64.plugin' or 'edm_MacOSX_arm.plugin' as appropriate
 if(WIN32)
   set(BUILD_SUFFIX "_Windows")
 elseif(APPLE)
@@ -85,15 +99,18 @@ else()
 endif()
 
 set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plugin")
-set_target_properties(edm PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
+set_target_properties(edm_plugin PROPERTIES OUTPUT_NAME "edm")
+set_target_properties(edm_plugin PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
 
-install(TARGETS edm DESTINATION .)
+install(TARGETS edm_plugin DESTINATION bin)
+install(TARGETS edm_plugin DESTINATION test)
+install(FILES stata/edm.ado DESTINATION test)
 
-# grab vendored files
+# Grab vendored files (e.g. the Stata/C interface files)
 include(vendor/CMakeLists.txt)
-target_include_directories(edm PRIVATE vendor)
+target_include_directories(edm_plugin PRIVATE vendor)
 
-# ↓↓↓ third-party code ↓↓↓
+# ↓↓↓ Third-party code ↓↓↓
 find_package(Eigen3 REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
@@ -103,52 +120,47 @@ if(NOT WIN32)
 endif()
 find_package(Threads REQUIRED)
 
-target_include_directories(edm PRIVATE ${EIGEN3_INCLUDE_DIR})
-target_link_libraries(edm PRIVATE fmt::fmt-header-only)
-target_link_libraries(edm PRIVATE Threads::Threads)
+target_include_directories(edm_plugin PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
+target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(edm_plugin PRIVATE Threads::Threads)
 
-# ↓↓↓ dev builds ↓↓↓
-if (DUMP_INPUT OR BUILD_DRIVER OR BUILD_GBENCH)
+# Formatting with clang-format
+include(ClangFormat)
+clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/stata.cpp)
 
-  if (DUMP_INPUT)
-    target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
-    set_target_properties(edm PROPERTIES COMPILE_DEFINITIONS DUMP_INPUT=TRUE)
-  endif()
-
-  if (BUILD_DRIVER)
-    add_executable(driver ${COMMON_SRC} src/driver.cpp src/driver.h)
-    set_target_properties(driver PROPERTIES CXX_STANDARD 17)
-    set_target_properties(driver PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
-    target_include_directories(driver PRIVATE include)
-    target_include_directories(driver PRIVATE ${EIGEN3_INCLUDE_DIR})
-    target_link_libraries(driver PRIVATE fmt::fmt-header-only)
-    target_link_libraries(driver PRIVATE Threads::Threads)
-    target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
-    install(TARGETS driver DESTINATION .)
-  endif()
-
-  # Google Benchmarks
-  if (BUILD_GBENCH)
-    add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/driver.h)
-    set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
-    if(WIN32)
-      target_compile_options(gbench PRIVATE "/MD")
-    endif()
-    find_package(benchmark CONFIG REQUIRED)
-    target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-    target_include_directories(gbench PRIVATE include)
-    target_include_directories(gbench PRIVATE ${EIGEN3_INCLUDE_DIR})
-    target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
-    target_link_libraries(gbench PRIVATE Threads::Threads)
-    target_link_libraries(edm PRIVATE nlohmann_json::nlohmann_json)
-    if(WIN32)
-      find_package(OpenMP)
-      target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
-    endif()
-    install(TARGETS gbench DESTINATION .)
-  endif()
+# ↓↓↓ Developer builds ↓↓↓
+# Command-line interface executable
+if (BUILD_CLI)
+  add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
+  set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
+  set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
+  target_include_directories(edm_cli PRIVATE include)
+  target_include_directories(edm_cli PRIVATE ${EIGEN3_INCLUDE_DIR})
+  target_link_libraries(edm_cli PRIVATE fmt::fmt-header-only)
+  target_link_libraries(edm_cli PRIVATE Threads::Threads)
+  target_link_libraries(edm_cli PRIVATE nlohmann_json::nlohmann_json)
+  install(TARGETS edm_cli DESTINATION bin)
+  install(TARGETS edm_cli DESTINATION test)
 endif()
 
-# ↓↓↓ formatting with clang-format ↓↓↓
-include(ClangFormat)
-clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/driver.cpp src/driver.h src/stata.cpp)
+# Google Benchmarks
+if (BUILD_GBENCH)
+  add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
+  set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+  if(WIN32)
+    target_compile_options(gbench PRIVATE "/MD")
+  endif()
+  find_package(benchmark CONFIG REQUIRED)
+  target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+  target_include_directories(gbench PRIVATE include)
+  target_include_directories(gbench PRIVATE ${EIGEN3_INCLUDE_DIR})
+  target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
+  target_link_libraries(gbench PRIVATE Threads::Threads)
+  target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+  if(WIN32)
+    find_package(OpenMP)
+    target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  install(TARGETS gbench DESTINATION test)
+endif()

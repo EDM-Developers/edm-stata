@@ -8,8 +8,8 @@
  */
 
 #include "edm.h"
-#include "ThreadPool.h"
 #include "cpu.h"
+#include "thread_pool.h"
 
 #ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY
