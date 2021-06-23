@@ -12,7 +12,8 @@ cmake_minimum_required(VERSION 3.12)
 # This can be helpful as it doesn't require Stata (unlike the main plugin).
 #
 # The cmake variable BUILD_GBENCH creates a Google Benchmarks executable which
-# performs microbenchmarking on the core EDM methods.
+# performs microbenchmarking on the core EDM methods. The vcpkg.json file must
+# be modified to include the "benchmark" package if building this.
 
 if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
