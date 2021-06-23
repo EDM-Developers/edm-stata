@@ -102,9 +102,27 @@ set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plug
 set_target_properties(edm_plugin PROPERTIES OUTPUT_NAME "edm")
 set_target_properties(edm_plugin PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
 
+# Store output as both bin/edm_OS_ARCH.plugin and test/edm.plugin
 install(TARGETS edm_plugin DESTINATION bin)
 install(FILES bin/edm${BUILD_SUFFIX}.plugin DESTINATION test RENAME edm.plugin)
 install(FILES stata/edm.ado DESTINATION test)
+
+# To make CI builds easier to access, have the outputs be copied to Dropbox also.
+# Copy to ~/Dropbox/EDM/ci-builds, though if running on the master branch, also copy
+# them to ~/Dropbox/EDM/ci-builds-master.
+
+# Get the current working branch
+execute_process(
+  COMMAND git rev-parse --abbrev-ref HEAD
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION ~/Dropbox/EDM/ci-builds/)
+if (${GIT_BRANCH} STREQUAL master)
+  install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION ~/Dropbox/EDM/ci-builds-master/)
+endif()
 
 # Grab vendored files (e.g. the Stata/C interface files)
 include(vendor/CMakeLists.txt)
