@@ -1,21 +1,23 @@
-all: build/CMakeCache.txt release install
+EDM_BUILD_DIR ?= build
 
-build/CMakeCache.txt:
-	cmake -B build -S .
+all: $(EDM_BUILD_DIR)/CMakeCache.txt release install
+
+$(EDM_BUILD_DIR)/CMakeCache.txt:
+	cmake -B $(EDM_BUILD_DIR) -S .
 
 .PHONY: release
-release: build/CMakeCache.txt
-	cmake --build build --config release
+release: $(EDM_BUILD_DIR)/CMakeCache.txt
+	cmake --build $(EDM_BUILD_DIR) --config release
 
 .PHONY: install
 install:
-	cmake --build build --config release --target install
+	cmake --build $(EDM_BUILD_DIR) --config release --target install
 
 .PHONY: clean
 clean:
-	rm -rf build
+	rm -rf $(EDM_BUILD_DIR)
 	rm -f compile_commands.json
 
 .PHONY: format
 format:
-	cmake --build build --target format
+	cmake --build $(EDM_BUILD_DIR) --target format
