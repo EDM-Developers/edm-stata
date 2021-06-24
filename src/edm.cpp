@@ -293,14 +293,10 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
     // llr algorithm is not needed at this stage
     rc(t, Mp_i) = NOT_IMPLEMENTED;
   } else {
-    Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    Eigen::VectorXd ics = svd.solve(y_ls_cj);
-
     // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
     // see https://scicomp.stackexchange.com/a/33375
-    // TODO: Test whether this provides a faster and more reliable way to solve this system.
-    // Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    // Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls_cj);
+    Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls_cj);
 
     double r = ics(0);
     for (int j = 1; j < M.E_actual() + 1; j++) {
