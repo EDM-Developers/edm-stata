@@ -37,7 +37,7 @@ jobs:
       run: mv cut-down-test.log reference.log
 
   test-linux:
-    runs-on: [linux]
+    runs-on: linux
     needs: build
 
     steps:
@@ -50,7 +50,7 @@ jobs:
       run: diff -B reference.log cut-down-test.log
 
   test-windows:
-    runs-on: [windows]
+    runs-on: windows
     needs: build
 
     steps:
@@ -61,3 +61,49 @@ jobs:
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "fc /W reference.log cut-down-test.log"
+  
+  build-and-test-mac-arm:
+    runs-on: macos
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Configure CMake
+      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake -B ${{github.workspace}}/build 
+
+    - name: Build & install
+      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+
+    - name: Prepare Test
+      working-directory: ${{github.workspace}}/test
+      run: mv cut-down-test.log reference.log
+    
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
+
+    - name: Check Test Results
+      working-directory: ${{github.workspace}}/test
+      run: diff -B reference.log cut-down-test.log
+
+  build-and-test-mac-x64:
+    runs-on: macos
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Configure CMake
+      run: env /usr/bin/arch -x86_64 cmake -B ${{github.workspace}}/build 
+
+    - name: Build & install
+      run: env /usr/bin/arch -x86_64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+
+    - name: Prepare Test
+      working-directory: ${{github.workspace}}/test
+      run: mv cut-down-test.log reference.log
+    
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
+
+    - name: Check Test Results
+      working-directory: ${{github.workspace}}/test
+      run: diff -B reference.log cut-down-test.log
