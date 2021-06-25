@@ -110,6 +110,8 @@ install(FILES stata/edm.ado DESTINATION test)
 
 # To make CI builds easier to access, have the outputs be copied to Dropbox also.
 # Copy to $EDM_CI_DIR, though if on the master branch, also copy to $EDM_CI_DIR-master.
+set(CI_DIR $ENV{EDM_CI_DIR} CACHE STRING "Location of CI output directory")
+
 if(DEFINED ENV{EDM_CI_DIR})
   # Get the current working branch
   execute_process(
@@ -119,11 +121,9 @@ if(DEFINED ENV{EDM_CI_DIR})
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  if(WIN32)
-    install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION $ENV{EDM_CI_DIR})
-    if (${GIT_BRANCH} STREQUAL master)
-      install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION $ENV{EDM_CI_DIR}-master)
-    endif()
+  install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION $ENV{EDM_CI_DIR})
+  if (${GIT_BRANCH} STREQUAL master)
+    install(FILES bin/edm${BUILD_SUFFIX}.plugin stata/edm.ado DESTINATION $ENV{EDM_CI_DIR}-master)
   endif()
 endif()
 
