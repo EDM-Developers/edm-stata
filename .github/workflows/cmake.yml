@@ -16,7 +16,10 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: [self-hosted, linux]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [linux, windows]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,18 +29,18 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -B ${{github.workspace}}/build 
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-    - name: Install
-      # Build your program with the given configuration
+    - name: Build & install
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
 
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
       run: mv cut-down-test.log reference.log
 
+  test-linux:
+    runs-on: [linux]
+    needs: build
+
+    steps:
     - name: Run Test
       working-directory: ${{github.workspace}}/test
       run: stata -e -q cut-down-test.do
@@ -46,3 +49,15 @@ jobs:
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log cut-down-test.log
 
+  test-windows:
+    runs-on: [windows]
+    needs: build
+
+    steps:
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q cut-down-test.do
+
+    - name: Check Test Results
+      working-directory: ${{github.workspace}}/test
+      run: cmd.exe /c "fc /W reference.log cut-down-test.log"
