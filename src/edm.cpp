@@ -7,6 +7,8 @@
  *   The University of Melbourne, patrick.laub@unimelb.edu.au
  */
 
+#pragma warning(disable : 4018)
+
 #include "edm.h"
 #include "cpu.h"
 #include "thread_pool.h"

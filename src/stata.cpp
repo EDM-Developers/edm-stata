@@ -1,9 +1,4 @@
-// Suppress Windows problems with sprintf etc. functions.
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-#endif
+#pragma warning(disable : 4018)
 
 #include "cpu.h"
 #include "edm.h"

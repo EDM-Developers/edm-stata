@@ -1,3 +1,5 @@
+#pragma warning(disable : 4018)
+
 #include "manifold.h"
 
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool prediction) const
