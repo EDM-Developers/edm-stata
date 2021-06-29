@@ -32,6 +32,7 @@ struct Options
   size_t taskNum = 1, numTasks = 1;
   bool calcRhoMAE = false;
   int parMode = 0;
+  double aspectRatio;
 };
 
 void to_json(json& j, const Options& o);

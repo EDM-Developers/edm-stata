@@ -11,6 +11,7 @@
 
 #include "edm.h"
 #include "cpu.h"
+#include "hungarian.h"
 #include "stats.h" // for correlation and mean_absolute_error
 #include "thread_pool.h"
 
@@ -100,32 +101,32 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
   }
   int validDistances = 0;
   std::vector<double> dists(M.nobs());
+  //  int num_Mp_i = Mp.num_not_missing(Mp_i);
+  HungarianAlgorithm HungAlgo;
 
   for (int i = 0; i < M.nobs(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
-      }
-    }
-
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-
-    if (!missing) {
-      dists[i] = sqrt(dist);
-      validDistances += 1;
-    } else {
+    if (opts.missingdistance == 0 && M.any_missing(i)) {
       dists[i] = MISSING;
+    } else {
+      //      int num_M_i = M.num_not_missing(i);
+      std::vector<std::vector<double>> costMatrix;
+      for (int r = 0; r < M.E_actual(); r += 1) {
+        std::vector<double> costRow;
+        for (int c = 0; c < Mp.E_actual(); c += 1) {
+          if (M(i, r) != MISSING && Mp(Mp_i, c) != MISSING) {
+            costRow.push_back(
+              std::sqrt((M(i, r) - Mp(Mp_i, c)) * (M(i, r) - Mp(Mp_i, c)) + opts.aspectRatio * (r - c) * (r - c)));
+          } else {
+            costRow.push_back(opts.missingdistance);
+          }
+        }
+        costMatrix.push_back(costRow);
+      }
+
+      std::vector<int> assignment;
+
+      dists[i] = HungAlgo.Solve(costMatrix, assignment);
+      validDistances += 1;
     }
   }
 
@@ -153,9 +154,9 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
   double minDist = *std::min_element(dists.begin(), dists.end());
   bool skipFirst = (minDist > 0) && (skipRow >= 0);
 
-  for (int i = 0; i < dists.size(); i++) {
-    if (dists[i] == 0) {
-      dists[i] = MISSING;
+  for (double& dist : dists) {
+    if (dist == 0) {
+      dist = MISSING;
     }
   }
 

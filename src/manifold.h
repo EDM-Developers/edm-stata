@@ -53,6 +53,17 @@ public:
     return false;
   }
 
+  int num_not_missing(int obsNum) const
+  {
+    int count = 0;
+    for (int j = 0; j < _E_actual; j++) {
+      if (operator()(obsNum, j) != _missing) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
   double y(int i) const { return _y[i]; }
   int ySize() const { return (int)_y.size(); }
 

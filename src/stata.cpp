@@ -391,10 +391,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 19) {
+  if (argc < 20) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 19) {
+  if (argc > 20) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -420,9 +420,9 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   int maxE = atoi(argv[15]);
   bool allowMissing = atoi(argv[16]);
   double nextRV = std::stod(argv[17]);
-
   opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
-
+  opts.aspectRatio = atof(argv[19]);
+  
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
   if (opts.nthreads <= 0) {
