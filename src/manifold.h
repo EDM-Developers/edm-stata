@@ -33,6 +33,27 @@ public:
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
   double extras(int i, int j) const { return _E_extras ? _flat[i * _E_actual + _E_x + _E_dt + j] : _missing; }
+
+  double range() const
+  {
+    double min = std::numeric_limits<double>::max();
+    double max = std::numeric_limits<double>::min();
+
+    for (int i = 0; i < _nobs * _E_actual; i++) {
+      if (_flat[i] != _missing) {
+        if (_flat[i] < min) {
+          min = _flat[i];
+        }
+        if (_flat[i] > max) {
+          max = _flat[i];
+        }
+      }
+    }
+    return max - min;
+  }
+
+  double time_range() const { return _nobs - 1; }
+  
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {

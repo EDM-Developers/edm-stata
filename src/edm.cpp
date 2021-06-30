@@ -101,31 +101,28 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
   }
   int validDistances = 0;
   std::vector<double> dists(M.nobs());
-  //  int num_Mp_i = Mp.num_not_missing(Mp_i);
   HungarianAlgorithm HungAlgo;
+  double gamma = Mp.range() / Mp.time_range() * opts.aspectRatio;
 
   for (int i = 0; i < M.nobs(); i++) {
     if (opts.missingdistance == 0 && M.any_missing(i)) {
       dists[i] = MISSING;
     } else {
-      //      int num_M_i = M.num_not_missing(i);
       std::vector<std::vector<double>> costMatrix;
       for (int r = 0; r < M.E_actual(); r += 1) {
         std::vector<double> costRow;
         for (int c = 0; c < Mp.E_actual(); c += 1) {
           if (M(i, r) != MISSING && Mp(Mp_i, c) != MISSING) {
-            costRow.push_back(
-              std::sqrt((M(i, r) - Mp(Mp_i, c)) * (M(i, r) - Mp(Mp_i, c)) + opts.aspectRatio * (r - c) * (r - c)));
+            costRow.push_back((M(i, r) - Mp(Mp_i, c)) * (M(i, r) - Mp(Mp_i, c)) + gamma * (r - c) * (r - c));
           } else {
-            costRow.push_back(opts.missingdistance);
+            costRow.push_back(opts.missingdistance * opts.missingdistance);
           }
         }
         costMatrix.push_back(costRow);
       }
 
       std::vector<int> assignment;
-
-      dists[i] = HungAlgo.Solve(costMatrix, assignment);
+      dists[i] = std::sqrt(HungAlgo.Solve(costMatrix, assignment));
       validDistances += 1;
     }
   }

@@ -422,7 +422,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   double nextRV = std::stod(argv[17]);
   opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
   opts.aspectRatio = atof(argv[19]);
-  
+
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
   if (opts.nthreads <= 0) {

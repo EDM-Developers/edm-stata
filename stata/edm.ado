@@ -439,7 +439,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)] [aspectratio(real 1)]
+			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)] [aspectratio(real 100000)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1139,7 +1139,7 @@ program define edmXmap, eclass
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[parmode(integer 0)] [aspectratio(real 1)]
+			[parmode(integer 0)] [aspectratio(real 100000)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
