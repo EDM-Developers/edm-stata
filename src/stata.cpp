@@ -22,8 +22,8 @@
 #include <string>
 #include <vector>
 
-// To save the inputs to a local file for testing
-#include "cli.h"
+#include "cli.h"   // to save the inputs to a local file for debugging
+#include "stats.h" // for median, rank, and correlation/MAE calculations
 
 const double PI = 3.141592653589793238463;
 
@@ -42,45 +42,6 @@ public:
 
 StataIO io;
 
-double median(std::vector<double> u)
-{
-  if (u.size() % 2 == 0) {
-    const auto median_it1 = u.begin() + u.size() / 2 - 1;
-    const auto median_it2 = u.begin() + u.size() / 2;
-
-    std::nth_element(u.begin(), median_it1, u.end());
-    const auto e1 = *median_it1;
-
-    std::nth_element(u.begin(), median_it2, u.end());
-    const auto e2 = *median_it2;
-
-    return (e1 + e2) / 2;
-  } else {
-    const auto median_it = u.begin() + u.size() / 2;
-    std::nth_element(u.begin(), median_it, u.end());
-    return *median_it;
-  }
-}
-
-std::vector<int> rank(const std::vector<double>& v_temp)
-{
-  std::vector<std::pair<double, int>> v_sort(v_temp.size());
-
-  for (int i = 0; i < v_sort.size(); ++i) {
-    v_sort[i] = std::make_pair(v_temp[i], i);
-  }
-
-  sort(v_sort.begin(), v_sort.end());
-
-  std::vector<int> result(v_temp.size());
-
-  // N.B. Stata's rank starts at 1, not 0, so the "+1" is added here.
-  for (int i = 0; i < v_sort.size(); ++i) {
-    result[v_sort[i].second] = i + 1;
-  }
-  return result;
-}
-
 class TrainPredictSplitter
 {
 private:
@@ -88,17 +49,6 @@ private:
   int _crossfold;
   std::vector<bool> _usable;
   std::vector<int> _crossfoldURank;
-
-  std::vector<double> strip_missing(std::vector<double> vWithMissing)
-  {
-    std::vector<double> v;
-    for (double& val : vWithMissing) {
-      if (val != MISSING) {
-        v.push_back(val);
-      }
-    }
-    return v;
-  }
 
 public:
   TrainPredictSplitter() {}
@@ -109,7 +59,7 @@ public:
     , _usable(usable)
   {}
 
-  void add_crossfold_rvs(std::vector<double> crossfoldU) { _crossfoldURank = rank(strip_missing(crossfoldU)); }
+  void add_crossfold_rvs(std::vector<double> crossfoldU) { _crossfoldURank = rank(remove_value(crossfoldU, MISSING)); }
 
   bool requiresRandomNumbersEachTask() { return (_crossfold == 0) && !_full; }
   bool requiresCrossFoldRandomNumbers() { return _crossfold > 0; }
@@ -143,7 +93,7 @@ public:
       return { trainingRows, predictionRows };
     }
 
-    std::vector<double> u = strip_missing(uWithMissing);
+    std::vector<double> u = remove_value(uWithMissing, MISSING);
 
     if (_explore) {
       double med = median(u);

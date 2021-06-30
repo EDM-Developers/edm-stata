@@ -11,6 +11,7 @@
 
 #include "edm.h"
 #include "cpu.h"
+#include "stats.h" // for correlation and mean_absolute_error
 #include "thread_pool.h"
 
 #ifndef FMT_HEADER_ONLY
@@ -479,14 +480,8 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
         }
       }
 
-      Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
-      Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
-
-      const Eigen::ArrayXd y1Cent = y1Map - y1Map.mean();
-      const Eigen::ArrayXd y2Cent = y2Map - y2Map.mean();
-
-      stats.mae = (y1Map - y2Map).abs().mean();
-      stats.rho = (y1Cent * y2Cent).sum() / (std::sqrt((y1Cent * y1Cent).sum()) * std::sqrt((y2Cent * y2Cent).sum()));
+      stats.mae = mean_absolute_error(y1, y2);
+      stats.rho = correlation(y1, y2);
     }
 
     stats.taskNum = opts.taskNum;
