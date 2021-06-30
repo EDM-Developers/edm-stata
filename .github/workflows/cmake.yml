@@ -30,7 +30,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build 
 
     - name: Build & install
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install --parallel 8
 
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
@@ -61,7 +61,25 @@ jobs:
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "fc /W reference.log cut-down-test.log"
-  
+
+  speed-test-linux:
+    runs-on: linux
+    needs: test-linux
+
+    steps:
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: stata -e -q speed-test.do
+
+  speed-test-windows:
+    runs-on: windows
+    needs: test-windows
+
+    steps:
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q speed-test.do
+
   build-and-test-mac-arm:
     runs-on: macos
     steps:
@@ -71,7 +89,7 @@ jobs:
       run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake -B ${{github.workspace}}/build 
 
     - name: Build & install
-      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install --parallel 8
 
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
@@ -85,8 +103,23 @@ jobs:
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log cut-down-test.log
 
+  speed-test-mac-arm:
+    runs-on: macos
+    needs: build-and-test-mac-arm
+
+    steps:
+    - name: Get the correct plugin
+      working-directory: ${{github.workspace}}
+      run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
+
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
+
+
   build-and-test-mac-x64:
     runs-on: macos
+    needs: speed-test-mac-arm
     steps:
     - uses: actions/checkout@v2
 
@@ -94,7 +127,7 @@ jobs:
       run: env /usr/bin/arch -x86_64 cmake -B ${{github.workspace}}/build 
 
     - name: Build & install
-      run: env /usr/bin/arch -x86_64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install
+      run: env /usr/bin/arch -x86_64 cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target install --parallel 8
 
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
@@ -107,3 +140,16 @@ jobs:
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log cut-down-test.log
+
+  speed-test-mac-x64:
+    runs-on: macos
+    needs: build-and-test-mac-x64
+
+    steps:
+    - name: Get the correct plugin
+      working-directory: ${{github.workspace}}
+      run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
+
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
