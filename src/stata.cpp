@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "edm.h"
+#include "mersennetwister.h"
 #include "stplugin.h"
 
 #ifndef FMT_HEADER_ONLY
@@ -13,6 +14,7 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/Core>
 
+#include <algorithm>
 #include <future>
 #include <numeric> // for std::accumulate
 #include <queue>
@@ -145,8 +147,57 @@ public:
   }
 };
 
-// Global state, needed to persist between multiple edm calls
+void set_rng_state(MtRng64& rng, std::string rngState, double nextRV)
+{
+  unsigned long long state[312];
 
+  io.print("Start set_rng_state\n");
+  // std::cout << "Next random variable will be: " << nextRV << std::endl;
+
+  // Set up the rng at the beginning on this batch (given by the 'state' array)
+  io.print(fmt::format("Expect length {} got length {}\n", 3 + 312 * 16, rngState.size()));
+  for (int i = 0; i < 312; i++) {
+    state[i] = std::stoull(rngState.substr(3 + i * 16, 16), nullptr, 16);
+    rng.state_[i] = state[i];
+    // std::cout << "State[ " << i << "] = " << line << " = " << state[i] << std::endl;
+  }
+
+  rng.left_ = 312;
+  rng.next_ = rng.state_;
+
+  // Go through this batch of rv's and find the closest to the
+  // observed 'nextRV'
+  int bestInd = -1;
+  double minDist = 1.0;
+
+  for (int i = 0; i < 312; i++) {
+    double dist = std::abs(rng.getReal2() - nextRV);
+    if (dist < minDist) {
+      minDist = dist;
+      bestInd = i;
+    }
+  }
+
+  io.print("Found how many rv's we've used\n");
+  // std::cout << "Gone through and found the best distance is " << minDist << " at index " << std::dec << bestInd <<
+  // std::endl;
+
+  // Reset the state to the beginning on this batch
+  for (int i = 0; i < 312; i++) {
+    rng.state_[i] = state[i];
+  }
+
+  rng.left_ = 312;
+  rng.next_ = rng.state_;
+
+  // Burn all the rv's which are already used
+  for (int i = 0; i < bestInd; i++) {
+    rng.getReal2();
+  }
+}
+
+// Global state, needed to persist between multiple edm calls
+MtRng64 rng;
 Options opts;
 ManifoldGenerator generator;
 TrainPredictSplitter splitter;
@@ -484,10 +535,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 17) {
+  if (argc < 18) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 17) {
+  if (argc > 18) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -512,6 +563,17 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   opts.parMode = atoi(argv[14]);
   int maxE = atoi(argv[15]);
   bool allowMissing = atoi(argv[16]);
+  double nextRV = std::stod(argv[17]);
+
+  char buffer[5200]; // Need at least 5011 + 1 bytes.
+  if (SF_macro_use("_rngstate", buffer, 5200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  //  io.print(fmt::format("RNGSTATE: <{}>\n", buffer));
+
+  std::string rngState(buffer);
+  //  io.print(fmt::format("Size of rngstate {}\n", rngState.size()));
+  set_rng_state(rng, rngState, nextRV);
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -623,9 +685,29 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   // Find which rows are used for training & which for prediction
+  std::vector<ST_double> uStata;
   std::vector<ST_double> u;
   if (splitter.requiresRandomNumbersEachTask()) {
-    u = stata_columns<ST_double>(1);
+    uStata = stata_columns<ST_double>(1);
+
+    print_vector<double>("u (stata)", uStata);
+
+    for (int i = 0; i < uStata.size(); i++) {
+      if (uStata[i] == MISSING) {
+        u.push_back(MISSING);
+      } else {
+        u.push_back(rng.getReal2());
+      }
+
+      // io.print(fmt::format("{}: {} -> {}\n", i, uStata[i], u[i]));
+    }
+
+    std::sort(uStata.begin(), uStata.end());
+    std::sort(u.begin(), u.end());
+
+    for (int i = 0; i < uStata.size(); i++) {
+      io.print(fmt::format("{}: {} -> {}\n", i, uStata[i], u[i]));
+    }
   }
 
   if (splitter.requiresCrossFoldRandomNumbers() && taskOpts.taskNum == 0) {

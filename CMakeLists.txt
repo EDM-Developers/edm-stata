@@ -81,6 +81,7 @@ set(COMMON_SRC src/common.cpp src/common.h
                src/cpu.cpp src/cpu.h
                src/edm.cpp src/edm.h
                src/manifold.cpp src/manifold.h
+               src/mersennetwister.h
                src/stats.cpp src/stats.h
                src/thread_pool.cpp src/thread_pool.h)
 

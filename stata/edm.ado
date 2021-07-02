@@ -740,9 +740,13 @@ program define edmExplore, eclass
 			local time = "`original_t'"
 		}
 
+		local rngstate = c(rngstate)
+		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+		set rngstate `rngstate'
+
 		plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1507,9 +1511,13 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
+			local rngstate = c(rngstate)
+			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+			set rngstate `rngstate'
+
 			plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients
