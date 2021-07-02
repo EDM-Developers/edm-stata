@@ -133,7 +133,7 @@ protected:
     UINTTYPE* p = state_;
     size_t j;
 
-    left_ = Traits::NN;
+    left_ = Traits::NN - 1;
     next_ = state_;
 
     for (j = Traits::NN - Traits::MM + 1; --j; p++)
@@ -168,6 +168,14 @@ public:
     next_ = NULL;
     state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
     init(initkeys, keylen);
+  }
+
+  MtRng(std::string rngState, double nextRV)
+  {
+    left_ = 1;
+    next_ = NULL;
+    state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
+    init(rngState, nextRV);
   }
 
   virtual ~MtRng()
@@ -231,6 +239,46 @@ public:
     left_ = 1;
   }
 
+  void init(std::string rngState, double nextRV)
+  {
+    unsigned long long state[312];
+
+    // Set up the rng at the beginning on this batch (given by the 'state' array)
+    for (int i = 0; i < 312; i++) {
+      state[i] = std::stoull(rngState.substr(i * 16, 16), nullptr, 16);
+      state_[i] = state[i];
+    }
+
+    left_ = 312 + 1;
+    next_ = state_;
+
+    // Go through this batch of rv's and find the closest to the
+    // observed 'nextRV'
+    int bestInd = -1;
+    double minDist = 1.0;
+
+    for (int i = 0; i < 312; i++) {
+      double dist = std::abs(getReal2() - nextRV);
+      if (dist < minDist) {
+        minDist = dist;
+        bestInd = i;
+      }
+    }
+
+    // Reset the state to the beginning on this batch
+    for (int i = 0; i < 312; i++) {
+      state_[i] = state[i];
+    }
+
+    left_ = 312;
+    next_ = state_;
+
+    // Burn all the rv's which are already used
+    for (int i = 0; i < bestInd; i++) {
+      getReal2();
+    }
+  }
+
   /* generates a random number on [0,2^bits-1]-interval */
   UINTTYPE getUint()
   {
@@ -262,7 +310,7 @@ public:
   /* generates a random number on [0,1)-real-interval */
   double getReal2()
   {
-    if (--left_ == 0)
+    if (left_-- == 0)
       nextState();
     if (Traits::INTTYPE_BITS > 53) {
       return ((double)(Traits::temper(*next_++) >> (Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740992.0));
@@ -281,6 +329,30 @@ public:
     } else {
       return (((double)Traits::temper(*next_++) + 0.5) * (1.0 / ((double)Traits::MAXDOUBLEVAL + 1.0)));
     }
+  }
+
+  double peek()
+  {
+    // Save the current state
+    unsigned long long state[312];
+    size_t left = left_;
+    UINTTYPE* next = next_;
+
+    for (int i = 0; i < 312; i++) {
+      state[i] = state_[i];
+    }
+
+    double rv = getReal2();
+
+    // Reset the state to the beginning on original values
+    for (int i = 0; i < 312; i++) {
+      state_[i] = state[i];
+    }
+
+    left_ = left;
+    next_ = next;
+
+    return rv;
   }
 };
 

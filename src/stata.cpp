@@ -18,14 +18,14 @@
 #include <future>
 #include <numeric> // for std::accumulate
 #include <queue>
-#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "cli.h"   // to save the inputs to a local file for debugging
-#include "stats.h" // for median, rank, and correlation/MAE calculations
+#include "cli.h" // to save the inputs to a local file for debugging
+#include "stats.h"
+#include "train_predict_split.h"
 
 const double PI = 3.141592653589793238463;
 
@@ -42,124 +42,14 @@ public:
   virtual void flush() const { _stata_->spoutflush(); }
 };
 
-StataIO io;
-
-class TrainPredictSplitter
-{
-private:
-  bool _explore, _full;
-  int _crossfold;
-  std::vector<bool> _usable;
-  std::vector<int> _crossfoldURank;
-
-public:
-  TrainPredictSplitter() {}
-  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable)
-    : _explore(explore)
-    , _full(full)
-    , _crossfold(crossfold)
-    , _usable(usable)
-  {}
-
-  void add_crossfold_rvs(std::vector<double> crossfoldU) { _crossfoldURank = rank(remove_value(crossfoldU, MISSING)); }
-
-  bool requiresRandomNumbersEachTask() { return (_crossfold == 0) && !_full; }
-  bool requiresCrossFoldRandomNumbers() { return _crossfold > 0; }
-
-  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library,
-                                                                      int crossfoldIter)
-  {
-    if (_explore && _full) {
-      return { _usable, _usable };
-    }
-
-    std::vector<bool> trainingRows(_usable.size()), predictionRows(_usable.size());
-
-    if (_explore && _crossfold > 0) {
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (_usable[i]) {
-          if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
-            trainingRows[i] = false;
-            predictionRows[i] = true;
-          } else {
-            trainingRows[i] = true;
-            predictionRows[i] = false;
-          }
-          obsNum += 1;
-        } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
-        }
-      }
-      return { trainingRows, predictionRows };
-    }
-
-    std::vector<double> u = remove_value(uWithMissing, MISSING);
-
-    if (_explore) {
-      double med = median(u);
-
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (_usable[i]) {
-          if (u[obsNum] < med) {
-            trainingRows[i] = true;
-            predictionRows[i] = false;
-          } else {
-            trainingRows[i] = false;
-            predictionRows[i] = true;
-          }
-          obsNum += 1;
-        } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
-        }
-      }
-    } else {
-      double uCutoff = 1.0;
-      if (library < u.size()) {
-        std::vector<double> uCopy(u);
-        const auto uCutoffIt = uCopy.begin() + library;
-        std::nth_element(uCopy.begin(), uCutoffIt, uCopy.end());
-        uCutoff = *uCutoffIt;
-      }
-
-      int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
-        if (_usable[i]) {
-          predictionRows[i] = true;
-          if (u[obsNum] < uCutoff) {
-            trainingRows[i] = true;
-          } else {
-            trainingRows[i] = false;
-          }
-          obsNum += 1;
-        } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
-        }
-      }
-    }
-    io.flush();
-
-    return { trainingRows, predictionRows };
-  }
-};
-
 void set_rng_state(MtRng64& rng, std::string rngState, double nextRV)
 {
   unsigned long long state[312];
 
-  io.print("Start set_rng_state\n");
-  // std::cout << "Next random variable will be: " << nextRV << std::endl;
-
   // Set up the rng at the beginning on this batch (given by the 'state' array)
-  io.print(fmt::format("Expect length {} got length {}\n", 3 + 312 * 16, rngState.size()));
   for (int i = 0; i < 312; i++) {
     state[i] = std::stoull(rngState.substr(3 + i * 16, 16), nullptr, 16);
     rng.state_[i] = state[i];
-    // std::cout << "State[ " << i << "] = " << line << " = " << state[i] << std::endl;
   }
 
   rng.left_ = 312;
@@ -170,17 +60,13 @@ void set_rng_state(MtRng64& rng, std::string rngState, double nextRV)
   int bestInd = -1;
   double minDist = 1.0;
 
-  for (int i = 0; i < 312; i++) {
+  for (int i = 0; i < 320; i++) {
     double dist = std::abs(rng.getReal2() - nextRV);
     if (dist < minDist) {
       minDist = dist;
       bestInd = i;
     }
   }
-
-  io.print("Found how many rv's we've used\n");
-  // std::cout << "Gone through and found the best distance is " << minDist << " at index " << std::dec << bestInd <<
-  // std::endl;
 
   // Reset the state to the beginning on this batch
   for (int i = 0; i < 312; i++) {
@@ -197,10 +83,13 @@ void set_rng_state(MtRng64& rng, std::string rngState, double nextRV)
 }
 
 // Global state, needed to persist between multiple edm calls
+StataIO io;
 MtRng64 rng;
 Options opts;
 ManifoldGenerator generator;
 TrainPredictSplitter splitter;
+std::vector<bool> trainingRows;
+std::vector<bool> predictionRows;
 std::queue<Prediction> predictions;
 std::queue<std::future<void>> futures;
 
@@ -434,8 +323,8 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_launch_info(int argc, char* argv[], Options taskOpts, std::vector<bool> trainingRows,
-                       std::vector<bool> predictionRows, ST_int E)
+void print_launch_info(int argc, char* argv[], Options& taskOpts, std::vector<bool>& trainingRows,
+                       std::vector<bool>& predictionRows, ST_int E)
 {
   if (io.verbosity > 1) {
 
@@ -569,11 +458,12 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   if (SF_macro_use("_rngstate", buffer, 5200)) {
     io.print("Got an error rc from macro_use!\n");
   }
-  //  io.print(fmt::format("RNGSTATE: <{}>\n", buffer));
 
   std::string rngState(buffer);
-  //  io.print(fmt::format("Size of rngstate {}\n", rngState.size()));
-  set_rng_state(rng, rngState, nextRV);
+
+  if (rngState.size() > 0) {
+    set_rng_state(rng, rngState, nextRV);
+  }
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -685,38 +575,28 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   // Find which rows are used for training & which for prediction
-  std::vector<ST_double> uStata;
+  char buffer[5]; // Need at least 5011 + 1 bytes.
+  if (SF_macro_use("_newTrainPredictSplit", buffer, 5)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool newTrainPredictSplit = atoi(buffer);
+
+  // Find which rows are used for training & which for prediction
   std::vector<ST_double> u;
   if (splitter.requiresRandomNumbersEachTask()) {
-    uStata = stata_columns<ST_double>(1);
-
-    print_vector<double>("u (stata)", uStata);
-
-    for (int i = 0; i < uStata.size(); i++) {
-      if (uStata[i] == MISSING) {
-        u.push_back(MISSING);
-      } else {
-        u.push_back(rng.getReal2());
-      }
-
-      // io.print(fmt::format("{}: {} -> {}\n", i, uStata[i], u[i]));
-    }
-
-    std::sort(uStata.begin(), uStata.end());
-    std::sort(u.begin(), u.end());
-
-    for (int i = 0; i < uStata.size(); i++) {
-      io.print(fmt::format("{}: {} -> {}\n", i, uStata[i], u[i]));
-    }
+    u = stata_columns<ST_double>(1);
   }
 
   if (splitter.requiresCrossFoldRandomNumbers() && taskOpts.taskNum == 0) {
     splitter.add_crossfold_rvs(stata_columns<ST_double>((u.size() > 0) + 1));
   }
 
-  std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
-  std::vector<bool> trainingRows = split.first;
-  std::vector<bool> predictionRows = split.second;
+  if (newTrainPredictSplit) {
+    std::pair<std::vector<bool>, std::vector<bool>> split =
+      splitter.train_predict_split(u, library, iterationNumber, rng);
+    trainingRows = std::vector<bool>(split.first);
+    predictionRows = std::vector<bool>(split.second);
+  }
 
   // If requested, save the inputs to a local file for testing
   if (std::string(argv[7]).size() > 0) {

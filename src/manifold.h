@@ -31,8 +31,8 @@ public:
   double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
-  double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
-  double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
+  double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
+  double extras(int i, int j) const { return _E_extras ? _flat[i * _E_actual + _E_x + _E_dt + j] : _missing; }
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {

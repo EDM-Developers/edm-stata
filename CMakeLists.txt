@@ -83,7 +83,8 @@ set(COMMON_SRC src/common.cpp src/common.h
                src/manifold.cpp src/manifold.h
                src/mersennetwister.h
                src/stats.cpp src/stats.h
-               src/thread_pool.cpp src/thread_pool.h)
+               src/train_predict_split.h
+               src/thread_pool.cpp src/thread_pool.h )
 
 # The main EDM plugin for Stata
 add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)

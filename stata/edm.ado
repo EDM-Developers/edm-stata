@@ -865,7 +865,9 @@ program define edmExplore, eclass
 	}
 
 	forvalues t=1/`round' {
-		
+
+		local newTrainPredictSplit = 1
+
 		// Generate some random numbers (if we're in a mode which needs them
 		// to separate the testing and prediction sets.)
 		if `crossfold' == 0 & "`full'" != "full" {
@@ -981,6 +983,7 @@ program define edmExplore, eclass
 							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 				}
 				local ++task_num
+				local newTrainPredictSplit = 0
 			}
 		}
 
@@ -1511,9 +1514,14 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
-			local rngstate = c(rngstate)
-			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-			set rngstate `rngstate'
+			if `direction_num' == 1 {
+				local rngstate = c(rngstate)
+				mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+				set rngstate `rngstate'
+			}
+			else {
+				local rngstate = ""
+			}
 
 			plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
@@ -1632,6 +1640,8 @@ program define edmXmap, eclass
 		qui gen double `u' = .
 	
 		forvalues rep =1/`replicate' {
+
+			local newTrainPredictSplit = 1
 
 			qui replace `u' = runiform() if `usable'
 			
@@ -1771,6 +1781,7 @@ program define edmXmap, eclass
 						}
 						drop `overlap'
 						local ++task_num
+						local newTrainPredictSplit = 0
 					}
 				}
 			}
