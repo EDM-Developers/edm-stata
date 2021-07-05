@@ -55,36 +55,6 @@
 #include <cstdlib>
 #include <ctime>
 
-struct Mt32Traits
-{
-  typedef unsigned int UINTTYPE;
-  typedef signed int INTTYPE;
-  static const int INTTYPE_BITS = 32;
-  static const unsigned int MAXDOUBLEVAL = 4294967295U; // 2^32-1
-  static const size_t NN = 624;
-  static const size_t MM = 397;
-  static const unsigned int INITVAL = 1812433253U;
-  static const unsigned int ARRAYINITVAL_0 = 19650218U;
-  static const unsigned int ARRAYINITVAL_1 = 1664525U;
-  static const unsigned int ARRAYINITVAL_2 = 1566083941U;
-
-  static unsigned int twist(const unsigned int& u, const unsigned int& v)
-  {
-    static unsigned int mag01[2] = { 0U, 0x9908b0dfU };
-    return ((((u & 0x80000000U) | (v & 0x7fffffffU)) >> 1) ^ mag01[v & 1]);
-  }
-
-  static unsigned int temper(unsigned int y)
-  {
-    y ^= (y >> 11);
-    y ^= (y << 7) & 0x9d2c5680U;
-    y ^= (y << 15) & 0xefc60000U;
-    y ^= (y >> 18);
-
-    return y;
-  }
-};
-
 struct Mt64Traits
 {
   typedef unsigned long long UINTTYPE;
@@ -115,15 +85,14 @@ struct Mt64Traits
   }
 };
 
-template<typename Traits>
-class MtRng
+class MtRng64
 {
 public:
-  typedef typename Traits::UINTTYPE UINTTYPE;
-  typedef typename Traits::INTTYPE INTTYPE;
+  typedef typename Mt64Traits::UINTTYPE UINTTYPE;
+  typedef typename Mt64Traits::INTTYPE INTTYPE;
 
   // member variables
-  UINTTYPE* state_;
+  UINTTYPE state_[Mt64Traits::NN];
   size_t left_;
   UINTTYPE* next_;
 
@@ -133,87 +102,87 @@ protected:
     UINTTYPE* p = state_;
     size_t j;
 
-    left_ = Traits::NN - 1;
+    left_ = Mt64Traits::NN - 1;
     next_ = state_;
 
-    for (j = Traits::NN - Traits::MM + 1; --j; p++)
-      *p = p[Traits::MM] ^ Traits::twist(p[0], p[1]);
+    for (j = Mt64Traits::NN - Mt64Traits::MM + 1; --j; p++)
+      *p = p[Mt64Traits::MM] ^ Mt64Traits::twist(p[0], p[1]);
 
-    for (j = Traits::MM; --j; p++)
-      *p = p[Traits::MM - Traits::NN] ^ Traits::twist(p[0], p[1]);
+    for (j = Mt64Traits::MM; --j; p++)
+      *p = p[Mt64Traits::MM - Mt64Traits::NN] ^ Mt64Traits::twist(p[0], p[1]);
 
-    *p = p[Traits::MM - Traits::NN] ^ Traits::twist(p[0], state_[0]);
+    *p = p[Mt64Traits::MM - Mt64Traits::NN] ^ Mt64Traits::twist(p[0], state_[0]);
   }
 
 public:
-  MtRng()
+  MtRng64(const MtRng64& obj)
+  {
+    for (int i = 0; i < 312; i++) {
+      state_[i] = obj.state_[i];
+    }
+
+    left_ = obj.left_;
+    next_ = state_ + (obj.next_ - obj.state_);
+  }
+
+  MtRng64()
   {
     left_ = 1;
     next_ = NULL;
-    state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
     init((UINTTYPE)time(NULL));
   }
 
-  MtRng(UINTTYPE seed)
+  MtRng64(UINTTYPE seed)
   {
     left_ = 1;
     next_ = NULL;
-    state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
     init(seed);
   }
 
-  MtRng(UINTTYPE initkeys[], size_t keylen)
+  MtRng64(UINTTYPE initkeys[], size_t keylen)
   {
     left_ = 1;
     next_ = NULL;
-    state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
     init(initkeys, keylen);
   }
 
-  MtRng(std::string rngState, double nextRV)
+  MtRng64(std::string rngState, double nextRV)
   {
     left_ = 1;
     next_ = NULL;
-    state_ = (UINTTYPE*)malloc(sizeof(UINTTYPE) * Traits::NN);
     init(rngState, nextRV);
-  }
-
-  virtual ~MtRng()
-  {
-    if (state_) {
-      free(state_);
-    }
   }
 
   void init(UINTTYPE seed)
   {
-    assert(sizeof(UINTTYPE) * 8 == (size_t)Traits::INTTYPE_BITS);
+    assert(sizeof(UINTTYPE) * 8 == (size_t)Mt64Traits::INTTYPE_BITS);
 
     state_[0] = seed;
-    for (size_t j = 1; j < Traits::NN; j++) {
-      state_[j] = (Traits::INITVAL * (state_[j - 1] ^ (state_[j - 1] >> (Traits::INTTYPE_BITS - 2))) + (UINTTYPE)j);
+    for (size_t j = 1; j < Mt64Traits::NN; j++) {
+      state_[j] =
+        (Mt64Traits::INITVAL * (state_[j - 1] ^ (state_[j - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) + (UINTTYPE)j);
     }
     left_ = 1;
   }
 
   void init(UINTTYPE initkeys[], size_t keylen)
   {
-    init(Traits::ARRAYINITVAL_0);
+    init(Mt64Traits::ARRAYINITVAL_0);
 
     size_t i = 1;
     size_t j = 0;
-    size_t k = (Traits::NN > keylen ? Traits::NN : keylen);
+    size_t k = (Mt64Traits::NN > keylen ? Mt64Traits::NN : keylen);
 
     for (; k; k--) {
-      state_[i] =
-        (state_[i] ^ ((state_[i - 1] ^ (state_[i - 1] >> (Traits::INTTYPE_BITS - 2))) * Traits::ARRAYINITVAL_1)) +
-        initkeys[j] + (UINTTYPE)j; /* non linear */
+      state_[i] = (state_[i] ^
+                   ((state_[i - 1] ^ (state_[i - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) * Mt64Traits::ARRAYINITVAL_1)) +
+                  initkeys[j] + (UINTTYPE)j; /* non linear */
 
       i++;
       j++;
 
-      if (i >= Traits::NN) {
-        state_[0] = state_[Traits::NN - 1];
+      if (i >= Mt64Traits::NN) {
+        state_[0] = state_[Mt64Traits::NN - 1];
         i = 1;
       }
       if (j >= keylen) {
@@ -221,21 +190,21 @@ public:
       }
     }
 
-    for (k = Traits::NN - 1; k; k--) {
-      state_[i] =
-        (state_[i] ^ ((state_[i - 1] ^ (state_[i - 1] >> (Traits::INTTYPE_BITS - 2))) * Traits::ARRAYINITVAL_2)) -
-        (UINTTYPE)i; /* non linear */
+    for (k = Mt64Traits::NN - 1; k; k--) {
+      state_[i] = (state_[i] ^
+                   ((state_[i - 1] ^ (state_[i - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) * Mt64Traits::ARRAYINITVAL_2)) -
+                  (UINTTYPE)i; /* non linear */
 
       i++;
 
-      if (i >= Traits::NN) {
-        state_[0] = state_[Traits::NN - 1];
+      if (i >= Mt64Traits::NN) {
+        state_[0] = state_[Mt64Traits::NN - 1];
         i = 1;
       }
     }
 
     /* MSB is 1; assuring non-zero initial array */
-    state_[0] = (UINTTYPE)1 << (Traits::INTTYPE_BITS - 1);
+    state_[0] = (UINTTYPE)1 << (Mt64Traits::INTTYPE_BITS - 1);
     left_ = 1;
   }
 
@@ -284,7 +253,7 @@ public:
   {
     if (--left_ == 0)
       nextState();
-    return Traits::temper(*next_++);
+    return Mt64Traits::temper(*next_++);
   }
 
   /* generates a random number on [0,2^(bits-1)-1]-interval */
@@ -292,7 +261,7 @@ public:
   {
     if (--left_ == 0)
       nextState();
-    return (INTTYPE)(Traits::temper(*next_++) >> 1);
+    return (INTTYPE)(Mt64Traits::temper(*next_++) >> 1);
   }
 
   /* generates a random number on [0,1]-real-interval */
@@ -300,10 +269,10 @@ public:
   {
     if (--left_ == 0)
       nextState();
-    if (Traits::INTTYPE_BITS > 53) {
-      return ((double)(Traits::temper(*next_++) >> (Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740991.0));
+    if (Mt64Traits::INTTYPE_BITS > 53) {
+      return ((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740991.0));
     } else {
-      return ((double)Traits::temper(*next_++) * (1.0 / (double)Traits::MAXDOUBLEVAL));
+      return ((double)Mt64Traits::temper(*next_++) * (1.0 / (double)Mt64Traits::MAXDOUBLEVAL));
     }
   }
 
@@ -312,10 +281,10 @@ public:
   {
     if (left_-- == 0)
       nextState();
-    if (Traits::INTTYPE_BITS > 53) {
-      return ((double)(Traits::temper(*next_++) >> (Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740992.0));
+    if (Mt64Traits::INTTYPE_BITS > 53) {
+      return ((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740992.0));
     } else {
-      return ((double)Traits::temper(*next_++) * (1.0 / ((double)Traits::MAXDOUBLEVAL + 1.0)));
+      return ((double)Mt64Traits::temper(*next_++) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
     }
   }
 
@@ -324,10 +293,11 @@ public:
   {
     if (--left_ == 0)
       nextState();
-    if (Traits::INTTYPE_BITS > 52) {
-      return (((double)(Traits::temper(*next_++) >> (Traits::INTTYPE_BITS - 52)) + 0.5) * (1.0 / 4503599627370496.0));
+    if (Mt64Traits::INTTYPE_BITS > 52) {
+      return (((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 52)) + 0.5) *
+              (1.0 / 4503599627370496.0));
     } else {
-      return (((double)Traits::temper(*next_++) + 0.5) * (1.0 / ((double)Traits::MAXDOUBLEVAL + 1.0)));
+      return (((double)Mt64Traits::temper(*next_++) + 0.5) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
     }
   }
 
@@ -355,8 +325,5 @@ public:
     return rv;
   }
 };
-
-typedef MtRng<Mt32Traits> MtRng32;
-typedef MtRng<Mt64Traits> MtRng64;
 
 #endif

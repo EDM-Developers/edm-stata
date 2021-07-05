@@ -1514,14 +1514,10 @@ program define edmXmap, eclass
 				local time = "`original_t'"
 			}
 
-			if `direction_num' == 1 {
-				local rngstate = c(rngstate)
-				mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-				set rngstate `rngstate'
-			}
-			else {
-				local rngstate = ""
-			}
+
+			local rngstate = c(rngstate)
+			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+			set rngstate `rngstate'
 
 			plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///

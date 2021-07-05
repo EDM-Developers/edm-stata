@@ -2,7 +2,6 @@
 
 #include "cpu.h"
 #include "edm.h"
-#include "mersennetwister.h"
 #include "stplugin.h"
 
 #ifndef FMT_HEADER_ONLY
@@ -42,49 +41,8 @@ public:
   virtual void flush() const { _stata_->spoutflush(); }
 };
 
-void set_rng_state(MtRng64& rng, std::string rngState, double nextRV)
-{
-  unsigned long long state[312];
-
-  // Set up the rng at the beginning on this batch (given by the 'state' array)
-  for (int i = 0; i < 312; i++) {
-    state[i] = std::stoull(rngState.substr(3 + i * 16, 16), nullptr, 16);
-    rng.state_[i] = state[i];
-  }
-
-  rng.left_ = 312;
-  rng.next_ = rng.state_;
-
-  // Go through this batch of rv's and find the closest to the
-  // observed 'nextRV'
-  int bestInd = -1;
-  double minDist = 1.0;
-
-  for (int i = 0; i < 320; i++) {
-    double dist = std::abs(rng.getReal2() - nextRV);
-    if (dist < minDist) {
-      minDist = dist;
-      bestInd = i;
-    }
-  }
-
-  // Reset the state to the beginning on this batch
-  for (int i = 0; i < 312; i++) {
-    rng.state_[i] = state[i];
-  }
-
-  rng.left_ = 312;
-  rng.next_ = rng.state_;
-
-  // Burn all the rv's which are already used
-  for (int i = 0; i < bestInd; i++) {
-    rng.getReal2();
-  }
-}
-
 // Global state, needed to persist between multiple edm calls
 StataIO io;
-MtRng64 rng;
 Options opts;
 ManifoldGenerator generator;
 TrainPredictSplitter splitter;
@@ -454,17 +412,6 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   bool allowMissing = atoi(argv[16]);
   double nextRV = std::stod(argv[17]);
 
-  char buffer[5200]; // Need at least 5011 + 1 bytes.
-  if (SF_macro_use("_rngstate", buffer, 5200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-
-  std::string rngState(buffer);
-
-  if (rngState.size() > 0) {
-    set_rng_state(rng, rngState, nextRV);
-  }
-
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
   if (opts.nthreads <= 0) {
@@ -533,6 +480,21 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   splitter = TrainPredictSplitter(explore, full, crossfold, usable);
 
+  // If we need to create a randomised train/predict split, then sync the state of the
+  // Mersenne Twister in Stata to that in the splitter instance.
+  if (splitter.requiresRandomNumbers()) {
+    char buffer[5200]; // Need at least 5011 + 1 bytes.
+    if (SF_macro_use("_rngstate", buffer, 5200)) {
+      io.print("Got an error rc from macro_use!\n");
+    }
+
+    std::string rngState(buffer);
+
+    if (rngState.size() > 0) {
+      splitter.set_rng_state(rngState, nextRV);
+    }
+  }
+
   print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
 
   ST_double* usableToSave = new ST_double[usable.size()];
@@ -592,8 +554,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   if (newTrainPredictSplit) {
-    std::pair<std::vector<bool>, std::vector<bool>> split =
-      splitter.train_predict_split(u, library, iterationNumber, rng);
+    std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
     trainingRows = std::vector<bool>(split.first);
     predictionRows = std::vector<bool>(split.second);
   }
