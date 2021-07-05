@@ -80,12 +80,13 @@ endif()
 set(COMMON_SRC src/common.cpp src/common.h
                src/cpu.cpp src/cpu.h
                src/edm.cpp src/edm.h
-               src/hungarian.cpp src/hungarian.h
                src/manifold.cpp src/manifold.h
                src/mersennetwister.h
                src/stats.cpp src/stats.h
                src/train_predict_split.h
-               src/thread_pool.cpp src/thread_pool.h )
+               src/core.h src/EMD_wrapper.cpp src/EMD.h
+               src/network_simplex_simple.h src/full_bipartitegraph.h
+               src/thread_pool.cpp src/thread_pool.h)
 
 # The main EDM plugin for Stata
 add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
