@@ -53,7 +53,7 @@ struct Prediction
   size_t numThetas, numPredictions, numCoeffCols;
   std::unique_ptr<double[]> ystar;
   std::unique_ptr<double[]> coeffs;
-  PredictionStats stats;
+  std::vector<PredictionStats> stats;
   std::vector<bool> predictionRows;
 };
 

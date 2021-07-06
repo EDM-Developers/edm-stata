@@ -464,29 +464,27 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
   }
 
   // Store the results, so long as we weren't interrupted by a 'break'.
-  if (keep_going != nullptr && keep_going() == true) {
+  if (keep_going == nullptr || keep_going() == true) {
+    // Start by calculating the MAE & rho of prediction, if requested
+    for (int t = 0; t < numThetas * opts.calcRhoMAE; t++) {
+      PredictionStats stats;
 
-    // Calculate the MAE & rho of prediction, if requested
-    PredictionStats stats;
-    stats.mae = MISSING;
-    stats.rho = MISSING;
-
-    if (opts.calcRhoMAE) {
       std::vector<double> y1, y2;
       for (int i = 0; i < Mp.ySize(); i++) {
         if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
           y1.push_back(Mp.y(i));
-          y2.push_back(ystar[i]);
+          y2.push_back(ystarView(t, i));
         }
       }
 
       stats.mae = mean_absolute_error(y1, y2);
       stats.rho = correlation(y1, y2);
-    }
 
-    stats.taskNum = opts.taskNum;
-    stats.calcRhoMAE = opts.calcRhoMAE;
-    pred->stats = stats;
+      stats.taskNum = opts.taskNum + t;
+      stats.calcRhoMAE = opts.calcRhoMAE;
+
+      pred->stats.push_back(stats);
+    }
 
     // Check if any mf_smap_single call failed, and if so find the most serious error
     pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
@@ -526,7 +524,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
     }
   }
 
-  numTasksFinished += 1;
+  numTasksFinished += numThetas;
 
   if (numTasksFinished == opts.numTasks) {
     if (all_tasks_finished != nullptr) {

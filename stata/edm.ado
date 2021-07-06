@@ -953,10 +953,10 @@ program define edmExplore, eclass
 
 			foreach j of numlist `theta' {
 
+				local save_prediction = ("`predict'" != "") & ((`crossfold' > 0)  | (`task_num' == `num_tasks'))
+
 				mat r[`task_num',1] = `current_e'
 				mat r[`task_num',2] = `j'
-
-				local save_prediction = ("`predict'" != "") & ((`crossfold' > 0)  | (`task_num' == `num_tasks'))
 
 				if `mata_mode' {
 					local savesmap_vars ""
@@ -975,16 +975,19 @@ program define edmExplore, eclass
 						cap replace `predict' = `x_p' if `x_p' !=.
 					}
 				}
-				else {
-					// PJL: Check we never save SMAP coeffs in explore mode.
-					local save_smap_coeffs = 0
-					local k_adj = `lib_size'
-					plugin call edm_plugin, "launch_edm_task" ///
-							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
-				}
+
 				local ++task_num
-				local newTrainPredictSplit = 0
 			}
+
+			if !`mata_mode' {
+				// PJL: Check we never save SMAP coeffs in explore mode.
+				local save_smap_coeffs = 0
+				local k_adj = `lib_size' // PJL: Check this shouldn't be k_adj = lib_size - 1
+				plugin call edm_plugin, "launch_edm_task" ///
+						"`t'" "`i'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
+
+				local newTrainPredictSplit = 0
+			}	
 		}
 
 		if `mata_mode' & `round' > 1 & `dot' > 0 {
@@ -1027,7 +1030,7 @@ program define edmExplore, eclass
 				scalar plugin_finished = 0
 
 				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						"`max_e'" "`theta'" "`lib_size'" "`saveinputs'"
+						"`max_e'" "`lib_size'" "`saveinputs'"
  
 				edmPrintPluginProgress
 				plugin call edm_plugin `co_x_p', "collect_results"
@@ -1849,7 +1852,7 @@ program define edmXmap, eclass
 			else {
 				scalar plugin_finished = 0
 				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						"`max_e'" "`theta'" "`k_size'" "`saveinputs'"
+						"`max_e'" "`k_size'" "`saveinputs'"
 				edmPrintPluginProgress
 				plugin call edm_plugin `co_x_p', "collect_results"
 			}

@@ -412,6 +412,8 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   bool allowMissing = atoi(argv[16]);
   double nextRV = std::stod(argv[17]);
 
+  opts.thetas = stata_numlist<double>("theta");
+
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
   if (opts.nthreads <= 0) {
@@ -516,10 +518,10 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
 ST_retcode launch_edm_task(int argc, char* argv[])
 {
-  if (argc < 8) {
+  if (argc < 7) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 8) {
+  if (argc > 7) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -530,13 +532,12 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   int iterationNumber = atoi(argv[0]);
   int E = atoi(argv[1]);
   int E_actual = generator.E_actual(E);
+  taskOpts.k = atoi(argv[2]);
+  int library = atoi(argv[3]);
 
-  taskOpts.thetas.push_back(atof(argv[2]));
-  taskOpts.k = atoi(argv[3]);
-  int library = atoi(argv[4]);
-
-  taskOpts.savePrediction = atoi(argv[5]);
-  taskOpts.saveSMAPCoeffs = atoi(argv[6]);
+  taskOpts.savePrediction = atoi(argv[4]);
+  taskOpts.saveSMAPCoeffs = atoi(argv[5]);
+  std::string saveInputsFilename(argv[6]);
 
   // Default number of neighbours k is E_actual + 1
   if (taskOpts.k <= 0) {
@@ -558,10 +559,10 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   }
 
   // If requested, save the inputs to a local file for testing
-  if (!std::string(argv[7]).empty()) {
-    io.print(fmt::format("Saving inputs to '{}'\n", argv[7]));
+  if (!saveInputsFilename.empty()) {
+    io.print(fmt::format("Saving inputs to '{}'\n", saveInputsFilename));
     io.flush();
-    write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);
+    write_dumpfile(saveInputsFilename.c_str(), taskOpts, generator, E, trainingRows, predictionRows);
   }
 
   predictions.push({});
@@ -576,10 +577,10 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
 ST_retcode launch_coprediction_task(int argc, char* argv[])
 {
-  if (argc < 4) {
+  if (argc < 3) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 4) {
+  if (argc > 3) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -602,8 +603,8 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   int E = atoi(argv[0]);
   int E_actual = generator.E_actual(E);
 
-  taskOpts.thetas.push_back(atof(argv[1]));
-  taskOpts.k = atoi(argv[2]);
+  taskOpts.k = atoi(argv[1]);
+  std::string saveInputsFilename(argv[2]);
 
   // Default number of neighbours k is E_actual + 1
   if (taskOpts.k <= 0) {
@@ -617,8 +618,8 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   std::vector<bool> coTrainingRows = stata_columns<bool>(2);
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
-  if (std::string(argv[3]).size() > 0) {
-    write_dumpfile(argv[3], taskOpts, generator, E, coTrainingRows, coPredictionRows);
+  if (!saveInputsFilename.empty()) {
+    write_dumpfile(saveInputsFilename.c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
 
   if (io.verbosity > 2) {
@@ -672,17 +673,18 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     const Prediction& pred = predictions.front();
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results if requested (i.e. not for coprediction)
-      if (pred.stats.calcRhoMAE) {
-        if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 3, pred.stats.rho)) {
-          io.error(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", pred.stats.rho, resultMatrix,
-                               pred.stats.taskNum + 1, 3)
+      for (auto& stats : pred.stats) {
+
+        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 3, stats.rho)) {
+          io.error(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", stats.rho, resultMatrix,
+                               stats.taskNum + 1, 3)
                      .c_str());
           rc = CANNOT_SAVE_RESULTS;
         }
 
-        if (SF_mat_store(resultMatrix, pred.stats.taskNum + 1, 4, pred.stats.mae)) {
-          io.error(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", pred.stats.mae, resultMatrix,
-                               pred.stats.taskNum + 1, 4)
+        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 4, stats.mae)) {
+          io.error(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", stats.mae, resultMatrix,
+                               stats.taskNum + 1, 4)
                      .c_str());
           rc = CANNOT_SAVE_RESULTS;
         }
