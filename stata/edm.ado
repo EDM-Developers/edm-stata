@@ -476,6 +476,7 @@ program define edmExplore, eclass
 
 	* identify data structure
 	qui xtset
+	local timevar "`=r(timevar)'"
 	if "`=r(panelvar)'" != "." {
 		local ispanel =1
 		local panel_id = r(panelvar)
@@ -490,9 +491,6 @@ program define edmExplore, eclass
 	if "`algorithm'" == "" {
 		local algorithm "simplex"
 	}
-
-	qui xtset
-	local timevar "`=r(timevar)'"
 
 	edmPluginCheck, `mata'
 
@@ -731,22 +729,23 @@ program define edmExplore, eclass
 		// PJL: Check that `savesmap' is not needed in explore mode.
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
-		qui gen double `usable' = .
 		local missing_dist_used = ""
+
+		// The plugin will save the 'usable' it generates to to here
+		qui gen double `usable' = .
 
 		local explore_mode = 1
 		local full_mode = ("`full'" == "full")
-		if `parsed_dt' {
-			local time = "`original_t'"
-		}
 
+		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
+		// Instead, just save it as a local and have the plugin read it using the Stata C API.
 		local rngstate = c(rngstate)
 		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 		set rngstate `rngstate'
 
-		plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1202,6 +1201,7 @@ program define edmXmap, eclass
 	}
 	* identify data structure
 	qui xtset
+	local timevar "`=r(timevar)'"
 	if "`=r(panelvar)'" != "." {
 		local ispanel =1
 		local panel_id = r(panelvar)
@@ -1209,8 +1209,6 @@ program define edmXmap, eclass
 	else {
 		local ispanel =0
 	}
-	qui xtset
-	local timevar "`=r(timevar)'"
 
 	marksample touse
 	markout `touse' `timevar' `panel_id'
@@ -1507,24 +1505,24 @@ program define edmXmap, eclass
 		else {
 			// Setup variables which the plugin will modify
 			scalar plugin_finished = 0
-			qui gen double `usable' = .
 			local missing_dist_used = ""
+
+			// The plugin will save the 'usable' it generates to to here
+			qui gen double `usable' = .
 
 			local explore_mode = 0
 			local full_mode = 0
 			local crossfold = 0
-			if `parsed_dt' {
-				local time = "`original_t'"
-			}
 
-
+			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
+			// Instead, just save it as a local and have the plugin read it using the Stata C API.
 			local rngstate = c(rngstate)
 			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 			set rngstate `rngstate'
 
-			plugin call edm_plugin `x' `x_f' `z_vars' `time' `usable' `touse', "transfer_manifold_data" ///
+			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients

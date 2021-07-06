@@ -208,14 +208,9 @@ void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, S
 }
 
 template<typename T>
-std::vector<T> stata_numlist(std::string macro)
+std::vector<T> numlist_to_vector(std::string list)
 {
   std::vector<T> numlist;
-
-  char buffer[1000];
-  SF_macro_use((char*)("_" + macro).c_str(), buffer, 1000);
-
-  std::string list(buffer);
   size_t found = list.find(' ');
   while (found != std::string::npos) {
     std::string theta = list.substr(0, found);
@@ -226,6 +221,18 @@ std::vector<T> stata_numlist(std::string macro)
   numlist.push_back((T)atof(list.c_str()));
 
   return numlist;
+}
+
+template<typename T>
+std::vector<T> stata_numlist(std::string macro)
+{
+  std::vector<T> numlist;
+
+  char buffer[1000];
+  SF_macro_use((char*)("_" + macro).c_str(), buffer, 1000);
+
+  std::string list(buffer);
+  return numlist_to_vector<T>(list);
 }
 
 template<typename T>
@@ -382,10 +389,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 18) {
+  if (argc < 19) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 18) {
+  if (argc > 19) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -412,7 +419,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   bool allowMissing = atoi(argv[16]);
   double nextRV = std::stod(argv[17]);
 
-  opts.thetas = stata_numlist<double>("theta");
+  opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -428,16 +435,16 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   }
 
   // Read in the main data from Stata
-  std::vector<ST_double> x = stata_columns<ST_double>(1);
+  std::vector<ST_double> x = stata_columns<ST_double>(2);
 
   // Read in the target vector 'y' from Stata
-  std::vector<ST_double> y = stata_columns<ST_double>(2);
+  std::vector<ST_double> y = stata_columns<ST_double>(3);
 
   // Read in the extras
   std::vector<std::vector<ST_double>> extras(numExtras);
 
   for (int z = 0; z < numExtras; z++) {
-    extras[z] = stata_columns<ST_double>(3 + z);
+    extras[z] = stata_columns<ST_double>(4 + z);
   }
 
   auto extrasEVarying = stata_numlist<bool>("z_e_varying");
@@ -446,13 +453,13 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   // Handle 'dt' flag
   if (dtMode) {
-    std::vector<ST_double> t = stata_columns<ST_double>(2 + numExtras + 1);
+    std::vector<ST_double> t = stata_columns<ST_double>(1);
     print_vector<ST_double>("t", t);
     generator.add_dt_data(t, dtWeight, dt0);
   }
 
   // The stata variable named `touse'
-  std::vector<bool> touse = stata_columns<bool>(2 + numExtras + dtMode + 2);
+  std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
   // Make the largest manifold we'll need in order to find missing values for 'usable'
@@ -506,12 +513,11 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
 
-  ST_double* usableToSave = new ST_double[usable.size()];
+  auto usableToSave = std::make_unique<double[]>(usable.size());
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
-  write_stata_column(usableToSave, (int)usable.size(), 2 + numExtras + dtMode + 1);
-  delete[] usableToSave;
+  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 2);
 
   return SUCCESS;
 }
