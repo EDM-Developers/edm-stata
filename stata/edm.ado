@@ -947,10 +947,9 @@ program define edmExplore, eclass
 				local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 			}
 			else if `k' != `lib_size' & `k' == 0 {
-				local plus_amt = `total_num_extras' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
+				local plus_amt = `lib_size' - `i'
 				local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
 			}
-
 
 			foreach j of numlist `theta' {
 
@@ -1625,14 +1624,29 @@ program define edmXmap, eclass
 			local finished_rep = 0
 		}
 
-		// Now that `usable' is defined, we can set the default library size to be sum(usable).
-		// N.B. For each direction of the xmap, we probably have a different sum(usable) value. 
+		// Set the default library size to be the number of usable observations.
 		qui count if `usable'
 		local num_usable = r(N)
 
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
 			local library = `num_usable'
 		}
+
+		// Also check that the the supplied library sizes are valid.
+		foreach lib_size of numlist `library' {
+			if `lib_size' > `num_usable' {
+				di as error "Library size exceeds the limit."
+				error 1
+			}
+
+			foreach i of numlist `e' {
+				if `lib_size' <= `i' + 1 {
+					di as error "Cannot estimate under the current library specification"
+					error 1
+				}
+			}
+		}
+
 
 		qui gen double `u' = .
 	
@@ -1651,23 +1665,12 @@ program define edmXmap, eclass
 				local manifold "mapping_`=`i'-1'"
 				foreach j of numlist `theta' {
 					foreach lib_size of numlist `library' {
-						if `lib_size' > `num_usable' {
-							di as error "Library size exceeds the limit."
-							error 1
-							// PJL: Does the next line ever get reached?
-							// PJL: Can easily check these lib_size constraints earlier in the function.
-							continue, break
-						}
-						else if `lib_size' <= `i' + 1 {
-							di as error "Cannot estimate under the current library specification"
-							error 1
-						}
 
 						if `mata_mode' {
 							qui replace `train_set' = `urank' <= `lib_size' & `usable'
 						}
 
-						local train_size = min(`lib_size',`num_usable')
+						local train_size = `lib_size'
 
 						// detect k size
 						if `k' > 0 {
