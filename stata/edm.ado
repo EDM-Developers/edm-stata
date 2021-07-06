@@ -918,8 +918,13 @@ program define edmExplore, eclass
 			local train_size = floor(`num_usable'/2)
 		}
 
-		// Set the maximum library size to be the size of the training set
-		local max_lib_size = `train_size'
+		// Set library size (unless k=0, when an adaptive default is applied)
+		if `k' > 0 {
+			local lib_size = min(`k',`train_size')
+		}
+		else if `k' < 0 {
+			local lib_size = `train_size'
+		}
 
 		foreach i of numlist `e' {
 			if `mata_mode' {
@@ -931,27 +936,23 @@ program define edmExplore, eclass
 			local e_offset = `r(manifold_size)' - `i'
 			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
-			foreach j of numlist `theta' {
+			// Set the adaptive default library size
+			if `k' == 0 {
+				local is_smap = cond("`algorithm'" == "smap", 1, 0)
+				local def_lib_size = `r(manifold_size)' + 1 + `is_smap'
+				local lib_size = min(`def_lib_size',`train_size')
+			}
+			
+			if `k' != 0 {
+				local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
+			}
+			else if `k' != `lib_size' & `k' == 0 {
+				local plus_amt = `total_num_extras' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
+				local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
+			}
 
-				if `k' > 0 {
-					local lib_size = min(`k',`train_size')
-				}
-				else if `k' == 0 {
-					local lib_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
-				}
-				else {
-					local lib_size = `max_lib_size'
-				}
-				if `lib_size' > `max_lib_size' {
-					local lib_size = `max_lib_size'
-				}
-				if `k' != 0 {
-					local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
-				}
-				else if `k' != `lib_size' & `k' == 0 {
-					local plus_amt = `total_num_extras' + `parsed_dt' + cond("`algorithm'" =="smap",2,1)
-					local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
-				}
+
+			foreach j of numlist `theta' {
 
 				mat r[`task_num',1] = `current_e'
 				mat r[`task_num',2] = `j'
