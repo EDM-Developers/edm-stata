@@ -478,21 +478,28 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   }
   SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
 
-  splitter = TrainPredictSplitter(explore, full, crossfold, usable);
-
   // If we need to create a randomised train/predict split, then sync the state of the
   // Mersenne Twister in Stata to that in the splitter instance.
-  if (splitter.requiresRandomNumbers()) {
+  bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
+  std::string rngState;
+
+  if (requiresRandomNumbers) {
     char buffer[5200]; // Need at least 5011 + 1 bytes.
     if (SF_macro_use("_rngstate", buffer, 5200)) {
       io.print("Got an error rc from macro_use!\n");
     }
 
-    std::string rngState(buffer);
+    rngState = std::string(buffer);
 
-    if (rngState.size() > 0) {
-      splitter.set_rng_state(rngState, nextRV);
+    if (rngState.empty()) {
+      io.print("Error: couldn't read the c(rngstate).\n");
     }
+  }
+
+  if (requiresRandomNumbers && !rngState.empty()) {
+    splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState, nextRV);
+  } else {
+    splitter = TrainPredictSplitter(explore, full, crossfold, usable);
   }
 
   print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
@@ -544,23 +551,14 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   bool newTrainPredictSplit = atoi(buffer);
 
   // Find which rows are used for training & which for prediction
-  std::vector<ST_double> u;
-  if (splitter.requiresRandomNumbersEachTask()) {
-    u = stata_columns<ST_double>(1);
-  }
-
-  if (splitter.requiresCrossFoldRandomNumbers() && taskOpts.taskNum == 0) {
-    splitter.add_crossfold_rvs(stata_columns<ST_double>((u.size() > 0) + 1));
-  }
-
   if (newTrainPredictSplit) {
-    std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(u, library, iterationNumber);
+    std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(library, iterationNumber);
     trainingRows = std::vector<bool>(split.first);
     predictionRows = std::vector<bool>(split.second);
   }
 
   // If requested, save the inputs to a local file for testing
-  if (std::string(argv[7]).size() > 0) {
+  if (!std::string(argv[7]).empty()) {
     io.print(fmt::format("Saving inputs to '{}'\n", argv[7]));
     io.flush();
     write_dumpfile(argv[7], taskOpts, generator, E, trainingRows, predictionRows);

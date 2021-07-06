@@ -979,7 +979,7 @@ program define edmExplore, eclass
 					// PJL: Check we never save SMAP coeffs in explore mode.
 					local save_smap_coeffs = 0
 					local k_adj = `lib_size'
-					plugin call edm_plugin `u' `crossfoldu', "launch_edm_task" ///
+					plugin call edm_plugin, "launch_edm_task" ///
 							"`t'" "`i'" "`j'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 				}
 				local ++task_num
@@ -1772,7 +1772,7 @@ program define edmXmap, eclass
 						}
 						else {
 							local save_smap_coeffs = ("`savesmap'" != "")
-							plugin call edm_plugin `u', "launch_edm_task" ///
+							plugin call edm_plugin, "launch_edm_task" ///
 									"`rep'" "`i'" "`j'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 						}
 						drop `overlap'

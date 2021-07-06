@@ -9,39 +9,62 @@ class TrainPredictSplitter
 {
 private:
   bool _explore, _full;
-  int _crossfold;
+  int _crossfold, _numObsUsable;
   std::vector<bool> _usable;
   std::vector<int> _crossfoldURank;
-  MtRng64 rng;
+  MtRng64 _rng;
 
 public:
-  TrainPredictSplitter() {}
+  TrainPredictSplitter() = default;
+
   TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable)
     : _explore(explore)
     , _full(full)
     , _crossfold(crossfold)
     , _usable(usable)
-    , rng(1)
-  {}
+    , _rng(1)
+  {
+    _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
+  };
 
-  void add_crossfold_rvs(std::vector<double> crossfoldU) { _crossfoldURank = rank(remove_value(crossfoldU, MISSING)); }
+  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, const std::string& rngState,
+                       double nextRV)
+    : _explore(explore)
+    , _full(full)
+    , _crossfold(crossfold)
+    , _usable(usable)
+  {
+    // Sync the local random number generator with Stata's
+    set_rng_state(rngState, nextRV);
 
-  bool requiresRandomNumbersEachTask() { return (_crossfold == 0) && !_full; }
-  bool requiresCrossFoldRandomNumbers() { return _crossfold > 0; }
-  bool requiresRandomNumbers() { return requiresRandomNumbersEachTask() || requiresCrossFoldRandomNumbers(); }
+    _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
 
-  void set_rng_state(std::string rngState, double nextRV)
+    if (crossfold > 0) {
+      std::vector<double> u;
+
+      for (int i = 0; i < _numObsUsable; i++) {
+        u.push_back(_rng.getReal2());
+      }
+
+      _crossfoldURank = rank(u);
+    }
+  }
+
+  bool requiresRandomNumbersEachTask() const { return (_crossfold == 0) && !_full; }
+  static bool requiresRandomNumbers(int crossfold, bool full) { return crossfold > 0 || !full; }
+
+  void set_rng_state(const std::string& rngState, double nextRV)
   {
     unsigned long long state[312];
 
     // Set up the rng at the beginning on this batch (given by the 'state' array)
     for (int i = 0; i < 312; i++) {
       state[i] = std::stoull(rngState.substr(3 + i * 16, 16), nullptr, 16);
-      rng.state_[i] = state[i];
+      _rng.state_[i] = state[i];
     }
 
-    rng.left_ = 312;
-    rng.next_ = rng.state_;
+    _rng.left_ = 312;
+    _rng.next_ = _rng.state_;
 
     // Go through this batch of rv's and find the closest to the
     // observed 'nextRV'
@@ -49,7 +72,7 @@ public:
     double minDist = 1.0;
 
     for (int i = 0; i < 320; i++) {
-      double dist = std::abs(rng.getReal2() - nextRV);
+      double dist = std::abs(_rng.getReal2() - nextRV);
       if (dist < minDist) {
         minDist = dist;
         bestInd = i;
@@ -58,20 +81,19 @@ public:
 
     // Reset the state to the beginning on this batch
     for (int i = 0; i < 312; i++) {
-      rng.state_[i] = state[i];
+      _rng.state_[i] = state[i];
     }
 
-    rng.left_ = 312;
-    rng.next_ = rng.state_;
+    _rng.left_ = 312;
+    _rng.next_ = _rng.state_;
 
     // Burn all the rv's which are already used
     for (int i = 0; i < bestInd; i++) {
-      rng.getReal2();
+      _rng.getReal2();
     }
   }
 
-  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(std::vector<double> uWithMissing, int library,
-                                                                      int crossfoldIter)
+  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(int library, int crossfoldIter)
   {
     if (_explore && _full) {
       return { _usable, _usable };
@@ -100,11 +122,10 @@ public:
       return { trainingRows, predictionRows };
     }
 
-    std::vector<double> uStata = remove_value(uWithMissing, MISSING);
     std::vector<double> u;
 
-    for (int i = 0; i < uStata.size(); i++) {
-      u.push_back(rng.getReal2());
+    for (int i = 0; i < _numObsUsable; i++) {
+      u.push_back(_rng.getReal2());
     }
 
     if (_explore) {

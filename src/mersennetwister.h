@@ -125,6 +125,17 @@ public:
     next_ = state_ + (obj.next_ - obj.state_);
   }
 
+  MtRng64& operator=(const MtRng64& obj)
+  {
+    for (int i = 0; i < 312; i++) {
+      state_[i] = obj.state_[i];
+    }
+
+    left_ = obj.left_;
+    next_ = state_ + (obj.next_ - obj.state_);
+    return *this;
+  }
+
   MtRng64()
   {
     left_ = 1;
