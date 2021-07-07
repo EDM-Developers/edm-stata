@@ -111,7 +111,7 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
     auto C = cost_matrix(M, Mp, i, Mp_i, gamma, opts.missingdistance, len_i, len_j);
 
     if (len_i > 0 && len_j > 0) {
-      dists[i] = std::sqrt(wasserstein(C.get(), len_i, len_j));
+      dists[i] = std::sqrt(approx_wasserstein(C.get(), len_i, len_j));
       validDistances += 1;
 
     } else {
