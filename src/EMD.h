@@ -12,26 +12,25 @@
  *
  */
 
-
 #ifndef EMD_H
 #define EMD_H
 
+#include "network_simplex_simple.h"
 #include <iostream>
 #include <vector>
-#include "network_simplex_simple.h"
 
 using namespace lemon;
 typedef unsigned int node_id_type;
 
-enum ProblemType {
-    INFEASIBLE,
-    OPTIMAL,
-    UNBOUNDED,
-	MAX_ITER_REACHED
+enum ProblemType
+{
+  INFEASIBLE,
+  OPTIMAL,
+  UNBOUNDED,
+  MAX_ITER_REACHED
 };
 
-int EMD_wrap(int n1,int n2, double *X, double *Y,double *D, double *G, double* alpha, double* beta, double *cost, int maxIter);
-
-
+int EMD_wrap(int n1, int n2, double* X, double* Y, double* D, double* G, double* alpha, double* beta, double* cost,
+             int maxIter);
 
 #endif

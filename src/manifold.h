@@ -52,6 +52,8 @@ public:
     return max - min;
   }
 
+  double missing() const { return _missing; }
+
   double time_range() const { return _nobs - 1; }
   
   bool any_missing(int obsNum) const

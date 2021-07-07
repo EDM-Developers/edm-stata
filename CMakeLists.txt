@@ -79,6 +79,7 @@ endif()
 # Source files common to all targets
 set(COMMON_SRC src/common.cpp src/common.h
                src/cpu.cpp src/cpu.h
+               src/distances.cpp src/distances.h
                src/edm.cpp src/edm.h
                src/manifold.cpp src/manifold.h
                src/mersennetwister.h

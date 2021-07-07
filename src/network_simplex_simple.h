@@ -1441,6 +1441,7 @@ private:
     // Execute the Network Simplex algorithm
     while (pivot.findEnteringArc()) {
       if (max_iter > 0 && ++iter_number >= max_iter && max_iter > 0) {
+#if DEBUG_LVL > 0
         char errMess[1000];
         sprintf(errMess,
                 "RESULT MIGHT BE INACURATE\nMax number of iteration reached, currently \%d. Sometimes iterations go on "
@@ -1449,6 +1450,7 @@ private:
                 "solution, if not try setting the maximum number of iterations a bit higher\n",
                 iter_number);
         std::cerr << errMess;
+#endif
         retVal = MAX_ITER_REACHED;
         break;
       }
