@@ -2471,7 +2471,7 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 			b_ls    = XpXi*quadcross(X_ls, w_ls, y_ls)
 		}
 		else {
-			b_ls = svsolve(X_ls, y_ls)
+			b_ls = svsolve(X_ls' * X_ls, X_ls' * y_ls)
 		}
 
 		if (save_index>0) {
