@@ -1,65 +1,65 @@
 
 
-. clear
+. clear 
 
-. 
-. set linesize 255
+.  
+. set linesize 255 
 
-. set obs 500
+. set obs 500 
 Number of observations (_N) was 0, now 500.
 
-. set seed 12345678
+. set seed 12345678 
 
-. if c(MP) {
-.     qui set processor 1
-. }
+. if c(MP) { 
+.     qui set processor 1 
+. } 
 
-. 
-. global EDM_VERBOSITY=1
+.  
+. global EDM_VERBOSITY=1 
 
-. global EDM_NTHREADS=4
+. global EDM_NTHREADS=4 
 
-. 
-. gen t = _n
+.  
+. gen t = _n 
 
-. tsset t
+. tsset t 
 
 Time variable: t, 1 to 500
         Delta: 1 unit
 
-. 
-. gen double x = 0.2 if _n==1
+.  
+. gen double x = 0.2 if _n==1 
 (499 missing values generated)
 
-. gen double y = 0.4 if _n==1
+. gen double y = 0.4 if _n==1 
 (499 missing values generated)
 
-. 
-. * Create a dynamic system
-. local r_x 3.625
+.  
+. * Create a dynamic system 
+. local r_x 3.625 
 
-. local r_y 3.77
+. local r_y 3.77 
 
-. local beta_xy = 0.05
+. local beta_xy = 0.05 
 
-. local beta_yx=0.4
+. local beta_yx=0.4 
 
-. local tau = 1
+. local tau = 1 
 
-. drawnorm double u1 u2
+. drawnorm double u1 u2 
 
-. qui {
+. qui { 
 
-. 
-. * burn the first 300 observations
-. keep in 300/500
+.  
+. * burn the first 300 observations 
+. keep in 300/500 
 (299 observations deleted)
 
-. 
-. * Determining the complexity of the system
-. 
-. * identify optimal E
-. edm explore x, e(2/10)
+.  
+. * Determining the complexity of the system 
+.  
+. * identify optimal E 
+. edm explore x, e(2/10) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -80,12 +80,39 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. 
-. * edm xmap x y, k(5)
-. 
-. * edm xmap x y, e(6) lib(8)
-. 
-. edm explore x, k(5) crossfold(10)
+.  
+. edm xmap x y, k(5) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             200          .55861          .12802 
+   x ~ x|M(y)             200          .94454         .048853 
+---------------------------------------------------------------
+Note: Number of neighbours (k) is adjusted to 5
+Note: The embedding dimension E is 2
+
+.  
+. edm xmap x y, e(6) lib(8) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)               8          .34074          .15729 
+   x ~ x|M(y)               8           .5642          .16437 
+---------------------------------------------------------------
+Note: The embedding dimension E is 6
+
+.  
+. edm explore x, k(5) crossfold(10) 
 10-fold cross-validation progress (10 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -95,51 +122,77 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1        .9994    .00037366     .0049774    .00084076
+        2        1       .99939    .00028279     .0051435     .0012207
 ----------------------------------------------------------------------
 Note: Results from 10 runs
 Note: Number of neighbours (k) is adjusted to 5
 Note: 10-fold cross validation results reported
 
-. 
-. edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
+.  
+. edm explore x, theta(0.2(0.1)2.0) algorithm(smap) 
 Percent complete: 0..
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2              .2          .99959        .0036474 
-                 2              .3           .9996        .0036208 
-                 2              .4          .99961        .0035963 
-                 2              .5          .99961        .0035715 
-                 2              .6          .99962        .0035465 
-                 2              .7          .99962        .0035213 
-                 2              .8          .99963        .0034964 
-                 2              .9          .99964        .0034721 
-                 2               1          .99964         .003449 
-                 2             1.1          .99965        .0034272 
-                 2             1.2          .99965        .0034084 
-                 2             1.3          .99966        .0033928 
-                 2             1.4          .99966        .0033796 
-                 2             1.5          .99967        .0033655 
-                 2             1.6          .99967        .0033503 
-                 2             1.7          .99967         .003334 
-                 2             1.8          .99968        .0033169 
-                 2             1.9          .99968        .0032997 
-                 2               2          .99968        .0032823 
+                 2              .2          .99945        .0041219 
+                 2              .3          .99946        .0040956 
+                 2              .4          .99946        .0040696 
+                 2              .5          .99947        .0040449 
+                 2              .6          .99947        .0040294 
+                 2              .7          .99947        .0040157 
+                 2              .8          .99948        .0040043 
+                 2              .9          .99948        .0039953 
+                 2               1          .99948        .0039876 
+                 2             1.1          .99948        .0039823 
+                 2             1.2          .99948        .0039795 
+                 2             1.3          .99948        .0039776 
+                 2             1.4          .99948        .0039776 
+                 2             1.5          .99948        .0039776 
+                 2             1.6          .99948        .0039773 
+                 2             1.7          .99947        .0039766 
+                 2             1.8          .99947        .0039761 
+                 2             1.9          .99946        .0039839 
+                 2               2          .99946        .0039918 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
 
-. 
-. * edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
-. * assert beta1_b2_rep1 !=. if _n>1
-. 
-. * edm xmap y x, predict(x2) direction(oneway)
-. * assert x2 !=. if _n>1
-. 
-. edm explore x, copredict(teste) copredictvar(y)
+.  
+. edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             200          .66867          .11052 
+   x ~ x|M(y)             200          .98487         .018655 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert beta1_b2_rep1 !=. if _n>1 
+
+.  
+. edm xmap y x, predict(x2) direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             200          .94272         .048213 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert x2 !=. if _n>1 
+
+.  
+. edm explore x, copredict(teste) copredictvar(y) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -148,15 +201,15 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99911        .0059669 
+                 2               1          .99902        .0065958 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. assert teste!=. if _n>1
+. assert teste!=. if _n>1 
 
-. 
-. edm explore z.x, tp(10)
+.  
+. edm explore z.x, tp(10) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -164,28 +217,91 @@ Univariate mapping with z.x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .91672          .30616 
+                 2               1           .9163          .32768 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. 
-. * edm xmap y x, tp(10) direction(oneway)
-. 
-. * edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
-. * assert testx!=. if _n>2
-. 
-. * edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
-. * assert testx2 !=. if _n>2
-. 
-. * edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
-. * assert testx3 !=. if _n>2
-. 
-. * check explore / xmap consistency
-. 
-. * edm xmap l.x x, direction(oneway)
-. * mat xmap_r=e(b)
-. edm explore x, full
+.  
+. edm xmap y x, tp(10) direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .89554         .068441 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+.  
+. edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .89554         .068441 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert testx!=. if _n>2 
+
+.  
+. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .89554         .068441 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert testx2 !=. if _n>2 
+
+.  
+. edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+Additional variable in the embedding: u1
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .37011          .16613 
+---------------------------------------------------------------
+Note: The embedding dimension E is 3 (including 1 extra)
+
+. assert testx3 !=. if _n>2 
+
+.  
+. * check explore / xmap consistency 
+.  
+. edm xmap l.x x, direction(oneway) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables l.x and x
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+     x ~ x|M(l.x)             199          .99939        .0049147 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. mat xmap_r=e(b) 
+
+. edm explore x, full 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -198,41 +314,69 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. mat explore_r =e(b)
+. mat explore_r =e(b) 
 
-. * assert xmap_r[1,1] == explore_r[1,1]
-. 
-. * check xmap reverse consistency
-. 
-. * edm xmap x y
-. * mat xmap1 = e(b)
-. * edm xmap y x
-. * TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac).
-. * assert e(b)[1,1] == xmap1[1,2]
-. * assert e(b)[1,2] == xmap1[1,1]
-. 
-. tempfile basedata
+. assert xmap_r[1,1] == explore_r[1,1] 
 
-. qui compress
+.  
+. * check xmap reverse consistency 
+.  
+. edm xmap x y 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
-. qui save `basedata', replace
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             200          .54213          .13182 
+   x ~ x|M(y)             200          .94272         .048213 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
 
-. * test missing data
-. set seed 12345678
+. mat xmap1 = e(b) 
 
-. gen double u = runiform()
+. edm xmap y x 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
-. drop if u<0.1
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and x
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             200          .94272         .048213 
+   y ~ y|M(x)             200          .54213          .13182 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. * TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac). 
+. * assert e(b)[1,1] == xmap1[1,2] 
+. * assert e(b)[1,2] == xmap1[1,1] 
+.  
+. tempfile basedata 
+
+. qui compress 
+
+. qui save `basedata', replace 
+
+. * test missing data 
+. set seed 12345678 
+
+. gen double u = runiform() 
+
+. drop if u<0.1 
 (19 observations deleted)
 
-. replace x = . if u<0.2
+. replace x = . if u<0.2 
 (22 real changes made, 22 to missing)
 
-. replace t=. if mod(t,19) ==1
+. replace t=. if mod(t,19) ==1 
 (11 real changes made, 11 to missing)
 
-. 
-. edm explore x
+.  
+. edm explore x 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -245,7 +389,7 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. edm explore x, dt
+. edm explore x, dt 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -261,8 +405,8 @@ Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .36
 
-. 
-. edm explore x, allowmissing
+.  
+. edm explore x, allowmissing 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -276,7 +420,7 @@ Missing values are assumed to have a distance of .24 with all values.
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. edm explore x, missingdistance(2)
+. edm explore x, missingdistance(2) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -290,14 +434,72 @@ Missing values are assumed to have a distance of 2 with all values.
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. * edm xmap x l.x, allowmissing
-. * edm xmap x l.x, missingdistance(2)
-. 
-. * edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
-. 
-. * edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
-. 
-. edm explore x, extraembed(u) allowmissing dt crossfold(5)
+. edm xmap x l.x, allowmissing 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Missing values are assumed to have a distance of .25 and .24
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124           .9998        .0027684 
+     x ~ x|M(l.x)             118           .9983        .0093727 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. edm xmap x l.x, missingdistance(2) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Missing values are assumed to have a distance of 2 with all values.
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124           .9998        .0027686 
+     x ~ x|M(l.x)             118           .9983        .0093764 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+.  
+. edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l.x
+Additional variables in the embedding: u (+ time delta)
+Missing values are assumed to have a distance of .25 and .24
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   l.x ~ l.x|M(x)             124           .8993         .052723 
+     x ~ x|M(l.x)             150          .18922          .31581 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 10 (including 5 extras)
+Note: Embedding includes the delta of the time variable with a weight of .55 and .54
+
+.  
+. edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and l3.x
+Additional variables in the embedding: u (+ time delta)
+Missing values are assumed to have a distance of .24 with all values.
+---------------------------------------------------------------------
+            Mapping    Library size             rho             MAE
+---------------------------------------------------------------------
+   l3.x ~ l3.x|M(x)             123          .69908         .075833 
+---------------------------------------------------------------------
+Note: The embedding dimension E is 10 (including 5 extras)
+Note: Embedding includes the delta of the time variable with a weight of .55
+
+.  
+. edm explore x, extraembed(u) allowmissing dt crossfold(5) 
 5-fold cross-validation progress (5 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -309,7 +511,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        4        1       .59097       .15207       .12651      .021386
+        4        1       .60894      .075592       .12527      .020009
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras
@@ -317,8 +519,8 @@ Note: Number of neighbours (k) is set to E+3
 Note: 5-fold cross validation results reported
 Note: Embedding includes the delta of the time variable with a weight of .55
 
-. 
-. edm explore d.x, dt
+.  
+. edm explore d.x, dt 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -327,15 +529,15 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 3               1          .84472          .14535 
+                 3               1          .78058          .15644 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .27
 
-. 
-. edm explore x, rep(20) ci(95)
+.  
+. edm explore x, rep(20) ci(95) 
 Replication progress (20 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -345,29 +547,50 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .99567     .0042336      .013306     .0036066
-  Est. mean 95% CI   [   .99369,    .99765 ]   [  .011618,   .014994 ]
-2.5/97.5 Pc (Est.)   [   .98737,     1.004 ]   [ .0062374,   .020375 ]
-2.5/97.5 Pc (Obs.)   [    .9835,    .99822 ]   [ .0098926,    .02064 ]
+        2        1       .99571     .0045792      .013297     .0039025
+  Est. mean 95% CI   [   .99357,    .99785 ]   [   .01147,   .015123 ]
+2.5/97.5 Pc (Est.)   [   .98673,    1.0047 ]   [ .0056481,   .020946 ]
+2.5/97.5 Pc (Obs.)   [   .98346,    .99887 ]   [ .0085166,   .024075 ]
 ----------------------------------------------------------------------
 Note: Results from 20 runs
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. 
-. * edm xmap x y, lib(50) rep(20) ci(95)
-. 
-. use `basedata', clear
+.  
+. edm xmap x y, lib(50) rep(20) ci(95) 
+Replication progress (40 in total)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
-. cap drop x_copy
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping        Lib size        Mean rho       Std. Dev.
+---------------------------------------------------------------
+   y ~ y|M(x)              50          .37281         .068293
+  Est. mean 95% CI                    [   .34085,    .40477 ]
+2.5/97.5 Pc (Est.)                    [   .23896,    .50666 ]
+2.5/97.5 Pc (Obs.)                    [   .25678,    .49079 ]
+   x ~ x|M(y)              50          .86316         .024202
+  Est. mean 95% CI                    [   .85183,    .87448 ]
+2.5/97.5 Pc (Est.)                    [   .81572,    .91059 ]
+2.5/97.5 Pc (Obs.)                    [   .80334,    .89799 ]
+---------------------------------------------------------------
+Note: Results from 20 replications
+Note: The embedding dimension E is 2
 
-. cap drop x_p
+.  
+. use `basedata', clear 
 
-. cap drop xc_p
+. cap drop x_copy 
 
-. clonevar x_copy = x
+. cap drop x_p 
 
-. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full
+. cap drop xc_p 
+
+. clonevar x_copy = x 
+
+. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -381,13 +604,13 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. assert x_p!=. if _n!=1 & _n!=_N
+. assert x_p!=. if _n!=1 & _n!=_N 
 
-. assert xc_p!=. if _n!=1 & _n!=_N
+. assert xc_p!=. if _n!=1 & _n!=_N 
 
-. assert x_p ==xc_p if x_p!=.
+. assert x_p ==xc_p if x_p!=. 
 
-. cor x_p f.x
+. cor x_p f.x 
 (obs=199)
 
              |                 F.
@@ -398,7 +621,7 @@ Note: Full sample used for the computation
          F1. |   0.9994   1.0000
 
 
-. cor xc_p f.x
+. cor xc_p f.x 
 (obs=199)
 
              |                 F.
@@ -409,10 +632,10 @@ Note: Full sample used for the computation
          F1. |   0.9994   1.0000
 
 
-. 
-. cap drop x_p xc_p
+.  
+. cap drop x_p xc_p 
 
-. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
+. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -426,33 +649,63 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. sum x_p xc_p
+. sum x_p xc_p 
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
          x_p |        198    .6434232    .2159587   .3039276   .8967989
         xc_p |        200    .6436226    .2154685   .3039276   .8967989
 
-. assert xc_p!=. if x_p!=.
+. assert xc_p!=. if x_p!=. 
 
-. 
-. gen y_copy = y
+.  
+. gen y_copy = y 
 
-. * edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
-. * assert xmap_y_p !=. if _n>1
-. * assert xmap_y_p == xmap_y if xmap_y !=.
-. 
-. preserve
+. edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
-. drop if mod(t,17)==1
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             190          .30665          .15441 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. assert xmap_y_p !=. if _n>1 
+
+. assert xmap_y_p == xmap_y if xmap_y !=. 
+
+.  
+. preserve 
+
+. drop if mod(t,17)==1 
 (12 observations deleted)
 
-. //copredict with dt
-. * edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
-. * assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
-. * assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
-. 
-. edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full
+. //copredict with dt 
+. edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt) 
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Additional variables in the embedding: (time delta)
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             188          .51527          .13499 
+---------------------------------------------------------------
+Note: The embedding dimension E is 3 (including 1 extra)
+Note: Embedding includes the delta of the time variable with a weight of .88
+
+. assert xmap_y_p_dt !=. if (_n>1 & _n < _N) 
+
+. assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != . 
+
+.  
+. edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -466,14 +719,14 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. 
-. assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=.
+.  
+. assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=. 
 
-. 
-. restore
+.  
+. restore 
 
-. 
-. edm explore x, copredict(dx2) copredictvar(d.x)
+.  
+. edm explore x, copredict(dx2) copredictvar(d.x) 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -482,13 +735,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99105         .011687 
+                 2               1          .99847        .0089172 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. 
-. edm explore x, predict(predicted_x) copredict(predicted_y_from_mx) copredictvar(y) full
+.  
+. edm explore x, predict(predicted_x) copredict(predicted_y_from_mx) copredictvar(y) full 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -502,7 +755,7 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. edm explore y, predict(predicted_y) full
+. edm explore y, predict(predicted_y) full 
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
 Empirical Dynamic Modelling
@@ -515,7 +768,7 @@ Univariate mapping with y and its lag values
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
-. cor f.x f.y predicted_x predicted_y predicted_y_from_mx
+. cor f.x f.y predicted_x predicted_y predicted_y_from_mx 
 (obs=199)
 
              |        F.       F.                           
@@ -530,7 +783,7 @@ Note: Full sample used for the computation
 predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
 
 
-. cor f.x predicted_x
+. cor f.x predicted_x 
 (obs=199)
 
              |        F.         
@@ -541,9 +794,9 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
  predicted_x |   0.9994   1.0000
 
 
-. assert r(rho)>0.99
+. assert r(rho)>0.99 
 
-. cor f.y predicted_y
+. cor f.y predicted_y 
 (obs=199)
 
              |        F.         
@@ -554,9 +807,9 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
  predicted_y |   0.9928   1.0000
 
 
-. assert r(rho)>0.99
+. assert r(rho)>0.99 
 
-. cor f.y predicted_y_from_mx
+. cor f.y predicted_y_from_mx 
 (obs=199)
 
              |        F.         
@@ -567,14 +820,41 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
 predicted~mx |   0.7831   1.0000
 
 
-. assert r(rho)>0.7
+. assert r(rho)>0.7 
 
-. 
-. * * Obtaining CI of the xmap
-. * jackknife: edm xmap x y, e(2)
-. * ereturn display
-. 
-. jackknife: edm explore x, e(2)
+.  
+. * Obtaining CI of the xmap 
+. jackknife: edm xmap x y, e(2) 
+(running edm on estimation sample)
+
+Jackknife replications (200)
+----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5 
+..................................................    50
+..................................................   100
+..................................................   150
+..................................................   200
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             200          .54213          .13182 
+   x ~ x|M(y)             200          .94272         .048213 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. ereturn display 
+------------------------------------------------------------------------------
+             |              Jackknife
+             | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      y|M(x) |    .542135   .0914957     5.93   0.000     .3617095    .7225605
+      x|M(y) |   .9427227   .0140109    67.29   0.000     .9150939    .9703515
+------------------------------------------------------------------------------
+
+.  
+. jackknife: edm explore x, e(2) 
 (running edm on estimation sample)
 
 Jackknife replications (199)
@@ -589,17 +869,17 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99896         .007504 
+                 2               1          .99846        .0083042 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
-. ereturn display
+. ereturn display 
 ------------------------------------------------------------------------------
              |              Jackknife
              | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
-           x |    .998957   .0130594    76.49   0.000     .9732036     1.02471
+           x |   .9984628   .0106503    93.75   0.000     .9774601    1.019465
 ------------------------------------------------------------------------------
 
 . 

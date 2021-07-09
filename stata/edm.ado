@@ -1664,95 +1664,98 @@ program define edmXmap, eclass
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
-				foreach j of numlist `theta' {
-					foreach lib_size of numlist `library' {
+				
+				foreach lib_size of numlist `library' {
 
-						if `mata_mode' {
-							qui replace `train_set' = `urank' <= `lib_size' & `usable'
+					if `mata_mode' {
+						qui replace `train_set' = `urank' <= `lib_size' & `usable'
+					}
+
+					local train_size = `lib_size'
+
+					// detect k size
+					if `k' > 0 {
+						local k_size = min(`k',`train_size' -1)
+					}
+					else if `k' == 0{
+						local k_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+					}
+					else if `k' < 0  {
+						local k_size = `train_size' - 1
+						/* di "full lib" */
+					}
+
+					if `k' != 0 {
+						local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `k_size'" + char(10)
+					}
+					else if `k' != `k_size' & `k' == 0 {
+						/* local cmdfootnote = "Note: Number of neighbours (k) is set to E+1" + char(10) */
+					}
+
+					if "`savesmap'" != "" {
+						local xx = "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
+						local yy = "`=cond(`direction_num'==1,"`ori_y'","`ori_x'")'"
+
+						qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
+						qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
+						local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
+
+						local mapping_name "`xx'" 
+
+						forvalues ii=1/`=`e'-1' {
+							local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
 						}
-
-						local train_size = `lib_size'
-
-						// detect k size
-						if `k' > 0 {
-							local k_size = min(`k',`train_size' -1)
-						}
-						else if `k' == 0{
-							local k_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
-						}
-						else if `k' < 0  {
-							local k_size = `train_size' - 1
-							/* di "full lib" */
-						}
-
-						if `k' != 0 {
-							local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `k_size'" + char(10)
-						}
-						else if `k' != `k_size' & `k' == 0 {
-							/* local cmdfootnote = "Note: Number of neighbours (k) is set to E+1" + char(10) */
-						}
-
-						if "`savesmap'" != "" {
-							local xx = "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
-							local yy = "`=cond(`direction_num'==1,"`ori_y'","`ori_x'")'"
-
-							qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
-							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
-							local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
-
-							local mapping_name "`xx'" 
-
-							forvalues ii=1/`=`e'-1' {
-								local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
+						if `parsed_dt' {
+							forvalues ii=`=(1 - `parsed_dt0')'/`=`e'-1' {
+								local mapping_name "`mapping_name' dt`ii'"
 							}
-							if `parsed_dt' {
-								forvalues ii=`=(1 - `parsed_dt0')'/`=`e'-1' {
-									local mapping_name "`mapping_name' dt`ii'"
-								}
-							}
+						}
 
-							forvalues kk=1/`z_count' {
-								local z_name : word `kk' of `z_names'
+						forvalues kk=1/`z_count' {
+							local z_name : word `kk' of `z_names'
 
-								local e_varying = strpos("`z_name'", "(e)")
-								if `e_varying' {
-									local suffix_ind = strlen("`z_name'")-3+1
-									local z_name = substr("`z_name'", 1, `suffix_ind'-1)
-								}
-
-								local mapping_name = "`mapping_name' `z_name'"
-								forvalues ii=1/`=(`e_varying'>0)*(`e'-1)' {
-									local lagged_z_name = "l`=`ii'*`tau''.`z_name'"
-									local mapping_name = "`mapping_name' `lagged_z_name'"
-								}
+							local e_varying = strpos("`z_name'", "(e)")
+							if `e_varying' {
+								local suffix_ind = strlen("`z_name'")-3+1
+								local z_name = substr("`z_name'", 1, `suffix_ind'-1)
 							}
 
-							local ii = 1
-							local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
-							foreach name of local mapping_name {
-								qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
-								qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' `label'"
-								local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
-								local ++ii
+							local mapping_name = "`mapping_name' `z_name'"
+							forvalues ii=1/`=(`e_varying'>0)*(`e'-1)' {
+								local lagged_z_name = "l`=`ii'*`tau''.`z_name'"
+								local mapping_name = "`mapping_name' `lagged_z_name'"
 							}
-							local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'" 
 						}
 
-						qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set'
+						local ii = 1
+						local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
+						foreach name of local mapping_name {
+							qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
+							qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' `label'"
+							local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
+							local ++ii
+						}
+						local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'" 
+					}
+
+					qui gen byte `overlap' = `train_set' ==`predict_set' if `predict_set'
+
+					// PJL: currently `savemanifold' does nothing in the plugin. 
+					if `mata_mode' & "`savemanifold'" !="" {
+						local counter = 1
+						foreach v of varlist ``manifold'' {
+							cap gen double `savemanifold'`direction_num'_`counter' = `v'
+							if _rc!=0 {
+								di as error "Cannot save the manifold using variable `savemanifold'`direction_num'_`counter' - is the prefix used already?"
+								exit(100)
+							}
+							local ++counter
+						}
+					}
+
+					foreach j of numlist `theta' {
+
 						local last_theta =  `j'
-
-						// PJL: currently `savemanifold' does nothing in the plugin. 
-						if `mata_mode' & "`savemanifold'" !="" {
-							local counter = 1
-							foreach v of varlist ``manifold'' {
-								cap gen double `savemanifold'`direction_num'_`counter' = `v'
-								if _rc!=0 {
-									di as error "Cannot save the manifold using variable `savemanifold'`direction_num'_`counter' - is the prefix used already?"
-									exit(100)
-								}
-								local ++counter
-							}
-						}
 
 						mat r`direction_num'[`task_num',1] = `direction_num'
 						mat r`direction_num'[`task_num',2] = `lib_size'
@@ -1778,7 +1781,7 @@ program define edmXmap, eclass
 						else {
 							local save_smap_coeffs = ("`savesmap'" != "")
 							plugin call edm_plugin, "launch_edm_task" ///
-									"`rep'" "`i'" "`j'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
+									"`rep'" "`i'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 						}
 						drop `overlap'
 						local ++task_num
