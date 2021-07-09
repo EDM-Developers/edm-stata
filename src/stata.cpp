@@ -32,6 +32,8 @@ const double PI = 3.141592653589793238463;
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
 char* FINISHED_SCALAR = (char*)"plugin_finished";
 char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
+char* RNG_STATE = (char*)"_rngstate";
+char* NEW_TRAIN_PREDICT_SPLIT = (char*)"_newTrainPredictSplit";
 
 class StataIO : public IO
 {
@@ -494,7 +496,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   if (requiresRandomNumbers) {
     char buffer[5200]; // Need at least 5011 + 1 bytes.
-    if (SF_macro_use("_rngstate", buffer, 5200)) {
+    if (SF_macro_use(RNG_STATE, buffer, 5200)) {
       io.print("Got an error rc from macro_use!\n");
     }
 
@@ -552,7 +554,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   // Find which rows are used for training & which for prediction
   char buffer[5]; // Need at least 5011 + 1 bytes.
-  if (SF_macro_use("_newTrainPredictSplit", buffer, 5)) {
+  if (SF_macro_use(NEW_TRAIN_PREDICT_SPLIT, buffer, 5)) {
     io.print("Got an error rc from macro_use!\n");
   }
   bool newTrainPredictSplit = atoi(buffer);
