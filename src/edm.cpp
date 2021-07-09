@@ -140,9 +140,6 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
     if (opts.forceCompute) {
       k = validDistances;
       if (k == 0) {
-        for (int t = 0; t < opts.thetas.size(); t++) {
-          rc(t, Mp_i) = INSUFFICIENT_UNIQUE;
-        }
         return;
       }
     } else {
@@ -410,12 +407,13 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
   auto predToTrainSelfMap = find_overlaps(trainingRows, predictionRows, numPredictions, opts.copredict);
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
+  std::fill_n(ystar.get(), numThetas * numPredictions, MISSING);
   Eigen::Map<Eigen::MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
 
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
-  Eigen::Map<Eigen::MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
   std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING);
+  Eigen::Map<Eigen::MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   Eigen::Map<Eigen::Matrix<retcode, -1, -1>> rcView(rc.get(), numThetas, numPredictions);

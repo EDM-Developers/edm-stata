@@ -783,12 +783,9 @@ program define edmExplore, eclass
 
 		* z list
 		local co_z_vars = "`z_vars'"
-		tempvar any_co_extras_missing
-		hasMissingValues `co_z_vars', out(`any_co_extras_missing')
+		local co_z_e_varying = "`z_e_varying'"
 
-		tempvar co_usable
-		gen byte `co_usable' = `touse' & `co_x' != . & !`any_co_extras_missing'
-
+		// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 		local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 		local co_manifold_vars = ""
@@ -796,15 +793,25 @@ program define edmExplore, eclass
 			tempvar co_manifold_var
 			local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 		}
-		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') z_vars("`co_z_vars'") ///
+		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
+			z_vars("`co_z_vars'") z_e_varying("`co_z_e_varying'") ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 		local co_mapping = "`r(max_e_manifold)'"
 
-		forvalues i=0/`=`max_e'-1' {
-			local co_x_`i' : word `=`i'+1' of `co_mapping'
-			qui replace `co_usable' = 0 if `co_x_`i'' ==.
-		}
+		// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+		tempvar co_usable
+		if `allow_missing_mode' {
+				qui gen byte `co_usable' = 0
+				foreach v of local co_mapping {
+					qui replace `co_usable' = 1 if `v' !=. & `touse'
+				}
+			}
+			else {
+				tempvar any_missing_in_co_manifold
+				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+			}
 
 		gen byte `co_predict_set' = `co_usable'
 
@@ -1560,12 +1567,7 @@ program define edmXmap, eclass
 			* z list
 			local co_z_vars = "`z_vars'"
 			local co_z_e_varying = "`z_e_varying'"
-			tempvar any_co_extras_missing
-			hasMissingValues `co_z_vars', out(`any_co_extras_missing')
-
-			tempvar co_usable
-			gen byte `co_usable' = `touse' & !`any_co_extras_missing'
-
+			
 			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
@@ -1580,9 +1582,18 @@ program define edmXmap, eclass
 
 			local co_mapping = "`r(max_e_manifold)'"
 
-			forvalues i=0/`=`max_e'-1' {
-				local co_x_`i' : word `=`i'+1' of `co_mapping'
-				qui replace `co_usable' = 0 if `co_x_`i'' ==.
+			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+			tempvar co_usable
+			if `allow_missing_mode' {
+				qui gen byte `co_usable' = 0
+				foreach v of local co_mapping {
+					qui replace `co_usable' = 1 if `v' !=. & `touse'
+				}
+			}
+			else {
+				tempvar any_missing_in_co_manifold
+				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
 			}
 
 			gen byte `co_predict_set' = `co_usable'
