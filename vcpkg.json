@@ -1,6 +1,6 @@
 {
     "name": "edm",
-    "version-string": "1.4.0",
+    "version-string": "1.5.1",
     "dependencies": [
         "eigen3", "fmt", "nlohmann-json"
     ]

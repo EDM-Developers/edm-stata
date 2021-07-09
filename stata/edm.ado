@@ -1,7 +1,7 @@
 *! version 1.5.0, 01Jun2021, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick J. Laub
 *! conact: <jinjing.li@canberra.edu.au>
 
-global EDM_VERSION = "1.5.0"
+global EDM_VERSION = "1.5.1"
 /* Empirical dynamic modelling
 
 Version history:
