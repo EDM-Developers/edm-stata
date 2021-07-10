@@ -55,7 +55,7 @@ public:
   double missing() const { return _missing; }
 
   double time_range() const { return _nobs - 1; }
-  
+
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
@@ -157,4 +157,14 @@ public:
   int E_dt(int E) const { return (_use_dt) * (E - 1 + _add_dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_varying * (E - 1); }
   int E_actual(int E) const { return E + E_dt(E) + E_extras(E); }
+
+  std::vector<int> E_extras_counts(int E) const
+  {
+    std::vector<int> E_counts;
+
+    for (const bool& eVarying : _extrasEVarying) {
+      E_counts.push_back(eVarying ? E : 1);
+    }
+    return E_counts;
+  };
 };

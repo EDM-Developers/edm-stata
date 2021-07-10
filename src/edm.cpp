@@ -92,31 +92,21 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
 // closest neighbour as it is probably cheating. 'skipRow' actually stores the specific index
 // of the training manifold which should not be used for this prediction, and in the future we will
 // use this directly, though some details need to be worked out.
-void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp, Eigen::Map<Eigen::MatrixXd> ystar,
-                     Eigen::Map<Eigen::MatrixXi> rc, Eigen::Map<Eigen::MatrixXd> coeffs, int skipRow,
-                     bool keep_going() = nullptr)
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
+                     Eigen::Map<Eigen::MatrixXd> coeffs, int skipRow, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
-  int validDistances = 0;
-  std::vector<double> dists(M.nobs());
 
-  double gamma = Mp.range() / Mp.time_range() * opts.aspectRatio;
+  int validDistances;
+  std::vector<double> dists;
 
-  int len_i, len_j;
-
-  for (int i = 0; i < M.nobs(); i++) {
-
-    auto C = cost_matrix(M, Mp, i, Mp_i, gamma, opts.missingdistance, len_i, len_j);
-
-    if (len_i > 0 && len_j > 0) {
-      dists[i] = std::sqrt(approx_wasserstein(C.get(), len_i, len_j));
-      validDistances += 1;
-
-    } else {
-      dists[i] = MISSING;
-    }
+  if (opts.distance == Distance::Wasserstein) {
+    dists = wasserstein_distances(Mp_i, opts, M, Mp, validDistances);
+  } else {
+    dists = other_distances(Mp_i, opts, M, Mp, validDistances);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -164,12 +154,7 @@ void make_prediction(int Mp_i, Options opts, const Manifold& M, const Manifold& 
       simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc);
     }
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
-    bool saveCoeffsForLargestTheta = opts.saveSMAPCoeffs;
-    opts.saveSMAPCoeffs = false;
     for (int t = 0; t < opts.thetas.size(); t++) {
-      if (t == opts.thetas.size() - 1) {
-        opts.saveSMAPCoeffs = saveCoeffsForLargestTheta;
-      }
       smap_prediction(Mp_i, t, opts, M, Mp, k, dists, kNNInds, ystar, coeffs, rc);
     }
   } else {
@@ -292,8 +277,9 @@ void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Man
       }
     }
 
-    // saving ics coefficients if savesmap option enabled
-    if (opts.saveSMAPCoeffs) {
+    // If the 'samesmap' option is given, save the 'ics' coefficients
+    // for the largest value of theta.
+    if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
       for (int j = 0; j < M.E_actual() + 1; j++) {
         if (ics(j) == 0.) {
           coeffs(Mp_i, j) = MISSING;

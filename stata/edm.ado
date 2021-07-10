@@ -439,7 +439,8 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)] [aspectratio(real 100000)]
+			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)] [aspectratio(real 100000)] ///
+			[distance(string)] [metrics(string)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -493,16 +494,55 @@ program define edmExplore, eclass
 	}
 
 	edmPluginCheck, `mata'
-
 	local mata_mode = r(mata_mode)
-	if "${EDM_VERBOSITY}"!="" {
-		local verbosity=${EDM_VERBOSITY}
+
+	if "`distance'" == "" {
+		local distance = "euclidean"
 	}
-	if "${EDM_NTHREADS}"!="" {
-		local nthreads=${EDM_NTHREADS}
+
+	if "`metrics'" == "" {
+		local metrics = "auto"
+	}
+
+	// Allow global variables to overwrite some options.
+	// This is to make it easier to change an option for all edm calls in a large do file.
+	if "${EDM_VERBOSITY}" != "" {
+		local verbosity = ${EDM_VERBOSITY}
+	}
+
+	if "${EDM_NTHREADS}" != "" {
+		local nthreads = ${EDM_NTHREADS}
+	}
+
+	if "${EDM_DISTANCE}" != "" {
+		local distance = "${EDM_DISTANCE}"
+	}
+
+	if "${EDM_METRICS}" != "" {
+		local metrics = "${EDM_METRICS}"
 	}
 
 	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
+
+	if ("`=strlower("`distance'")'" == "wasserstein") {
+		if ("`dt'" == "dt") {
+			di "Ignoring dt option as it cannot be specified with the Wasserstein distance"
+			local dt = ""
+		}
+		if ("`olddt'" == "olddt") {
+			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
+			local olddt = ""
+		}
+	}
+
+	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+	local parsed_dt0 = ("`olddt'" != "olddt")
+	local parsed_dtw = "`dtweight'"
+
+	if "`dtsave'" != ""{
+		confirm new variable `dtsave'
+	}
+	local parsed_dtsave = "`dtsave'"
 
 	* create manifold as variables
 	tokenize "`anything'"
@@ -519,14 +559,6 @@ program define edmExplore, eclass
 
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
-
-	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
-	local parsed_dt0 = ("`olddt'" != "olddt")
-	local parsed_dtw = "`dtweight'"
-	if "`dtsave'" != ""{
-		confirm new variable `dtsave'
-	}
-	local parsed_dtsave = "`dtsave'"
 
 	if `parsed_dt' {
 		/* general algorithm for generating t patterns
@@ -745,7 +777,7 @@ program define edmExplore, eclass
 
 		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1139,7 +1171,7 @@ program define edmXmap, eclass
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[parmode(integer 0)] [aspectratio(real 100000)]
+			[parmode(integer 0)] [aspectratio(real 100000)] [distance(string)] [metrics(string)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1149,7 +1181,7 @@ program define edmXmap, eclass
 		error 9
 	}
 
-	if "`oneway'" =="oneway" {
+	if "`oneway'" == "oneway" {
 		if !inlist("`direction'","oneway","") {
 			di as error "option oneway does not match direction() option"
 			error 9
@@ -1158,12 +1190,12 @@ program define edmXmap, eclass
 			local direction "oneway"
 		}
 	}
-	if "`direction'" != "oneway" & "`dtsave'" !="" {
+	if "`direction'" != "oneway" & "`dtsave'" != "" {
 		di as error "dtsave() option can only be used together with oneway"
 		error 9
 	}
 	* check prediction save
-	if "`predict'" !="" {
+	if "`predict'" != "" {
 		confirm new variable `predict'
 		if "`direction'" != "oneway" {
 			dis as error "direction() option must be set to oneway if predicted values are to be saved."
@@ -1207,6 +1239,57 @@ program define edmXmap, eclass
 		dis as error "direction() option should be either both or oneway"
 		error 197
 	}
+
+	edmPluginCheck, `mata'
+	local mata_mode = r(mata_mode)
+
+	if "`distance'" == "" {
+		local distance = "euclidean"
+	}
+
+	if "`metrics'" == "" {
+		local metrics = "auto"
+	}
+
+	// Allow global variables to overwrite some options.
+	// This is to make it easier to change an option for all edm calls in a large do file.
+	if "${EDM_VERBOSITY}" != "" {
+		local verbosity = ${EDM_VERBOSITY}
+	}
+
+	if "${EDM_NTHREADS}" != "" {
+		local nthreads = ${EDM_NTHREADS}
+	}
+
+	if "${EDM_DISTANCE}" != "" {
+		local distance = "${EDM_DISTANCE}"
+	}
+
+	if "${EDM_METRICS}" != "" {
+		local metrics = "${EDM_METRICS}"
+	}
+
+	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
+
+	if ("`=strlower("`distance'")'" == "wasserstein") {
+		if ("`dt'" == "dt") {
+			di "Ignoring dt option as it cannot be specified with the Wasserstein distance"
+			local dt = ""
+		}
+		if ("`olddt'" == "olddt") {
+			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
+			local olddt = ""
+		}
+	}
+
+	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+	local parsed_dt0 = ("`olddt'" != "olddt")
+
+	if "`dtsave'" != ""{
+		confirm new variable `dtsave'
+	}
+	local parsed_dtsave = "`dtsave'"
+
 	* identify data structure
 	qui xtset
 	local timevar "`=r(timevar)'"
@@ -1221,18 +1304,6 @@ program define edmXmap, eclass
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 	sort `panel_id' `timevar'
-
-
-	edmPluginCheck, `mata'
-	local mata_mode = r(mata_mode)
-	if "${EDM_VERBOSITY}"!="" {
-		local verbosity=${EDM_VERBOSITY}
-	}
-	if "${EDM_NTHREADS}"!="" {
-		local nthreads=${EDM_NTHREADS}
-	}
-
-	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 
 	* create manifold as variables
 	tokenize "`anything'"
@@ -1269,14 +1340,7 @@ program define edmXmap, eclass
 			local y "`swap'"
 		}
 
-		/* return list */
-		local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
-		local parsed_dt0 = ("`olddt'" != "olddt")
 		local parsed_dtw = "`dtweight'"
-		if "`dtsave'" != ""{
-			confirm new variable `dtsave'
-		}
-		local parsed_dtsave = "`dtsave'"
 
 		if `parsed_dt' {
 			/* general algorithm for generating t patterns
@@ -1530,7 +1594,7 @@ program define edmXmap, eclass
 
 			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients

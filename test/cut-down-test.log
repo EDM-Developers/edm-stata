@@ -415,7 +415,7 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99637         .012655 
+                 2               1          .99682         .011803 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -444,8 +444,8 @@ Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124          .99973        .0031437 
-     x ~ x|M(l.x)             118          .99748         .011154 
+   l.x ~ l.x|M(x)             124           .9998        .0027684 
+     x ~ x|M(l.x)             118           .9983        .0093727 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -476,8 +476,8 @@ Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124          .89903         .059167 
-     x ~ x|M(l.x)             150         .020588          .34297 
+   l.x ~ l.x|M(x)             124          .89929          .05816 
+     x ~ x|M(l.x)             150          .10714          .25182 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 11 (including 6 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55 and .54
@@ -493,7 +493,7 @@ Missing values are assumed to have a distance of .24 with all values.
 ---------------------------------------------------------------------
             Mapping    Library size             rho             MAE
 ---------------------------------------------------------------------
-   l3.x ~ l3.x|M(x)             123          .79958         .083857 
+   l3.x ~ l3.x|M(x)             123          .80037         .077677 
 ---------------------------------------------------------------------
 Note: The embedding dimension E is 11 (including 6 extras)
 Note: Embedding includes the delta of the time variable with a weight of .55
@@ -511,7 +511,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        5        1       .91881      .039981      .052156      .011567
+        5        1       .91558      .045844      .052989        .0135
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras

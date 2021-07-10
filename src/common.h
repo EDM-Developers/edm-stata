@@ -4,6 +4,8 @@
 #define TOO_FEW_VARIABLES 102
 #define TOO_MANY_VARIABLES 103
 #define INVALID_ALGORITHM 400
+#define INVALID_DISTANCE 401
+#define INVALID_METRICS 402
 #define INSUFFICIENT_UNIQUE 503
 #define NOT_IMPLEMENTED 908
 #define CANNOT_SAVE_RESULTS 1000
@@ -21,6 +23,18 @@ typedef int retcode;
 
 #include "manifold.h"
 
+enum class Distance
+{
+  MeanAbsoluteError,
+  Euclidean,
+  Wasserstein
+};
+enum class Metric
+{
+  Diff,
+  CheckSame
+};
+
 struct Options
 {
   bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
@@ -33,6 +47,8 @@ struct Options
   bool calcRhoMAE = false;
   int parMode = 0;
   double aspectRatio;
+  Distance distance;
+  std::vector<Metric> metrics;
 };
 
 void to_json(json& j, const Options& o);

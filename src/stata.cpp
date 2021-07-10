@@ -20,6 +20,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "cli.h" // to save the inputs to a local file for debugging
@@ -88,6 +89,12 @@ void print_error(std::string command, ST_retcode rc)
       break;
     case INVALID_ALGORITHM:
       io.error("Invalid algorithm argument\n");
+      break;
+    case INVALID_DISTANCE:
+      io.error("Invalid distance argument\n");
+      break;
+    case INVALID_METRICS:
+      io.error("Invalid metrics argument\n");
       break;
     case UNKNOWN_ERROR:
       io.error("Unknown error\n");
@@ -209,27 +216,49 @@ void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, S
   }
 }
 
-template<typename T>
-std::vector<T> numlist_to_vector(std::string list)
+std::vector<std::string> split_string(std::string list)
 {
-  std::vector<T> numlist;
+  if (list.empty()) {
+    return {};
+  }
+
+  std::vector<std::string> splitList;
+
   size_t found = list.find(' ');
   while (found != std::string::npos) {
-    std::string theta = list.substr(0, found);
-    numlist.push_back(atof(theta.c_str()));
+    std::string part = list.substr(0, found);
+    splitList.push_back(part);
     list = list.substr(found + 1);
     found = list.find(' ');
   }
-  numlist.push_back((T)atof(list.c_str()));
+  splitList.push_back(list);
+  return splitList;
+}
 
-  return numlist;
+template<typename T>
+std::vector<T> numlist_to_vector(std::string list)
+{
+  if (list.empty()) {
+    return {};
+  }
+
+  std::vector<T> numList;
+
+  size_t found = list.find(' ');
+  while (found != std::string::npos) {
+    std::string theta = list.substr(0, found);
+    numList.push_back(atof(theta.c_str()));
+    list = list.substr(found + 1);
+    found = list.find(' ');
+  }
+  numList.push_back((T)atof(list.c_str()));
+
+  return numList;
 }
 
 template<typename T>
 std::vector<T> stata_numlist(std::string macro)
 {
-  std::vector<T> numlist;
-
   char buffer[1000];
   SF_macro_use((char*)("_" + macro).c_str(), buffer, 1000);
 
@@ -368,6 +397,27 @@ double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
   return defaultMissingDist;
 }
 
+Metric default_metric(std::vector<ST_double> data, int targetSample = 100)
+{
+  std::unordered_set<double> uniqueValues;
+
+  int sampleSize = 0;
+  for (int i = 0; i < data.size() && sampleSize < targetSample; i++) {
+    if (data[i] != MISSING) {
+      sampleSize += 1;
+      uniqueValues.insert(data[i]);
+    }
+  }
+
+  if (uniqueValues.size() <= 10) {
+    // The data is likely binary or categorical, calculate the indicator function for two values being identical
+    return Metric::CheckSame;
+  } else {
+    // The data is likely continuous, just take differences between the values
+    return Metric::Diff;
+  }
+}
+
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
@@ -391,10 +441,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 20) {
+  if (argc < 22) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 20) {
+  if (argc > 22) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -422,6 +472,18 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   double nextRV = std::stod(argv[17]);
   opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
   opts.aspectRatio = atof(argv[19]);
+  std::string distance(argv[20]);
+  std::string metrics(argv[21]);
+
+  if (distance == "l1" || distance == "L1" || distance == "mae" || distance == "MAE") {
+    opts.distance = Distance::MeanAbsoluteError;
+  } else if (distance == "l2" || distance == "L2" || distance == "euclidean" || distance == "Euclidean") {
+    opts.distance = Distance::Euclidean;
+  } else if (distance == "wasserstein" || distance == "Wasserstein") {
+    opts.distance = Distance::Wasserstein;
+  } else {
+    return INVALID_DISTANCE;
+  }
 
   // Default number of threads is the number of physical cores available
   ST_int npcores = (ST_int)num_physical_cores();
@@ -449,6 +511,28 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(4 + z);
   }
 
+  if (metrics == "auto" || metrics == "") {
+    opts.metrics.push_back(default_metric(x));
+    for (auto& extra : extras) {
+      opts.metrics.push_back(default_metric(extra));
+    }
+  } else {
+    for (std::string& metric : split_string(metrics)) {
+      if (metric == "same" || metric == "indicator" || metric == "onehot") {
+        opts.metrics.push_back(Metric::CheckSame);
+      } else {
+        opts.metrics.push_back(Metric::Diff);
+      }
+    }
+
+    // If the user supplied fewer than the required number of metrics,
+    // just repeat the last one to pad out the list.
+    while (opts.metrics.size() < 1 + numExtras) {
+      opts.metrics.push_back(opts.metrics.back());
+    }
+  }
+
+  // TODO: Bring this in via the standard argument passing
   auto extrasEVarying = stata_numlist<bool>("z_e_varying");
 
   generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
@@ -550,6 +634,26 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   // Default number of neighbours k is E_actual + 1
   if (taskOpts.k <= 0) {
     taskOpts.k = E_actual + 1;
+  }
+
+  // Expand the metrics vector now we know the value of E
+  taskOpts.metrics.clear();
+
+  for (int repeat = 0; repeat < E; repeat++) {
+    taskOpts.metrics.push_back(opts.metrics[0]);
+  }
+
+  // Add metrics for each dt variable (it is always treated as a continuous value)
+  for (int repeat = 0; repeat < generator.E_dt(E); repeat++) {
+    taskOpts.metrics.push_back(Metric::Diff);
+  }
+
+  int j = 1;
+  for (int E_extra_count : generator.E_extras_counts(E)) {
+    for (int repeat = 0; repeat < E_extra_count; repeat++) {
+      taskOpts.metrics.push_back(opts.metrics[j]);
+    }
+    j += 1;
   }
 
   // Find which rows are used for training & which for prediction
