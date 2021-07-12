@@ -253,17 +253,26 @@ program define hasMissingValues
 	}
 end
 
-program define edmPreprocessVariable
+program define edmPreprocessVariable, rclass
 	syntax anything , touse(name) out(name)
 
-	if substr("`1'", 1, 2) == "z." {
-		local unnormalized = substr("`1'", 3, .)
-		qui egen `out' = std(`unnormalized') if `touse'
+	local factor_var = "0"
+
+	if substr("`1'", 1, 2) == "z." {  // user asks for this variable to be normalized
+		local varname = substr("`1'", 3, .)
+		qui egen `out' = std(`varname') if `touse'
+	}
+	else if substr("`1'", 1, 2) == "i." {  // treat as a factor variable
+		local factor_var = "1"
+		local varname = substr("`1'", 3, .)
+		qui gen double `out' = `varname'
 	}
 	else {
 		qui gen double `out' = `1'
 	}
+	return local factor_var = "`factor_var'"
 end
+
 
 program define edmManifoldSize, rclass
 	syntax , e(int) dt(int) dt0(int) num_extras(int) [num_eextras(int 0)]
@@ -335,12 +344,22 @@ program define edmCountExtras, rclass
 	local z_count = 0
 	local z_e_varying = ""
 	local z_e_varying_count = 0
+	local z_factor_var = ""
 
 	foreach v of local extravars {
 		local z_prefix = strpos("`v'", "z.")
 		if `z_prefix' {
 			if `z_prefix' > 1 {
 				noi di as error "Extra '`v'' must have 'z.' prefix come first"
+				error 198
+			}
+			local v = substr("`v'",3,.)
+		}
+
+		local i_prefix = strpos("`v'", "i.")
+		if `i_prefix' {
+			if `z_prefix' {
+				noi di as error "Extra '`v'' can't both 'z.' prefix and 'i.' prefix"
 				error 198
 			}
 			local v = substr("`v'",3,.)
@@ -366,11 +385,12 @@ program define edmCountExtras, rclass
 		}
 		tokenize `v_list'
 		forvalues i = 1/`v_count' {
-			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'``i''`=cond(`e_varying', "(e)", "")'"
+			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'`=cond(`i_prefix', "i.", "")'``i''`=cond(`e_varying', "(e)", "")'"
 			local ++z_count
 			if !`e_varying' {
 					local z_e_varying = "`z_e_varying' 0"
 			}
+			local z_factor_var = "`z_factor_var' `=cond(`i_prefix', 1, 0)'"
 		}
 	}
 
@@ -378,6 +398,7 @@ program define edmCountExtras, rclass
 	return local z_count = `z_count'
 	return local z_e_varying_count = `z_e_varying_count'
 	return local z_e_varying = strtrim("`z_e_varying'")
+	return local z_factor_var = strtrim("`z_factor_var'")
 end
 
 program define edmPreprocessExtras, rclass
@@ -398,7 +419,7 @@ program define edmPreprocessExtras, rclass
 
 		edmPreprocessVariable `z_name' , touse(`touse') out(`z_var')
 	}
-end 
+end
 
 program define edmPrintPluginProgress
 	plugin call edm_plugin , "report_progress"
@@ -559,6 +580,7 @@ program define edmExplore, eclass
 
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
+	local factor_var = "`r(factor_var)'"
 
 	if `parsed_dt' {
 		/* general algorithm for generating t patterns
@@ -694,6 +716,8 @@ program define edmExplore, eclass
 	local z_names = "`r(z_names)'"
 	local z_e_varying_count = `r(z_e_varying_count)'
 	local z_e_varying = "`r(z_e_varying)'"
+	local factor_var = strtrim("`factor_var' `r(z_factor_var)'")
+
 	local z_vars = ""
 	forvalues i = 1/`z_count' {
 		tempvar z
@@ -1314,13 +1338,28 @@ program define edmXmap, eclass
 		error 103
 	}
 
-	if "`1'" =="" | "`2'" == "" {
+	if "`1'" == "" | "`2'" == "" {
 		error 102
 	}
 
 	tempvar x y
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
+	local factor_var = "`r(factor_var)'"
 	edmPreprocessVariable "`2'", touse(`touse') out(`y')
+
+	edmCountExtras `extraembed'
+	local z_count = `r(z_count)'
+	local z_names = "`r(z_names)'"
+	local z_e_varying_count = `r(z_e_varying_count)'
+	local z_e_varying = "`r(z_e_varying)'"
+	local factor_var = strtrim("`factor_var' `r(z_factor_var)'")
+
+	local z_vars = ""
+	forvalues i = 1/`z_count' {
+		tempvar z
+		local z_vars = "`z_vars' `z'"
+	}
+	edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 	if (`e' < 1) {
 		dis as error "Some of the proposed number of dimensions for embedding is too small."
@@ -1493,18 +1532,6 @@ program define edmXmap, eclass
 			qui tsfill
 			qui replace `touse' = 0 if !`before_tsfill'
 		}
-
-		edmCountExtras `extraembed'
-		local z_count = `r(z_count)'
-		local z_names = "`r(z_names)'"
-		local z_e_varying_count = `r(z_e_varying_count)'
-		local z_e_varying = "`r(z_e_varying)'"
-		local z_vars = ""
-		forvalues i = 1/`z_count' {
-			tempvar z
-			local z_vars = "`z_vars' `z'"
-		}
-		edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
 		numlist "`e'"
 		local e_size = wordcount("`=r(numlist)'")

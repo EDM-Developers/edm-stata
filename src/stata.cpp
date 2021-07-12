@@ -218,10 +218,6 @@ void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, S
 
 std::vector<std::string> split_string(std::string list)
 {
-  if (list.empty()) {
-    return {};
-  }
-
   std::vector<std::string> splitList;
 
   size_t found = list.find(' ');
@@ -231,17 +227,17 @@ std::vector<std::string> split_string(std::string list)
     list = list.substr(found + 1);
     found = list.find(' ');
   }
-  splitList.push_back(list);
+
+  if (!list.empty()) {
+    splitList.push_back(list);
+  }
+
   return splitList;
 }
 
 template<typename T>
 std::vector<T> numlist_to_vector(std::string list)
 {
-  if (list.empty()) {
-    return {};
-  }
-
   std::vector<T> numList;
 
   size_t found = list.find(' ');
@@ -251,7 +247,10 @@ std::vector<T> numlist_to_vector(std::string list)
     list = list.substr(found + 1);
     found = list.find(' ');
   }
-  numList.push_back((T)atof(list.c_str()));
+
+  if (!list.empty()) {
+    numList.push_back((T)atof(list.c_str()));
+  }
 
   return numList;
 }
@@ -286,7 +285,8 @@ void print_vector(std::string name, std::vector<T> vec)
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight)
+void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight,
+                      const std::vector<Metric>& metrics)
 {
   if (io.verbosity > 1) {
     // Overview of variables and arguments passed and observations in sample
@@ -306,6 +306,16 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
     if (dtMode) {
       io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
     }
+
+    io.print("Metrics:");
+    for (const Metric& m : metrics) {
+      if (m == Metric::Diff) {
+        io.print(" Diff");
+      } else {
+        io.print(" CheckSame");
+      }
+    }
+    io.print("\n");
 
     io.print(fmt::format("Requested {} threads\n", reqThreads));
     io.print(fmt::format("Using {} threads\n\n", opts.nthreads));
@@ -397,7 +407,7 @@ double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
   return defaultMissingDist;
 }
 
-Metric default_metric(std::vector<ST_double> data, int targetSample = 100)
+Metric guess_appropriate_metric(std::vector<ST_double> data, int targetSample = 100)
 {
   std::unordered_set<double> uniqueValues;
 
@@ -473,7 +483,11 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
   opts.aspectRatio = atof(argv[19]);
   std::string distance(argv[20]);
-  std::string metrics(argv[21]);
+  std::string requestedMetrics(argv[21]);
+
+  // TODO: Bring this in via the standard argument passing?
+  auto factorVariables = stata_numlist<bool>("factor_var");
+  auto extrasEVarying = stata_numlist<bool>("z_e_varying");
 
   if (distance == "l1" || distance == "L1" || distance == "mae" || distance == "MAE") {
     opts.distance = Distance::MeanAbsoluteError;
@@ -511,29 +525,27 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     extras[z] = stata_columns<ST_double>(4 + z);
   }
 
-  if (metrics == "auto" || metrics == "") {
-    opts.metrics.push_back(default_metric(x));
-    for (auto& extra : extras) {
-      opts.metrics.push_back(default_metric(extra));
+  std::vector<Metric> metrics;
+  if (requestedMetrics == "auto" || requestedMetrics.empty()) {
+    for (bool isFactorVariable : factorVariables) {
+      metrics.push_back(isFactorVariable ? Metric::CheckSame : Metric::Diff);
     }
   } else {
-    for (std::string& metric : split_string(metrics)) {
+    for (std::string& metric : split_string(requestedMetrics)) {
       if (metric == "same" || metric == "indicator" || metric == "onehot") {
-        opts.metrics.push_back(Metric::CheckSame);
+        metrics.push_back(Metric::CheckSame);
       } else {
-        opts.metrics.push_back(Metric::Diff);
+        metrics.push_back(Metric::Diff);
       }
     }
 
     // If the user supplied fewer than the required number of metrics,
     // just repeat the last one to pad out the list.
-    while (opts.metrics.size() < 1 + numExtras) {
-      opts.metrics.push_back(opts.metrics.back());
+    while (metrics.size() < 1 + numExtras) {
+      metrics.push_back(metrics.back());
     }
   }
-
-  // TODO: Bring this in via the standard argument passing
-  auto extrasEVarying = stata_numlist<bool>("z_e_varying");
+  opts.metrics = metrics;
 
   generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
 
@@ -597,7 +609,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
     splitter = TrainPredictSplitter(explore, full, crossfold, usable);
   }
 
-  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight);
+  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight, opts.metrics);
 
   auto usableToSave = std::make_unique<double[]>(usable.size());
   for (int i = 0; i < usable.size(); i++) {
@@ -672,9 +684,9 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   // If requested, save the inputs to a local file for testing
   if (!saveInputsFilename.empty()) {
-    io.print(fmt::format("Saving inputs to '{}'\n", saveInputsFilename));
+    io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
     io.flush();
-    write_dumpfile(saveInputsFilename.c_str(), taskOpts, generator, E, trainingRows, predictionRows);
+    write_dumpfile((saveInputsFilename + ".json").c_str(), taskOpts, generator, E, trainingRows, predictionRows);
   }
 
   predictions.push({});
@@ -730,8 +742,28 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   std::vector<bool> coTrainingRows = stata_columns<bool>(2);
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
+  // Expand the metrics vector now we know the value of E
+  taskOpts.metrics.clear();
+
+  for (int repeat = 0; repeat < E; repeat++) {
+    taskOpts.metrics.push_back(opts.metrics[0]);
+  }
+
+  // Add metrics for each dt variable (it is always treated as a continuous value)
+  for (int repeat = 0; repeat < generator.E_dt(E); repeat++) {
+    taskOpts.metrics.push_back(Metric::Diff);
+  }
+
+  int j = 1;
+  for (int E_extra_count : generator.E_extras_counts(E)) {
+    for (int repeat = 0; repeat < E_extra_count; repeat++) {
+      taskOpts.metrics.push_back(opts.metrics[j]);
+    }
+    j += 1;
+  }
+
   if (!saveInputsFilename.empty()) {
-    write_dumpfile(saveInputsFilename.c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
+    write_dumpfile((saveInputsFilename + "copred.json").c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
 
   if (io.verbosity > 2) {
