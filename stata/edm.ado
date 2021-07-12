@@ -1,7 +1,7 @@
-*! version 1.5.0, 01Jun2021, Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick J. Laub
-*! conact: <jinjing.li@canberra.edu.au>
+*! Jinjing Li, Michael Zyphur, George Sugihara, Edoardo Tescari, Patrick J. Laub
+*! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@unimelb.edu.au>
 
-global EDM_VERSION = "1.5.2"
+global EDM_VERSION = "1.5.3"
 /* Empirical dynamic modelling
 
 Version history:
@@ -36,8 +36,6 @@ Version history:
 * 12/3/2019: labelling of the savesmap
 
  */
-
-/* global EDM_DEBUG = 0 */
 
 program define edm, eclass sortpreserve
 	version 14
