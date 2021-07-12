@@ -460,7 +460,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [olddt] [parmode(integer 0)] [aspectratio(real 100000)] ///
+			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 100000)] ///
 			[distance(string)] [metrics(string)]
 	* set seed
 	if `seed' != 0 {
@@ -801,7 +801,7 @@ program define edmExplore, eclass
 
 		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'"
+				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1195,7 +1195,7 @@ program define edmXmap, eclass
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[parmode(integer 0)] [aspectratio(real 100000)] [distance(string)] [metrics(string)]
+			[aspectratio(real 100000)] [distance(string)] [metrics(string)]
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1621,7 +1621,7 @@ program define edmXmap, eclass
 
 			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`parmode'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'"
+					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients

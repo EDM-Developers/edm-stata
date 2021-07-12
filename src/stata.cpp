@@ -451,10 +451,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 22) {
+  if (argc < 21) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 22) {
+  if (argc > 21) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -476,14 +476,13 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   bool full = atoi(argv[11]);
   int crossfold = atoi(argv[12]);
   int tau = atoi(argv[13]);
-  opts.parMode = atoi(argv[14]);
-  int maxE = atoi(argv[15]);
-  bool allowMissing = atoi(argv[16]);
-  double nextRV = std::stod(argv[17]);
-  opts.thetas = numlist_to_vector<double>(std::string(argv[18]));
-  opts.aspectRatio = atof(argv[19]);
-  std::string distance(argv[20]);
-  std::string requestedMetrics(argv[21]);
+  int maxE = atoi(argv[14]);
+  bool allowMissing = atoi(argv[15]);
+  double nextRV = std::stod(argv[16]);
+  opts.thetas = numlist_to_vector<double>(std::string(argv[17]));
+  opts.aspectRatio = atof(argv[18]);
+  std::string distance(argv[19]);
+  std::string requestedMetrics(argv[20]);
 
   // TODO: Bring this in via the standard argument passing?
   auto factorVariables = stata_numlist<bool>("factor_var");
@@ -693,8 +692,8 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   print_launch_info(argc, argv, taskOpts, trainingRows, predictionRows, E);
 
-  futures.push(edm_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going,
-                         all_tasks_finished));
+  futures.push(edm_task_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()),
+                              keep_going, all_tasks_finished));
 
   return SUCCESS;
 }
@@ -763,7 +762,8 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   }
 
   if (!saveInputsFilename.empty()) {
-    write_dumpfile((saveInputsFilename + "copred.json").c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
+    write_dumpfile((saveInputsFilename + "-copred.json").c_str(), taskOpts, generator, E, coTrainingRows,
+                   coPredictionRows);
   }
 
   if (io.verbosity > 2) {
@@ -788,8 +788,8 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   }
 
   predictions.push({});
-  futures.push(edm_async(taskOpts, &generator, E, coTrainingRows, coPredictionRows, &io, &(predictions.back()),
-                         keep_going, all_tasks_finished));
+  futures.push(edm_task_async(taskOpts, &generator, E, coTrainingRows, coPredictionRows, &io, &(predictions.back()),
+                              keep_going, all_tasks_finished));
 
   return SUCCESS;
 }

@@ -10,7 +10,7 @@ bool keep_going()
 int main(int argc, char* argv[])
 {
   if (argc < 2) {
-    std::cerr << "Usage: ./edm_cli filename [numThreads=4]" << std::endl;
+    std::cerr << "Usage: ./edm_cli filename [numThreads=1]" << std::endl;
     return -1;
   }
 
@@ -29,9 +29,9 @@ int main(int argc, char* argv[])
   ConsoleIO io;
   Prediction pred;
 
-  std::future<void> fut =
-    edm_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred, keep_going);
-  fut.get();
+  auto f =
+    edm_task_async(vars.opts, &vars.generator, vars.E, vars.trainingRows, vars.predictionRows, &io, &pred, keep_going);
+  f.get();
 
   size_t ext = fnameIn.find_last_of(".");
   fnameIn = fnameIn.substr(0, ext);

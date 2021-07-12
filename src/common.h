@@ -37,16 +37,14 @@ enum class Metric
 };
 
 // Store these enum classes to JSON as strings
-NLOHMANN_JSON_SERIALIZE_ENUM( Distance, {
-  {Distance::MeanAbsoluteError, "MeanAbsoluteError"},
-  {Distance::Euclidean, "Euclidean"},
-  {Distance::Wasserstein, "Wasserstein"}
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(Distance, { { Distance::MeanAbsoluteError, "MeanAbsoluteError" },
+                                         { Distance::Euclidean, "Euclidean" },
+                                         { Distance::Wasserstein, "Wasserstein" } })
 
-NLOHMANN_JSON_SERIALIZE_ENUM( Metric, {
-  {Metric::Diff, "Diff"},
-  {Metric::CheckSame, "CheckSame"},
-})
+NLOHMANN_JSON_SERIALIZE_ENUM(Metric, {
+                                       { Metric::Diff, "Diff" },
+                                       { Metric::CheckSame, "CheckSame" },
+                                     })
 
 struct Options
 {
@@ -58,7 +56,6 @@ struct Options
   std::string algorithm;
   size_t taskNum = 1, numTasks = 1;
   bool calcRhoMAE = false;
-  int parMode = 0;
   double aspectRatio;
   Distance distance;
   std::vector<Metric> metrics;

@@ -324,20 +324,34 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, masterPool;
 
-std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
-                            std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-                            void all_tasks_finished(void))
+std::future<void> edm_task_async(Options opts, const ManifoldGenerator* generator, int E,
+                                 std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io,
+                                 Prediction* pred, bool keep_going(), void all_tasks_finished(void))
 {
-  bool serial;
-  if (opts.parMode == -1) {
-    serial = (opts.numTasks > opts.nthreads);
-  } else {
-    serial = opts.parMode;
+  workerPool.set_num_workers(opts.nthreads);
+  masterPool.set_num_workers(opts.nthreads);
+
+  if (opts.taskNum == 0) {
+    numTasksStarted = 0;
+    numTasksFinished = 0;
   }
 
-  workerPool.set_num_workers(opts.nthreads);
-  if (!serial) {
-    masterPool.set_num_workers(opts.nthreads);
+  numTasksStarted += 1;
+
+  return masterPool.enqueue(
+    [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished] {
+      edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished);
+    });
+}
+
+void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
+              std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
+              void all_tasks_finished(void))
+{
+  bool multiThreaded = opts.nthreads > 1;
+
+  if (multiThreaded) {
+    workerPool.set_num_workers(opts.nthreads);
   }
 
   if (opts.taskNum == 0) {
@@ -347,33 +361,15 @@ std::future<void> edm_async(Options opts, const ManifoldGenerator* generator, in
 
   numTasksStarted += 1;
 
-  if (serial) {
-    return workerPool.enqueue(
-      [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial] {
-        edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial);
-      });
-  } else {
-    return masterPool.enqueue(
-      [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial] {
-        edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished, serial);
-      });
-  }
-}
-
-// Don't call this directly. The thread pools won't be setup correctly.
-void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vector<bool> trainingRows,
-              std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-              void all_tasks_finished(void), bool serial)
-{
   Manifold M, Mp;
-  if (serial) {
-    M = generator->create_manifold(E, trainingRows, false);
-    Mp = generator->create_manifold(E, predictionRows, true);
-  } else {
+  if (multiThreaded) {
     std::future<void> f1 = workerPool.enqueue([&] { M = generator->create_manifold(E, trainingRows, false); });
     std::future<void> f2 = workerPool.enqueue([&] { Mp = generator->create_manifold(E, predictionRows, true); });
     f1.get();
     f2.get();
+  } else {
+    M = generator->create_manifold(E, trainingRows, false);
+    Mp = generator->create_manifold(E, predictionRows, true);
   }
 
   int numThetas = (int)opts.thetas.size();
@@ -398,20 +394,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
     io->progress_bar(0.0);
   }
 
-  if (serial) {
-    if (opts.numTasks == 1) {
-      io->progress_bar(0.0);
-    }
-    for (int i = 0; i < numPredictions; i++) {
-      if (keep_going != nullptr && keep_going() == false) {
-        break;
-      }
-      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
-      if (opts.numTasks == 1) {
-        io->progress_bar((i + 1) / ((double)numPredictions));
-      }
-    }
-  } else {
+  if (multiThreaded) {
     if (opts.distributeThreads) {
       distribute_threads(workerPool.workers);
     }
@@ -427,6 +410,19 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
     }
     for (int i = 0; i < numPredictions; i++) {
       results[i].get();
+      if (opts.numTasks == 1) {
+        io->progress_bar((i + 1) / ((double)numPredictions));
+      }
+    }
+  } else {
+    if (opts.numTasks == 1) {
+      io->progress_bar(0.0);
+    }
+    for (int i = 0; i < numPredictions; i++) {
+      if (keep_going != nullptr && keep_going() == false) {
+        break;
+      }
+      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
       if (opts.numTasks == 1) {
         io->progress_bar((i + 1) / ((double)numPredictions));
       }

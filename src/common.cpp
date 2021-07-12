@@ -15,7 +15,6 @@ void to_json(json& j, const Options& o)
             { "taskNum", o.taskNum },
             { "numTasks", o.numTasks },
             { "calcRhoMAE", o.calcRhoMAE },
-            { "parMode", o.parMode },
             { "aspectRatio", o.aspectRatio },
             { "distance", o.distance },
             { "metrics", o.metrics } };
@@ -36,7 +35,6 @@ void from_json(const json& j, Options& o)
   j.at("taskNum").get_to(o.taskNum);
   j.at("numTasks").get_to(o.numTasks);
   j.at("calcRhoMAE").get_to(o.calcRhoMAE);
-  j.at("parMode").get_to(o.parMode);
   j.at("aspectRatio").get_to(o.aspectRatio);
   j.at("distance").get_to(o.distance);
   j.at("metrics").get_to(o.metrics);
