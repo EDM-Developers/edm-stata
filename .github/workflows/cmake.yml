@@ -64,7 +64,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build 
 
     - name: Build & install
-      run: cmake --build ${{github.workspace}}/build --config Release --target install --parallel 8
+      run: cmake --build ${{github.workspace}}/build --config Release --target install
 
   test-linux:
     runs-on: linux

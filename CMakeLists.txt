@@ -69,12 +69,8 @@ foreach(FLAG IN LISTS REQUESTED_DEBUG_FLAGS)
   endif()
 endforeach()
 
-# Set the default build type if not set by user
-if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
-  if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
-  endif()
-endif()
+# Tell MSVC to compile in parallel
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 # Source files common to all targets
 set(COMMON_SRC src/common.cpp src/common.h
