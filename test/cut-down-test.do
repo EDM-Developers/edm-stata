@@ -380,7 +380,7 @@ sum err
 capture drop plugin mata err
 
 // Make sure theta changes are reflected, even when k(-1) is specified.
-edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full
+edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full force
 
 
 // Check that factor variables don't crash everything

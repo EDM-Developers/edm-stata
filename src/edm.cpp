@@ -77,7 +77,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
                         const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                         Eigen::Map<Eigen::MatrixXi> rc);
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& d, const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                     const std::vector<double>& d, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                      Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc);
 
 // Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
@@ -211,106 +211,68 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
-                     Eigen::Map<Eigen::MatrixXi> rc)
+                     const std::vector<double>& dists, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc)
 {
-  std::vector<double> w(k);
-  Eigen::MatrixXd X_ls(k, M.E_actual());
-  std::vector<double> y_ls(k), w_ls(k);
-
-  double mean_d = 0.;
-  int kValid = 0;
-  for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] != MISSING) {
-      mean_d = mean_d + dists[kNNInds[j]];
-      kValid += 1;
-    }
-  }
-  mean_d = mean_d / (double)kValid;
-
-  double theta = opts.thetas[t];
-
-  // Need to check for missing values because e^(-theta*w[j]) = e^(-0 * MISSING) = 1
-  // will still gives weight to missing values.
-  for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] != MISSING) {
-      w[j] = exp(-theta * (dists[kNNInds[j]] / mean_d));
-    } else {
-      w[j] = 0;
-    }
+  if (opts.algorithm == "llr") {
+    // llr algorithm is not needed at this stage
+    rc(t, Mp_i) = NOT_IMPLEMENTED;
+    return;
   }
 
-  int rowc = -1;
-  for (int j = 0; j < k; j++) {
-    if (M.any_missing(kNNInds[j])) {
-      continue;
-    }
-    rowc++;
-    if (opts.algorithm == "llr") {
-      // llr algorithm is not needed at this stage
-      rc(t, Mp_i) = NOT_IMPLEMENTED;
-      return;
+  // Remove neighbours which have a missing value for their distance
+  kNNInds.erase(std::remove_if(kNNInds.begin(), kNNInds.end(),
+                               [&dists, &M](int obs) { return dists[obs] == MISSING || M.any_missing(obs); }),
+                kNNInds.end());
+  k = kNNInds.size();
 
-    } else if (opts.algorithm == "smap") {
-      y_ls[rowc] = M.y(kNNInds[j]) * w[j];
-      w_ls[rowc] = w[j];
-      for (int i = 0; i < M.E_actual(); i++) {
-        X_ls(rowc, i) = M(kNNInds[j], i) * w[j];
-      }
-    }
-  }
-  if (rowc == -1) {
+  if (k == 0) {
     ystar(t, Mp_i) = MISSING;
     rc(t, Mp_i) = SUCCESS;
     return;
   }
 
-  // Pull out the first 'rowc+1' elements of the y_ls vector and
-  // concatenate the column vector 'w' with 'X_ls', keeping only
-  // the first 'rowc+1' rows.
-  Eigen::VectorXd y_ls_cj(rowc + 1);
-  Eigen::MatrixXd X_ls_cj(rowc + 1, M.E_actual() + 1);
+  // Pull out the nearest neighbours from the manifold, and
+  // simultaneously prepend a column of ones in front of the manifold data.
+  Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
+  X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
 
-  for (int i = 0; i < rowc + 1; i++) {
-    y_ls_cj(i) = y_ls[i];
-    X_ls_cj(i, 0) = w_ls[i];
-    for (int j = 1; j < X_ls.cols() + 1; j++) {
-      X_ls_cj(i, j) = X_ls(i, j - 1);
+  // Calculate the weight for each neighbour
+  Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
+  Eigen::VectorXd d = distsMap(kNNInds);
+  d /= d.mean();
+  Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * d.array());
+
+  // Scale everything by our weights vector
+  X_ls_cj.array().colwise() *= w.array();
+  Eigen::VectorXd y_ls = M.yMap()(kNNInds).array() * w.array();
+
+  // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
+  // see https://scicomp.stackexchange.com/a/33375
+  Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls);
+
+  double r = ics(0);
+  for (int j = 0; j < M.E_actual(); j++) {
+    if (Mp(Mp_i, j) != MISSING) {
+      r += Mp(Mp_i, j) * ics(j + 1);
     }
   }
 
-  if (opts.algorithm == "llr") {
-    // llr algorithm is not needed at this stage
-    rc(t, Mp_i) = NOT_IMPLEMENTED;
-  } else {
-    // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
-    // see https://scicomp.stackexchange.com/a/33375
-    Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls_cj);
-
-    double r = ics(0);
-    for (int j = 1; j < M.E_actual() + 1; j++) {
-      if (Mp(Mp_i, j - 1) != MISSING) {
-        r += Mp(Mp_i, j - 1) * ics(j);
+  // If the 'savesmap' option is given, save the 'ics' coefficients
+  // for the largest value of theta.
+  if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
+    for (int j = 0; j < M.E_actual() + 1; j++) {
+      if (ics(j) == 0.) {
+        coeffs(Mp_i, j) = MISSING;
+      } else {
+        coeffs(Mp_i, j) = ics(j);
       }
     }
-
-    // If the 'samesmap' option is given, save the 'ics' coefficients
-    // for the largest value of theta.
-    if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
-      for (int j = 0; j < M.E_actual() + 1; j++) {
-        if (ics(j) == 0.) {
-          coeffs(Mp_i, j) = MISSING;
-        } else {
-          coeffs(Mp_i, j) = ics(j);
-        }
-      }
-    }
-
-    ystar(t, Mp_i) = r;
-    rc(t, Mp_i) = SUCCESS;
   }
+
+  ystar(t, Mp_i) = r;
+  rc(t, Mp_i) = SUCCESS;
 }
 
 // If the same observation is in the training & prediction sets,

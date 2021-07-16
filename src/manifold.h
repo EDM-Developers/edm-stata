@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include <Eigen/Core>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -29,6 +30,12 @@ public:
   {}
 
   double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
+
+  Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> map() const
+  {
+    return { _flat.get(), _nobs, _E_actual };
+  }
+  Eigen::Map<const Eigen::VectorXd> yMap() const { return { &(_y[0]), _nobs }; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
