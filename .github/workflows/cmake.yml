@@ -11,132 +11,188 @@ jobs:
   build-linux:
     runs-on: linux
     steps:
-
-    - uses: actions/checkout@v2
-
+    - name: Checkout the repository
+      uses: actions/checkout@v2
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build & install
-      run: cmake --build ${{github.workspace}}/build --target install --parallel 8
+    - name: Build plugin
+      run: cmake --build ${{github.workspace}}/build --target edm_plugin --parallel 8
+    - name: Install plugin
+      run: cmake --build ${{github.workspace}}/build --target install
 
   build-mac-arm:
     runs-on: macos
     steps:
-
-    - name: Checkout arm version
+    - name: Checkout a copy to compile for ARM
       uses: actions/checkout@v2
       with:
         path: arm
-
     - name: Configure CMake
       working-directory: ${{github.workspace}}/arm
-      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake -B ${{github.workspace}}/arm/build -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build & install
+      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build plugin
       working-directory: ${{github.workspace}}/arm
-      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx env /usr/bin/arch -arm64 cmake --build ${{github.workspace}}/arm/build --target install --parallel 8
+      run: env /usr/bin/arch -arm64 cmake --build build --target edm_plugin --parallel 8
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/arm
+      run: env /usr/bin/arch -arm64 cmake --build build --target install
 
   build-mac-x64:
     runs-on: macos
     steps:
-
-    - name: Checkout x86 version
+    - name: Checkout a copy to compile for x86
       uses: actions/checkout@v2
       with:
         path: x64
-
     - name: Configure CMake
       working-directory: ${{github.workspace}}/x64
-      run: env /usr/bin/arch -x86_64 cmake -B ${{github.workspace}}/x64/build -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build & install
+      run: env /usr/bin/arch -x86_64 cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build plugin
       working-directory: ${{github.workspace}}/x64
-      run: env /usr/bin/arch -x86_64 cmake --build ${{github.workspace}}/x64/build --target install --parallel 8
+      run: env /usr/bin/arch -x86_64 cmake --build build --target edm_plugin --parallel 8
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/x64
+      run: env /usr/bin/arch -x86_64 cmake --build build --target install
 
   build-windows:
     runs-on: windows
     steps:
-
-    - uses: actions/checkout@v2
-
+    - name: Checkout the repository
+      uses: actions/checkout@v2
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build 
-
-    - name: Build & install
+    - name: Build plugin
+      run: cmake --build ${{github.workspace}}/build --config Release --target edm_plugin
+    - name: Install plugin
       run: cmake --build ${{github.workspace}}/build --config Release --target install
 
   test-linux:
     runs-on: linux
     needs: build-linux
     steps:
-
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
       run: mv cut-down-test.log reference.log
-
     - name: Run Test
       working-directory: ${{github.workspace}}/test
       run: stata -e -q cut-down-test.do
-
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log cut-down-test.log
+
+  test-cli-linux:
+    runs-on: linux
+    needs: test-linux
+    steps:
+    - name: Wipe the previous build
+      run: rm -rf ${{github.workspace}}/build
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
+    - name: Build CLI
+      run: cmake --build ${{github.workspace}}/build --target edm_cli --parallel 8
+    - name: Install CLI
+      run: cp ${{github.workspace}}/build/edm_cli ${{github.workspace}}/test
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: ./edm_cli cut-down-test.json
 
   test-mac-arm:
     runs-on: macos
     needs: build-mac-arm
     steps:
-
     - name: Prepare Test
       working-directory: ${{github.workspace}}/arm/test
       run: mv cut-down-test.log reference.log
-    
     - name: Run Test
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
-
     - name: Check Test Results
       working-directory: ${{github.workspace}}/arm/test
       run: diff -B reference.log cut-down-test.log
+
+  test-cli-mac-arm:
+    runs-on: macos
+    needs: test-mac-arm
+    steps:
+    - name: Wipe the previous build
+      working-directory: ${{github.workspace}}/arm
+      run: rm -rf build
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/arm
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+    - name: Build CLI
+      working-directory: ${{github.workspace}}/arm
+      run: cmake --build build --target edm_cli --parallel 8
+    - name: Install CLI
+      working-directory: ${{github.workspace}}/arm
+      run: cp build/edm_cli test
+    - name: Run Test
+      working-directory: ${{github.workspace}}/arm/test
+      run: ./edm_cli cut-down-test.json
 
   test-mac-x64:
     runs-on: macos
     needs: build-mac-x64
     steps:
-
     - name: Prepare Test
       working-directory: ${{github.workspace}}/x64/test
       run: mv cut-down-test.log reference.log
-    
     - name: Run Test
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q cut-down-test.do
-
     - name: Check Test Results
       working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log cut-down-test.log
+
+  test-cli-mac-x64:
+    runs-on: macos
+    needs: test-mac-x64
+    steps:
+    - name: Wipe the previous build
+      working-directory: ${{github.workspace}}/x64
+      run: rm -rf build
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/x64
+      run: env /usr/bin/arch -x86_64 cmake -B build -DCMAKE_BUILD_TYPE=Debug
+    - name: Build CLI
+      working-directory: ${{github.workspace}}/x64
+      run: env /usr/bin/arch -x86_64 cmake --build build --target edm_cli --parallel 8
+    - name: Install CLI
+      working-directory: ${{github.workspace}}/x64
+      run: cp build/edm_cli test
+    - name: Run Test
+      working-directory: ${{github.workspace}}/x64/test
+      run: env /usr/bin/arch -x86_64 ./edm_cli cut-down-test.json
 
   test-windows:
     runs-on: windows
     needs: build-windows
     steps:
-
     - name: Prepare Test
       working-directory: ${{github.workspace}}/test
       run: mv cut-down-test.log reference.log
-
     - name: Run Test
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q cut-down-test.do
-
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "fc /W reference.log cut-down-test.log"
 
+  test-cli-windows:
+    runs-on: windows
+    needs: test-windows
+    steps:
+    - name: Build CLI
+      run: cmake --build ${{github.workspace}}/build --config Debug --target edm_cli
+    - name: Install CLI
+      run: cp ${{github.workspace}}/build/Debug/edm_cli.exe test
+    - name: Run Test
+      working-directory: ${{github.workspace}}/test
+      run: .\edm_cli.exe cut-down-test.json
+
   speed-test-linux:
     runs-on: linux
-    needs: test-linux
+    needs: test-cli-linux
     steps:
     - name: Run Test
       working-directory: ${{github.workspace}}/test
@@ -144,36 +200,33 @@ jobs:
 
   speed-test-mac-arm:
     runs-on: macos
-    needs: test-mac-arm
+    needs: test-cli-mac-arm
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
       run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
-
     - name: Run Test
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
 
   speed-test-mac-x64:
     runs-on: macos
-    needs: test-mac-x64
+    needs: test-cli-mac-x64
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
       run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
-
     - name: Run Test
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
 
   speed-test-windows:
     runs-on: windows
-    needs: test-windows
+    needs: test-cli-windows
     steps:
     - name: Run Test
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q speed-test.do
-
 
   single-thread-speed-test-linux:
     runs-on: linux
@@ -190,7 +243,6 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
       run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
-
     - name: Run Test
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do
@@ -202,7 +254,6 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
       run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
-
     - name: Run Test
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do

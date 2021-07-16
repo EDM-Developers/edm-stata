@@ -7,14 +7,13 @@ cmake_minimum_required(VERSION 3.12)
 # compiling for ARM or x86, though it defaults to x86 and can normally
 # be ignored.
 #
-# The cmake variables BUILD_CLI can be set to create a command-line executable
+# The edm_cli target creates a command-line executable
 # to run the core EDM algorithms by reading & saving data to JSON files.
 # This can be helpful as it doesn't require Stata (unlike the main plugin).
 #
 # The cmake variable BUILD_GBENCH creates a Google Benchmarks executable which
 # performs microbenchmarking on the core EDM methods. The vcpkg.json file must
 # be modified to include the "benchmark" package if building this.
-
 if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
 endif()
@@ -27,8 +26,11 @@ else()
   set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
 endif()
 
-set(BUILD_CLI FALSE CACHE BOOL "Generate command-line executable for the plugin")
 set(BUILD_GBENCH FALSE CACHE BOOL "Generate google benchmark executable")
+
+# The default behaviour of the 'install' target is to build everything first.
+# As we often don't want to build the CLI executable, we disable this behaviour.
+set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
 project(edm-stata-package CXX)
 
@@ -145,18 +147,16 @@ clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/stat
 
 # ↓↓↓ Developer builds ↓↓↓
 # Command-line interface executable
-if (BUILD_CLI)
-  add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
-  set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
-  set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
-  target_include_directories(edm_cli PRIVATE include)
-  target_include_directories(edm_cli PRIVATE ${EIGEN3_INCLUDE_DIR})
-  target_link_libraries(edm_cli PRIVATE fmt::fmt-header-only)
-  target_link_libraries(edm_cli PRIVATE Threads::Threads)
-  target_link_libraries(edm_cli PRIVATE nlohmann_json::nlohmann_json)
-  install(TARGETS edm_cli DESTINATION bin)
-  install(TARGETS edm_cli DESTINATION test)
-endif()
+add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
+set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
+set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
+target_include_directories(edm_cli PRIVATE include)
+target_include_directories(edm_cli PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_link_libraries(edm_cli PRIVATE fmt::fmt-header-only)
+target_link_libraries(edm_cli PRIVATE Threads::Threads)
+target_link_libraries(edm_cli PRIVATE nlohmann_json::nlohmann_json)
+install(TARGETS edm_cli DESTINATION bin OPTIONAL)
+install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
 # Google Benchmarks
 if (BUILD_GBENCH)
@@ -176,5 +176,5 @@ if (BUILD_GBENCH)
     find_package(OpenMP)
     target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
   endif()
-  install(TARGETS gbench DESTINATION test)
+  install(TARGETS gbench DESTINATION test OPTIONAL)
 endif()
