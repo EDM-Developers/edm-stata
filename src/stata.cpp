@@ -451,10 +451,10 @@ void reset_global_state()
  */
 ST_retcode read_manifold_data(int argc, char* argv[])
 {
-  if (argc < 21) {
+  if (argc < 22) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 21) {
+  if (argc > 22) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -483,6 +483,7 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   opts.aspectRatio = atof(argv[18]);
   std::string distance(argv[19]);
   std::string requestedMetrics(argv[20]);
+  opts.cmdLine = argv[21];
 
   // TODO: Bring this in via the standard argument passing?
   auto factorVariables = stata_numlist<bool>("factor_var");
@@ -683,8 +684,10 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   // If requested, save the inputs to a local file for testing
   if (!saveInputsFilename.empty()) {
-    io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
-    io.flush();
+    if (io.verbosity > 1) {
+      io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
+      io.flush();
+    }
     write_dumpfile((saveInputsFilename + ".json").c_str(), taskOpts, generator, E, trainingRows, predictionRows);
   }
 
@@ -762,8 +765,7 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   }
 
   if (!saveInputsFilename.empty()) {
-    write_dumpfile((saveInputsFilename + "-copred.json").c_str(), taskOpts, generator, E, coTrainingRows,
-                   coPredictionRows);
+    write_dumpfile((saveInputsFilename + ".json").c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
   }
 
   if (io.verbosity > 2) {

@@ -59,6 +59,7 @@ struct Options
   double aspectRatio;
   Distance distance;
   std::vector<Metric> metrics;
+  std::string cmdLine;
 };
 
 void to_json(json& j, const Options& o);

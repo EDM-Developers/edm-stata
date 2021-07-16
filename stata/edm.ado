@@ -460,6 +460,9 @@ program define edmExplore, eclass
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
 			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 100000)] ///
 			[distance(string)] [metrics(string)]
+
+	local cmdline = "edm explore `0'"
+
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -539,6 +542,10 @@ program define edmExplore, eclass
 
 	if "${EDM_METRICS}" != "" {
 		local metrics = "${EDM_METRICS}"
+	}
+
+	if "${EDM_SAVE_INPUTS}" != "" {
+		local saveinputs = "${EDM_SAVE_INPUTS}"
 	}
 
 	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
@@ -798,8 +805,10 @@ program define edmExplore, eclass
 		set rngstate `rngstate'
 
 		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
-				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-				"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'"
+				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
+				"`cmdline'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1194,6 +1203,9 @@ program define edmXmap, eclass
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
 			[aspectratio(real 100000)] [distance(string)] [metrics(string)]
+
+	local cmdline = "edm xmap `0'"
+
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
@@ -1289,6 +1301,10 @@ program define edmXmap, eclass
 
 	if "${EDM_METRICS}" != "" {
 		local metrics = "${EDM_METRICS}"
+	}
+
+	if "${EDM_SAVE_INPUTS}" != "" {
+		local saveinputs = "${EDM_SAVE_INPUTS}"
 	}
 
 	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
@@ -1618,8 +1634,10 @@ program define edmXmap, eclass
 			set rngstate `rngstate'
 
 			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
-					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" "`nthreads'" "`verbosity'" "`num_tasks'" ///
-					"`explore_mode'" "`full_mode'" "`crossfold'" "`tau'"  "`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'"
+					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
+					"`cmdline'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients

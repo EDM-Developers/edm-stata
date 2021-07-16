@@ -16,7 +16,6 @@ install:
 .PHONY: clean
 clean:
 	rm -rf $(EDM_BUILD_DIR)
-	rm -f compile_commands.json
 
 .PHONY: format
 format:

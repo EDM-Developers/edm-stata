@@ -69,12 +69,8 @@ void from_json(const json& j, ManifoldGenerator& g)
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-Inputs read_dumpfile(std::string fname_in)
+Inputs read_dumpfile(json j)
 {
-  std::ifstream i(fname_in);
-  json j;
-  i >> j;
-
   int E = j["E"];
   Options opts = j["opts"];
   ManifoldGenerator generator = j["generator"];
@@ -87,20 +83,38 @@ Inputs read_dumpfile(std::string fname_in)
 void write_dumpfile(const char* fname, const Options& opts, const ManifoldGenerator& generator, int E,
                     const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows)
 {
-  json j;
-  j["opts"] = opts;
-  j["generator"] = generator;
-  j["E"] = E;
-  j["trainingRows"] = trainingRows;
-  j["predictionRows"] = predictionRows;
+  json task;
+  task["opts"] = opts;
+  task["generator"] = generator;
+  task["E"] = E;
+  task["trainingRows"] = trainingRows;
+  task["predictionRows"] = predictionRows;
+
+  json tasks;
+
+  std::ifstream i(fname);
+  if (i.is_open()) {
+    i >> tasks;
+  }
+
+  tasks.push_back(task);
 
   std::ofstream o(fname);
-  o << std::setw(4) << j << std::endl;
+  o << std::setw(4) << tasks << std::endl;
 }
 
 void write_results(std::string fname_out, const Prediction& pred)
 {
-  json j = pred;
+  json results;
+
+  std::ifstream i(fname_out);
+  if (i.is_open()) {
+    i >> results;
+  }
+
+  json result = pred;
+  results.push_back(result);
+
   std::ofstream o(fname_out);
-  o << std::setw(4) << j << std::endl;
+  o << std::setw(4) << results << std::endl;
 }

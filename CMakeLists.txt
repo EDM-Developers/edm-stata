@@ -50,24 +50,12 @@ set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 
 if(WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI")
+  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI /fsanitize=address")
   set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ox")
 else()
-  set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+  set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fsanitize=address")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-  set(REQUESTED_DEBUG_FLAGS "-fsanitize=address" "-fsanitize=leak" "-fsanitize=undefined" "-fno-common" "-fno-omit-frame-pointer")
 endif()
-
-include(CheckCXXCompilerFlag)
-
-foreach(FLAG IN LISTS REQUESTED_DEBUG_FLAGS)
-  string(REPLACE "-" "_" FLAG_NAME ${FLAG})
-  string(REPLACE "=" "_" FLAG_NAME ${FLAG_NAME})
-  check_cxx_compiler_flag(${FLAG} SUPPORTS_${FLAG_NAME})
-  if(SUPPORTS_${FLAG_NAME})
-    string(APPEND CMAKE_CXX_FLAGS_DEBUG " ${FLAG}")
-  endif()
-endforeach()
 
 # Tell MSVC to compile in parallel
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)

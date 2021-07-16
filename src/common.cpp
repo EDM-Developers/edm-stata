@@ -17,7 +17,8 @@ void to_json(json& j, const Options& o)
             { "calcRhoMAE", o.calcRhoMAE },
             { "aspectRatio", o.aspectRatio },
             { "distance", o.distance },
-            { "metrics", o.metrics } };
+            { "metrics", o.metrics },
+            { "cmdLine", o.cmdLine } };
 }
 
 void from_json(const json& j, Options& o)
@@ -38,6 +39,7 @@ void from_json(const json& j, Options& o)
   j.at("aspectRatio").get_to(o.aspectRatio);
   j.at("distance").get_to(o.distance);
   j.at("metrics").get_to(o.metrics);
+  j.at("cmdLine").get_to(o.cmdLine);
 }
 
 void to_json(json& j, const PredictionStats& s)

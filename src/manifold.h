@@ -106,14 +106,13 @@ private:
   int _tau;
   double _missing;
   int _num_extras, _num_extras_varying;
-
-  double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
-  double find_dt(const std::vector<int>& inds, int i, int j) const;
-
   double _dtWeight = 0.0;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
   std::vector<bool> _extrasEVarying;
+
+  double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
+  double find_dt(const std::vector<int>& inds, int i, int j) const;
 
 public:
   friend void to_json(json& j, const ManifoldGenerator& g);
@@ -136,6 +135,57 @@ public:
     for (const bool& eVarying : extrasEVarying) {
       _num_extras_varying += eVarying;
     }
+  }
+
+  ManifoldGenerator(const ManifoldGenerator& obj)
+  {
+    _copredict = obj._copredict;
+    _use_dt = obj._use_dt;
+    _add_dt0 = obj._add_dt0;
+    _tau = obj._tau;
+    _missing = obj._missing;
+
+    _num_extras_varying = obj._num_extras_varying;
+    _num_extras = obj._num_extras;
+
+    _dtWeight = obj._dtWeight;
+
+    _x = obj._x;
+    _y = obj._y;
+    _co_x = obj._co_x;
+    _t = obj._t;
+
+    _extras.clear();
+    for (auto& extra : obj._extras) {
+      _extras.push_back(extra);
+    }
+    _extrasEVarying = obj._extrasEVarying;
+  }
+
+  ManifoldGenerator& operator=(const ManifoldGenerator& obj)
+  {
+    _copredict = obj._copredict;
+    _use_dt = obj._use_dt;
+    _add_dt0 = obj._add_dt0;
+    _tau = obj._tau;
+    _missing = obj._missing;
+
+    _num_extras_varying = obj._num_extras_varying;
+    _num_extras = obj._num_extras;
+
+    _dtWeight = obj._dtWeight;
+
+    _x = obj._x;
+    _y = obj._y;
+    _co_x = obj._co_x;
+    _t = obj._t;
+
+    _extras.clear();
+    for (auto& extra : obj._extras) {
+      _extras.push_back(extra);
+    }
+    _extrasEVarying = obj._extrasEVarying;
+    return *this;
   }
 
   void add_coprediction_data(const std::vector<double>& co_x)
