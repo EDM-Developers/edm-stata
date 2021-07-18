@@ -172,3 +172,222 @@ ereturn display
 
 jackknife: edm explore x, e(2)
 ereturn display
+
+* Further tests that were previously in the 'bigger-test.do' script
+global EDM_SAVE_INPUTS = "cut-down-test"
+
+clear
+set obs 100
+
+gen t = _n
+tsset t
+
+gen double x = 0.2 if _n==1
+gen double y = 0.4 if _n==1
+
+* Create a dynamic system
+local r_x 3.625
+local r_y 3.77
+local beta_xy = 0.05
+local beta_yx=0.4
+local tau = 1
+drawnorm double u1 u2
+qui {
+    forvalues i=2/`=_N' {
+        replace x=l.x *(`r_x' *(1-l.x)-`beta_xy'*l.y) in `i'
+        replace y=l.y *(`r_y' *(1-l.y)-`beta_yx'*l`tau'.x) in `i'
+    }
+}
+
+edm explore x, e(2) crossfold(2) k(-1) allowmissing force
+
+edm explore x, e(2) crossfold(10) k(-1) allowmissing force
+
+edm explore x, e(5) extra(d.y) full allowmissing
+
+// Test e-varying extra is the same as specifying the individual lagged extras
+edm explore x, e(5) extra(y(e)) full allowmissing
+edm explore x, e(5) extra(L(0/4).y) full allowmissing
+
+edm explore x, e(2 3 4) extra(y(e)) full allowmissing
+edm explore x, e(2) extra(L(0/1).y) full allowmissing
+edm explore x, e(3) extra(L(0/2).y) full allowmissing
+edm explore x, e(4) extra(L(0/3).y) full allowmissing
+
+
+edm explore x, e(5) extra(y) full
+
+edm explore x, e(5) extra(z.y) full
+
+* identify optimal E
+edm explore x, e(2/10)
+
+edm xmap x y, e(10) k(5)
+
+edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta) tau(5)
+
+format beta* %3.0g
+list beta*
+drop beta*
+
+// Introduce missing data and test all the dt variations
+set seed 12345678
+gen double u = runiform()
+drop if u<0.1
+replace x = . if u<0.2
+replace t = . if mod(t,19) ==1
+replace u1 = . if mod(t,7) ==1
+
+edm explore x, copredict(predicted_y_from_mx) copredictvar(y) full
+edm explore x, copredict(predicted_y_from_mx_mata) copredictvar(y) full mata
+
+gen err = abs(predicted_y_from_mx - predicted_y_from_mx_mata)
+qui replace err = 0 if err < 1e-6
+sum err
+drop err
+
+format predicted_y_from_mx %8.0g
+list predicted_y_from_mx
+sum predicted_y_from_mx
+drop predicted_y_from_mx
+drop predicted_y_from_mx_mata
+
+edm explore x, e(3) extra(u1) dt
+
+edm explore l.x, allowmissing predict(pred)
+
+format pred %8.0g
+list pred
+drop pred
+
+edm xmap x l.x, oneway allowmissing predict(pred)
+
+format pred %8.0g
+list pred
+drop pred
+
+
+edm xmap x y, oneway allowmissing dt dtweight(1) predict(pred)
+
+format pred %8.0g
+list pred
+drop pred
+
+
+edm xmap x y, e(3) extra(u1) dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+
+edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) savesmap(beta) dtweight(10.0)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(2) extra(u1(e)) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(3) extra(z.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(3) extra(L5.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+edm xmap x y, e(3) extra(z.L5.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*
+
+// Check that [dtsave] works on both mata & plugin
+edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) oneway dtsave(plugin)
+edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) oneway dtsave(mata) mata
+
+gen err = plugin != mata
+sum err
+
+cap drop plugin
+cap drop mata
+cap drop err
+
+cap drop err
+set seed 1
+edm explore x, e(3) extra(u1) dt alg(smap) dtsave(pluginnomissing) dtweight(1) predict(predplugin)
+set seed 1
+edm explore x, e(3) extra(u1) dt alg(smap) dtsave(matanomissing) mata dtweight(1) predict(predmata)
+
+gen dterr = pluginnomissing != matanomissing
+sum dterr
+
+cap drop pluginnomissing
+cap drop matanomissing
+cap drop dterr
+
+gen preddiff = abs(predplugin - predmata)
+qui replace preddiff = 0 if preddiff < 1e-6
+sum preddiff
+
+cap drop predplugin
+cap drop predmata
+cap drop prederr
+
+
+edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(plugin)
+edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(mata) mata
+
+gen err = plugin != mata
+sum err
+
+capture drop plugin mata err
+
+// Make sure theta changes are reflected, even when k(-1) is specified.
+edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full
+
+
+// Check that factor variables don't crash everything
+edm explore i.x
+
+edm explore x, extra(i.y)
+
+edm xmap x y, extra(i.y)
+
+edm explore x, e(2/4) extra(x i.y(e) l.x)
