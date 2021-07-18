@@ -53,6 +53,10 @@ std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int
   std::vector<int> idx(dists.size());
   std::iota(idx.begin(), idx.end(), 0);
 
+  if (k >= dists.size()) {
+    return idx;
+  }
+
   if (k >= (int)(dists.size() / 2)) {
     auto comparator = [&dists](int i1, int i2) { return dists[i1] < dists[i2]; };
     std::stable_sort(idx.begin(), idx.end(), comparator);
@@ -69,10 +73,11 @@ std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int
   return idx;
 }
 
-void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& d,
-                        const std::vector<int>& ind, Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc);
-void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& d, const std::vector<int>& ind, Eigen::Map<Eigen::MatrixXd> ystar,
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k, const std::vector<double>& d,
+                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                        Eigen::Map<Eigen::MatrixXi> rc);
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
+                     const std::vector<double>& d, const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                      Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc);
 
 // Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
@@ -149,6 +154,10 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
+  // Remove the indices for the points which are not in the k nearest neighbour set.
+  // After this line, the 'assert(kNNInds.size() == k)' should be true.
+  kNNInds.erase(kNNInds.begin() + k, kNNInds.end());
+
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
       simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc);
@@ -164,15 +173,22 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 }
 
-void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                        Eigen::Map<Eigen::MatrixXi> rc)
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k,
+                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
+                        Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc)
 {
-  double theta = opts.thetas[t];
+  // Find the smallest distance (closest neighbour) among the supplied neighbours.
+  double d_base = MISSING;
+  for (int j = 0; j < k; j++) {
+    if (dists[kNNInds[j]] < d_base) {
+      d_base = dists[kNNInds[j]];
+    }
+  }
 
-  double d_base = dists[kNNInds[0]];
+  // Calculate our weighting of each neighbour, and the total sum of these weights.
   std::vector<double> w(k);
-  double sumw = 0., r = 0.;
+  double sumw = 0.0;
+  const double theta = opts.thetas[t];
 
   for (int j = 0; j < k; j++) {
     if (dists[kNNInds[j]] != MISSING) {
@@ -183,15 +199,18 @@ void simplex_prediction(int Mp_i, int t, Options opts, const Manifold& M, int k,
     sumw = sumw + w[j];
   }
 
+  // Make the simplex projection/prediction.
+  double r = 0.0;
   for (int j = 0; j < k; j++) {
     r = r + M.y(kNNInds[j]) * (w[j] / sumw);
   }
 
+  // Store the results & return value.
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
 }
 
-void smap_prediction(int Mp_i, int t, Options opts, const Manifold& M, const Manifold& Mp, int k,
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
                      Eigen::Map<Eigen::MatrixXi> rc)
@@ -322,14 +341,14 @@ std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool
 
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
-ThreadPool workerPool, masterPool;
+ThreadPool workerPool, taskRunnerPool;
 
 std::future<void> edm_task_async(Options opts, const ManifoldGenerator* generator, int E,
                                  std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io,
                                  Prediction* pred, bool keep_going(), void all_tasks_finished(void))
 {
   workerPool.set_num_workers(opts.nthreads);
-  masterPool.set_num_workers(opts.nthreads);
+  taskRunnerPool.set_num_workers(num_physical_cores());
 
   if (opts.taskNum == 0) {
     numTasksStarted = 0;
@@ -338,7 +357,7 @@ std::future<void> edm_task_async(Options opts, const ManifoldGenerator* generato
 
   numTasksStarted += 1;
 
-  return masterPool.enqueue(
+  return taskRunnerPool.enqueue(
     [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished] {
       edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished);
     });
@@ -443,8 +462,13 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
         }
       }
 
-      stats.mae = mean_absolute_error(y1, y2);
-      stats.rho = correlation(y1, y2);
+      if (!(y1.empty() || y2.empty())) {
+        stats.mae = mean_absolute_error(y1, y2);
+        stats.rho = correlation(y1, y2);
+      } else {
+        stats.mae = MISSING;
+        stats.rho = MISSING;
+      }
 
       stats.taskNum = opts.taskNum + t;
       stats.calcRhoMAE = opts.calcRhoMAE;
@@ -478,7 +502,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
     }
 
     if (opts.savePrediction || opts.saveSMAPCoeffs) {
-      pred->predictionRows = predictionRows;
+      pred->predictionRows = std::move(predictionRows);
     }
 
     pred->numThetas = numThetas;

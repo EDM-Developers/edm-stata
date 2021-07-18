@@ -1051,7 +1051,12 @@ program define edmExplore, eclass
 			if !`mata_mode' {
 				// PJL: Check we never save SMAP coeffs in explore mode.
 				local save_smap_coeffs = 0
-				local k_adj = `lib_size' // PJL: Check this shouldn't be k_adj = lib_size - 1
+				if `k' >= 0 {
+					local k_adj = `lib_size'
+				}
+				else {
+					local k_adj = `k'
+				}
 				plugin call edm_plugin, "launch_edm_task" ///
 						"`t'" "`i'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 
@@ -1800,8 +1805,7 @@ program define edmXmap, eclass
 						local k_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
 					}
 					else if `k' < 0  {
-						local k_size = `train_size' - 1
-						/* di "full lib" */
+						local k_size = `train_size'
 					}
 
 					if `k' != 0 {

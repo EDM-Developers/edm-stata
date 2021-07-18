@@ -643,9 +643,13 @@ ST_retcode launch_edm_task(int argc, char* argv[])
   taskOpts.saveSMAPCoeffs = atoi(argv[5]);
   std::string saveInputsFilename(argv[6]);
 
-  // Default number of neighbours k is E_actual + 1
-  if (taskOpts.k <= 0) {
+  // Note, currently these 'k' defaults are already handled inside Stata
+  if (taskOpts.k == 0) {
     taskOpts.k = E_actual + 1;
+  }
+
+  if (taskOpts.k < 0) {
+    taskOpts.k = library;
   }
 
   // Expand the metrics vector now we know the value of E
