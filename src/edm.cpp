@@ -75,10 +75,10 @@ std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k, const std::vector<double>& d,
                         const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                        Eigen::Map<Eigen::MatrixXi> rc);
+                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
                      const std::vector<double>& d, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc);
+                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
 
 // Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
 // Specifically, predict the 'Mp_i'-th value of the prediction manifold 'Mp'.
@@ -99,7 +99,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 // use this directly, though some details need to be worked out.
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, int skipRow, bool keep_going() = nullptr)
+                     Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, int skipRow, bool keep_going() = nullptr)
 {
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -160,11 +160,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc);
+      simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc, kUsed);
     }
   } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, k, dists, kNNInds, ystar, coeffs, rc);
+      smap_prediction(Mp_i, t, opts, M, Mp, k, dists, kNNInds, ystar, coeffs, rc, kUsed);
     }
   } else {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -175,8 +175,10 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k,
                         const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                        Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc)
+                        Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
+  *kUsed = k;
+
   // Find the smallest distance (closest neighbour) among the supplied neighbours.
   double d_base = MISSING;
   for (int j = 0; j < k; j++) {
@@ -212,7 +214,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
                      const std::vector<double>& dists, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc)
+                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
   if (opts.algorithm == "llr") {
     // llr algorithm is not needed at this stage
@@ -225,6 +227,8 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                                [&dists, &M](int obs) { return dists[obs] == MISSING || M.any_missing(obs); }),
                 kNNInds.end());
   k = kNNInds.size();
+
+  *kUsed = k;
 
   if (k == 0) {
     ystar(t, Mp_i) = MISSING;
@@ -371,6 +375,11 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
   Eigen::Map<Eigen::Matrix<retcode, -1, -1>> rcView(rc.get(), numThetas, numPredictions);
 
+  std::vector<int> kUsed;
+  for (int i = 0; i < numPredictions; i++) {
+    kUsed.push_back(-1);
+  }
+
   if (opts.numTasks > 1 && opts.taskNum == 0) {
     io->progress_bar(0.0);
   }
@@ -382,8 +391,9 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
 
     std::vector<std::future<void>> results(numPredictions);
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = workerPool.enqueue(
-        [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going); });
+      results[i] = workerPool.enqueue([&, i] {
+        make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), predToTrainSelfMap[i], keep_going);
+      });
     }
 
     if (opts.numTasks == 1) {
@@ -403,7 +413,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, predToTrainSelfMap[i], keep_going);
+      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), predToTrainSelfMap[i], keep_going);
       if (opts.numTasks == 1) {
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
@@ -466,6 +476,9 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
     if (opts.savePrediction || opts.saveSMAPCoeffs) {
       pred->predictionRows = std::move(predictionRows);
     }
+
+    pred->kUsed = kUsed;
+    pred->cmdLine = opts.cmdLine;
 
     pred->numThetas = numThetas;
     pred->numPredictions = numPredictions;

@@ -72,7 +72,9 @@ void to_json(json& j, const Prediction& p)
             { "ystar", yStarVec },
             { "coeffs", coeffsVec },
             { "stats", p.stats },
-            { "predictionRows", p.predictionRows } };
+            { "predictionRows", p.predictionRows },
+            { "kUsed", p.kUsed },
+            { "cmdLine", p.cmdLine } };
 }
 
 void from_json(const json& j, Prediction& p)
@@ -83,6 +85,8 @@ void from_json(const json& j, Prediction& p)
   j.at("numCoeffCols").get_to(p.numCoeffCols);
   j.at("predictionRows").get_to(p.predictionRows);
   j.at("stats").get_to(p.stats);
+  j.at("kUsed").get_to(p.kUsed);
+  j.at("cmdLine").get_to(p.cmdLine);
 
   // TODO: Test this coeffs/ystar loading works as expected
   std::vector<double> ystar = j.at("ystar");

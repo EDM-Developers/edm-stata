@@ -83,6 +83,8 @@ struct Prediction
   std::unique_ptr<double[]> coeffs;
   std::vector<PredictionStats> stats;
   std::vector<bool> predictionRows;
+  std::vector<int> kUsed;
+  std::string cmdLine;
 };
 
 void to_json(json& j, const Prediction& p);
