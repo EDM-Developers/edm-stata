@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
   for (int taskNum = 0; taskNum < j.size(); taskNum++) {
     if (verb)
       std::cout << "Starting task number " << taskNum;
-    Inputs vars = read_dumpfile(j[taskNum]);
+    Inputs vars = parse_dumpfile(j[taskNum]);
 
     if (verb)
       std::cerr << " (" << vars.opts.taskNum << " of " << vars.opts.numTasks << ")\n";

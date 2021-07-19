@@ -14,6 +14,10 @@ plugin: $(EDM_BUILD_DIR)/CMakeCache.txt
 cli: $(EDM_BUILD_DIR)/CMakeCache.txt
 	cmake --build $(EDM_BUILD_DIR) --config $(EDM_BUILD_CONFIG) --parallel 12 --target edm_cli
 
+.PHONY: gbench
+gbench: $(EDM_BUILD_DIR)/CMakeCache.txt
+	cmake --build $(EDM_BUILD_DIR) --config $(EDM_BUILD_CONFIG) --parallel 12 --target gbench
+
 .PHONY: install
 install:
 	cmake --build $(EDM_BUILD_DIR) --config $(EDM_BUILD_CONFIG) --parallel 12 --target install

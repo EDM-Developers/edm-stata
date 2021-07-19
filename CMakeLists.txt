@@ -1,32 +1,31 @@
 cmake_minimum_required(VERSION 3.12)
 
-# We require the environment variable VCPKG_ROOT to be set before
-# running cmake. This contains the path to the vcpkg install directory.
-#
-# Optionally, the ARM_MODE environment variable specifies whether we are
-# compiling for ARM or x86, though it defaults to x86 and can normally
-# be ignored.
-#
-# The edm_cli target creates a command-line executable
-# to run the core EDM algorithms by reading & saving data to JSON files.
-# This can be helpful as it doesn't require Stata (unlike the main plugin).
-#
-# The cmake variable BUILD_GBENCH creates a Google Benchmarks executable which
-# performs microbenchmarking on the core EDM methods. The vcpkg.json file must
-# be modified to include the "benchmark" package if building this.
-if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
-  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
-endif()
+# There are three targets in this CMake project:
+# - edm_plugin makes the main plugin (DLL) which is loaded by Stata.
+# - edm_cli creates a command-line executable to run the core EDM
+#   algorithms by reading & saving data to JSON files. This doesn't
+#   require Stata to run (unlike the main plugin).
+# - gbench creates a Google Benchmarks executable which performs
+#   microbenchmarking on the core EDM methods.
+
+# As we use vcpkg for package management, we need to run CMake will
+# the vcpkg toolchain file. As such, we require the environment variable
+# VCPKG_ROOT to be set before running cmake. This contains.
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
+if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
+endif()
+
+# Optionally, the ARM_MODE environment variable specifies whether we are
+# compiling for ARM or x86, though it defaults to x86 and can normally
+# be ignored.
 if(DEFINED ENV{ARMMODE})
   set(ARMMODE TRUE CACHE BOOL "Compiling to ARM")
 else()
   set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
 endif()
-
-set(BUILD_GBENCH FALSE CACHE BOOL "Generate google benchmark executable")
 
 # The default behaviour of the 'install' target is to build everything first.
 # As we often don't want to build the CLI executable, we disable this behaviour.
@@ -159,22 +158,16 @@ install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
 # Google Benchmarks
-if (BUILD_GBENCH)
-  add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
-  set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
-  if(WIN32)
-    target_compile_options(gbench PRIVATE "/MD")
-  endif()
-  find_package(benchmark CONFIG REQUIRED)
-  target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-  target_include_directories(gbench PRIVATE include)
-  target_include_directories(gbench PRIVATE include/eigen3)
-  target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
-  target_link_libraries(gbench PRIVATE Threads::Threads)
-  target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
-  if(WIN32)
-    find_package(OpenMP)
-    target_link_libraries(gbench PRIVATE OpenMP::OpenMP_CXX)
-  endif()
-  install(TARGETS gbench DESTINATION test OPTIONAL)
+add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
+set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+if(WIN32)
+  target_compile_options(gbench PRIVATE "/MD")
 endif()
+find_package(benchmark CONFIG REQUIRED)
+target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+target_include_directories(gbench PRIVATE include)
+target_include_directories(gbench PRIVATE include/eigen3)
+target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
+target_link_libraries(gbench PRIVATE Threads::Threads)
+target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+install(TARGETS gbench DESTINATION test OPTIONAL)

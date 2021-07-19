@@ -30,20 +30,24 @@ qui {
 
 keep in 300/50000
 
+cap rm logmaplarge.json
+
 timer clear
 timer on 1
 
-edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge.json) verbosity(1)
+edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge) verbosity(1)
 
 timer off 1
 timer list
 
 keep in 1/5000
 
+cap rm logmapsmall.json
+
 timer clear
 timer on 1
 
-edm explore x, e(10) saveinputs(logmapsmall.json)
+edm explore x, e(10) saveinputs(logmapsmall)
 
 timer off 1
 timer list
@@ -54,16 +58,20 @@ use "FEEL_S1_MERGED_V3_DATE_tc.DTA"
 
 keep in 1/5000
 
+cap rm affectsmall.json
+
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall.json) 
+edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall) 
 timer off 1
 timer list 1
 
 keep in 1/5000
 
+cap rm affectbige.json
+
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige.json)
+edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige)
 timer off 1
 timer list 1

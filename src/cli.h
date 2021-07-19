@@ -69,7 +69,7 @@ void from_json(const json& j, ManifoldGenerator& g)
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-Inputs read_dumpfile(json j)
+Inputs parse_dumpfile(json j)
 {
   int E = j["E"];
   Options opts = j["opts"];
@@ -78,6 +78,15 @@ Inputs read_dumpfile(json j)
   std::vector<bool> trainingRows = j["trainingRows"], predictionRows = j["predictionRows"];
 
   return { opts, generator, E, trainingRows, predictionRows };
+}
+
+Inputs read_dumpfile(std::string fName)
+{
+  std::ifstream i(fName);
+  json j;
+  i >> j;
+
+  return parse_dumpfile(j[0]);
 }
 
 void write_dumpfile(const char* fname, const Options& opts, const ManifoldGenerator& generator, int E,
