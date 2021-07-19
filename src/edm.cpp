@@ -109,9 +109,9 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   std::vector<double> dists;
 
   if (opts.distance == Distance::Wasserstein) {
-    dists = wasserstein_distances(Mp_i, opts, M, Mp, validDistances);
+    dists = wasserstein_distances(Mp_i, opts, M, Mp, skipRow, validDistances);
   } else {
-    dists = other_distances(Mp_i, opts, M, Mp, validDistances);
+    dists = other_distances(Mp_i, opts, M, Mp, skipRow, validDistances);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -135,20 +135,22 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     }
   }
 
+  // If the closest distance is 0, then basically we just want to
+  // weight these points by 1 and every non-zero distance by 0.
   double minDist = *std::min_element(dists.begin(), dists.end());
-  bool skipFirst = (minDist > 0) && (skipRow >= 0);
-
-  for (double& dist : dists) {
-    if (dist == 0) {
-      dist = MISSING;
+  int numZeroPoints = 0;
+  if (minDist == 0.0) {
+    for (double& dist : dists) {
+      if (dist > 0) {
+        dist = MISSING;
+      } else {
+        numZeroPoints += 1;
+      }
     }
+    k = numZeroPoints;
   }
 
-  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k + skipFirst);
-
-  if (skipFirst) {
-    kNNInds.erase(kNNInds.begin(), kNNInds.begin() + 1);
-  }
+  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k);
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -177,28 +179,39 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
                         const std::vector<double>& dists, const std::vector<int>& kNNInds,
                         Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
-  *kUsed = k;
 
-  // Find the smallest distance (closest neighbour) among the supplied neighbours.
-  double d_base = MISSING;
-  for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] < d_base) {
-      d_base = dists[kNNInds[j]];
-    }
-  }
+  *kUsed = k;
 
   // Calculate our weighting of each neighbour, and the total sum of these weights.
   std::vector<double> w(k);
   double sumw = 0.0;
-  const double theta = opts.thetas[t];
 
-  for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] != MISSING) {
-      w[j] = exp(-theta * (dists[kNNInds[j]] / d_base));
-    } else {
-      w[j] = 0;
+  double minDist = *std::min_element(dists.begin(), dists.end());
+  if (minDist > 0) {
+    // Find the smallest distance (closest neighbour) among the supplied neighbours.
+    double d_base = MISSING;
+    for (int j = 0; j < k; j++) {
+      if (dists[kNNInds[j]] < d_base) {
+        d_base = dists[kNNInds[j]];
+      }
     }
-    sumw = sumw + w[j];
+
+    const double theta = opts.thetas[t];
+
+    for (int j = 0; j < k; j++) {
+      if (dists[kNNInds[j]] != MISSING) {
+        w[j] = exp(-theta * (dists[kNNInds[j]] / d_base));
+      } else {
+        w[j] = 0;
+      }
+      sumw = sumw + w[j];
+    }
+  } else {
+
+    for (int j = 0; j < k; j++) {
+      w[j] = 1.0;
+    }
+    sumw = k;
   }
 
   // Make the simplex projection/prediction.
@@ -244,7 +257,12 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // Calculate the weight for each neighbour
   Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
   Eigen::VectorXd d = distsMap(kNNInds);
-  d /= d.mean();
+  if (d.mean() > 0) {
+    d /= d.mean();
+  } else {
+    d = Eigen::VectorXd::Ones(k);
+  }
+
   Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * d.array());
 
   // Scale everything by our weights vector

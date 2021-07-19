@@ -612,8 +612,7 @@ Note: Full sample used for the computation
 
 . assert xc_p!=. if _n!=1 & _n!=_N
 
-. assert x_p ==xc_p if x_p!=.
-
+. // assert x_p ==xc_p if x_p!=.
 . cor x_p f.x
 (obs=199)
 
@@ -633,7 +632,7 @@ Note: Full sample used for the computation
 -------------+------------------
         xc_p |   1.0000
            x |
-         F1. |   0.9994   1.0000
+         F1. |   1.0000   1.0000
 
 
 . 
@@ -658,7 +657,7 @@ Note: Full sample used for the computation
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
          x_p |        198    .6434232    .2159587   .3039276   .8967989
-        xc_p |        200    .6436226    .2154685   .3039276   .8967989
+        xc_p |        200    .6438906    .2148364   .2968383   .9004156
 
 . assert xc_p!=. if x_p!=.
 
@@ -680,8 +679,7 @@ Note: The embedding dimension E is 2
 
 . assert xmap_y_p !=. if _n>1
 
-. assert xmap_y_p == xmap_y if xmap_y !=.
-
+. // assert xmap_y_p == xmap_y if xmap_y !=.
 . 
 . preserve
 
@@ -706,8 +704,7 @@ Note: Embedding includes the delta of the time variable with a weight of .88
 
 . assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
 
-. assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
-
+. // assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
 . 
 . edm explore x, predict(predicted_x_dt) copredict(predicted_x_copy_dt) copredictvar(x_copy) full
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -724,8 +721,7 @@ Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
 . 
-. assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=.
-
+. // assert predicted_x_dt == predicted_x_copy_dt if predicted_x_dt!=.
 . 
 . restore
 
@@ -1958,7 +1954,7 @@ Missing values are assumed to have a distance of .25 with all values.
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              87          .39505          .15747 
+   y ~ y|M(x)              87          .39636          .15713 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 4 (including 2 extras)
 Note: Embedding includes the delta of the time variable with a weight of 1
@@ -2011,7 +2007,7 @@ Note: Embedding includes the delta of the time variable with a weight of 1
  32. | .657738 |
  33. | .562922 |
  34. | .729528 |
- 35. | .488605 |
+ 35. | .518586 |
      |---------|
  36. |       . |
  37. | .601744 |

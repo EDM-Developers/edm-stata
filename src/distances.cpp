@@ -91,7 +91,7 @@ double wasserstein(double* C, int len_i, int len_j)
   return cost;
 }
 
-std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, int skipRow,
                                           int& validDistances)
 {
 
@@ -102,6 +102,11 @@ std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const M
   validDistances = 0;
 
   for (int i = 0; i < M.nobs(); i++) {
+    if (i == skipRow) {
+      dists[i] = MISSING;
+      continue;
+    }
+
     int len_i, len_j;
     auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, gamma, opts.missingdistance, len_i, len_j);
 
@@ -117,7 +122,7 @@ std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const M
   return dists;
 }
 
-std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, int skipRow,
                                     int& validDistances)
 {
 
@@ -128,6 +133,11 @@ std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifol
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
   for (int i = 0; i < M.nobs(); i++) {
+    if (i == skipRow) {
+      dists[i] = MISSING;
+      continue;
+    }
+
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
