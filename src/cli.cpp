@@ -1,5 +1,6 @@
 #include "cli.h"
 #include <iostream>
+#include <queue>
 
 std::atomic<bool> going = true;
 
@@ -26,42 +27,44 @@ int main(int argc, char* argv[])
 
   ConsoleIO io;
 
-  std::vector<Prediction*> predictions;
-  std::vector<std::future<void>> futures;
-  std::vector<ManifoldGenerator*> generators;
+  std::queue<Prediction> predictions;
+  std::queue<std::future<void>> futures;
+  std::queue<Inputs> inputs;
 
   std::cerr << "Read in the JSON input from " << fnameIn << "\n";
   std::ifstream i(fnameIn);
   json j;
   i >> j;
 
-  bool verb = false;
+  bool verb = true;
 
   std::cerr << "Input is of size " << j.size() << "\n";
   for (int taskNum = 0; taskNum < j.size(); taskNum++) {
-    if (verb)
+    if (verb) {
       std::cout << "Starting task number " << taskNum;
-    Inputs vars = parse_dumpfile(j[taskNum]);
+    }
 
-    if (verb)
-      std::cerr << " (" << vars.opts.taskNum << " of " << vars.opts.numTasks << ")\n";
+    inputs.emplace(parse_dumpfile(j[taskNum]));
+    Inputs* vars = &(inputs.back());
 
-    vars.opts.nthreads = nthreads;
+    if (verb) {
+      std::cerr << " (" << vars->opts.taskNum + 1 << " of " << vars->opts.numTasks << ")\n";
+    }
 
-    Prediction* pred = new Prediction;
-    predictions.push_back(pred);
+    vars->opts.nthreads = nthreads;
 
-    ManifoldGenerator* gen = new ManifoldGenerator(vars.generator);
-    generators.push_back(gen);
+    predictions.push({});
 
-    futures.emplace_back(
-      edm_task_async(vars.opts, gen, vars.E, vars.trainingRows, vars.predictionRows, &io, pred, keep_going));
+    futures.emplace(edm_task_async(vars->opts, &(vars->generator), vars->E, vars->trainingRows, vars->predictionRows,
+                                   &io, &(predictions.back()), keep_going));
   }
 
   for (int taskNum = 0; taskNum < j.size(); taskNum++) {
-    if (verb)
+    if (verb) {
       std::cout << "Getting results of task number " << taskNum << "\n";
-    futures[taskNum].get();
+    }
+    futures.front().get();
+    futures.pop();
   }
 
   size_t ext = fnameIn.find_last_of(".");
@@ -74,14 +77,14 @@ int main(int argc, char* argv[])
   json results;
 
   for (int taskNum = 0; taskNum < j.size(); taskNum++) {
-    Prediction* pred = predictions[taskNum];
-    results.push_back(*pred);
-    if (pred->rc > rc) {
-      rc = pred->rc;
+    const Prediction& pred = predictions.front();
+
+    results.push_back(pred);
+    if (pred.rc > rc) {
+      rc = pred.rc;
     }
 
-    delete pred;
-    delete generators[taskNum];
+    predictions.pop();
   }
 
   std::ofstream o(fnameOut);

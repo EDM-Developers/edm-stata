@@ -144,57 +144,6 @@ public:
     }
   }
 
-  ManifoldGenerator(const ManifoldGenerator& obj)
-  {
-    _copredict = obj._copredict;
-    _use_dt = obj._use_dt;
-    _add_dt0 = obj._add_dt0;
-    _tau = obj._tau;
-    _missing = obj._missing;
-
-    _num_extras_varying = obj._num_extras_varying;
-    _num_extras = obj._num_extras;
-
-    _dtWeight = obj._dtWeight;
-
-    _x = obj._x;
-    _y = obj._y;
-    _co_x = obj._co_x;
-    _t = obj._t;
-
-    _extras.clear();
-    for (auto& extra : obj._extras) {
-      _extras.push_back(extra);
-    }
-    _extrasEVarying = obj._extrasEVarying;
-  }
-
-  ManifoldGenerator& operator=(const ManifoldGenerator& obj)
-  {
-    _copredict = obj._copredict;
-    _use_dt = obj._use_dt;
-    _add_dt0 = obj._add_dt0;
-    _tau = obj._tau;
-    _missing = obj._missing;
-
-    _num_extras_varying = obj._num_extras_varying;
-    _num_extras = obj._num_extras;
-
-    _dtWeight = obj._dtWeight;
-
-    _x = obj._x;
-    _y = obj._y;
-    _co_x = obj._co_x;
-    _t = obj._t;
-
-    _extras.clear();
-    for (auto& extra : obj._extras) {
-      _extras.push_back(extra);
-    }
-    _extrasEVarying = obj._extrasEVarying;
-    return *this;
-  }
-
   void add_coprediction_data(const std::vector<double>& co_x)
   {
     _co_x = co_x;

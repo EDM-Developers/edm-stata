@@ -60,6 +60,7 @@ struct Options
   Distance distance;
   std::vector<Metric> metrics;
   std::string cmdLine;
+  bool saveKUsed = false;
 };
 
 void to_json(json& j, const Options& o);

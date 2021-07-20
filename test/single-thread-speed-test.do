@@ -5,8 +5,10 @@ import delimited "affect.csv"
 gen t = _n
 tsset t
 
-global EDM_VERBOSITY=1
-global EDM_NTHREADS=1
+global EDM_VERBOSITY = 1
+global EDM_NTHREADS = 1
+global EDM_SAVE_INPUTS = "single-thread-speed-test"
+cap rm single-thread-speed-test.json
 
 set seed 1
 timer clear

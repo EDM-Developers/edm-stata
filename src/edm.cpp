@@ -477,7 +477,10 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
       pred->predictionRows = std::move(predictionRows);
     }
 
-    pred->kUsed = kUsed;
+    if (opts.saveKUsed) {
+      pred->kUsed = kUsed;
+    }
+
     pred->cmdLine = opts.cmdLine;
 
     pred->numThetas = numThetas;
