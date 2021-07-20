@@ -19,9 +19,9 @@ Number of observations (_N) was 0, now 500.
 
 . global EDM_NTHREADS = 4
 
-. global EDM_SAVE_INPUTS = "cut-down-test"
+. global EDM_SAVE_INPUTS = "ci-test"
 
-. cap rm cut-down-test.json
+. cap rm ci-test.json
 
 . 
 . gen t = _n
@@ -891,7 +891,7 @@ Note: Random 50/50 split for training and validation data
 
 . 
 . * Further tests that were previously in the 'bigger-test.do' script
-. global EDM_SAVE_INPUTS = "cut-down-test"
+. global EDM_SAVE_INPUTS = "ci-test"
 
 . 
 . clear
@@ -4274,19 +4274,6 @@ Note: -force- option is specified. The estimate may not be derived from the spec
 . 
 . 
 . // Check that factor variables don't crash everything
-. edm explore i.x
-Percent complete: 0...10...20...30...40...50...60...70...80...90...
-
-Empirical Dynamic Modelling
-Univariate mapping with i.x and its lag values
---------------------------------------------------------------------
-          Actual E           theta             rho             MAE
---------------------------------------------------------------------
-                 2               1               .          .18986 
---------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
-
 . 
 . edm explore x, extra(i.y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -4297,13 +4284,12 @@ Additional variable in the embedding: i.y
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 3               1          .96849         .043236 
+                 3               1          .93324         .067038 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
 Note: Random 50/50 split for training and validation data
 
-. 
 . edm xmap x y, extra(i.y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -4319,7 +4305,6 @@ Additional variable in the embedding: i.y
 ---------------------------------------------------------------
 Note: The embedding dimension E is 3 (including 1 extra)
 
-. 
 . edm explore x, e(2/4) extra(x i.y(e) l.x)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -4329,13 +4314,114 @@ Additional variables in the embedding: x i.y(e) L.x
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 6               1          .91666          .21153 
-                 8               1          .94355          .22657 
-                10               1          .95746          .22719 
+                 6               1          .89856          .17278 
+                 8               1          .88688          .18595 
+                10               1          .91309          .18711 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+4
 Note: Random 50/50 split for training and validation data
+
+. 
+. // Having factor variables like the following probably doesn't make sense;
+. // for now, just check that nothing crashes with this kind of command
+. edm explore i.x
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Univariate mapping with i.x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1               .          .23606 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. edm xmap i.x i.y
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables i.x and i.y
+---------------------------------------------------------------------
+            Mapping    Library size             rho             MAE
+---------------------------------------------------------------------
+   i.y ~ i.y|M(i.x)              50         -.33974          .27401 
+   i.x ~ i.x|M(i.y)              62         -.17374          .21419 
+---------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. edm xmap i.x y
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables i.x and y
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+     y ~ y|M(i.x)              50         -.33974          .27401 
+   i.x ~ i.x|M(y)              62         -.17374          .21419 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. edm xmap y i.x
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables y and i.x
+-------------------------------------------------------------------
+          Mapping    Library size             rho             MAE
+-------------------------------------------------------------------
+   i.x ~ i.x|M(y)              62          .90401         .069639 
+     y ~ y|M(i.x)              50          .30789           .1807 
+-------------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. 
+. // Make sure multiple library values are respected
+. edm xmap x y, allowmissing dt library(10(5)70)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Additional variables in the embedding: (time delta)
+Missing values are assumed to have a distance of .25 and .23
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              10          .42766          .15983 
+   y ~ y|M(x)              15          .18728          .20365 
+   y ~ y|M(x)              20          .42034          .16518 
+   y ~ y|M(x)              25          .31036          .17333 
+   y ~ y|M(x)              30          .47316          .15108 
+   y ~ y|M(x)              35          .38384          .15814 
+   y ~ y|M(x)              40          .15588          .16619 
+   y ~ y|M(x)              45          .32587          .15938 
+   y ~ y|M(x)              50          .35384          .16107 
+   y ~ y|M(x)              55          .42833          .15597 
+   y ~ y|M(x)              60           .4287          .15761 
+   y ~ y|M(x)              65          .37489          .16742 
+   y ~ y|M(x)              70          .37085          .16416 
+   x ~ x|M(y)              10          .44835          .18021 
+   x ~ x|M(y)              15          .58253          .14055 
+   x ~ x|M(y)              20          .62918           .1389 
+   x ~ x|M(y)              25          .63063          .13556 
+   x ~ x|M(y)              30          .61459          .13158 
+   x ~ x|M(y)              35          .64703          .13656 
+   x ~ x|M(y)              40          .64569            .128 
+   x ~ x|M(y)              45          .71112          .11593 
+   x ~ x|M(y)              50          .73806          .11182 
+   x ~ x|M(y)              55          .82144         .091414 
+   x ~ x|M(y)              60          .77325          .10433 
+   x ~ x|M(y)              65          .82184         .092953 
+   x ~ x|M(y)              70          .82153          .09166 
+---------------------------------------------------------------
+Note: The embedding dimension E is 4 (including 2 extras)
+Note: Embedding includes the delta of the time variable with a weight of .65 and .59
 
 . 
 end of do-file

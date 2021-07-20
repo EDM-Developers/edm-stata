@@ -9,8 +9,8 @@ if c(MP) {
 
 global EDM_VERBOSITY = 1
 global EDM_NTHREADS = 4
-global EDM_SAVE_INPUTS = "cut-down-test"
-cap rm cut-down-test.json
+global EDM_SAVE_INPUTS = "ci-test"
+cap rm ci-test.json
 
 gen t = _n
 tsset t
@@ -174,7 +174,7 @@ jackknife: edm explore x, e(2)
 ereturn display
 
 * Further tests that were previously in the 'bigger-test.do' script
-global EDM_SAVE_INPUTS = "cut-down-test"
+global EDM_SAVE_INPUTS = "ci-test"
 
 clear
 set obs 100
@@ -384,10 +384,17 @@ edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full force
 
 
 // Check that factor variables don't crash everything
-edm explore i.x
 
 edm explore x, extra(i.y)
-
 edm xmap x y, extra(i.y)
-
 edm explore x, e(2/4) extra(x i.y(e) l.x)
+
+// Having factor variables like the following probably doesn't make sense;
+// for now, just check that nothing crashes with this kind of command
+edm explore i.x
+edm xmap i.x i.y
+edm xmap i.x y
+edm xmap y i.x
+
+// Make sure multiple library values are respected
+edm xmap x y, allowmissing dt library(10(5)70)
