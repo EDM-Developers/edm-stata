@@ -1777,8 +1777,6 @@ program define edmXmap, eclass
 	
 		forvalues rep =1/`replicate' {
 
-			local newTrainPredictSplit = 1
-
 			qui replace `u' = runiform() if `usable'
 			
 			if `mata_mode' {
@@ -1790,6 +1788,8 @@ program define edmXmap, eclass
 				local manifold "mapping_`=`i'-1'"
 				
 				foreach lib_size of numlist `library' {
+
+					local newTrainPredictSplit = 1
 
 					if `mata_mode' {
 						qui replace `train_set' = `urank' <= `lib_size' & `usable'
