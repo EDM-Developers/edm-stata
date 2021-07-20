@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
   std::cerr << "Using nthreads = " << nthreads << "\n";
 
   ConsoleIO io;
-
   std::queue<Prediction> predictions;
   std::queue<std::future<void>> futures;
   std::queue<Inputs> inputs;
@@ -36,35 +35,45 @@ int main(int argc, char* argv[])
   json j;
   i >> j;
 
-  bool verb = true;
+  bool verb = false;
 
-  std::cerr << "Input is of size " << j.size() << "\n";
-  for (int taskNum = 0; taskNum < j.size(); taskNum++) {
+  int numTaskGroups = j.size();
+  std::cerr << "Number of task groups is " << numTaskGroups << "\n";
+  for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
     if (verb) {
-      std::cout << "Starting task number " << taskNum;
+      std::cout << "Starting task group number " << taskGroupNum << "\n";
+    }
+    ManifoldGenerator generator = j[taskGroupNum]["generator"];
+    std::vector<bool> trainingRows, predictionRows;
+
+    int numTasks = j[taskGroupNum]["tasks"].size();
+    std::cerr << "Number of tasks is " << numTasks << "\n";
+
+    for (int taskNum = 0; taskNum < numTasks; taskNum++) {
+      Options opts = j[taskGroupNum]["tasks"][taskNum]["opts"];
+      int E = j[taskGroupNum]["tasks"][taskNum]["E"];
+
+      if (j[taskGroupNum]["tasks"][taskNum].contains("trainingRows")) {
+        trainingRows = (std::vector<bool>)j[taskGroupNum]["tasks"][taskNum]["trainingRows"];
+        predictionRows = (std::vector<bool>)j[taskGroupNum]["tasks"][taskNum]["predictionRows"];
+      }
+
+      opts.nthreads = nthreads;
+
+      predictions.push({});
+
+      futures.emplace(
+        edm_task_async(opts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going));
     }
 
-    inputs.emplace(parse_dumpfile(j[taskNum]));
-    Inputs* vars = &(inputs.back());
-
-    if (verb) {
-      std::cerr << " (" << vars->opts.taskNum + 1 << " of " << vars->opts.numTasks << ")\n";
+    // Collect the results of this task group before moving on to the next task group
+    for (int taskNum = 0; taskNum < numTasks; taskNum++) {
+      if (verb) {
+        std::cout << "Getting results of task number " << taskNum << "\n";
+      }
+      futures.front().get();
+      futures.pop();
     }
-
-    vars->opts.nthreads = nthreads;
-
-    predictions.push({});
-
-    futures.emplace(edm_task_async(vars->opts, &(vars->generator), vars->E, vars->trainingRows, vars->predictionRows,
-                                   &io, &(predictions.back()), keep_going));
-  }
-
-  for (int taskNum = 0; taskNum < j.size(); taskNum++) {
-    if (verb) {
-      std::cout << "Getting results of task number " << taskNum << "\n";
-    }
-    futures.front().get();
-    futures.pop();
   }
 
   size_t ext = fnameIn.find_last_of(".");
@@ -76,7 +85,8 @@ int main(int argc, char* argv[])
   int rc = 0;
   json results;
 
-  for (int taskNum = 0; taskNum < j.size(); taskNum++) {
+  std::cerr << "Saving " << predictions.size() << " predictions\n";
+  while (!predictions.empty()) {
     const Prediction& pred = predictions.front();
 
     results.push_back(pred);

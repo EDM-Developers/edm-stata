@@ -89,41 +89,17 @@ Inputs read_dumpfile(std::string fName)
   return parse_dumpfile(j[0]);
 }
 
-void write_dumpfile(const char* fname, const Options& opts, const ManifoldGenerator& generator, int E,
-                    const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows)
+void append_to_dumpfile(std::string fName, json taskGroup)
 {
-  json task;
-  task["opts"] = opts;
-  task["generator"] = generator;
-  task["E"] = E;
-  task["trainingRows"] = trainingRows;
-  task["predictionRows"] = predictionRows;
+  json allTaskGroups;
 
-  json tasks;
-
-  std::ifstream i(fname);
+  std::ifstream i(fName);
   if (i.is_open()) {
-    i >> tasks;
+    i >> allTaskGroups;
   }
 
-  tasks.push_back(task);
+  allTaskGroups.push_back(taskGroup);
 
-  std::ofstream o(fname);
-  o << std::setw(4) << tasks << std::endl;
-}
-
-void write_results(std::string fname_out, const Prediction& pred)
-{
-  json results;
-
-  std::ifstream i(fname_out);
-  if (i.is_open()) {
-    i >> results;
-  }
-
-  json result = pred;
-  results.push_back(result);
-
-  std::ofstream o(fname_out);
-  o << std::setw(4) << results << std::endl;
+  std::ofstream o(fName);
+  o << std::setw(4) << allTaskGroups << std::endl;
 }

@@ -53,6 +53,7 @@ std::vector<bool> trainingRows;
 std::vector<bool> predictionRows;
 std::queue<Prediction> predictions;
 std::queue<std::future<void>> futures;
+json taskGroup;
 
 std::atomic<bool> breakButtonPressed = false;
 std::atomic<bool> allTasksFinished = false;
@@ -692,7 +693,24 @@ ST_retcode launch_edm_task(int argc, char* argv[])
       io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
       io.flush();
     }
-    write_dumpfile((saveInputsFilename + ".json").c_str(), taskOpts, generator, E, trainingRows, predictionRows);
+
+    if (taskOpts.taskNum == 0) {
+      taskGroup.clear();
+      taskGroup["generator"] = generator;
+    }
+
+    json task;
+    task["opts"] = taskOpts;
+    task["E"] = E;
+    if (newTrainPredictSplit) {
+      task["trainingRows"] = trainingRows;
+      task["predictionRows"] = predictionRows;
+    }
+    taskGroup["tasks"].push_back(task);
+
+    if (taskOpts.taskNum == taskOpts.numTasks - 1) {
+      append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+    }
   }
 
   predictions.push({});
@@ -769,7 +787,19 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   }
 
   if (!saveInputsFilename.empty()) {
-    write_dumpfile((saveInputsFilename + ".json").c_str(), taskOpts, generator, E, coTrainingRows, coPredictionRows);
+    taskGroup.clear();
+    taskGroup["generator"] = generator;
+
+    json task;
+    task["opts"] = taskOpts;
+    task["E"] = E;
+    task["trainingRows"] = coTrainingRows;
+    task["predictionRows"] = coPredictionRows;
+    taskGroup["tasks"].push_back(task);
+
+    if (taskOpts.taskNum == taskOpts.numTasks - 1) {
+      append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+    }
   }
 
   if (io.verbosity > 2) {
