@@ -15,14 +15,23 @@
 #include <fmt/format.h>
 
 #include "cli.h"
+#include "common.h"
 #include "cpu.h"
+#include "distances.h"
 #include "edm.h"
 
 #define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
+// Declare some of the internal functions in edm.cpp which are not publicly listed in edm.h.
 std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k);
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k, const std::vector<double>& d,
+                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
+                     const std::vector<double>& d, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
 
 // Compiler flags tried on Windows: "/GL" and "/GL /LTCG", both slightly worse. "/O2" is the default.
 
@@ -36,68 +45,7 @@ std::vector<std::string> tests = {
 
 ConsoleIO io(0);
 
-static void bm_sqrt(benchmark::State& state)
-{
-  state.SetLabel("'sqrt' function");
-
-  double i = 0.0;
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(std::sqrt(i));
-    i += 1.0;
-  }
-}
-
-BENCHMARK(bm_sqrt);
-
-static void bm_pow_half(benchmark::State& state)
-{
-  state.SetLabel("'pow(., 0.5)' function");
-
-  double i = 0.0;
-  for (auto _ : state) {
-    benchmark::DoNotOptimize(std::pow(i, 0.5));
-    i += 1.0;
-  }
-}
-
-BENCHMARK(bm_pow_half);
-
-void get_distances(int Mp_i, Options opts, const Manifold& M, const Manifold& Mp)
-{
-  int validDistances = 0;
-  std::vector<double> d(M.nobs());
-
-  for (int i = 0; i < M.nobs(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
-      }
-    }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
-
-    if (missing || dist == 0.) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
-      validDistances += 1;
-    }
-  }
-}
-
-static void bm_get_distances(benchmark::State& state)
+static void bm_basic_distances(benchmark::State& state)
 {
   std::string input = tests[state.range(0)];
   state.SetLabel(input);
@@ -108,13 +56,34 @@ static void bm_get_distances(benchmark::State& state)
   Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
+  int validDistances;
   for (auto _ : state) {
-    get_distances(Mp_i, vars.opts, M, Mp);
+    other_distances(Mp_i, vars.opts, M, Mp, validDistances);
     Mp_i = (Mp_i + 1) % Mp.nobs();
   }
 }
 
-BENCHMARK(bm_get_distances)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
+BENCHMARK(bm_basic_distances)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMicrosecond);
+
+static void bm_wasserstein_distances(benchmark::State& state)
+{
+  std::string input = tests[state.range(0)];
+  state.SetLabel(input);
+
+  Inputs vars = read_dumpfile(input);
+
+  Manifold M = vars.generator.create_manifold(vars.E, vars.trainingRows, false);
+  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, true);
+
+  int Mp_i = 0;
+  int validDistances;
+  for (auto _ : state) {
+    wasserstein_distances(Mp_i, vars.opts, M, Mp, validDistances);
+    Mp_i = (Mp_i + 1) % Mp.nobs();
+  }
+}
+
+BENCHMARK(bm_wasserstein_distances)->DenseRange(0, tests.size() - 1)->Unit(benchmark::kMillisecond);
 
 static void bm_nearest_neighbours(benchmark::State& state)
 {
@@ -129,42 +98,28 @@ static void bm_nearest_neighbours(benchmark::State& state)
   int Mp_i = 0;
   Options opts = vars.opts;
 
-  int validDistances = 0;
-  std::vector<double> d(M.nobs());
+  int validDistances;
+  std::vector<double> dists;
 
-  for (int i = 0; i < M.nobs(); i++) {
-    double dist = 0.;
-    bool missing = false;
-    int numMissingDims = 0;
-    for (int j = 0; j < M.E_actual(); j++) {
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
-        if (opts.missingdistance == 0) {
-          missing = true;
-          break;
-        }
-        numMissingDims += 1;
-      } else {
-        dist += (M(i, j) - Mp(Mp_i, j)) * (M(i, j) - Mp(Mp_i, j));
-      }
-    }
-    // If the distance between M_i and b is 0 before handling missing values,
-    // then keep it at 0. Otherwise, add in the correct number of missingdistance's.
-    if (dist != 0) {
-      dist += numMissingDims * opts.missingdistance * opts.missingdistance;
-    }
-
-    if (missing || dist == 0.) {
-      d[i] = MISSING;
-    } else {
-      d[i] = dist;
-      validDistances += 1;
-    }
+  if (opts.distance == Distance::Wasserstein) {
+    dists = wasserstein_distances(Mp_i, opts, M, Mp, validDistances);
+  } else {
+    dists = other_distances(Mp_i, opts, M, Mp, validDistances);
   }
 
   int k = opts.k;
+  if (k > validDistances) {
+    k = validDistances;
+  }
+
+  for (double& dist : dists) {
+    if (dist == 0) {
+      dist = MISSING;
+    }
+  }
 
   for (auto _ : state) {
-    std::vector<int> ind = kNearestNeighboursIndices(d, k);
+    std::vector<int> ind = kNearestNeighboursIndices(dists, k);
   }
 }
 
