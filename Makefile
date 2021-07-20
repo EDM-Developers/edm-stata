@@ -1,7 +1,7 @@
 EDM_BUILD_DIR ?= build
 EDM_BUILD_CONFIG ?= release
 
-all: $(EDM_BUILD_DIR)/CMakeCache.txt
+all: $(EDM_BUILD_DIR)/CMakeCache.txt plugin cli install
 
 $(EDM_BUILD_DIR)/CMakeCache.txt:
 	cmake -B $(EDM_BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(EDM_BUILD_CONFIG)
