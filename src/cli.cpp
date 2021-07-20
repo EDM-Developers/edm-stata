@@ -54,8 +54,17 @@ int main(int argc, char* argv[])
       int E = j[taskGroupNum]["tasks"][taskNum]["E"];
 
       if (j[taskGroupNum]["tasks"][taskNum].contains("trainingRows")) {
-        trainingRows = (std::vector<bool>)j[taskGroupNum]["tasks"][taskNum]["trainingRows"];
-        predictionRows = (std::vector<bool>)j[taskGroupNum]["tasks"][taskNum]["predictionRows"];
+        // Saving the vector of bools as a vector of ints (as it's much smaller in JSON format),
+        // so have to convert it back.
+        trainingRows.clear();
+        predictionRows.clear();
+
+        std::vector<int> trainingRowsInt = j[taskGroupNum]["tasks"][taskNum]["trainingRows"];
+        std::vector<int> predictionRowsInt = j[taskGroupNum]["tasks"][taskNum]["predictionRows"];
+
+        std::copy(trainingRowsInt.begin(), trainingRowsInt.end(), std::back_inserter(trainingRows));
+
+        std::copy(predictionRowsInt.begin(), predictionRowsInt.end(), std::back_inserter(predictionRows));
       }
 
       opts.nthreads = nthreads;

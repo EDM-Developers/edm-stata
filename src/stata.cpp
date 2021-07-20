@@ -703,8 +703,14 @@ ST_retcode launch_edm_task(int argc, char* argv[])
     task["opts"] = taskOpts;
     task["E"] = E;
     if (newTrainPredictSplit) {
-      task["trainingRows"] = trainingRows;
-      task["predictionRows"] = predictionRows;
+      std::vector<int> trainingRowsInt, predictionRowsInt;
+
+      std::copy(trainingRows.begin(), trainingRows.end(), std::back_inserter(trainingRowsInt));
+
+      std::copy(predictionRows.begin(), predictionRows.end(), std::back_inserter(predictionRowsInt));
+
+      task["trainingRows"] = trainingRowsInt;
+      task["predictionRows"] = predictionRowsInt;
     }
     taskGroup["tasks"].push_back(task);
 

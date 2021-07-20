@@ -101,5 +101,5 @@ void append_to_dumpfile(std::string fName, json taskGroup)
   allTaskGroups.push_back(taskGroup);
 
   std::ofstream o(fName);
-  o << std::setw(4) << allTaskGroups << std::endl;
+  o << allTaskGroups << std::endl;
 }
