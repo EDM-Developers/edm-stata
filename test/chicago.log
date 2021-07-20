@@ -1,0 +1,568 @@
+
+
+. set seed 1
+
+. 
+. timer clear 1
+
+. timer on 1
+
+. 
+. global EDM_SAVE_INPUTS = "chicago"
+
+. cap rm chicago.json
+
+. 
+. /* Example with a Real-World Dataset */
+. /* Visualising coupling strength using the Chicago crime dataset*/
+. 
+. use chicago,clear
+
+. 
+. /* Explore the system dimension */
+. edm explore temp, e(2/20) crossfold(5) seed(1234567)
+5-fold cross-validation progress (5 in total)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Univariate mapping with temp and its lag values
+----------------------------------------------------------------------
+                      --------- rho ---------  --------- MAE ---------
+ Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
+----------------------------------------------------------------------
+        2        1       .89957     .0062745       7.1043        .2019
+        3        1       .90697      .007509       6.8662        .2264
+        4        1        .9118       .00755       6.6514       .26913
+        5        1       .91559     .0059538       6.5268       .23706
+        6        1       .91887     .0044995       6.4603       .21609
+        7        1       .91945     .0043747       6.4401       .20654
+        8        1       .91941     .0038785       6.4424       .18948
+        9        1       .91891      .004358       6.4872       .17443
+       10        1       .91844     .0035891       6.5051       .14676
+       11        1       .91784     .0032224       6.5201       .16668
+       12        1       .91842      .002948       6.5009       .12944
+       13        1       .91766     .0022427       6.5398       .12682
+       14        1       .91723     .0027735       6.5559       .16053
+       15        1       .91615     .0029781       6.6042       .16587
+       16        1       .91597     .0031002       6.6025       .21435
+       17        1       .91552     .0034164       6.6201       .18458
+       18        1       .91511     .0037616       6.6438       .18286
+       19        1       .91454     .0036294       6.6832       .17264
+       20        1       .91367     .0034175       6.7146       .15943
+----------------------------------------------------------------------
+Note: Results from 5 runs
+Note: Number of neighbours (k) is set to E+1
+Note: 5-fold cross validation results reported
+
+. 
+. /* Explore convergance property */
+. // note this process may take considerable computation time
+. // it is possible to skip this section if needed
+. edm xmap temp crime, e(7) library(10(5)200 210(10)1000 1020(20)2000 2050(50)4350 4365) rep(10)
+Replication progress (20 in total)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables temp and crime
+--------------------------------------------------------------------------
+                 Mapping        Lib size        Mean rho       Std. Dev.
+--------------------------------------------------------------------------
+   crime ~ crime|M(temp)              10          .24732          .18404
+   crime ~ crime|M(temp)              15          .32017          .13364
+   crime ~ crime|M(temp)              20          .40303         .028349
+   crime ~ crime|M(temp)              25          .37666         .045278
+   crime ~ crime|M(temp)              30          .38392         .039562
+   crime ~ crime|M(temp)              35          .39656         .040837
+   crime ~ crime|M(temp)              40          .37683         .055394
+   crime ~ crime|M(temp)              45          .39227         .027892
+   crime ~ crime|M(temp)              50          .38632         .030611
+   crime ~ crime|M(temp)              55          .38839         .021827
+   crime ~ crime|M(temp)              60          .36387         .047259
+   crime ~ crime|M(temp)              65          .38688         .068524
+   crime ~ crime|M(temp)              70          .36447         .065128
+   crime ~ crime|M(temp)              75          .38093          .02567
+   crime ~ crime|M(temp)              80          .39058         .027528
+   crime ~ crime|M(temp)              85          .39066         .046098
+   crime ~ crime|M(temp)              90           .3999         .025956
+   crime ~ crime|M(temp)              95          .40666         .017923
+   crime ~ crime|M(temp)             100          .37217         .024076
+   crime ~ crime|M(temp)             105          .38905         .023811
+   crime ~ crime|M(temp)             110          .39504         .022227
+   crime ~ crime|M(temp)             115          .37883         .038205
+   crime ~ crime|M(temp)             120          .39641         .018305
+   crime ~ crime|M(temp)             125            .387         .026184
+   crime ~ crime|M(temp)             130           .3911          .01646
+   crime ~ crime|M(temp)             135          .38237         .032376
+   crime ~ crime|M(temp)             140          .38178         .034503
+   crime ~ crime|M(temp)             145          .38999         .015564
+   crime ~ crime|M(temp)             150          .39603         .023632
+   crime ~ crime|M(temp)             155          .38637         .028055
+   crime ~ crime|M(temp)             160          .39496         .015056
+   crime ~ crime|M(temp)             165          .38902          .02356
+   crime ~ crime|M(temp)             170           .3985         .022946
+   crime ~ crime|M(temp)             175          .38639         .025928
+   crime ~ crime|M(temp)             180          .39455         .018645
+   crime ~ crime|M(temp)             185          .39897         .017978
+   crime ~ crime|M(temp)             190           .3932         .016216
+   crime ~ crime|M(temp)             195          .38648         .025458
+   crime ~ crime|M(temp)             200           .3928         .020229
+   crime ~ crime|M(temp)             210          .39333         .022391
+   crime ~ crime|M(temp)             220          .38748         .019469
+   crime ~ crime|M(temp)             230          .38969         .019716
+   crime ~ crime|M(temp)             240           .4069         .014268
+   crime ~ crime|M(temp)             250          .40063         .016374
+   crime ~ crime|M(temp)             260          .39864         .016046
+   crime ~ crime|M(temp)             270          .39338         .016706
+   crime ~ crime|M(temp)             280          .39034         .019948
+   crime ~ crime|M(temp)             290          .39464         .019108
+   crime ~ crime|M(temp)             300          .39298          .01666
+   crime ~ crime|M(temp)             310          .38411         .018283
+   crime ~ crime|M(temp)             320          .39972         .014871
+   crime ~ crime|M(temp)             330          .38445         .020703
+   crime ~ crime|M(temp)             340          .39189         .015278
+   crime ~ crime|M(temp)             350          .39827         .012258
+   crime ~ crime|M(temp)             360          .39994         .013175
+   crime ~ crime|M(temp)             370           .3956         .017173
+   crime ~ crime|M(temp)             380          .40264         .014692
+   crime ~ crime|M(temp)             390          .39963        .0097415
+   crime ~ crime|M(temp)             400          .39619         .009884
+   crime ~ crime|M(temp)             410          .39457         .012823
+   crime ~ crime|M(temp)             420          .39717         .019612
+   crime ~ crime|M(temp)             430          .39493         .014087
+   crime ~ crime|M(temp)             440          .39464         .020267
+   crime ~ crime|M(temp)             450          .40159         .013124
+   crime ~ crime|M(temp)             460            .399         .012243
+   crime ~ crime|M(temp)             470          .38486         .011805
+   crime ~ crime|M(temp)             480           .3896         .010471
+   crime ~ crime|M(temp)             490          .39161         .019845
+   crime ~ crime|M(temp)             500           .3959         .011266
+   crime ~ crime|M(temp)             510          .40543        .0077803
+   crime ~ crime|M(temp)             520          .39592           .0104
+   crime ~ crime|M(temp)             530          .39769         .013396
+   crime ~ crime|M(temp)             540          .39704         .011827
+   crime ~ crime|M(temp)             550          .39567        .0085641
+   crime ~ crime|M(temp)             560          .40073         .014169
+   crime ~ crime|M(temp)             570          .39678         .015546
+   crime ~ crime|M(temp)             580          .39408          .01271
+   crime ~ crime|M(temp)             590          .39533          .01129
+   crime ~ crime|M(temp)             600          .39502         .016307
+   crime ~ crime|M(temp)             610          .39178         .012424
+   crime ~ crime|M(temp)             620          .39686        .0091075
+   crime ~ crime|M(temp)             630          .40124         .014505
+   crime ~ crime|M(temp)             640           .4001        .0094003
+   crime ~ crime|M(temp)             650          .40014         .016106
+   crime ~ crime|M(temp)             660          .39512         .011084
+   crime ~ crime|M(temp)             670          .39703         .017865
+   crime ~ crime|M(temp)             680          .40182         .011462
+   crime ~ crime|M(temp)             690          .40319        .0063916
+   crime ~ crime|M(temp)             700          .40058        .0085801
+   crime ~ crime|M(temp)             710          .40132        .0086608
+   crime ~ crime|M(temp)             720          .40289        .0095381
+   crime ~ crime|M(temp)             730           .4047         .011281
+   crime ~ crime|M(temp)             740          .40019        .0092002
+   crime ~ crime|M(temp)             750          .39886        .0083819
+   crime ~ crime|M(temp)             760          .40464        .0072121
+   crime ~ crime|M(temp)             770          .39973         .011182
+   crime ~ crime|M(temp)             780          .39726         .013498
+   crime ~ crime|M(temp)             790          .40334        .0087463
+   crime ~ crime|M(temp)             800          .39682         .010337
+   crime ~ crime|M(temp)             810          .39956          .01046
+   crime ~ crime|M(temp)             820          .40204        .0099796
+   crime ~ crime|M(temp)             830          .39798         .010329
+   crime ~ crime|M(temp)             840          .40362        .0083136
+   crime ~ crime|M(temp)             850          .40346         .012197
+   crime ~ crime|M(temp)             860           .3997         .011522
+   crime ~ crime|M(temp)             870          .40222         .014894
+   crime ~ crime|M(temp)             880          .39773         .011084
+   crime ~ crime|M(temp)             890          .40146        .0073383
+   crime ~ crime|M(temp)             900          .39965         .010262
+   crime ~ crime|M(temp)             910          .40569        .0090206
+   crime ~ crime|M(temp)             920          .40064        .0082065
+   crime ~ crime|M(temp)             930          .40713        .0073741
+   crime ~ crime|M(temp)             940          .40015        .0089273
+   crime ~ crime|M(temp)             950          .39642        .0054445
+   crime ~ crime|M(temp)             960          .40242         .011425
+   crime ~ crime|M(temp)             970          .40136         .010327
+   crime ~ crime|M(temp)             980          .40788        .0027339
+   crime ~ crime|M(temp)             990          .40604        .0093901
+   crime ~ crime|M(temp)            1000           .4001         .010947
+   crime ~ crime|M(temp)            1020          .40014         .010136
+   crime ~ crime|M(temp)            1040          .40222        .0030495
+   crime ~ crime|M(temp)            1060          .40286        .0079445
+   crime ~ crime|M(temp)            1080          .40654        .0043735
+   crime ~ crime|M(temp)            1100          .40522        .0081357
+   crime ~ crime|M(temp)            1120          .40472        .0065853
+   crime ~ crime|M(temp)            1140          .40674        .0058611
+   crime ~ crime|M(temp)            1160          .40453        .0082192
+   crime ~ crime|M(temp)            1180          .40325        .0099963
+   crime ~ crime|M(temp)            1200          .40448        .0078536
+   crime ~ crime|M(temp)            1220          .39976        .0084237
+   crime ~ crime|M(temp)            1240          .40322        .0095939
+   crime ~ crime|M(temp)            1260          .40636         .010577
+   crime ~ crime|M(temp)            1280          .40412         .007033
+   crime ~ crime|M(temp)            1300          .40605         .010854
+   crime ~ crime|M(temp)            1320          .40141        .0073683
+   crime ~ crime|M(temp)            1340          .40532        .0052271
+   crime ~ crime|M(temp)            1360          .40272        .0073174
+   crime ~ crime|M(temp)            1380          .40441        .0088598
+   crime ~ crime|M(temp)            1400          .40249        .0077443
+   crime ~ crime|M(temp)            1420           .4068         .010876
+   crime ~ crime|M(temp)            1440          .40551        .0065532
+   crime ~ crime|M(temp)            1460          .40543        .0088529
+   crime ~ crime|M(temp)            1480          .40161         .007974
+   crime ~ crime|M(temp)            1500          .40355        .0068144
+   crime ~ crime|M(temp)            1520          .40842        .0055799
+   crime ~ crime|M(temp)            1540           .4064          .00682
+   crime ~ crime|M(temp)            1560          .40701        .0041205
+   crime ~ crime|M(temp)            1580          .40237        .0071991
+   crime ~ crime|M(temp)            1600          .40168        .0096922
+   crime ~ crime|M(temp)            1620          .40588        .0070831
+   crime ~ crime|M(temp)            1640          .40572        .0062912
+   crime ~ crime|M(temp)            1660          .40766        .0045204
+   crime ~ crime|M(temp)            1680          .40722        .0067713
+   crime ~ crime|M(temp)            1700          .40418         .006091
+   crime ~ crime|M(temp)            1720          .40601        .0081451
+   crime ~ crime|M(temp)            1740          .40785        .0081744
+   crime ~ crime|M(temp)            1760          .40621        .0075074
+   crime ~ crime|M(temp)            1780          .40955        .0066735
+   crime ~ crime|M(temp)            1800          .40662        .0057162
+   crime ~ crime|M(temp)            1820          .40947        .0070572
+   crime ~ crime|M(temp)            1840          .41015        .0056801
+   crime ~ crime|M(temp)            1860          .40647        .0066112
+   crime ~ crime|M(temp)            1880          .40715        .0079613
+   crime ~ crime|M(temp)            1900          .40486        .0032491
+   crime ~ crime|M(temp)            1920          .40802        .0035001
+   crime ~ crime|M(temp)            1940          .40732        .0071522
+   crime ~ crime|M(temp)            1960          .41203        .0065876
+   crime ~ crime|M(temp)            1980          .41045        .0066413
+   crime ~ crime|M(temp)            2000          .41205        .0055625
+   crime ~ crime|M(temp)            2050          .40783         .005778
+   crime ~ crime|M(temp)            2100          .41209         .004779
+   crime ~ crime|M(temp)            2150          .40704         .004319
+   crime ~ crime|M(temp)            2200          .41052        .0042467
+   crime ~ crime|M(temp)            2250          .41372        .0034329
+   crime ~ crime|M(temp)            2300          .40836        .0077378
+   crime ~ crime|M(temp)            2350           .4105        .0065198
+   crime ~ crime|M(temp)            2400          .41129        .0074026
+   crime ~ crime|M(temp)            2450          .40745         .003675
+   crime ~ crime|M(temp)            2500          .41193        .0047447
+   crime ~ crime|M(temp)            2550          .41205        .0065086
+   crime ~ crime|M(temp)            2600          .40789        .0047563
+   crime ~ crime|M(temp)            2650          .41192        .0064828
+   crime ~ crime|M(temp)            2700          .41141        .0033742
+   crime ~ crime|M(temp)            2750          .41033        .0043317
+   crime ~ crime|M(temp)            2800          .41094         .003378
+   crime ~ crime|M(temp)            2850          .41211         .004805
+   crime ~ crime|M(temp)            2900           .4082        .0038516
+   crime ~ crime|M(temp)            2950          .41048        .0039093
+   crime ~ crime|M(temp)            3000          .41224        .0041249
+   crime ~ crime|M(temp)            3050           .4116        .0035156
+   crime ~ crime|M(temp)            3100          .41095        .0048217
+   crime ~ crime|M(temp)            3150          .41187        .0031495
+   crime ~ crime|M(temp)            3200          .41241        .0047081
+   crime ~ crime|M(temp)            3250          .41181        .0044187
+   crime ~ crime|M(temp)            3300          .41189        .0031881
+   crime ~ crime|M(temp)            3350           .4126        .0033895
+   crime ~ crime|M(temp)            3400          .41374        .0059061
+   crime ~ crime|M(temp)            3450          .41255        .0042902
+   crime ~ crime|M(temp)            3500           .4113        .0029122
+   crime ~ crime|M(temp)            3550           .4124        .0023924
+   crime ~ crime|M(temp)            3600           .4123        .0027324
+   crime ~ crime|M(temp)            3650          .41418        .0025258
+   crime ~ crime|M(temp)            3700          .41416        .0024409
+   crime ~ crime|M(temp)            3750          .41321        .0029761
+   crime ~ crime|M(temp)            3800          .41416        .0026382
+   crime ~ crime|M(temp)            3850          .41416        .0029769
+   crime ~ crime|M(temp)            3900          .41368        .0024634
+   crime ~ crime|M(temp)            3950          .41243        .0019739
+   crime ~ crime|M(temp)            4000          .41402        .0015735
+   crime ~ crime|M(temp)            4050          .41479        .0028254
+   crime ~ crime|M(temp)            4100          .41563        .0024324
+   crime ~ crime|M(temp)            4150          .41697        .0020362
+   crime ~ crime|M(temp)            4200          .41632        .0020735
+   crime ~ crime|M(temp)            4250          .41719        .0014322
+   crime ~ crime|M(temp)            4300          .41728       .00044716
+   crime ~ crime|M(temp)            4350          .41731       .00042412
+   crime ~ crime|M(temp)            4365          .41771               0
+    temp ~ temp|M(crime)              10           .2952          .19403
+    temp ~ temp|M(crime)              15          .44163         .052125
+    temp ~ temp|M(crime)              20           .4308         .022087
+    temp ~ temp|M(crime)              25          .36681          .10611
+    temp ~ temp|M(crime)              30          .47283         .049385
+    temp ~ temp|M(crime)              35          .45594         .059844
+    temp ~ temp|M(crime)              40          .45623         .048434
+    temp ~ temp|M(crime)              45          .44308          .10541
+    temp ~ temp|M(crime)              50          .47413         .050586
+    temp ~ temp|M(crime)              55          .49363         .040528
+    temp ~ temp|M(crime)              60          .46309          .04223
+    temp ~ temp|M(crime)              65          .45326         .038693
+    temp ~ temp|M(crime)              70          .49261         .034702
+    temp ~ temp|M(crime)              75          .49464         .021939
+    temp ~ temp|M(crime)              80          .50081         .026879
+    temp ~ temp|M(crime)              85          .50416         .021526
+    temp ~ temp|M(crime)              90          .51025         .021185
+    temp ~ temp|M(crime)              95           .4911         .044781
+    temp ~ temp|M(crime)             100          .50752         .026596
+    temp ~ temp|M(crime)             105          .50249         .039195
+    temp ~ temp|M(crime)             110          .50493         .021015
+    temp ~ temp|M(crime)             115          .50572         .027191
+    temp ~ temp|M(crime)             120          .51625         .030027
+    temp ~ temp|M(crime)             125          .51551         .030516
+    temp ~ temp|M(crime)             130          .53099         .018127
+    temp ~ temp|M(crime)             135          .52343         .013831
+    temp ~ temp|M(crime)             140          .52918         .029356
+    temp ~ temp|M(crime)             145          .52591         .025698
+    temp ~ temp|M(crime)             150          .52999         .021534
+    temp ~ temp|M(crime)             155          .51807         .024376
+    temp ~ temp|M(crime)             160          .52294         .023312
+    temp ~ temp|M(crime)             165          .52616         .021483
+    temp ~ temp|M(crime)             170           .5295         .019636
+    temp ~ temp|M(crime)             175          .53932         .014238
+    temp ~ temp|M(crime)             180          .52673          .01764
+    temp ~ temp|M(crime)             185          .53533         .017095
+    temp ~ temp|M(crime)             190           .5294         .011086
+    temp ~ temp|M(crime)             195          .52918         .019941
+    temp ~ temp|M(crime)             200          .53625         .011294
+    temp ~ temp|M(crime)             210          .54032         .017901
+    temp ~ temp|M(crime)             220          .53528         .012668
+    temp ~ temp|M(crime)             230          .52735         .023902
+    temp ~ temp|M(crime)             240          .54013         .011793
+    temp ~ temp|M(crime)             250          .54465        .0088915
+    temp ~ temp|M(crime)             260          .54613         .013091
+    temp ~ temp|M(crime)             270          .54675         .011348
+    temp ~ temp|M(crime)             280          .54984          .01122
+    temp ~ temp|M(crime)             290          .54343         .017144
+    temp ~ temp|M(crime)             300          .54788         .010513
+    temp ~ temp|M(crime)             310          .54419         .014811
+    temp ~ temp|M(crime)             320          .54969         .014103
+    temp ~ temp|M(crime)             330          .54536         .009676
+    temp ~ temp|M(crime)             340          .55062         .011546
+    temp ~ temp|M(crime)             350          .54893         .009099
+    temp ~ temp|M(crime)             360          .54234          .01405
+    temp ~ temp|M(crime)             370          .55121         .012155
+    temp ~ temp|M(crime)             380          .54327        .0072431
+    temp ~ temp|M(crime)             390          .54626        .0099869
+    temp ~ temp|M(crime)             400          .55932        .0054779
+    temp ~ temp|M(crime)             410          .56214         .010171
+    temp ~ temp|M(crime)             420          .55002         .010013
+    temp ~ temp|M(crime)             430          .55392         .014521
+    temp ~ temp|M(crime)             440          .55487         .008151
+    temp ~ temp|M(crime)             450          .55445        .0085281
+    temp ~ temp|M(crime)             460          .54786         .010136
+    temp ~ temp|M(crime)             470          .55713        .0066557
+    temp ~ temp|M(crime)             480          .55129         .010427
+    temp ~ temp|M(crime)             490          .55042        .0085926
+    temp ~ temp|M(crime)             500          .55452         .011883
+    temp ~ temp|M(crime)             510          .55363        .0093728
+    temp ~ temp|M(crime)             520          .55991         .010327
+    temp ~ temp|M(crime)             530          .55782        .0063107
+    temp ~ temp|M(crime)             540          .55539        .0085849
+    temp ~ temp|M(crime)             550          .55921        .0093883
+    temp ~ temp|M(crime)             560          .56004         .010017
+    temp ~ temp|M(crime)             570          .55354        .0079187
+    temp ~ temp|M(crime)             580          .55955         .010191
+    temp ~ temp|M(crime)             590          .55909         .010936
+    temp ~ temp|M(crime)             600          .56443        .0072838
+    temp ~ temp|M(crime)             610          .56337        .0099976
+    temp ~ temp|M(crime)             620          .56355        .0084159
+    temp ~ temp|M(crime)             630          .55897         .015306
+    temp ~ temp|M(crime)             640          .56996        .0099746
+    temp ~ temp|M(crime)             650          .56288        .0087077
+    temp ~ temp|M(crime)             660          .56507         .009628
+    temp ~ temp|M(crime)             670          .56415         .010902
+    temp ~ temp|M(crime)             680          .56071        .0099622
+    temp ~ temp|M(crime)             690          .56647        .0083449
+    temp ~ temp|M(crime)             700          .56324         .011586
+    temp ~ temp|M(crime)             710          .57061         .005373
+    temp ~ temp|M(crime)             720          .56352          .01203
+    temp ~ temp|M(crime)             730          .55749         .007482
+    temp ~ temp|M(crime)             740          .57286         .005645
+    temp ~ temp|M(crime)             750          .56398        .0071452
+    temp ~ temp|M(crime)             760          .56627         .005784
+    temp ~ temp|M(crime)             770          .56854        .0097742
+    temp ~ temp|M(crime)             780          .56586        .0071407
+    temp ~ temp|M(crime)             790          .56694        .0072152
+    temp ~ temp|M(crime)             800          .56192         .012889
+    temp ~ temp|M(crime)             810          .56665        .0081915
+    temp ~ temp|M(crime)             820          .56802         .010676
+    temp ~ temp|M(crime)             830          .56531        .0075271
+    temp ~ temp|M(crime)             840           .5688        .0081012
+    temp ~ temp|M(crime)             850          .56479        .0040749
+    temp ~ temp|M(crime)             860          .57186        .0066425
+    temp ~ temp|M(crime)             870          .56368         .002784
+    temp ~ temp|M(crime)             880          .56805        .0065748
+    temp ~ temp|M(crime)             890          .57349         .006074
+    temp ~ temp|M(crime)             900          .56755        .0065796
+    temp ~ temp|M(crime)             910          .56916        .0089057
+    temp ~ temp|M(crime)             920          .56846         .011448
+    temp ~ temp|M(crime)             930          .56928        .0075528
+    temp ~ temp|M(crime)             940          .57069        .0063778
+    temp ~ temp|M(crime)             950          .56853         .005961
+    temp ~ temp|M(crime)             960          .56912        .0081839
+    temp ~ temp|M(crime)             970          .57021        .0085136
+    temp ~ temp|M(crime)             980          .57228        .0093373
+    temp ~ temp|M(crime)             990          .56676        .0080246
+    temp ~ temp|M(crime)            1000          .57046         .010192
+    temp ~ temp|M(crime)            1020          .57126        .0079777
+    temp ~ temp|M(crime)            1040          .56789        .0063844
+    temp ~ temp|M(crime)            1060           .5681        .0064587
+    temp ~ temp|M(crime)            1080          .57286        .0076773
+    temp ~ temp|M(crime)            1100          .57289        .0084744
+    temp ~ temp|M(crime)            1120          .57369        .0092785
+    temp ~ temp|M(crime)            1140          .57601         .006898
+    temp ~ temp|M(crime)            1160          .56964        .0061489
+    temp ~ temp|M(crime)            1180          .57664        .0059472
+    temp ~ temp|M(crime)            1200          .57355        .0065757
+    temp ~ temp|M(crime)            1220          .57334        .0065218
+    temp ~ temp|M(crime)            1240          .57492        .0086181
+    temp ~ temp|M(crime)            1260          .57308        .0055909
+    temp ~ temp|M(crime)            1280          .57256        .0043819
+    temp ~ temp|M(crime)            1300          .57434        .0096523
+    temp ~ temp|M(crime)            1320          .57228         .004028
+    temp ~ temp|M(crime)            1340          .57749         .008413
+    temp ~ temp|M(crime)            1360          .57414        .0078398
+    temp ~ temp|M(crime)            1380             .58        .0059777
+    temp ~ temp|M(crime)            1400          .57878        .0070655
+    temp ~ temp|M(crime)            1420          .57886         .005526
+    temp ~ temp|M(crime)            1440          .58117        .0049205
+    temp ~ temp|M(crime)            1460           .5847        .0059986
+    temp ~ temp|M(crime)            1480          .57552        .0049739
+    temp ~ temp|M(crime)            1500          .57902        .0047961
+    temp ~ temp|M(crime)            1520          .58064        .0074506
+    temp ~ temp|M(crime)            1540          .57999          .00528
+    temp ~ temp|M(crime)            1560          .57677        .0051473
+    temp ~ temp|M(crime)            1580          .58157        .0057188
+    temp ~ temp|M(crime)            1600           .5816        .0046416
+    temp ~ temp|M(crime)            1620          .58033        .0048462
+    temp ~ temp|M(crime)            1640          .58098        .0091787
+    temp ~ temp|M(crime)            1660          .58257        .0053551
+    temp ~ temp|M(crime)            1680          .58435        .0052615
+    temp ~ temp|M(crime)            1700          .58148        .0055618
+    temp ~ temp|M(crime)            1720          .58375         .004428
+    temp ~ temp|M(crime)            1740          .58342        .0051581
+    temp ~ temp|M(crime)            1760          .58703        .0079973
+    temp ~ temp|M(crime)            1780          .58518        .0042457
+    temp ~ temp|M(crime)            1800          .58295        .0033786
+    temp ~ temp|M(crime)            1820          .58705        .0055695
+    temp ~ temp|M(crime)            1840          .58395        .0067987
+    temp ~ temp|M(crime)            1860           .5835         .004351
+    temp ~ temp|M(crime)            1880          .58185        .0049397
+    temp ~ temp|M(crime)            1900          .58345        .0045059
+    temp ~ temp|M(crime)            1920          .58627        .0029451
+    temp ~ temp|M(crime)            1940          .58602        .0033547
+    temp ~ temp|M(crime)            1960          .58515        .0025708
+    temp ~ temp|M(crime)            1980          .58429        .0053278
+    temp ~ temp|M(crime)            2000          .58719        .0043863
+    temp ~ temp|M(crime)            2050          .58558        .0044291
+    temp ~ temp|M(crime)            2100          .58723        .0046955
+    temp ~ temp|M(crime)            2150          .58923        .0050513
+    temp ~ temp|M(crime)            2200           .5886        .0037127
+    temp ~ temp|M(crime)            2250          .59001        .0053224
+    temp ~ temp|M(crime)            2300          .58983        .0037069
+    temp ~ temp|M(crime)            2350          .58893        .0025694
+    temp ~ temp|M(crime)            2400            .588        .0038232
+    temp ~ temp|M(crime)            2450          .58871        .0045367
+    temp ~ temp|M(crime)            2500          .59092        .0038941
+    temp ~ temp|M(crime)            2550          .59139        .0039487
+    temp ~ temp|M(crime)            2600          .59147         .004068
+    temp ~ temp|M(crime)            2650          .59077        .0039291
+    temp ~ temp|M(crime)            2700          .59076        .0027299
+    temp ~ temp|M(crime)            2750          .59462        .0040601
+    temp ~ temp|M(crime)            2800          .59018        .0036819
+    temp ~ temp|M(crime)            2850          .59071        .0041716
+    temp ~ temp|M(crime)            2900          .59444        .0024309
+    temp ~ temp|M(crime)            2950          .59258        .0045845
+    temp ~ temp|M(crime)            3000          .59299        .0040697
+    temp ~ temp|M(crime)            3050          .59425        .0023834
+    temp ~ temp|M(crime)            3100          .59538        .0034294
+    temp ~ temp|M(crime)            3150          .59496        .0031168
+    temp ~ temp|M(crime)            3200          .59574        .0028449
+    temp ~ temp|M(crime)            3250          .59355        .0025901
+    temp ~ temp|M(crime)            3300          .59612        .0029091
+    temp ~ temp|M(crime)            3350          .59684        .0025795
+    temp ~ temp|M(crime)            3400          .59673        .0029667
+    temp ~ temp|M(crime)            3450          .59659        .0029568
+    temp ~ temp|M(crime)            3500            .597        .0024331
+    temp ~ temp|M(crime)            3550          .59684        .0027579
+    temp ~ temp|M(crime)            3600          .59674         .005126
+    temp ~ temp|M(crime)            3650          .59727        .0026038
+    temp ~ temp|M(crime)            3700          .59871        .0014138
+    temp ~ temp|M(crime)            3750          .59902        .0023111
+    temp ~ temp|M(crime)            3800           .5973        .0015864
+    temp ~ temp|M(crime)            3850          .59745         .001829
+    temp ~ temp|M(crime)            3900          .60028        .0022821
+    temp ~ temp|M(crime)            3950          .59954        .0015305
+    temp ~ temp|M(crime)            4000          .59971        .0023856
+    temp ~ temp|M(crime)            4050           .6004        .0016361
+    temp ~ temp|M(crime)            4100          .59934        .0013461
+    temp ~ temp|M(crime)            4150          .59967        .0013514
+    temp ~ temp|M(crime)            4200          .60064        .0010118
+    temp ~ temp|M(crime)            4250          .60083        .0008248
+    temp ~ temp|M(crime)            4300          .60027        .0010236
+    temp ~ temp|M(crime)            4350          .60066       .00044043
+    temp ~ temp|M(crime)            4365          .60053               0
+--------------------------------------------------------------------------
+Note: Results from 10 replications
+Note: The embedding dimension E is 7
+
+. 
+. mat cyx= e(xmap_2)
+
+. mat cxy= e(xmap_1)
+
+. svmat cyx, names(chicago_yx)
+
+. svmat cxy, names(chicago_xy)
+
+. label variable chicago_xy3 "Crime|M(Temperature)"
+
+. label variable chicago_yx3 "Temperature|M(Crime)"
+
+. twoway (scatter chicago_xy3 chicago_xy2, mfcolor(%30) mlcolor(%30)) ///
+>     (scatter chicago_yx3 chicago_yx2, mfcolor(%30) mlcolor(%30)) ///
+>     (lpoly chicago_xy3 chicago_xy2)(lpoly chicago_yx3 chicago_yx2), xtitle(L) ytitle("{it:{&rho}}") legend(col(1))
+
+. 
+. graph export chicago-rho-L.pdf, replace
+file /Users/plaub/Dropbox/EDM/edm-pkg/test/chicago-rho-L.pdf saved as PDF format
+
+. 
+. /* save the betas using smap algorithms */
+. 
+. edm xmap temp crime, e(7) alg(smap) k(-1) savesmap(beta)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables temp and crime
+--------------------------------------------------------------------------
+                 Mapping    Library size             rho             MAE
+--------------------------------------------------------------------------
+   crime ~ crime|M(temp)            4365          .46784          136.93 
+    temp ~ temp|M(crime)            4365          .54886          14.661 
+--------------------------------------------------------------------------
+Note: Number of neighbours (k) is adjusted to 4364
+Note: The embedding dimension E is 7
+Note: -force- option is specified. The estimate may not be derived from the specified k.
+
+. 
+. /* Plot the effects of temperature on crime */
+. twoway (kdensity beta1_b1_rep1), xtitle("Contemporaneous effect of temperature on crime") ytitle("Density")
+
+. graph export chicago-crime1.pdf, replace
+file /Users/plaub/Dropbox/EDM/edm-pkg/test/chicago-crime1.pdf saved as PDF format
+
+. twoway (scatter beta1_b1_rep1 temp, xtitle("Temperature (Fahrenheit)") ytitle("Contemporaneous effect of temperature on crime") msize(small))(lpoly beta1_b1_rep1 temp), legend(on order( 1 "Local coefficient" 2 "Local polynomial smoothing"))
+
+. graph export chicago-crime2.pdf, replace
+file /Users/plaub/Dropbox/EDM/edm-pkg/test/chicago-crime2.pdf saved as PDF format
+
+. 
+. timer off 1
+
+. timer list
+   1:     85.52 /        1 =      85.5150
+
+. 
+end of do-file
