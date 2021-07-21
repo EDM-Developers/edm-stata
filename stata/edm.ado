@@ -804,7 +804,7 @@ program define edmExplore, eclass
 		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 		set rngstate `rngstate'
 
-		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
+		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -1057,8 +1057,6 @@ program define edmExplore, eclass
 				else {
 					local k_adj = `k'
 				}
-				plugin call edm_plugin, "launch_edm_task" ///
-						"`t'" "`i'" "`k_adj'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 
 				local newTrainPredictSplit = 0
 			}	
@@ -1526,6 +1524,10 @@ program define edmXmap, eclass
 
 		}
 
+		// To give both explore & xmap the same name for this variable:
+		local round = `replicate'
+
+
 		// Calculate the default value for `dtweight'
 		if `parsed_dt' {
 			if `parsed_dtw' == 0 {
@@ -1638,7 +1640,7 @@ program define edmXmap, eclass
 			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 			set rngstate `rngstate'
 
-			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "transfer_manifold_data" ///
+			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1775,7 +1777,7 @@ program define edmXmap, eclass
 
 		qui gen double `u' = .
 
-		forvalues rep =1/`replicate' {
+		forvalues rep = 1/`round' {
 
 			qui replace `u' = runiform() if `usable'
 			
@@ -1810,7 +1812,7 @@ program define edmXmap, eclass
 						local k_size = min(`def_lib_size',`train_size')
 					}
 					else if `k' < 0  {
-						local k_size = `train_size'
+						local k_size = `lib_size'
 					}
 
 					if `k' != 0 {
@@ -1908,8 +1910,6 @@ program define edmXmap, eclass
 						}
 						else {
 							local save_smap_coeffs = ("`savesmap'" != "")
-							plugin call edm_plugin, "launch_edm_task" ///
-									"`rep'" "`i'" "`k_size'" "`lib_size'" "`save_prediction'" "`save_smap_coeffs'" "`saveinputs'"
 						}
 						drop `overlap'
 						local ++task_num

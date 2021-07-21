@@ -34,7 +34,13 @@ const double PI = 3.141592653589793238463;
 char* FINISHED_SCALAR = (char*)"plugin_finished";
 char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
 char* RNG_STATE = (char*)"_rngstate";
-char* NEW_TRAIN_PREDICT_SPLIT = (char*)"_newTrainPredictSplit";
+
+char* NUM_NEIGHBOURS = (char*)"_k";
+char* FULL_MODE = (char*)"_full";
+char* SAVE_PREDICTION = (char*)"_predict";
+char* SAVE_SMAP = (char*)"_savesmap";
+char* SAVE_INPUTS = (char*)"_saveinputs";
+char* NUM_REPS = (char*)"_round";
 
 class StataIO : public IO
 {
@@ -330,21 +336,13 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_launch_info(int argc, char* argv[], Options& taskOpts, std::vector<bool>& trainingRows,
-                       std::vector<bool>& predictionRows, ST_int E)
+void print_launch_info(Options& taskOpts, std::vector<bool>& trainingRows, std::vector<bool>& predictionRows, ST_int E)
 {
   if (io.verbosity > 1) {
-
-    for (int i = 0; i < argc; i++) {
-      io.print(fmt::format("arg {}: {}\n", i, argv[i]));
-    }
-    io.print("\n");
-
     for (int t = 0; t < taskOpts.thetas.size(); t++) {
       io.print(fmt::format("theta = {:6.4f}\n\n", taskOpts.thetas[t]));
     }
 
-    // io.print(fmt::format("number of variables in manifold = {}\n\n", generator.E_actual()));
     io.print(fmt::format("train set obs: {}\n", std::accumulate(trainingRows.begin(), trainingRows.end(), 0)));
     io.print(fmt::format("predict set obs: {}\n\n", std::accumulate(predictionRows.begin(), predictionRows.end(), 0)));
 
@@ -446,11 +444,14 @@ void reset_global_state()
   allTasksFinished = false;
 }
 
+ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool savePrediction, bool saveSMAPCoeffs,
+                           bool newTrainPredictSplit, std::string saveInputsFilename);
+
 /*
  * Read that information needed for the edm tasks which is doesn't change across
  * the various tasks, and store it in the 'opts' and 'generator' global variables.
  */
-ST_retcode read_manifold_data(int argc, char* argv[])
+ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
   if (argc < 22) {
     return TOO_FEW_VARIABLES;
@@ -578,14 +579,16 @@ ST_retcode read_manifold_data(int argc, char* argv[])
 
   Manifold M = generator.create_manifold(maxE, allTrue, false);
 
-  // Generate the 'usable' variable
+  // Generate the 'usable' variable, and count the number of true values
   std::vector<bool> usable(touse.size());
+  int numUsable = 0;
   for (int i = 0; i < usable.size(); i++) {
     if (allowMissing) {
       usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
     } else {
       usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
     }
+    numUsable += usable[i];
   }
 
   print_vector<bool>("usable", usable);
@@ -627,40 +630,145 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   }
   write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 2);
 
+  // Read in some macros from Stata
+  char buffer[200];
+
+  // What is k?
+  if (SF_macro_use(NUM_NEIGHBOURS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  int k = atoi(buffer);
+
+  // Is `full' specified?
+  if (SF_macro_use(FULL_MODE, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool fullMode = (std::string(buffer) == "full");
+
+  // Are we saving the predictions?
+  if (SF_macro_use(SAVE_PREDICTION, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool saveFinalPredictions = !(std::string(buffer).empty());
+
+  // Are we saving the S-map coefficients (only in xmap mode)?
+  bool saveSMAPCoeffs;
+  if (explore) {
+    saveSMAPCoeffs = false;
+  } else {
+    if (SF_macro_use(SAVE_SMAP, buffer, 200)) {
+      io.print("Got an error rc from macro_use!\n");
+    }
+    saveSMAPCoeffs = !(std::string(buffer).empty());
+  }
+
+  // Are we saving the inputs to a JSON file?
+  if (SF_macro_use(SAVE_INPUTS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  std::string saveInputsFilename(buffer);
+
+  // Number of replications
+  if (SF_macro_use(NUM_REPS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  int numReps = atoi(buffer);
+
+  std::vector<int> Es = stata_numlist<int>("e");
+
+  std::vector<int> libraries;
+  if (!explore) {
+    libraries = stata_numlist<int>("l_ori"); // The 'library' macro gets overwritten
+    if (libraries.empty()) {
+      libraries.push_back(numUsable);
+    }
+  }
+  bool newTrainPredictSplit = true;
+  int taskNum = 0;
+  int numTasks = explore ? numReps * Es.size() : numReps * Es.size() * libraries.size();
+
+  int kAdj;
+
+  for (int iterationNumber = 1; iterationNumber <= numReps; iterationNumber++) {
+    if (explore) {
+      newTrainPredictSplit = true;
+    }
+
+    int trainSize;
+    if (explore) {
+      if (crossfold > 0) {
+        int numNotInThisCrossfold = 0;
+        for (int obs = 1; obs <= numUsable; obs++) {
+          if ((obs % crossfold) != (iterationNumber - 1)) {
+            numNotInThisCrossfold += 1;
+          }
+        }
+        trainSize = numNotInThisCrossfold;
+      } else if (fullMode) {
+        trainSize = numUsable;
+      } else {
+        trainSize = numUsable / 2;
+      }
+    }
+
+    for (int i = 0; i < Es.size(); i++) {
+      int E = Es[i]; // i
+
+      // If explore, set the library size here
+      if (explore) {
+        libraries.clear();
+        libraries.push_back(trainSize);
+      }
+
+      for (int l = 0; l < libraries.size(); l++) {
+        if (!explore) {
+          newTrainPredictSplit = true;
+        }
+
+        int library = libraries[l];
+
+        // Set the number of neighbours to use
+        if (k > 0) {
+          kAdj = k;
+        } else if (k < 0) {
+          kAdj = library;
+        } else if (k == 0) {
+          bool isSMap = opts.algorithm == Algorithm::SMap;
+          int defaultK = generator.E_actual(E) + 1 + isSMap;
+          kAdj = defaultK < library ? defaultK : library;
+        }
+
+        taskNum += 1;
+
+        bool savePrediction;
+        if (explore) {
+          savePrediction = saveFinalPredictions && ((crossfold > 0) || (taskNum == numTasks));
+        } else {
+          savePrediction = saveFinalPredictions && (taskNum == numTasks);
+        }
+
+        launch_edm_task(iterationNumber, E, kAdj, library, savePrediction, saveSMAPCoeffs, newTrainPredictSplit,
+                        saveInputsFilename);
+        newTrainPredictSplit = false;
+      }
+    }
+  }
+
   return SUCCESS;
 }
 
-ST_retcode launch_edm_task(int argc, char* argv[])
+ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool savePrediction, bool saveSMAPCoeffs,
+                           bool newTrainPredictSplit, std::string saveInputsFilename)
 {
-  if (argc < 7) {
-    return TOO_FEW_VARIABLES;
-  }
-  if (argc > 7) {
-    return TOO_MANY_VARIABLES;
-  }
-
   Options taskOpts = opts;
   taskOpts.copredict = false;
   taskOpts.taskNum = (int)futures.size();
 
-  int iterationNumber = atoi(argv[0]);
-  int E = atoi(argv[1]);
   int E_actual = generator.E_actual(E);
-  taskOpts.k = atoi(argv[2]);
-  int library = atoi(argv[3]);
 
-  taskOpts.savePrediction = atoi(argv[4]);
-  taskOpts.saveSMAPCoeffs = atoi(argv[5]);
-  std::string saveInputsFilename(argv[6]);
-
-  // Note, currently these 'k' defaults are already handled inside Stata
-  if (taskOpts.k == 0) {
-    taskOpts.k = E_actual + 1;
-  }
-
-  if (taskOpts.k < 0) {
-    taskOpts.k = library;
-  }
+  taskOpts.k = k;
+  taskOpts.savePrediction = savePrediction;
+  taskOpts.saveSMAPCoeffs = saveSMAPCoeffs;
 
   // Expand the metrics vector now we know the value of E
   taskOpts.metrics.clear();
@@ -681,13 +789,6 @@ ST_retcode launch_edm_task(int argc, char* argv[])
     }
     j += 1;
   }
-
-  // Find which rows are used for training & which for prediction
-  char buffer[5]; // Need at least 5011 + 1 bytes.
-  if (SF_macro_use(NEW_TRAIN_PREDICT_SPLIT, buffer, 5)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  bool newTrainPredictSplit = atoi(buffer);
 
   // Find which rows are used for training & which for prediction
   if (newTrainPredictSplit) {
@@ -730,7 +831,7 @@ ST_retcode launch_edm_task(int argc, char* argv[])
 
   predictions.push({});
 
-  print_launch_info(argc, argv, taskOpts, trainingRows, predictionRows, E);
+  print_launch_info(taskOpts, trainingRows, predictionRows, E);
 
   futures.push(edm_task_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()),
                               keep_going, all_tasks_finished));
@@ -912,10 +1013,8 @@ STDLL stata_call(int argc, char* argv[])
     ST_retcode rc = UNKNOWN_ERROR + 1;
     std::string command(argv[0]);
 
-    if (command == "transfer_manifold_data") {
-      rc = read_manifold_data(argc - 1, argv + 1);
-    } else if (command == "launch_edm_task") {
-      rc = launch_edm_task(argc - 1, argv + 1);
+    if (command == "launch_edm_tasks") {
+      rc = launch_edm_tasks(argc - 1, argv + 1);
     } else if (command == "report_progress") {
       if (!breakButtonPressed) {
         io.print(io.get_and_clear_async_buffer());
