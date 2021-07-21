@@ -177,8 +177,6 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
                         const std::vector<double>& dists, const std::vector<int>& kNNInds,
                         Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
-  *kUsed = k;
-
   // Find the smallest distance (closest neighbour) among the supplied neighbours.
   double minDist = MISSING;
   for (int j = 0; j < k; j++) {
@@ -192,9 +190,16 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   double sumw = 0.0;
   const double theta = opts.thetas[t];
 
+  int numNonZeroWeights = 0;
   for (int j = 0; j < k; j++) {
     w[j] = exp(-theta * (dists[kNNInds[j]] / minDist));
     sumw = sumw + w[j];
+    numNonZeroWeights += (w[j] > 0);
+  }
+
+  // For the sake of debugging, count how many neighbours we end up with.
+  if (opts.saveKUsed) {
+    *kUsed = numNonZeroWeights;
   }
 
   // Make the simplex projection/prediction.
@@ -212,8 +217,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                      const std::vector<double>& dists, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                      Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
-  *kUsed = k;
-
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.
   Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
@@ -224,6 +227,17 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   Eigen::VectorXd d = distsMap(kNNInds);
   d /= d.mean();
   Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * d.array());
+
+  // For the sake of debugging, count how many neighbours we end up with.
+  if (opts.saveKUsed) {
+    int numNonZeroWeights = 0;
+    for (double& w_i : w) {
+      if (w_i > 0) {
+        numNonZeroWeights += 1;
+      }
+    }
+    *kUsed = numNonZeroWeights;
+  }
 
   // Scale everything by our weights vector
   X_ls_cj.array().colwise() *= w.array();
