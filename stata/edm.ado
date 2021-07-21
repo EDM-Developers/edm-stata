@@ -977,7 +977,7 @@ program define edmExplore, eclass
 			tempvar counting_up not_in_crossfold_t
 			qui gen `counting_up' = _n if _n <= `num_usable'
 			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1) 
-			qui count if `not_in_crossfold_t'
+			qui count if `not_in_crossfold_t' & _n <= `num_usable'
 			local train_size = r(N)
 		}
 		else if "`full'" == "full"  {

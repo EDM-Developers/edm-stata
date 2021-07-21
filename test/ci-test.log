@@ -945,7 +945,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98192      .023046       .01629     .0076906
 ----------------------------------------------------------------------
 Note: Results from 2 runs
-Note: Number of neighbours (k) is adjusted to 50
+Note: Number of neighbours (k) is adjusted to 49
 Note: 2-fold cross validation results reported
 Note: -force- option is specified. The estimate may not be derived from the specified k.
 
@@ -964,7 +964,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .97662      .044399      .014792     .0093618
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is adjusted to 90
+Note: Number of neighbours (k) is adjusted to 89
 Note: 10-fold cross validation results reported
 Note: -force- option is specified. The estimate may not be derived from the specified k.
 
