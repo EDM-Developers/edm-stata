@@ -122,14 +122,13 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   // Screen out missing or zero distances.
   // Also, for S-map we can't have any missing values in the Manifold, so insist on that also.
   std::vector<int> possibleNeighbourIndices;
-  bool smap = opts.algorithm == "smap";
   for (int i = 0; i < dists.size(); i++) {
     if (dists[i] == 0) {
       dists[i] = MISSING;
     }
 
     if (dists[i] != MISSING) {
-      if (!(smap && M.any_missing(i))) {
+      if (!(opts.algorithm == Algorithm::SMap && M.any_missing(i))) {
         possibleNeighbourIndices.push_back(i);
       }
     }
@@ -145,11 +144,14 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
         return;
       }
     } else {
-      for (int t = 0; t < opts.thetas.size(); t++) {
-        rc(t, Mp_i) = INSUFFICIENT_UNIQUE;
-      }
+      rc(0, Mp_i) = INSUFFICIENT_UNIQUE;
       return;
     }
+  }
+
+  if (k == 0) {
+    rc(0, Mp_i) = SUCCESS;
+    return;
   }
 
   std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k, possibleNeighbourIndices);
@@ -158,18 +160,16 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
-  if (opts.algorithm == "" || opts.algorithm == "simplex") {
+  if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
       simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc, kUsed);
     }
-  } else if (opts.algorithm == "smap" || opts.algorithm == "llr") {
+  } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
       smap_prediction(Mp_i, t, opts, M, Mp, k, dists, kNNInds, ystar, coeffs, rc, kUsed);
     }
   } else {
-    for (int t = 0; t < opts.thetas.size(); t++) {
-      rc(t, Mp_i) = INVALID_ALGORITHM;
-    }
+    rc(0, Mp_i) = INVALID_ALGORITHM;
   }
 }
 
@@ -212,19 +212,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                      const std::vector<double>& dists, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                      Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
-  if (opts.algorithm == "llr") {
-    // llr algorithm is not needed at this stage
-    rc(t, Mp_i) = NOT_IMPLEMENTED;
-    return;
-  }
-
   *kUsed = k;
-
-  if (k == 0) {
-    ystar(t, Mp_i) = MISSING;
-    rc(t, Mp_i) = SUCCESS;
-    return;
-  }
 
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.

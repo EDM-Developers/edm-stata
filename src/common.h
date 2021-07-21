@@ -23,6 +23,12 @@ typedef int retcode;
 
 #include "manifold.h"
 
+enum class Algorithm
+{
+  Simplex,
+  SMap,
+};
+
 enum class Distance
 {
   MeanAbsoluteError,
@@ -37,6 +43,8 @@ enum class Metric
 };
 
 // Store these enum classes to JSON as strings
+NLOHMANN_JSON_SERIALIZE_ENUM(Algorithm, { { Algorithm::Simplex, "Simplex" }, { Algorithm::SMap, "SMap" } })
+
 NLOHMANN_JSON_SERIALIZE_ENUM(Distance, { { Distance::MeanAbsoluteError, "MeanAbsoluteError" },
                                          { Distance::Euclidean, "Euclidean" },
                                          { Distance::Wasserstein, "Wasserstein" } })
@@ -53,7 +61,7 @@ struct Options
   int k, nthreads;
   double missingdistance;
   std::vector<double> thetas;
-  std::string algorithm;
+  Algorithm algorithm;
   size_t taskNum = 1, numTasks = 1;
   bool calcRhoMAE = false;
   double aspectRatio;

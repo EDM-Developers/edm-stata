@@ -466,7 +466,16 @@ ST_retcode read_manifold_data(int argc, char* argv[])
   bool dtMode = atoi(argv[1]);
   bool dt0 = atoi(argv[2]);
   double dtWeight = atof(argv[3]);
-  opts.algorithm = std::string(argv[4]);
+  std::string alg = std::string(argv[4]);
+  if (alg.empty() || alg == "simplex") {
+    opts.algorithm = Algorithm::Simplex;
+  } else if (alg == "smap") {
+    opts.algorithm = Algorithm::SMap;
+  } else if (alg == "llr") {
+    return NOT_IMPLEMENTED;
+  } else {
+    return INVALID_ALGORITHM;
+  }
   opts.forceCompute = (std::string(argv[5]) == "force");
   opts.missingdistance = atof(argv[6]);
   char* reqThreads = argv[7];
