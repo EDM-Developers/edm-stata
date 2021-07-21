@@ -1008,7 +1008,7 @@ program define edmExplore, eclass
 			// Set the adaptive default library size
 			if `k' == 0 {
 				local is_smap = cond("`algorithm'" == "smap", 1, 0)
-				local def_lib_size = `r(manifold_size)' + 1 + `is_smap'
+				local def_lib_size = `r(manifold_size)' + `is_smap' + 1
 				local lib_size = min(`def_lib_size',`train_size')
 			}
 			
@@ -1774,7 +1774,7 @@ program define edmXmap, eclass
 
 
 		qui gen double `u' = .
-	
+
 		forvalues rep =1/`replicate' {
 
 			qui replace `u' = runiform() if `usable'
@@ -1786,7 +1786,7 @@ program define edmXmap, eclass
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
-				
+
 				foreach lib_size of numlist `library' {
 
 					local newTrainPredictSplit = 1
@@ -1799,10 +1799,15 @@ program define edmXmap, eclass
 
 					// detect k size
 					if `k' > 0 {
-						local k_size = min(`k',`train_size' -1)
+						local k_size = min(`k',`train_size')
 					}
-					else if `k' == 0{
-						local k_size = `i' + `total_num_extras' + `parsed_dt' + cond("`algorithm'" == "smap", 2, 1)
+					else if `k' == 0 {
+						edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') ///
+							num_extras(`z_count') num_eextras(`z_e_varying_count')
+
+						local is_smap = cond("`algorithm'" == "smap", 1, 0)
+						local def_lib_size = `r(manifold_size)' + `is_smap' + 1
+						local k_size = min(`def_lib_size',`train_size')
 					}
 					else if `k' < 0  {
 						local k_size = `train_size'

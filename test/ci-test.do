@@ -303,7 +303,7 @@ format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta) force
 
 ds, detail
 format beta* %3.0g
