@@ -93,6 +93,24 @@ public:
     }
   }
 
+  // Assuming this is called in explore mode
+  int next_training_size(int crossfoldIter) const
+  {
+    int trainSize = 0;
+    if (_crossfold > 0) {
+      for (int obsNum = 0; obsNum < _numObsUsable; obsNum++) {
+        if ((obsNum + 1) % _crossfold != (crossfoldIter - 1)) {
+          trainSize += 1;
+        }
+      }
+      return trainSize;
+    } else if (_full) {
+      return _numObsUsable;
+    } else {
+      return _numObsUsable / 2;
+    }
+  }
+
   std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(int library, int crossfoldIter)
   {
     if (_explore && _full) {

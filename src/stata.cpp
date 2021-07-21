@@ -36,7 +36,6 @@ char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
 char* RNG_STATE = (char*)"_rngstate";
 
 char* NUM_NEIGHBOURS = (char*)"_k";
-char* FULL_MODE = (char*)"_full";
 char* SAVE_PREDICTION = (char*)"_predict";
 char* SAVE_SMAP = (char*)"_savesmap";
 char* SAVE_INPUTS = (char*)"_saveinputs";
@@ -447,6 +446,10 @@ void reset_global_state()
 ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool savePrediction, bool saveSMAPCoeffs,
                            bool newTrainPredictSplit, std::string saveInputsFilename);
 
+ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, int k, int numReps, int crossfold,
+                             bool explore, bool full, bool saveFinalPredictions, bool saveSMAPCoeffs,
+                             std::string saveInputsFilename);
+
 /*
  * Read that information needed for the edm tasks which is doesn't change across
  * the various tasks, and store it in the 'opts' and 'generator' global variables.
@@ -496,7 +499,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::string requestedMetrics(argv[20]);
   opts.cmdLine = argv[21];
 
-  // TODO: Bring this in via the standard argument passing?
   auto factorVariables = stata_numlist<bool>("factor_var");
   auto extrasEVarying = stata_numlist<bool>("z_e_varying");
 
@@ -639,12 +641,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   int k = atoi(buffer);
 
-  // Is `full' specified?
-  if (SF_macro_use(FULL_MODE, buffer, 200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  bool fullMode = (std::string(buffer) == "full");
-
   // Are we saving the predictions?
   if (SF_macro_use(SAVE_PREDICTION, buffer, 200)) {
     io.print("Got an error rc from macro_use!\n");
@@ -683,42 +679,35 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
       libraries.push_back(numUsable);
     }
   }
+
+  return launch_task_group(Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions, saveSMAPCoeffs,
+                           saveInputsFilename);
+}
+
+ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, int k, int numReps, int crossfold,
+                             bool explore, bool full, bool saveFinalPredictions, bool saveSMAPCoeffs,
+                             std::string saveInputsFilename)
+{
   bool newTrainPredictSplit = true;
   int taskNum = 0;
   int numTasks = explore ? numReps * Es.size() : numReps * Es.size() * libraries.size();
 
   int kAdj;
 
-  for (int iterationNumber = 1; iterationNumber <= numReps; iterationNumber++) {
+  for (int iter = 1; iter <= numReps; iter++) {
     if (explore) {
       newTrainPredictSplit = true;
     }
 
-    int trainSize;
+    // If explore, set the library size here
     if (explore) {
-      if (crossfold > 0) {
-        int numNotInThisCrossfold = 0;
-        for (int obs = 1; obs <= numUsable; obs++) {
-          if ((obs % crossfold) != (iterationNumber - 1)) {
-            numNotInThisCrossfold += 1;
-          }
-        }
-        trainSize = numNotInThisCrossfold;
-      } else if (fullMode) {
-        trainSize = numUsable;
-      } else {
-        trainSize = numUsable / 2;
-      }
+      int trainSize = splitter.next_training_size(iter);
+      libraries.clear();
+      libraries.push_back(trainSize);
     }
 
     for (int i = 0; i < Es.size(); i++) {
-      int E = Es[i]; // i
-
-      // If explore, set the library size here
-      if (explore) {
-        libraries.clear();
-        libraries.push_back(trainSize);
-      }
+      int E = Es[i];
 
       for (int l = 0; l < libraries.size(); l++) {
         if (!explore) {
@@ -747,7 +736,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
           savePrediction = saveFinalPredictions && (taskNum == numTasks);
         }
 
-        launch_edm_task(iterationNumber, E, kAdj, library, savePrediction, saveSMAPCoeffs, newTrainPredictSplit,
+        launch_edm_task(iter, E, kAdj, library, savePrediction, saveSMAPCoeffs, newTrainPredictSplit,
                         saveInputsFilename);
         newTrainPredictSplit = false;
       }
