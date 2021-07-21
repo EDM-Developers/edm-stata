@@ -49,15 +49,20 @@
 // N.B. The equivalent function in Stata/Mata is called 'minindex'.
 std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k)
 {
-  // Initialize original index locations
-  std::vector<int> idx(dists.size());
-  std::iota(idx.begin(), idx.end(), 0);
+  // Create a list of possible neighbour indices; screen out missing distances here.
+  std::vector<int> idx;
+  for (int i = 0; i < dists.size(); i++) {
+    if (dists[i] != MISSING) {
+      idx.push_back(i);
+    }
+  }
 
-  if (k >= dists.size()) {
+  // If we asked for all of the neighbours to be considered, just return this index vector directly.
+  if (k >= idx.size()) {
     return idx;
   }
 
-  if (k >= (int)(dists.size() / 2)) {
+  if (k >= (int)(idx.size() / 2)) {
     auto comparator = [&dists](int i1, int i2) { return dists[i1] < dists[i2]; };
     std::stable_sort(idx.begin(), idx.end(), comparator);
   } else {
@@ -69,6 +74,9 @@ std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int
     };
     std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
   }
+
+  // Remove the indices for the points which are not in the k nearest neighbour set.
+  idx.erase(idx.begin() + k, idx.end());
 
   return idx;
 }
@@ -93,37 +101,47 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 //
 // We sometimes let 'M' and 'Mp' be the same manifold, so we train and predict using the same values.
 // In this case, the algorithm may cheat by pulling out the identical trajectory from the training manifold
-// and using this as the prediction. The 'skipRow' variable, when positive, indicates that we skip the
-// closest neighbour as it is probably cheating. 'skipRow' actually stores the specific index
-// of the training manifold which should not be used for this prediction, and in the future we will
-// use this directly, though some details need to be worked out.
+// and using this as the prediction. As such, we throw away any neighbours which have a distance of 0 from
+// the target point.
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, int skipRow, bool keep_going() = nullptr)
+                     Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going() = nullptr)
 {
+  // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
+  // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
+  // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
 
-  int validDistances;
   std::vector<double> dists;
 
   if (opts.distance == Distance::Wasserstein) {
-    dists = wasserstein_distances(Mp_i, opts, M, Mp, validDistances);
+    dists = wasserstein_distances(Mp_i, opts, M, Mp);
   } else {
-    dists = other_distances(Mp_i, opts, M, Mp, validDistances);
+    dists = other_distances(Mp_i, opts, M, Mp);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
 
-  // If we only look at distances which are non-zero and non-missing,
-  // do we have enough of them to find k neighbours?
+  // Throw away distances which are exactly 0, and also count the number of
+  // distances which are valid.
+  int numValidDistances = 0;
+  for (double& dist : dists) {
+    if (dist == 0) {
+      dist = MISSING;
+    } else if (dist != MISSING) {
+      numValidDistances += 1;
+    }
+  }
+
+  // Do we have enough distances to find k neighbours?
   int k = opts.k;
-  if (k > validDistances) {
+  if (k > numValidDistances) {
     if (opts.forceCompute) {
-      k = validDistances;
+      k = numValidDistances;
       if (k == 0) {
         return;
       }
@@ -135,28 +153,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     }
   }
 
-  double minDist = *std::min_element(dists.begin(), dists.end());
-  bool skipFirst = (minDist > 0) && (skipRow >= 0);
-
-  for (double& dist : dists) {
-    if (dist == 0) {
-      dist = MISSING;
-    }
-  }
-
-  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k + skipFirst);
-
-  if (skipFirst) {
-    kNNInds.erase(kNNInds.begin(), kNNInds.begin() + 1);
-  }
+  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k);
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
-
-  // Remove the indices for the points which are not in the k nearest neighbour set.
-  // After this line, the 'assert(kNNInds.size() == k)' should be true.
-  kNNInds.erase(kNNInds.begin() + k, kNNInds.end());
 
   if (opts.algorithm == "" || opts.algorithm == "simplex") {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -180,10 +181,10 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   *kUsed = k;
 
   // Find the smallest distance (closest neighbour) among the supplied neighbours.
-  double d_base = MISSING;
+  double minDist = MISSING;
   for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] < d_base) {
-      d_base = dists[kNNInds[j]];
+    if (dists[kNNInds[j]] < minDist) {
+      minDist = dists[kNNInds[j]];
     }
   }
 
@@ -193,11 +194,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   const double theta = opts.thetas[t];
 
   for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] != MISSING) {
-      w[j] = exp(-theta * (dists[kNNInds[j]] / d_base));
-    } else {
-      w[j] = 0;
-    }
+    w[j] = exp(-theta * (dists[kNNInds[j]] / minDist));
     sumw = sumw + w[j];
   }
 
@@ -222,9 +219,8 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
     return;
   }
 
-  // Remove neighbours which have a missing value for their distance
-  kNNInds.erase(std::remove_if(kNNInds.begin(), kNNInds.end(),
-                               [&dists, &M](int obs) { return dists[obs] == MISSING || M.any_missing(obs); }),
+  // Remove neighbours which have a missing value in the relevant part of the manifold
+  kNNInds.erase(std::remove_if(kNNInds.begin(), kNNInds.end(), [&dists, &M](int obs) { return M.any_missing(obs); }),
                 kNNInds.end());
   k = kNNInds.size();
 
@@ -277,32 +273,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
-}
-
-// If the same observation is in the training & prediction sets,
-// then find the row index of the train manifold for a given prediction row.
-std::vector<int> find_overlaps(std::vector<bool>& trainingRows, std::vector<bool>& predictionRows, int numPredictions,
-                               bool copredict)
-{
-
-  std::vector<int> predToTrainSelfMap(numPredictions);
-  int M_i = 0, Mp_i = 0;
-  int numSelfToSkip = 0;
-  for (int r = 0; r < trainingRows.size(); r++) {
-    if (predictionRows[r]) {
-      if (trainingRows[r] && !copredict) {
-        predToTrainSelfMap[Mp_i] = M_i;
-        numSelfToSkip += 1;
-      } else {
-        predToTrainSelfMap[Mp_i] = -1;
-      }
-    }
-
-    M_i += trainingRows[r];
-    Mp_i += predictionRows[r];
-  }
-
-  return predToTrainSelfMap;
 }
 
 std::atomic<int> numTasksStarted = 0;
@@ -361,8 +331,6 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
   int numPredictions = Mp.nobs();
   int numCoeffCols = M.E_actual() + 1;
 
-  auto predToTrainSelfMap = find_overlaps(trainingRows, predictionRows, numPredictions, opts.copredict);
-
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
   std::fill_n(ystar.get(), numThetas * numPredictions, MISSING);
   Eigen::Map<Eigen::MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
@@ -391,9 +359,8 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
 
     std::vector<std::future<void>> results(numPredictions);
     for (int i = 0; i < numPredictions; i++) {
-      results[i] = workerPool.enqueue([&, i] {
-        make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), predToTrainSelfMap[i], keep_going);
-      });
+      results[i] = workerPool.enqueue(
+        [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going); });
     }
 
     if (opts.numTasks == 1) {
@@ -413,7 +380,7 @@ void edm_task(Options opts, const ManifoldGenerator* generator, int E, std::vect
       if (keep_going != nullptr && keep_going() == false) {
         break;
       }
-      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), predToTrainSelfMap[i], keep_going);
+      make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going);
       if (opts.numTasks == 1) {
         io->progress_bar((i + 1) / ((double)numPredictions));
       }

@@ -91,15 +91,11 @@ double wasserstein(double* C, int len_i, int len_j)
   return cost;
 }
 
-std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                          int& validDistances)
+std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
-
   std::vector<double> dists(M.nobs());
 
   double gamma = Mp.range() / Mp.time_range() * opts.aspectRatio;
-
-  validDistances = 0;
 
   for (int i = 0; i < M.nobs(); i++) {
     int len_i, len_j;
@@ -107,8 +103,6 @@ std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const M
 
     if (len_i > 0 && len_j > 0) {
       dists[i] = std::sqrt(wasserstein(C.get(), len_i, len_j));
-      validDistances += 1;
-
     } else {
       dists[i] = MISSING;
     }
@@ -117,13 +111,10 @@ std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const M
   return dists;
 }
 
-std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                    int& validDistances)
+std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
 
   std::vector<double> dists(M.nobs());
-
-  validDistances = 0;
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
@@ -163,7 +154,6 @@ std::vector<double> other_distances(int Mp_i, const Options& opts, const Manifol
     }
 
     if (dist_i != MISSING) {
-      validDistances += 1;
       if (opts.distance == Distance::MeanAbsoluteError) {
         dists[i] = dist_i;
       } else { // Distance::Euclidean
