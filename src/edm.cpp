@@ -47,16 +47,8 @@
 // vector.
 //
 // N.B. The equivalent function in Stata/Mata is called 'minindex'.
-std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k)
+std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k, std::vector<int> idx)
 {
-  // Create a list of possible neighbour indices; screen out missing distances here.
-  std::vector<int> idx;
-  for (int i = 0; i < dists.size(); i++) {
-    if (dists[i] != MISSING) {
-      idx.push_back(i);
-    }
-  }
-
   // If we asked for all of the neighbours to be considered, just return this index vector directly.
   if (k >= idx.size()) {
     return idx;
@@ -126,18 +118,25 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
-  // Throw away distances which are exactly 0, and also count the number of
-  // distances which are valid.
-  int numValidDistances = 0;
-  for (double& dist : dists) {
-    if (dist == 0) {
-      dist = MISSING;
-    } else if (dist != MISSING) {
-      numValidDistances += 1;
+  // Create a list of possible neighbour indices.
+  // Screen out missing or zero distances.
+  // Also, for S-map we can't have any missing values in the Manifold, so insist on that also.
+  std::vector<int> possibleNeighbourIndices;
+  bool smap = opts.algorithm == "smap";
+  for (int i = 0; i < dists.size(); i++) {
+    if (dists[i] == 0) {
+      dists[i] = MISSING;
+    }
+
+    if (dists[i] != MISSING) {
+      if (!(smap && M.any_missing(i))) {
+        possibleNeighbourIndices.push_back(i);
+      }
     }
   }
 
   // Do we have enough distances to find k neighbours?
+  int numValidDistances = possibleNeighbourIndices.size();
   int k = opts.k;
   if (k > numValidDistances) {
     if (opts.forceCompute) {
@@ -153,7 +152,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     }
   }
 
-  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k);
+  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k, possibleNeighbourIndices);
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -218,11 +217,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
     rc(t, Mp_i) = NOT_IMPLEMENTED;
     return;
   }
-
-  // Remove neighbours which have a missing value in the relevant part of the manifold
-  kNNInds.erase(std::remove_if(kNNInds.begin(), kNNInds.end(), [&dists, &M](int obs) { return M.any_missing(obs); }),
-                kNNInds.end());
-  k = kNNInds.size();
 
   *kUsed = k;
 
