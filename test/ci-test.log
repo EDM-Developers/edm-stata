@@ -480,7 +480,7 @@ Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
           Mapping    Library size             rho             MAE
 -------------------------------------------------------------------
-   l.x ~ l.x|M(x)             124               1      4.3700e-11 
+   l.x ~ l.x|M(x)             124               1               0 
      x ~ x|M(l.x)             150          .13144          .88057 
 -------------------------------------------------------------------
 Note: The embedding dimension E is 11 (including 6 extras)
