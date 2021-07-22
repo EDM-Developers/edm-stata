@@ -6,10 +6,9 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
               std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going() = nullptr,
               void all_tasks_finished(void) = nullptr);
 
-std::future<void> edm_task_async(Options opts, ManifoldGenerator generator, int E,
-                                 std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io,
-                                 Prediction* pred, bool keep_going() = nullptr,
-                                 void all_tasks_finished(void) = nullptr);
+std::future<void> edm_task_async(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
+                                 std::vector<bool> predictionRows, IO* io, Prediction* pred,
+                                 bool keep_going() = nullptr, void all_tasks_finished(void) = nullptr);
 
 int launch_task_group(const ManifoldGenerator& generator, const Options& opts, std::vector<int> Es,
                       std::vector<int> libraries, int k, int numReps, int crossfold, bool explore, bool full,

@@ -95,6 +95,7 @@ struct Prediction
   std::vector<bool> predictionRows;
   std::vector<int> kUsed;
   std::string cmdLine;
+  bool copredict;
 };
 
 void to_json(json& j, const Prediction& p);

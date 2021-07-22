@@ -1078,13 +1078,6 @@ program define edmExplore, eclass
 		}
 	}
 
-	// Collect all the asynchronous predictions from the plugin
-	if `mata_mode' == 0 {
-		edmPrintPluginProgress
-		local result_matrix = "r"
-		plugin call edm_plugin `predict', "collect_results" "`result_matrix'"
-	}
-
 	if "`copredictvar'" != ""  {
 		if `num_tasks' == 1 {
 			if `mata_mode' {
@@ -1103,19 +1096,29 @@ program define edmExplore, eclass
 
 				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
 						"`max_e'" "`lib_size'" "`saveinputs'"
- 
-				edmPrintPluginProgress
-				plugin call edm_plugin `co_x_p', "collect_results"
 			}
-
-			qui gen double `copredict' = `co_x_p'
-			qui label variable `copredict' "edm copredicted  `copredictvar' using manifold `ori_x' `ori_y'"
 		}
 		else {
 			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
 			di as result ""
 		}
 	}
+
+
+	// Collect all the asynchronous predictions from the plugin
+	if `mata_mode' == 0 {
+		edmPrintPluginProgress
+		local result_matrix = "r"
+		local save_predict_mode = ("`predict'" != "")
+		local save_copredict_mode = ("`copredictvar'" != "")
+		plugin call edm_plugin `predict' `co_x_p', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+	}
+
+	if ("`copredictvar'" != "") {
+		qui gen double `copredict' = `co_x_p'
+		qui label variable `copredict' "edm copredicted  `copredictvar' using manifold `ori_x' `ori_y'"
+	}
+
 
 	/* mat r = r[2...,.] */
 	if !`parsed_dt' {
@@ -1929,11 +1932,13 @@ program define edmXmap, eclass
 			}
 		}
 
-		// Collect all the asynchronous predictions from the plugin 
-		if `mata_mode' == 0 {
+		// Collect all the asynchronous predictions from the plugin
+		if !`mata_mode'  & (`direction_num' == 1) & (`num_directions' == 2) {
 			edmPrintPluginProgress
-			local result_matrix = "r`direction_num'"
-			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'"
+			local result_matrix = "r1"
+			local save_predict_mode = "`predict'" != ""
+			local save_copredict_mode = 0 // Only possible for the final direction
+			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
 		* reset the panel structure
@@ -1982,17 +1987,26 @@ program define edmXmap, eclass
 				scalar plugin_finished = 0
 				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
 						"`max_e'" "`k_size'" "`saveinputs'"
-				edmPrintPluginProgress
-				plugin call edm_plugin `co_x_p', "collect_results"
 			}
-
-			qui gen double `copredict' = `co_x_p'
-			qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 		}
 		else {
 			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
 			di as result ""
 		}
+	}
+
+	// Collect all the asynchronous predictions from the plugin
+	if `mata_mode' == 0 {
+		edmPrintPluginProgress
+		local result_matrix = "r`num_directions'"
+		local save_predict_mode = ("`predict'" != "")
+		local save_copredict_mode = ("`copredictvar'" != "")
+		plugin call edm_plugin `predict' `co_x_p' `all_savesmap_vars`num_directions'', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+	}
+
+	if ("`copredictvar'" != "") {
+		qui gen double `copredict' = `co_x_p'
+		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 	}
 
 	if !`parsed_dt' {

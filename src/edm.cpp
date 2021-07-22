@@ -276,9 +276,9 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool, taskRunnerPool;
 
-std::future<void> edm_task_async(Options opts, ManifoldGenerator generator, int E,
-                                 std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io,
-                                 Prediction* pred, bool keep_going(), void all_tasks_finished(void))
+std::future<void> edm_task_async(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
+                                 std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
+                                 void all_tasks_finished(void))
 {
   workerPool.set_num_workers(opts.nthreads);
   taskRunnerPool.set_num_workers(num_physical_cores());
@@ -446,6 +446,7 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
     }
 
     pred->cmdLine = opts.cmdLine;
+    pred->copredict = opts.copredict;
 
     pred->numThetas = numThetas;
     pred->numPredictions = numPredictions;
@@ -495,6 +496,8 @@ int launch_task_group(const ManifoldGenerator& generator, const Options& opts, s
                       bool saveFinalPredictions, bool saveSMAPCoeffs, std::vector<bool> usable, std::string rngState,
                       double nextRV, IO* io, bool keep_going(), void all_tasks_finished(void))
 {
+  wipe_past_results();
+
   // Store a backup of these for in case there's a coprediction task coming afterwards
   prevGenerator = generator;
   prevOpts = opts;
@@ -620,8 +623,6 @@ int launch_coprediction_task(int E, int k, std::vector<double> co_x, std::vector
                              std::vector<bool> coPredictionRows, IO* io, bool keep_going(),
                              void all_tasks_finished(void))
 {
-  wipe_past_results();
-
   // Load the previously used generator & options
   ManifoldGenerator& generator = prevGenerator;
   Options opts = prevOpts;

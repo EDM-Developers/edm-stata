@@ -81,9 +81,9 @@ int main(int argc, char* argv[])
                       saveSMAPCoeffs, usable, rngState, nextRV, &io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
-      if (verb) {
-        std::cerr << "Waiting for results...\n";
-      }
+    if (verb) {
+      std::cerr << "Waiting for results...\n";
+    }
 
     std::queue<Prediction>& predictions = get_results();
 
@@ -101,7 +101,6 @@ int main(int argc, char* argv[])
 
       predictions.pop();
     }
-
   }
 
   std::ofstream o(fnameOut);

@@ -700,7 +700,7 @@ ST_retcode prepare_coprediction_task(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
-  reset_global_state();
+  //  reset_global_state();
 
   int E = atoi(argv[0]);
   int k = atoi(argv[1]);
@@ -710,16 +710,16 @@ ST_retcode prepare_coprediction_task(int argc, char* argv[])
   std::vector<bool> coTrainingRows = stata_columns<bool>(2);
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
-//  if (!saveInputsFilename.empty()) {
-//    json taskGroup;
-//    //    taskGroup["generator"] = generator;
-//    //    taskGroup["opts"] = taskOpts;
-//    taskGroup["E"] = E;
-//    taskGroup["trainingRows"] = coTrainingRows;
-//    taskGroup["predictionRows"] = coPredictionRows;
-//
-//    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
-//  }
+  //  if (!saveInputsFilename.empty()) {
+  //    json taskGroup;
+  //    //    taskGroup["generator"] = generator;
+  //    //    taskGroup["opts"] = taskOpts;
+  //    taskGroup["E"] = E;
+  //    taskGroup["trainingRows"] = coTrainingRows;
+  //    taskGroup["predictionRows"] = coPredictionRows;
+  //
+  //    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+  //  }
 
   //  if (io.verbosity > 2) {
   //    auto M = generator.create_manifold(E, coTrainingRows, false);
@@ -747,16 +747,19 @@ ST_retcode prepare_coprediction_task(int argc, char* argv[])
 
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 {
-  if (argc > 1) {
+  if (argc < 3) {
+    return TOO_FEW_VARIABLES;
+  }
+  if (argc > 3) {
     return TOO_MANY_VARIABLES;
   }
 
-  char* resultMatrix = nullptr;
-  if (argc == 1) {
-    resultMatrix = argv[0];
-  }
+  char* resultMatrix = argv[0];
+  bool savePredictMode = atoi(argv[1]);
+  bool saveCoPredictMode = atoi(argv[2]);
 
   ST_retcode rc = 0;
+
   int numCoeffColsSaved = 0;
 
   std::queue<Prediction>& predictions = get_results();
@@ -785,12 +788,16 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       }
 
       if (pred.ystar != nullptr) {
-        write_stata_column(pred.ystar.get(), pred.numPredictions, 1, pred.predictionRows);
+        if (!pred.copredict) {
+          write_stata_column(pred.ystar.get(), pred.numPredictions, 1, pred.predictionRows);
+        } else {
+          write_stata_column(pred.ystar.get(), pred.numPredictions, savePredictMode + 1, pred.predictionRows);
+        }
       }
 
       if (pred.coeffs != nullptr) {
         write_stata_columns(pred.coeffs.get(), pred.numPredictions, pred.numCoeffCols,
-                            (pred.ystar != nullptr) + numCoeffColsSaved + 1, pred.predictionRows);
+                            savePredictMode + saveCoPredictMode + numCoeffColsSaved + 1, pred.predictionRows);
         numCoeffColsSaved += pred.numCoeffCols;
       }
     }
