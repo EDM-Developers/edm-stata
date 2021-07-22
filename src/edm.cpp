@@ -275,31 +275,10 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
-ThreadPool workerPool, taskRunnerPool;
+ThreadPool workerPool(0), taskRunnerPool(0);
 
-std::future<void> edm_task_async(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
-                                 std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-                                 void all_tasks_finished(void))
-{
-  workerPool.set_num_workers(opts.nthreads);
-  taskRunnerPool.set_num_workers(num_physical_cores());
-
-  if (opts.taskNum == 0) {
-    numTasksStarted = 0;
-    numTasksFinished = 0;
-  }
-
-  numTasksStarted += 1;
-
-  return taskRunnerPool.enqueue(
-    [opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished] {
-      edm_task(opts, generator, E, trainingRows, predictionRows, io, pred, keep_going, all_tasks_finished);
-    });
-}
-
-void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
-              std::vector<bool> predictionRows, IO* io, Prediction* pred, bool keep_going(),
-              void all_tasks_finished(void))
+Prediction edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
+                    std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished(void))
 {
   bool multiThreaded = opts.nthreads > 1;
 
@@ -351,10 +330,6 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
   }
 
   if (multiThreaded) {
-    if (opts.distributeThreads) {
-      distribute_threads(workerPool.workers);
-    }
-
     std::vector<std::future<void>> results(numPredictions);
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
@@ -385,6 +360,8 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
     }
   }
 
+  Prediction pred;
+
   // Store the results, so long as we weren't interrupted by a 'break'.
   if (keep_going == nullptr || keep_going() == true) {
     // Start by calculating the MAE & rho of prediction, if requested
@@ -410,48 +387,48 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
       stats.taskNum = opts.taskNum + t;
       stats.calcRhoMAE = opts.calcRhoMAE;
 
-      pred->stats.push_back(stats);
+      pred.stats.push_back(stats);
     }
 
     // Check if any mf_smap_single call failed, and if so find the most serious error
-    pred->rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
+    pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
 
     // If we're storing the prediction and/or the SMAP coefficients, put them
     // into the resulting Prediction struct. Otherwise, let them be deleted.
     if (opts.savePrediction) {
       // Take only the predictions for the largest theta value.
       if (numThetas == 1) {
-        pred->ystar = std::move(ystar);
+        pred.ystar = std::move(ystar);
       } else {
-        pred->ystar = std::make_unique<double[]>(numPredictions);
+        pred.ystar = std::make_unique<double[]>(numPredictions);
         for (int i = 0; i < numPredictions; i++) {
-          pred->ystar[i] = ystarView(numThetas - 1, i);
+          pred.ystar[i] = ystarView(numThetas - 1, i);
         }
       }
     } else {
-      pred->ystar = nullptr;
+      pred.ystar = nullptr;
     }
 
     if (opts.saveSMAPCoeffs) {
-      pred->coeffs = std::move(coeffs);
+      pred.coeffs = std::move(coeffs);
     } else {
-      pred->coeffs = nullptr;
+      pred.coeffs = nullptr;
     }
 
     if (opts.savePrediction || opts.saveSMAPCoeffs) {
-      pred->predictionRows = std::move(predictionRows);
+      pred.predictionRows = std::move(predictionRows);
     }
 
     if (opts.saveKUsed) {
-      pred->kUsed = kUsed;
+      pred.kUsed = kUsed;
     }
 
-    pred->cmdLine = opts.cmdLine;
-    pred->copredict = opts.copredict;
+    pred.cmdLine = opts.cmdLine;
+    pred.copredict = opts.copredict;
 
-    pred->numThetas = numThetas;
-    pred->numPredictions = numPredictions;
-    pred->numCoeffCols = numCoeffCols;
+    pred.numThetas = numThetas;
+    pred.numPredictions = numPredictions;
+    pred.numCoeffCols = numCoeffCols;
 
     if (opts.numTasks > 1) {
       io->progress_bar((numTasksFinished + 1) / ((double)opts.numTasks));
@@ -465,35 +442,22 @@ void edm_task(Options opts, ManifoldGenerator generator, int E, std::vector<bool
       all_tasks_finished();
     }
   }
+
+  return std::move(pred);
 }
 
-std::queue<Prediction> predictions;
-std::queue<std::future<void>> futures;
+std::future<Prediction> launch_edm_task(ManifoldGenerator generator, Options opts, int taskNum, int E, int k,
+                                        bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
+                                        std::vector<bool> predictionRows, IO* io, bool keep_going(),
+                                        void all_tasks_finished(void));
 
-// In case we have some remnants of previous runs still
-// in the system (e.g. after a 'break'), clear our past results.
-void wipe_past_results()
+std::vector<std::future<Prediction>> launch_task_group(
+  ManifoldGenerator generator, const Options& opts, std::vector<int> Es, std::vector<int> libraries, int k, int numReps,
+  int crossfold, bool explore, bool full, bool saveFinalPredictions, bool saveSMAPCoeffs, bool copredictMode,
+  std::vector<bool> usable, std::vector<double> co_x, std::vector<bool> coTrainingRows,
+  std::vector<bool> coPredictionRows, std::string rngState, double nextRV, IO* io, bool keep_going(),
+  void all_tasks_finished(void))
 {
-  while (!futures.empty()) {
-    futures.pop();
-  }
-  while (!predictions.empty()) {
-    predictions.pop();
-  }
-}
-
-int launch_edm_task(ManifoldGenerator generator, Options opts, int E, int k, bool savePrediction, bool saveSMAPCoeffs,
-                    std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io, bool keep_going(),
-                    void all_tasks_finished(void));
-
-int launch_task_group(ManifoldGenerator generator, const Options& opts, std::vector<int> Es, std::vector<int> libraries,
-                      int k, int numReps, int crossfold, bool explore, bool full, bool saveFinalPredictions,
-                      bool saveSMAPCoeffs, bool copredictMode, std::vector<bool> usable, std::vector<double> co_x,
-                      std::vector<bool> coTrainingRows, std::vector<bool> coPredictionRows, std::string rngState,
-                      double nextRV, IO* io, bool keep_going(), void all_tasks_finished(void))
-{
-  wipe_past_results();
-
   // Construct the instance which will (repeatedly) split the data into either the training manifold
   // or the prediction manifold; sometimes this is randomised so the RNG state may need to be set.
   bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
@@ -507,12 +471,16 @@ int launch_task_group(ManifoldGenerator generator, const Options& opts, std::vec
 
   bool newTrainPredictSplit = true;
   int taskNum = 0;
-  int numTasks = explore ? numReps * Es.size() : numReps * Es.size() * libraries.size();
 
+  int numStandardTasks = numReps * Es.size() * (explore ? 1 : libraries.size());
+  int numTasks = numStandardTasks + copredictMode;
   int E, kAdj, library;
 
   Options sharedOpts = opts;
   sharedOpts.copredict = false;
+  sharedOpts.numTasks = numTasks;
+
+  std::vector<std::future<Prediction>> futures;
 
   for (int iter = 1; iter <= numReps; iter++) {
     if (explore) {
@@ -551,9 +519,9 @@ int launch_task_group(ManifoldGenerator generator, const Options& opts, std::vec
 
         bool savePrediction;
         if (explore) {
-          savePrediction = saveFinalPredictions && ((crossfold > 0) || (taskNum == numTasks));
+          savePrediction = saveFinalPredictions && ((crossfold > 0) || (taskNum == numStandardTasks));
         } else {
-          savePrediction = saveFinalPredictions && (taskNum == numTasks);
+          savePrediction = saveFinalPredictions && (taskNum == numStandardTasks);
         }
 
         if (newTrainPredictSplit) {
@@ -561,8 +529,9 @@ int launch_task_group(ManifoldGenerator generator, const Options& opts, std::vec
           newTrainPredictSplit = false;
         }
 
-        launch_edm_task(generator, opts, E, kAdj, savePrediction, saveSMAPCoeffs, splitter.trainingRows(),
-                        splitter.predictionRows(), io, keep_going, all_tasks_finished);
+        futures.emplace_back(launch_edm_task(generator, opts, taskNum - 1, E, kAdj, savePrediction, saveSMAPCoeffs,
+                                             splitter.trainingRows(), splitter.predictionRows(), io, keep_going,
+                                             all_tasks_finished));
       }
     }
   }
@@ -579,18 +548,41 @@ int launch_task_group(ManifoldGenerator generator, const Options& opts, std::vec
     copredOpts.calcRhoMAE = false;
     saveSMAPCoeffs = false;
 
-    launch_edm_task(generator, copredOpts, E, kAdj, savePrediction, saveSMAPCoeffs, coTrainingRows, coPredictionRows,
-                    io, keep_going, all_tasks_finished);
+    taskNum += 1;
+
+    futures.push_back(
+      std::move(launch_edm_task(generator, copredOpts, taskNum - 1, E, kAdj, savePrediction, saveSMAPCoeffs,
+                                coTrainingRows, coPredictionRows, io, keep_going, all_tasks_finished)));
   }
 
-  return SUCCESS;
+  return futures;
 }
 
-int launch_edm_task(ManifoldGenerator generator, Options opts, int E, int k, bool savePrediction, bool saveSMAPCoeffs,
-                    std::vector<bool> trainingRows, std::vector<bool> predictionRows, IO* io, bool keep_going(),
-                    void all_tasks_finished(void))
+std::future<Prediction> edm_task_async(Options opts, ManifoldGenerator generator, int E, std::vector<bool> trainingRows,
+                                       std::vector<bool> predictionRows, IO* io, bool keep_going(),
+                                       void all_tasks_finished(void))
 {
-  opts.taskNum = (int)futures.size();
+  workerPool.set_num_workers(opts.nthreads);
+  taskRunnerPool.set_num_workers(num_physical_cores());
+
+  if (opts.taskNum == 0) {
+    numTasksStarted = 0;
+    numTasksFinished = 0;
+  }
+
+  numTasksStarted += 1;
+
+  return taskRunnerPool.enqueue([opts, generator, E, trainingRows, predictionRows, io, keep_going, all_tasks_finished] {
+    return edm_task(opts, generator, E, trainingRows, predictionRows, io, keep_going, all_tasks_finished);
+  });
+}
+
+std::future<Prediction> launch_edm_task(ManifoldGenerator generator, Options opts, int taskNum, int E, int k,
+                                        bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
+                                        std::vector<bool> predictionRows, IO* io, bool keep_going(),
+                                        void all_tasks_finished(void))
+{
+  opts.taskNum = taskNum;
   opts.k = k;
   opts.savePrediction = savePrediction;
   opts.saveSMAPCoeffs = saveSMAPCoeffs;
@@ -617,21 +609,5 @@ int launch_edm_task(ManifoldGenerator generator, Options opts, int E, int k, boo
 
   opts.metrics = metrics;
 
-  predictions.push({});
-
-  futures.push(edm_task_async(opts, generator, E, trainingRows, predictionRows, io, &(predictions.back()), keep_going,
-                              all_tasks_finished));
-
-  return SUCCESS;
-}
-
-std::queue<Prediction>& get_results()
-{
-  while (futures.size() > 0) {
-    std::future<void>& fut = futures.front();
-    fut.get();
-    futures.pop();
-  }
-
-  return predictions;
+  return edm_task_async(opts, generator, E, trainingRows, predictionRows, io, keep_going, all_tasks_finished);
 }

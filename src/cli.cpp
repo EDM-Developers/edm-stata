@@ -88,30 +88,26 @@ int main(int argc, char* argv[])
 
     std::cerr << "Loaded this part of the JSON\n";
 
-    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                      saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState, nextRV,
-                      &io, nullptr, nullptr);
+    std::vector<std::future<Prediction>> futures = launch_task_group(
+      generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions, saveSMAPCoeffs,
+      copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState, nextRV, &io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     if (verb) {
       std::cerr << "Waiting for results...\n";
     }
 
-    std::queue<Prediction>& predictions = get_results();
-
     if (verb) {
       std::cerr << "Storing results...\n";
     }
 
-    while (!predictions.empty()) {
-      const Prediction& pred = predictions.front();
+    for (int i = 0; i < futures.size(); i++) {
+      const Prediction pred = futures[i].get();
 
       results.push_back(pred);
       if (pred.rc > rc) {
         rc = pred.rc;
       }
-
-      predictions.pop();
     }
   }
 

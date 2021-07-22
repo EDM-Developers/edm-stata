@@ -6,7 +6,6 @@ void to_json(json& j, const Options& o)
             { "forceCompute", o.forceCompute },
             { "savePrediction", o.savePrediction },
             { "saveSMAPCoeffs", o.saveSMAPCoeffs },
-            { "distributeThreads", o.distributeThreads },
             { "k", o.k },
             { "nthreads", o.nthreads },
             { "missingdistance", o.missingdistance },
@@ -27,7 +26,6 @@ void from_json(const json& j, Options& o)
   j.at("forceCompute").get_to(o.forceCompute);
   j.at("savePrediction").get_to(o.savePrediction);
   j.at("saveSMAPCoeffs").get_to(o.saveSMAPCoeffs);
-  j.at("distributeThreads").get_to(o.distributeThreads);
   j.at("k").get_to(o.k);
   j.at("nthreads").get_to(o.nthreads);
   j.at("missingdistance").get_to(o.missingdistance);

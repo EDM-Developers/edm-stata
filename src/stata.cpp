@@ -326,6 +326,8 @@ Metric guess_appropriate_metric(std::vector<ST_double> data, int targetSample = 
   }
 }
 
+std::vector<std::future<Prediction>> futures;
+
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
@@ -611,9 +613,11 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
   }
 
-  return launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                           saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState,
-                           nextRV, &io, keep_going, all_tasks_finished);
+  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
+                              saveFinalPredictions, saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows,
+                              coPredictionRows, rngState, nextRV, &io, keep_going, all_tasks_finished);
+
+  return SUCCESS;
 }
 
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
@@ -633,12 +637,11 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 
   int numCoeffColsSaved = 0;
 
-  std::queue<Prediction>& predictions = get_results();
-
-  while (predictions.size() > 0) {
+  for (int i = 0; i < futures.size(); i++) {
 
     // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
-    const Prediction& pred = predictions.front();
+    const Prediction pred = futures[i].get();
+
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       for (auto& stats : pred.stats) {
@@ -676,8 +679,6 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     if (pred.rc > rc) {
       rc = pred.rc;
     }
-
-    predictions.pop();
   }
 
   return rc;
