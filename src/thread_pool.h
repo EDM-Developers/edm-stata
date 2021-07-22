@@ -26,9 +26,9 @@
 class ThreadPool
 {
 public:
-  explicit ThreadPool(int);
+  ThreadPool(int);
   template<class F, class... Args>
-  decltype(auto) enqueue(F&& f, Args&&... args);
+  auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
   ~ThreadPool();
   void set_num_workers(int threads);
 
@@ -36,7 +36,7 @@ private:
   // need to keep track of threads so we can join them
   std::vector<std::thread> workers;
   // the task queue
-  std::queue<std::packaged_task<void()>> tasks;
+  std::queue<std::function<void()>> tasks;
 
   // synchronization
   std::mutex queue_mutex;
@@ -59,7 +59,7 @@ inline void ThreadPool::set_num_workers(int threads)
   for (size_t i = 0; i < numNewThreads; ++i)
     workers.emplace_back([this] {
       for (;;) {
-        std::packaged_task<void()> task;
+        std::function<void()> task;
 
         {
           std::unique_lock<std::mutex> lock(this->queue_mutex);
@@ -77,13 +77,14 @@ inline void ThreadPool::set_num_workers(int threads)
 
 // add new work item to the pool
 template<class F, class... Args>
-decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args)
+auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>
 {
-  using return_type = std::invoke_result_t<F, Args...>;
+  using return_type = typename std::result_of<F(Args...)>::type;
 
-  std::packaged_task<return_type()> task(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+  auto task =
+    std::make_shared<std::packaged_task<return_type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
 
-  std::future<return_type> res = task.get_future();
+  std::future<return_type> res = task->get_future();
   {
     std::unique_lock<std::mutex> lock(queue_mutex);
 
@@ -91,7 +92,7 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args)
     if (stop)
       throw std::runtime_error("enqueue on stopped ThreadPool");
 
-    tasks.emplace(std::move(task));
+    tasks.emplace([task]() { (*task)(); });
   }
   condition.notify_one();
   return res;
