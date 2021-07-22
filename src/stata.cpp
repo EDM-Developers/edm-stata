@@ -25,7 +25,7 @@
 
 #include "cli.h" // to save the inputs to a local file for debugging
 #include "stats.h"
-#include "train_predict_split.h"
+#include "train_predict_split.h" // Just for 'TrainPredictSplitter::requiresRandomNumbers', can simplify
 
 const double PI = 3.141592653589793238463;
 
@@ -418,36 +418,14 @@ Metric guess_appropriate_metric(std::vector<ST_double> data, int targetSample = 
   }
 }
 
-ManifoldGenerator generator;
-Options opts;
-std::queue<Prediction> predictions;
-std::queue<std::future<void>> futures;
-
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
 {
   io.get_and_clear_async_buffer();
-
-  while (!futures.empty()) {
-    futures.pop();
-  }
-  while (!predictions.empty()) {
-    predictions.pop();
-  }
-
   breakButtonPressed = false;
   allTasksFinished = false;
 }
-
-ST_retcode launch_edm_task(const ManifoldGenerator& generator, const Options& opts, int iter, int E, int k, int library,
-                           bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
-                           std::vector<bool> predictionRows);
-
-ST_retcode launch_task_group(const ManifoldGenerator& generator, const Options& opts, std::vector<int> Es,
-                             std::vector<int> libraries, int k, int numReps, int crossfold, bool explore, bool full,
-                             bool saveFinalPredictions, bool saveSMAPCoeffs, std::vector<bool> usable,
-                             std::string rngState, double nextRV);
 
 std::vector<bool> generate_usable(std::vector<bool> touse, ManifoldGenerator& generator, int maxE, bool allowMissing)
 {
@@ -486,6 +464,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
 
   reset_global_state();
+
+  Options opts;
+  opts.copredict = false;
 
   opts.calcRhoMAE = true;
   int numExtras = atoi(argv[0]);
@@ -582,7 +563,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   opts.metrics = metrics;
 
-  generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
+  ManifoldGenerator generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
 
   // Handle 'dt' flag
   if (dtMode) {
@@ -707,132 +688,10 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
 
   return launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                           saveSMAPCoeffs, usable, rngState, nextRV);
+                           saveSMAPCoeffs, usable, rngState, nextRV, &io, keep_going, all_tasks_finished);
 }
 
-ST_retcode launch_task_group(const ManifoldGenerator& generator, const Options& opts, std::vector<int> Es,
-                             std::vector<int> libraries, int k, int numReps, int crossfold, bool explore, bool full,
-                             bool saveFinalPredictions, bool saveSMAPCoeffs, std::vector<bool> usable,
-                             std::string rngState, double nextRV)
-{
-  // Construct the instance which will (repeatedly) split the data into either the training manifold
-  // or the prediction manifold; sometimes this is randomised so the RNG state may need to be set.
-  bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
-
-  TrainPredictSplitter splitter;
-  if (requiresRandomNumbers && !rngState.empty()) {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState, nextRV);
-  } else {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable);
-  }
-
-  bool newTrainPredictSplit = true;
-  int taskNum = 0;
-  int numTasks = explore ? numReps * Es.size() : numReps * Es.size() * libraries.size();
-
-  int kAdj;
-
-  for (int iter = 1; iter <= numReps; iter++) {
-    if (explore) {
-      newTrainPredictSplit = true;
-    }
-
-    // If explore, set the library size here
-    if (explore) {
-      int trainSize = splitter.next_training_size(iter);
-      libraries.clear();
-      libraries.push_back(trainSize);
-    }
-
-    for (int i = 0; i < Es.size(); i++) {
-      int E = Es[i];
-
-      for (int l = 0; l < libraries.size(); l++) {
-        if (!explore) {
-          newTrainPredictSplit = true;
-        }
-
-        int library = libraries[l];
-
-        // Set the number of neighbours to use
-        if (k > 0) {
-          kAdj = k;
-        } else if (k < 0) {
-          kAdj = library;
-        } else if (k == 0) {
-          bool isSMap = opts.algorithm == Algorithm::SMap;
-          int defaultK = generator.E_actual(E) + 1 + isSMap;
-          kAdj = defaultK < library ? defaultK : library;
-        }
-
-        taskNum += 1;
-
-        bool savePrediction;
-        if (explore) {
-          savePrediction = saveFinalPredictions && ((crossfold > 0) || (taskNum == numTasks));
-        } else {
-          savePrediction = saveFinalPredictions && (taskNum == numTasks);
-        }
-
-        if (newTrainPredictSplit) {
-          splitter.update_train_predict_split(library, iter);
-          newTrainPredictSplit = false;
-        }
-
-        launch_edm_task(generator, opts, iter, E, kAdj, library, savePrediction, saveSMAPCoeffs,
-                        splitter.trainingRows(), splitter.predictionRows());
-      }
-    }
-  }
-
-  return SUCCESS;
-}
-
-ST_retcode launch_edm_task(const ManifoldGenerator& generator, const Options& opts, int iter, int E, int k, int library,
-                           bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
-                           std::vector<bool> predictionRows)
-{
-  Options taskOpts = opts;
-  taskOpts.copredict = false;
-  taskOpts.taskNum = (int)futures.size();
-
-  int E_actual = generator.E_actual(E);
-
-  taskOpts.k = k;
-  taskOpts.savePrediction = savePrediction;
-  taskOpts.saveSMAPCoeffs = saveSMAPCoeffs;
-
-  // Expand the metrics vector now we know the value of E
-  taskOpts.metrics.clear();
-
-  for (int repeat = 0; repeat < E; repeat++) {
-    taskOpts.metrics.push_back(opts.metrics[0]);
-  }
-
-  // Add metrics for each dt variable (it is always treated as a continuous value)
-  for (int repeat = 0; repeat < generator.E_dt(E); repeat++) {
-    taskOpts.metrics.push_back(Metric::Diff);
-  }
-
-  int j = 1;
-  for (int E_extra_count : generator.E_extras_counts(E)) {
-    for (int repeat = 0; repeat < E_extra_count; repeat++) {
-      taskOpts.metrics.push_back(opts.metrics[j]);
-    }
-    j += 1;
-  }
-
-  predictions.push({});
-
-  print_launch_info(generator, taskOpts, trainingRows, predictionRows, E);
-
-  futures.push(edm_task_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()),
-                              keep_going, all_tasks_finished));
-
-  return SUCCESS;
-}
-
-ST_retcode launch_coprediction_task(int argc, char* argv[])
+ST_retcode prepare_coprediction_task(int argc, char* argv[])
 {
   if (argc < 3) {
     return TOO_FEW_VARIABLES;
@@ -843,95 +702,47 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
 
   reset_global_state();
 
-  Options taskOpts = opts;
-  taskOpts.copredict = true;
-
-  // Just one task when in coprediction mode.
-  taskOpts.taskNum = 0;
-  taskOpts.numTasks = 1;
-
-  // Always saving prediction vector in coprediction mode.
-  // Never calculating rho & MAE statistics in this mode.
-  // Never saving SMAP coefficients in coprediction mode.
-  taskOpts.savePrediction = 1;
-  taskOpts.calcRhoMAE = 0;
-  taskOpts.saveSMAPCoeffs = false;
-
   int E = atoi(argv[0]);
-  int E_actual = generator.E_actual(E);
-
-  taskOpts.k = atoi(argv[1]);
+  int k = atoi(argv[1]);
   std::string saveInputsFilename(argv[2]);
 
-  // Default number of neighbours k is E_actual + 1
-  if (taskOpts.k <= 0) {
-    taskOpts.k = E_actual + 1;
-  }
-
-  // Add co_x directly to the manifold generator.
-  generator.add_coprediction_data(stata_columns<ST_double>(1));
-
-  // Find which rows are used for training & which for prediction
+  std::vector<ST_double> co_x = stata_columns<ST_double>(1);
   std::vector<bool> coTrainingRows = stata_columns<bool>(2);
   std::vector<bool> coPredictionRows = stata_columns<bool>(3);
 
-  // Expand the metrics vector now we know the value of E
-  taskOpts.metrics.clear();
+//  if (!saveInputsFilename.empty()) {
+//    json taskGroup;
+//    //    taskGroup["generator"] = generator;
+//    //    taskGroup["opts"] = taskOpts;
+//    taskGroup["E"] = E;
+//    taskGroup["trainingRows"] = coTrainingRows;
+//    taskGroup["predictionRows"] = coPredictionRows;
+//
+//    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+//  }
 
-  for (int repeat = 0; repeat < E; repeat++) {
-    taskOpts.metrics.push_back(opts.metrics[0]);
-  }
+  //  if (io.verbosity > 2) {
+  //    auto M = generator.create_manifold(E, coTrainingRows, false);
+  //    auto Mp = generator.create_manifold(E, coPredictionRows, true);
+  //    io.print("Coprediction M Manifold\n");
+  //    for (int i = 0; i < M.nobs(); i++) {
+  //      for (int j = 0; j < M.E_actual(); j++) {
+  //        io.print(fmt::format("{} ", M(i, j)));
+  //      }
+  //      io.print("\n");
+  //    }
+  //    io.print("\n");
+  //
+  //    io.print("Coprediction  Mp Manifold\n");
+  //    for (int i = 0; i < Mp.nobs(); i++) {
+  //      for (int j = 0; j < Mp.E_actual(); j++) {
+  //        io.print(fmt::format("{} ", Mp(i, j)));
+  //      }
+  //      io.print("\n");
+  //    }
+  //  }
 
-  // Add metrics for each dt variable (it is always treated as a continuous value)
-  for (int repeat = 0; repeat < generator.E_dt(E); repeat++) {
-    taskOpts.metrics.push_back(Metric::Diff);
-  }
-
-  int j = 1;
-  for (int E_extra_count : generator.E_extras_counts(E)) {
-    for (int repeat = 0; repeat < E_extra_count; repeat++) {
-      taskOpts.metrics.push_back(opts.metrics[j]);
-    }
-    j += 1;
-  }
-
-  if (!saveInputsFilename.empty()) {
-    json taskGroup;
-    taskGroup["generator"] = generator;
-    taskGroup["opts"] = taskOpts;
-    taskGroup["E"] = E;
-    taskGroup["trainingRows"] = coTrainingRows;
-    taskGroup["predictionRows"] = coPredictionRows;
-
-    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
-  }
-
-  if (io.verbosity > 2) {
-    auto M = generator.create_manifold(E, coTrainingRows, false);
-    auto Mp = generator.create_manifold(E, coPredictionRows, true);
-    io.print("Coprediction M Manifold\n");
-    for (int i = 0; i < M.nobs(); i++) {
-      for (int j = 0; j < M.E_actual(); j++) {
-        io.print(fmt::format("{} ", M(i, j)));
-      }
-      io.print("\n");
-    }
-    io.print("\n");
-
-    io.print("Coprediction  Mp Manifold\n");
-    for (int i = 0; i < Mp.nobs(); i++) {
-      for (int j = 0; j < Mp.E_actual(); j++) {
-        io.print(fmt::format("{} ", Mp(i, j)));
-      }
-      io.print("\n");
-    }
-  }
-
-  predictions.push({});
-  futures.push(edm_task_async(taskOpts, &generator, E, coTrainingRows, coPredictionRows, &io, &(predictions.back()),
-                              keep_going, all_tasks_finished));
-
-  return SUCCESS;
+  return launch_coprediction_task(E, k, co_x, coTrainingRows, coPredictionRows, &io, keep_going, all_tasks_finished);
 }
 
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
@@ -948,10 +759,9 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   ST_retcode rc = 0;
   int numCoeffColsSaved = 0;
 
+  std::queue<Prediction>& predictions = get_results();
+
   while (predictions.size() > 0) {
-    std::future<void>& fut = futures.front();
-    fut.get();
-    futures.pop();
 
     // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
     const Prediction& pred = predictions.front();
@@ -1024,7 +834,7 @@ STDLL stata_call(int argc, char* argv[])
 
       rc = save_all_task_results_to_stata(argc - 1, argv + 1);
     } else if (command == "launch_coprediction_task") {
-      rc = launch_coprediction_task(argc - 1, argv + 1);
+      rc = prepare_coprediction_task(argc - 1, argv + 1);
     } else {
       rc = UNKNOWN_ERROR;
     }

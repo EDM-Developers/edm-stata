@@ -18,6 +18,7 @@ typedef int retcode;
 
 #include <future>
 #include <memory> // For unique_ptr
+#include <queue>
 #include <string>
 #include <vector>
 

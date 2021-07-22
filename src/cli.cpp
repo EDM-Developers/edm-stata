@@ -26,28 +26,41 @@ int main(int argc, char* argv[])
   std::cerr << "Using nthreads = " << nthreads << "\n";
 
   ConsoleIO io;
-  std::queue<Prediction> predictions;
-  std::queue<std::future<void>> futures;
-  std::queue<Inputs> inputs;
 
   std::cerr << "Read in the JSON input from " << fnameIn << "\n";
   std::ifstream i(fnameIn);
   json j;
   i >> j;
 
-  bool verb = false;
+  size_t ext = fnameIn.find_last_of(".");
+  fnameIn = fnameIn.substr(0, ext);
+  std::string fnameOut = fnameIn + "-out.json";
+
+  remove(fnameOut.c_str());
+
+  int rc = 0;
+  json results;
+
+  bool verb = true;
 
   int numTaskGroups = j.size();
   std::cerr << "Number of task groups is " << numTaskGroups << "\n";
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
     if (verb) {
-      std::cout << "Starting task group number " << taskGroupNum << "\n";
+      std::cerr << "Starting task group number " << taskGroupNum << "\n";
     }
 
     json taskGroup = j[taskGroupNum];
 
     ManifoldGenerator generator = taskGroup["generator"];
     Options opts = taskGroup["opts"];
+
+    std::cerr << "Loading: " << opts.cmdLine << "\n";
+
+    if (opts.copredict) {
+      std::cerr << "Actually, skipping the coprediction for not (not yet implemented)\n";
+      continue;
+    }
 
     std::vector<int> Es = taskGroup["Es"];
     std::vector<int> libraries = taskGroup["libraries"];
@@ -62,39 +75,33 @@ int main(int argc, char* argv[])
     std::string rngState = taskGroup["rngState"];
     double nextRV = taskGroup["nextRV"];
 
-//    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-//                      saveSMAPCoeffs, usable, rngState, nextRV);
+    std::cerr << "Loaded this part of the JSON\n";
+
+    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
+                      saveSMAPCoeffs, usable, rngState, nextRV, &io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
-    int numTasks = futures.size();
-    for (int taskNum = 0; taskNum < numTasks; taskNum++) {
       if (verb) {
-        std::cout << "Getting results of task number " << taskNum << "\n";
+        std::cerr << "Waiting for results...\n";
       }
-      futures.front().get();
-      futures.pop();
-    }
-  }
 
-  size_t ext = fnameIn.find_last_of(".");
-  fnameIn = fnameIn.substr(0, ext);
-  std::string fnameOut = fnameIn + "-out.json";
+    std::queue<Prediction>& predictions = get_results();
 
-  remove(fnameOut.c_str());
-
-  int rc = 0;
-  json results;
-
-  std::cerr << "Saving " << predictions.size() << " predictions\n";
-  while (!predictions.empty()) {
-    const Prediction& pred = predictions.front();
-
-    results.push_back(pred);
-    if (pred.rc > rc) {
-      rc = pred.rc;
+    if (verb) {
+      std::cerr << "Storing results...\n";
     }
 
-    predictions.pop();
+    while (!predictions.empty()) {
+      const Prediction& pred = predictions.front();
+
+      results.push_back(pred);
+      if (pred.rc > rc) {
+        rc = pred.rc;
+      }
+
+      predictions.pop();
+    }
+
   }
 
   std::ofstream o(fnameOut);
