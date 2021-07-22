@@ -51,15 +51,6 @@ public:
 
 // Global state, needed to persist between multiple edm calls
 StataIO io;
-Options opts;
-ManifoldGenerator generator;
-TrainPredictSplitter splitter;
-std::vector<bool> trainingRows;
-std::vector<bool> predictionRows;
-std::queue<Prediction> predictions;
-std::queue<std::future<void>> futures;
-json taskGroup;
-
 std::atomic<bool> breakButtonPressed = false;
 std::atomic<bool> allTasksFinished = false;
 
@@ -291,8 +282,8 @@ void print_vector(std::string name, std::vector<T> vec)
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras, bool dtMode, ST_double dtWeight,
-                      const std::vector<Metric>& metrics)
+void print_setup_info(int argc, char* argv[], const Options& opts, char* reqThreads, ST_int numExtras, bool dtMode,
+                      ST_double dtWeight, const std::vector<Metric>& metrics)
 {
   if (io.verbosity > 1) {
     // Overview of variables and arguments passed and observations in sample
@@ -335,7 +326,8 @@ void print_setup_info(int argc, char* argv[], char* reqThreads, ST_int numExtras
 }
 
 /* Print to the Stata console the inputs to the plugin  */
-void print_launch_info(Options& taskOpts, std::vector<bool>& trainingRows, std::vector<bool>& predictionRows, ST_int E)
+void print_launch_info(const ManifoldGenerator& generator, Options& taskOpts, std::vector<bool>& trainingRows,
+                       std::vector<bool>& predictionRows, ST_int E)
 {
   if (io.verbosity > 1) {
     for (int t = 0; t < taskOpts.thetas.size(); t++) {
@@ -426,6 +418,11 @@ Metric guess_appropriate_metric(std::vector<ST_double> data, int targetSample = 
   }
 }
 
+ManifoldGenerator generator;
+Options opts;
+std::queue<Prediction> predictions;
+std::queue<std::future<void>> futures;
+
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
 void reset_global_state()
@@ -443,12 +440,37 @@ void reset_global_state()
   allTasksFinished = false;
 }
 
-ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool savePrediction, bool saveSMAPCoeffs,
-                           bool newTrainPredictSplit, std::string saveInputsFilename);
+ST_retcode launch_edm_task(const ManifoldGenerator& generator, const Options& opts, int iter, int E, int k, int library,
+                           bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
+                           std::vector<bool> predictionRows);
 
-ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, int k, int numReps, int crossfold,
-                             bool explore, bool full, bool saveFinalPredictions, bool saveSMAPCoeffs,
-                             std::string saveInputsFilename);
+ST_retcode launch_task_group(const ManifoldGenerator& generator, const Options& opts, std::vector<int> Es,
+                             std::vector<int> libraries, int k, int numReps, int crossfold, bool explore, bool full,
+                             bool saveFinalPredictions, bool saveSMAPCoeffs, std::vector<bool> usable,
+                             std::string rngState, double nextRV);
+
+std::vector<bool> generate_usable(std::vector<bool> touse, ManifoldGenerator& generator, int maxE, bool allowMissing)
+{
+  // Make the largest manifold we'll need in order to find missing values for 'usable'
+  std::vector<bool> allTrue(touse.size());
+  for (int i = 0; i < allTrue.size(); i++) {
+    allTrue[i] = true;
+  }
+
+  Manifold M = generator.create_manifold(maxE, allTrue, false);
+
+  // Generate the 'usable' variable
+  std::vector<bool> usable(touse.size());
+  for (int i = 0; i < usable.size(); i++) {
+    if (allowMissing) {
+      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
+    } else {
+      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
+    }
+  }
+
+  return usable;
+}
 
 /*
  * Read that information needed for the edm tasks which is doesn't change across
@@ -573,26 +595,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
-  // Make the largest manifold we'll need in order to find missing values for 'usable'
-  std::vector<bool> allTrue(touse.size());
-  for (int i = 0; i < allTrue.size(); i++) {
-    allTrue[i] = true;
-  }
-
-  Manifold M = generator.create_manifold(maxE, allTrue, false);
-
-  // Generate the 'usable' variable, and count the number of true values
-  std::vector<bool> usable(touse.size());
-  int numUsable = 0;
-  for (int i = 0; i < usable.size(); i++) {
-    if (allowMissing) {
-      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
-    } else {
-      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
-    }
-    numUsable += usable[i];
-  }
-
+  std::vector<bool> usable = generate_usable(touse, generator, maxE, allowMissing);
   print_vector<bool>("usable", usable);
 
   if (allowMissing && opts.missingdistance == 0) {
@@ -618,13 +621,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  if (requiresRandomNumbers && !rngState.empty()) {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState, nextRV);
-  } else {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable);
-  }
-
-  print_setup_info(argc, argv, reqThreads, numExtras, dtMode, dtWeight, opts.metrics);
+  print_setup_info(argc, argv, opts, reqThreads, numExtras, dtMode, dtWeight, opts.metrics);
 
   auto usableToSave = std::make_unique<double[]>(usable.size());
   for (int i = 0; i < usable.size(); i++) {
@@ -676,18 +673,59 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (!explore) {
     libraries = stata_numlist<int>("l_ori"); // The 'library' macro gets overwritten
     if (libraries.empty()) {
+      int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
       libraries.push_back(numUsable);
     }
   }
 
-  return launch_task_group(Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions, saveSMAPCoeffs,
-                           saveInputsFilename);
+  // If requested, save the inputs to a local file for testing
+  if (!saveInputsFilename.empty()) {
+    if (io.verbosity > 1) {
+      io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
+      io.flush();
+    }
+
+    json taskGroup;
+
+    taskGroup["generator"] = generator;
+    taskGroup["opts"] = opts;
+
+    taskGroup["Es"] = Es;
+    taskGroup["libraries"] = libraries;
+    taskGroup["k"] = k;
+    taskGroup["numReps"] = numReps;
+    taskGroup["crossfold"] = crossfold;
+    taskGroup["explore"] = explore;
+    taskGroup["full"] = full;
+    taskGroup["saveFinalPredictions"] = saveFinalPredictions;
+    taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
+    taskGroup["usable"] = usable;
+    taskGroup["rngState"] = rngState;
+    taskGroup["nextRV"] = nextRV;
+
+    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+  }
+
+  return launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
+                           saveSMAPCoeffs, usable, rngState, nextRV);
 }
 
-ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, int k, int numReps, int crossfold,
-                             bool explore, bool full, bool saveFinalPredictions, bool saveSMAPCoeffs,
-                             std::string saveInputsFilename)
+ST_retcode launch_task_group(const ManifoldGenerator& generator, const Options& opts, std::vector<int> Es,
+                             std::vector<int> libraries, int k, int numReps, int crossfold, bool explore, bool full,
+                             bool saveFinalPredictions, bool saveSMAPCoeffs, std::vector<bool> usable,
+                             std::string rngState, double nextRV)
 {
+  // Construct the instance which will (repeatedly) split the data into either the training manifold
+  // or the prediction manifold; sometimes this is randomised so the RNG state may need to be set.
+  bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
+
+  TrainPredictSplitter splitter;
+  if (requiresRandomNumbers && !rngState.empty()) {
+    splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState, nextRV);
+  } else {
+    splitter = TrainPredictSplitter(explore, full, crossfold, usable);
+  }
+
   bool newTrainPredictSplit = true;
   int taskNum = 0;
   int numTasks = explore ? numReps * Es.size() : numReps * Es.size() * libraries.size();
@@ -736,9 +774,13 @@ ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, in
           savePrediction = saveFinalPredictions && (taskNum == numTasks);
         }
 
-        launch_edm_task(iter, E, kAdj, library, savePrediction, saveSMAPCoeffs, newTrainPredictSplit,
-                        saveInputsFilename);
-        newTrainPredictSplit = false;
+        if (newTrainPredictSplit) {
+          splitter.update_train_predict_split(library, iter);
+          newTrainPredictSplit = false;
+        }
+
+        launch_edm_task(generator, opts, iter, E, kAdj, library, savePrediction, saveSMAPCoeffs,
+                        splitter.trainingRows(), splitter.predictionRows());
       }
     }
   }
@@ -746,8 +788,9 @@ ST_retcode launch_task_group(std::vector<int> Es, std::vector<int> libraries, in
   return SUCCESS;
 }
 
-ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool savePrediction, bool saveSMAPCoeffs,
-                           bool newTrainPredictSplit, std::string saveInputsFilename)
+ST_retcode launch_edm_task(const ManifoldGenerator& generator, const Options& opts, int iter, int E, int k, int library,
+                           bool savePrediction, bool saveSMAPCoeffs, std::vector<bool> trainingRows,
+                           std::vector<bool> predictionRows)
 {
   Options taskOpts = opts;
   taskOpts.copredict = false;
@@ -779,48 +822,9 @@ ST_retcode launch_edm_task(int iterationNumber, int E, int k, int library, bool 
     j += 1;
   }
 
-  // Find which rows are used for training & which for prediction
-  if (newTrainPredictSplit) {
-    std::pair<std::vector<bool>, std::vector<bool>> split = splitter.train_predict_split(library, iterationNumber);
-    trainingRows = std::vector<bool>(split.first);
-    predictionRows = std::vector<bool>(split.second);
-  }
-
-  // If requested, save the inputs to a local file for testing
-  if (!saveInputsFilename.empty()) {
-    if (io.verbosity > 1) {
-      io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
-      io.flush();
-    }
-
-    if (taskOpts.taskNum == 0) {
-      taskGroup.clear();
-      taskGroup["generator"] = generator;
-    }
-
-    json task;
-    task["opts"] = taskOpts;
-    task["E"] = E;
-    if (newTrainPredictSplit) {
-      std::vector<int> trainingRowsInt, predictionRowsInt;
-
-      std::copy(trainingRows.begin(), trainingRows.end(), std::back_inserter(trainingRowsInt));
-
-      std::copy(predictionRows.begin(), predictionRows.end(), std::back_inserter(predictionRowsInt));
-
-      task["trainingRows"] = trainingRowsInt;
-      task["predictionRows"] = predictionRowsInt;
-    }
-    taskGroup["tasks"].push_back(task);
-
-    if (taskOpts.taskNum == taskOpts.numTasks - 1) {
-      append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
-    }
-  }
-
   predictions.push({});
 
-  print_launch_info(taskOpts, trainingRows, predictionRows, E);
+  print_launch_info(generator, taskOpts, trainingRows, predictionRows, E);
 
   futures.push(edm_task_async(taskOpts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()),
                               keep_going, all_tasks_finished));
@@ -892,19 +896,14 @@ ST_retcode launch_coprediction_task(int argc, char* argv[])
   }
 
   if (!saveInputsFilename.empty()) {
-    taskGroup.clear();
+    json taskGroup;
     taskGroup["generator"] = generator;
+    taskGroup["opts"] = taskOpts;
+    taskGroup["E"] = E;
+    taskGroup["trainingRows"] = coTrainingRows;
+    taskGroup["predictionRows"] = coPredictionRows;
 
-    json task;
-    task["opts"] = taskOpts;
-    task["E"] = E;
-    task["trainingRows"] = coTrainingRows;
-    task["predictionRows"] = coPredictionRows;
-    taskGroup["tasks"].push_back(task);
-
-    if (taskOpts.taskNum == taskOpts.numTasks - 1) {
-      append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
-    }
+    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
   }
 
   if (io.verbosity > 2) {

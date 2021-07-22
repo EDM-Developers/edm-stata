@@ -11,6 +11,7 @@ private:
   bool _explore, _full;
   int _crossfold, _numObsUsable;
   std::vector<bool> _usable;
+  std::vector<bool> _trainingRows, _predictionRows;
   std::vector<int> _crossfoldURank;
   MtRng64 _rng;
 
@@ -111,33 +112,36 @@ public:
     }
   }
 
-  std::pair<std::vector<bool>, std::vector<bool>> train_predict_split(int library, int crossfoldIter)
+  void update_train_predict_split(int library, int crossfoldIter)
   {
     if (_explore && _full) {
-      return { _usable, _usable };
+      _trainingRows = _usable;
+      _predictionRows = _usable;
+      return;
     }
 
-    std::vector<bool> trainingRows(_usable.size()), predictionRows(_usable.size());
+    _trainingRows = std::vector<bool>(_usable.size());
+    _predictionRows = std::vector<bool>(_usable.size());
 
     if (_explore && _crossfold > 0) {
       int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
+      for (int i = 0; i < _trainingRows.size(); i++) {
         if (_usable[i]) {
           if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
-            trainingRows[i] = false;
-            predictionRows[i] = true;
+            _trainingRows[i] = false;
+            _predictionRows[i] = true;
           } else {
-            trainingRows[i] = true;
-            predictionRows[i] = false;
+            _trainingRows[i] = true;
+            _predictionRows[i] = false;
           }
           obsNum += 1;
         } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
+          _trainingRows[i] = false;
+          _predictionRows[i] = false;
         }
       }
 
-      return { trainingRows, predictionRows };
+      return;
     }
 
     std::vector<double> u;
@@ -150,19 +154,19 @@ public:
       double med = median(u);
 
       int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
+      for (int i = 0; i < _trainingRows.size(); i++) {
         if (_usable[i]) {
           if (u[obsNum] < med) {
-            trainingRows[i] = true;
-            predictionRows[i] = false;
+            _trainingRows[i] = true;
+            _predictionRows[i] = false;
           } else {
-            trainingRows[i] = false;
-            predictionRows[i] = true;
+            _trainingRows[i] = false;
+            _predictionRows[i] = true;
           }
           obsNum += 1;
         } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
+          _trainingRows[i] = false;
+          _predictionRows[i] = false;
         }
       }
     } else {
@@ -175,22 +179,24 @@ public:
       }
 
       int obsNum = 0;
-      for (int i = 0; i < trainingRows.size(); i++) {
+      for (int i = 0; i < _trainingRows.size(); i++) {
         if (_usable[i]) {
-          predictionRows[i] = true;
+          _predictionRows[i] = true;
           if (u[obsNum] < uCutoff) {
-            trainingRows[i] = true;
+            _trainingRows[i] = true;
           } else {
-            trainingRows[i] = false;
+            _trainingRows[i] = false;
           }
           obsNum += 1;
         } else {
-          trainingRows[i] = false;
-          predictionRows[i] = false;
+          _trainingRows[i] = false;
+          _predictionRows[i] = false;
         }
       }
     }
-
-    return { trainingRows, predictionRows };
   }
+
+  std::vector<bool> trainingRows() const { return _trainingRows; }
+
+  std::vector<bool> predictionRows() const { return _predictionRows; }
 };

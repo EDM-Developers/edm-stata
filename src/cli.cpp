@@ -43,39 +43,30 @@ int main(int argc, char* argv[])
     if (verb) {
       std::cout << "Starting task group number " << taskGroupNum << "\n";
     }
-    ManifoldGenerator generator = j[taskGroupNum]["generator"];
-    std::vector<bool> trainingRows, predictionRows;
 
-    int numTasks = j[taskGroupNum]["tasks"].size();
-    std::cerr << "Number of tasks is " << numTasks << "\n";
+    json taskGroup = j[taskGroupNum];
 
-    for (int taskNum = 0; taskNum < numTasks; taskNum++) {
-      Options opts = j[taskGroupNum]["tasks"][taskNum]["opts"];
-      int E = j[taskGroupNum]["tasks"][taskNum]["E"];
+    ManifoldGenerator generator = taskGroup["generator"];
+    Options opts = taskGroup["opts"];
 
-      if (j[taskGroupNum]["tasks"][taskNum].contains("trainingRows")) {
-        // Saving the vector of bools as a vector of ints (as it's much smaller in JSON format),
-        // so have to convert it back.
-        trainingRows.clear();
-        predictionRows.clear();
+    std::vector<int> Es = taskGroup["Es"];
+    std::vector<int> libraries = taskGroup["libraries"];
+    int k = taskGroup["k"];
+    int numReps = taskGroup["numReps"];
+    int crossfold = taskGroup["crossfold"];
+    bool explore = taskGroup["explore"];
+    bool full = taskGroup["full"];
+    bool saveFinalPredictions = taskGroup["saveFinalPredictions"];
+    bool saveSMAPCoeffs = taskGroup["saveSMAPCoeffs"];
+    std::vector<bool> usable = taskGroup["usable"];
+    std::string rngState = taskGroup["rngState"];
+    double nextRV = taskGroup["nextRV"];
 
-        std::vector<int> trainingRowsInt = j[taskGroupNum]["tasks"][taskNum]["trainingRows"];
-        std::vector<int> predictionRowsInt = j[taskGroupNum]["tasks"][taskNum]["predictionRows"];
-
-        std::copy(trainingRowsInt.begin(), trainingRowsInt.end(), std::back_inserter(trainingRows));
-
-        std::copy(predictionRowsInt.begin(), predictionRowsInt.end(), std::back_inserter(predictionRows));
-      }
-
-      opts.nthreads = nthreads;
-
-      predictions.push({});
-
-      futures.emplace(
-        edm_task_async(opts, &generator, E, trainingRows, predictionRows, &io, &(predictions.back()), keep_going));
-    }
+//    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
+//                      saveSMAPCoeffs, usable, rngState, nextRV);
 
     // Collect the results of this task group before moving on to the next task group
+    int numTasks = futures.size();
     for (int taskNum = 0; taskNum < numTasks; taskNum++) {
       if (verb) {
         std::cout << "Getting results of task number " << taskNum << "\n";
