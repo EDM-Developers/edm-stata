@@ -740,7 +740,12 @@ program define edmExplore, eclass
 	
 	local task_num = 1
 	local num_tasks = `round'*`theta_size'*`e_size'
-	mat r = J(`num_tasks', 4, .)	
+	mat r = J(`num_tasks', 4, .)
+
+	if ("`copredictvar'" != "") & (`num_tasks' != 1) {
+		di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
+		di as result ""
+	}
 
 	edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') ///
 		num_extras(`z_count') num_eextras(`z_e_varying_count')
@@ -786,33 +791,6 @@ program define edmExplore, eclass
 			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 		}
 	}
-	else {
-		// PJL: Check that `savesmap' is not needed in explore mode.
-		// Setup variables which the plugin will modify
-		scalar plugin_finished = 0
-		local missing_dist_used = ""
-
-		// The plugin will save the 'usable' it generates to to here
-		qui gen double `usable' = .
-
-		local explore_mode = 1
-		local full_mode = ("`full'" == "full")
-
-		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
-		// Instead, just save it as a local and have the plugin read it using the Stata C API.
-		local rngstate = c(rngstate)
-		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-		set rngstate `rngstate'
-
-		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "launch_edm_tasks" ///
-				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
-				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
-				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`cmdline'"
-
-		local missingdistance = `missing_dist_used'
-		qui compress `usable'
-	}
 
 	// Default value for 'missingdistance'
 	if `mata_mode' & `allow_missing_mode' & `missingdistance' <= 0 {
@@ -837,7 +815,6 @@ program define edmExplore, eclass
 
 		confirm new variable `copredict'
 		tempvar co_train_set co_predict_set
-		gen byte `co_train_set' = `usable'
 
 		* build prediction manifold
 		tokenize "`copredictvar'"
@@ -865,17 +842,18 @@ program define edmExplore, eclass
 		// Generate the same way as `usable', though don't insist on `x_f' being accessible.
 		tempvar co_usable
 		if `allow_missing_mode' {
-				qui gen byte `co_usable' = 0
-				foreach v of local co_mapping {
-					qui replace `co_usable' = 1 if `v' !=. & `touse'
-				}
+			qui gen byte `co_usable' = 0
+			foreach v of local co_mapping {
+				qui replace `co_usable' = 1 if `v' !=. & `touse'
 			}
-			else {
-				tempvar any_missing_in_co_manifold
-				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
-				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
-			}
+		}
+		else {
+			tempvar any_missing_in_co_manifold
+			hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+		}
 
+		gen byte `co_train_set' = `co_usable'
 		gen byte `co_predict_set' = `co_usable'
 
 		//restore t
@@ -887,6 +865,35 @@ program define edmExplore, eclass
 				qui tsset `newt'
 			}
 		}
+	}
+
+	if !`mata_mode' {
+		// PJL: Check that `savesmap' is not needed in explore mode.
+		// Setup variables which the plugin will modify
+		scalar plugin_finished = 0
+		local missing_dist_used = ""
+
+		// The plugin will save the 'usable' it generates to to here
+		qui gen double `usable' = .
+
+		local explore_mode = 1
+		local full_mode = ("`full'" == "full")
+		local copredict_mode = ("`copredictvar'" != "")
+
+		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
+		// Instead, just save it as a local and have the plugin read it using the Stata C API.
+		local rngstate = c(rngstate)
+		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+		set rngstate `rngstate'
+
+		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set', "launch_edm_tasks" ///
+				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
+				"`copredict_mode'" "`cmdline'"
+
+		local missingdistance = `missing_dist_used'
+		qui compress `usable'
 	}
 
 	if `mata_mode' {
@@ -1078,29 +1085,17 @@ program define edmExplore, eclass
 		}
 	}
 
-	if "`copredictvar'" != ""  {
-		if `num_tasks' == 1 {
-			if `mata_mode' {
-				qui replace `overlap' = 0
-			}
-			qui replace `co_train_set' = 0 if `usable' == 0
-
-			tempvar co_x_p
-			qui gen double `co_x_p'=.
-
-			if `mata_mode' {
-				break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
-			}
-			else {
-				scalar plugin_finished = 0
-
-				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						"`max_e'" "`lib_size'" "`saveinputs'"
-			}
+	if "`copredictvar'" != "" {
+		if `mata_mode' {
+			qui replace `overlap' = 0
 		}
-		else {
-			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
-			di as result ""
+
+		tempvar co_x_p
+		qui gen double `co_x_p'=.
+
+		if `mata_mode' {
+			qui replace `co_train_set' = 0 if `usable' == 0
+			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`overlap'", "`algorithm'", "","`force'",`missingdistance')
 		}
 	}
 
@@ -1575,6 +1570,11 @@ program define edmXmap, eclass
 		local num_tasks = `replicate'*`theta_size'*`e_size'*`l_size'
 		mat r`direction_num' = J(`num_tasks', 4, .)
 
+		if ("`copredictvar'" != "") & (`num_tasks' != 1) {
+			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
+			di as result ""
+		}
+
 		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') ///
 			num_extras(`z_count') num_eextras(`z_e_varying_count')
 		local manifold_size = `r(manifold_size)'
@@ -1625,35 +1625,6 @@ program define edmXmap, eclass
 				gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
 			}
 		}
-		else {
-			// Setup variables which the plugin will modify
-			scalar plugin_finished = 0
-			local missing_dist_used = ""
-
-			// The plugin will save the 'usable' it generates to to here
-			qui gen double `usable' = .
-
-			local explore_mode = 0
-			local full_mode = 0
-			local crossfold = 0
-
-			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
-			// Instead, just save it as a local and have the plugin read it using the Stata C API.
-			local rngstate = c(rngstate)
-			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-			set rngstate `rngstate'
-
-			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable', "launch_edm_tasks" ///
-					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
-					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
-					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`cmdline'"
-
-			local missingdistance`direction_num' = `missing_dist_used'
-			// Collect a list of all the variables created to store the SMAP coefficients
-			// across all the 'replicate's for this xmap direction.
-			local all_savesmap_vars = ""
-		}
 
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
 			// temporary move to newt_co
@@ -1669,7 +1640,7 @@ program define edmXmap, eclass
 			}
 			confirm new variable `copredict'
 			tempvar co_train_set co_predict_set
-			gen byte `co_train_set' = `usable'
+
 			* build prediction manifold
 			tokenize "`copredictvar'"
 
@@ -1714,7 +1685,9 @@ program define edmXmap, eclass
 				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
 			}
 
+			gen byte `co_train_set' = `co_usable'
 			gen byte `co_predict_set' = `co_usable'
+
 			local comap_constructed = 1
 
 			//restore t
@@ -1728,6 +1701,46 @@ program define edmXmap, eclass
 					}
 				}
 			}
+		}
+
+		if !`mata_mode' {
+			// Setup variables which the plugin will modify
+			scalar plugin_finished = 0
+			local missing_dist_used = ""
+
+			// The plugin will save the 'usable' it generates to to here
+			qui gen double `usable' = .
+
+			local explore_mode = 0
+			local full_mode = 0
+			local crossfold = 0
+
+			local copredict_mode = ("`copredictvar'" != "") & (`direction_num' == `num_directions')
+
+			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
+			// Instead, just save it as a local and have the plugin read it using the Stata C API.
+			local rngstate = c(rngstate)
+			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
+			set rngstate `rngstate'
+
+			if `copredict_mode' {
+				local co_xvar = "`co_x'"
+			}
+			else {
+				local co_xvar = ""
+			}
+
+
+			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set', "launch_edm_tasks" ///
+					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
+					"`copredict_mode'" "`cmdline'"
+
+			local missingdistance`direction_num' = `missing_dist_used'
+			// Collect a list of all the variables created to store the SMAP coefficients
+			// across all the 'replicate's for this xmap direction.
+			local all_savesmap_vars = ""
 		}
 
 		tempvar train_set predict_set
@@ -1970,28 +1983,17 @@ program define edmXmap, eclass
 	}
 
 	if "`copredictvar'" != "" {
-		if `num_tasks' == 1 {
-			qui gen byte `overlap' = 0
+		qui gen byte `overlap' = 0
+
+		tempvar co_x_p
+		qui gen double `co_x_p' = .
+
+		//check whether dt transformation is required for copredict?
+		// extract t for copredict variables -> add to copredict extras
+		// set to new id t for mainfold construction
+		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
-
-			tempvar co_x_p
-			qui gen double `co_x_p' = .
-
-			//check whether dt transformation is required for copredict?
-			// extract t for copredict variables -> add to copredict extras
-			// set to new id t for mainfold construction
-			if `mata_mode' {
-				break mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
-			}
-			else {
-				scalar plugin_finished = 0
-				plugin call edm_plugin `co_x' `co_train_set' `co_predict_set', "launch_coprediction_task" ///
-						"`max_e'" "`k_size'" "`saveinputs'"
-			}
-		}
-		else {
-			di as error "Error: coprediction can only run with one specified manifold construct (no repetition etc.)" _c
-			di as result ""
+			break mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size', "`overlap'", "`algorithm'","","`force'",`missingdistance')
 		}
 	}
 

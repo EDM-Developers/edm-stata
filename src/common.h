@@ -59,7 +59,7 @@ struct Options
 {
   bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
   bool distributeThreads = false;
-  int k, nthreads;
+  int k = 0, nthreads;
   double missingdistance;
   std::vector<double> thetas;
   Algorithm algorithm;

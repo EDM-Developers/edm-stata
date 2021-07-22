@@ -9,6 +9,13 @@ bool keep_going()
   return going;
 }
 
+std::vector<bool> int_to_bool(std::vector<int> iv)
+{
+  std::vector<bool> bv;
+  std::copy(iv.begin(), iv.end(), std::back_inserter(bv));
+  return bv;
+}
+
 int main(int argc, char* argv[])
 {
   if (argc < 2) {
@@ -71,14 +78,19 @@ int main(int argc, char* argv[])
     bool full = taskGroup["full"];
     bool saveFinalPredictions = taskGroup["saveFinalPredictions"];
     bool saveSMAPCoeffs = taskGroup["saveSMAPCoeffs"];
-    std::vector<bool> usable = taskGroup["usable"];
+    bool copredictMode = taskGroup["copredictMode"];
+    std::vector<bool> usable = int_to_bool(taskGroup["usable"]);
+    std::vector<double> co_x = taskGroup["co_x"];
+    std::vector<bool> coTrainingRows = int_to_bool(taskGroup["coTrainingRows"]);
+    std::vector<bool> coPredictionRows = int_to_bool(taskGroup["coPredictionRows"]);
     std::string rngState = taskGroup["rngState"];
     double nextRV = taskGroup["nextRV"];
 
     std::cerr << "Loaded this part of the JSON\n";
 
     launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                      saveSMAPCoeffs, usable, rngState, nextRV, &io, nullptr, nullptr);
+                      saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState, nextRV,
+                      &io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     if (verb) {

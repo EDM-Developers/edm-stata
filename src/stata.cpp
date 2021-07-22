@@ -281,103 +281,11 @@ void print_vector(std::string name, std::vector<T> vec)
   }
 }
 
-/* Print to the Stata console the inputs to the plugin  */
-void print_setup_info(int argc, char* argv[], const Options& opts, char* reqThreads, ST_int numExtras, bool dtMode,
-                      ST_double dtWeight, const std::vector<Metric>& metrics)
+std::vector<int> bool_to_int(std::vector<bool> bv)
 {
-  if (io.verbosity > 1) {
-    // Overview of variables and arguments passed and observations in sample
-    io.print(fmt::format("number of vars & obs = {}, {}\n", SF_nvars(), SF_nobs()));
-    io.print(fmt::format("first and last obs in sample = {}, {}\n\n", SF_in1(), SF_in2()));
-
-    for (int i = 0; i < argc; i++) {
-      io.print(fmt::format("arg {}: {}\n", i, argv[i]));
-    }
-    io.print("\n");
-
-    io.print(fmt::format("algorithm = {}\n\n", opts.algorithm));
-    io.print(fmt::format("force compute = {}\n\n", opts.forceCompute));
-    io.print(fmt::format("missing distance = {}\n\n", opts.missingdistance));
-
-    io.print(fmt::format("We have {} 'extra' columns\n", numExtras));
-    if (dtMode) {
-      io.print(fmt::format("Adding dt with weight {}\n", dtWeight));
-    }
-
-    io.print("Metrics:");
-    for (const Metric& m : metrics) {
-      if (m == Metric::Diff) {
-        io.print(" Diff");
-      } else {
-        io.print(" CheckSame");
-      }
-    }
-    io.print("\n");
-
-    io.print(fmt::format("Requested {} threads\n", reqThreads));
-    io.print(fmt::format("Using {} threads\n\n", opts.nthreads));
-
-    ST_int npcores = (ST_int)num_physical_cores();
-    ST_int nlcores = (ST_int)num_logical_cores();
-    io.print(fmt::format("System has {} physical cores <= {} logical cores\n", npcores, nlcores));
-
-    io.flush();
-  }
-}
-
-/* Print to the Stata console the inputs to the plugin  */
-void print_launch_info(const ManifoldGenerator& generator, Options& taskOpts, std::vector<bool>& trainingRows,
-                       std::vector<bool>& predictionRows, ST_int E)
-{
-  if (io.verbosity > 1) {
-    for (int t = 0; t < taskOpts.thetas.size(); t++) {
-      io.print(fmt::format("theta = {:6.4f}\n\n", taskOpts.thetas[t]));
-    }
-
-    io.print(fmt::format("train set obs: {}\n", std::accumulate(trainingRows.begin(), trainingRows.end(), 0)));
-    io.print(fmt::format("predict set obs: {}\n\n", std::accumulate(predictionRows.begin(), predictionRows.end(), 0)));
-
-    io.print(fmt::format("k = {}\n\n", taskOpts.k));
-    io.print(fmt::format("savePrediction = {}\n\n", taskOpts.savePrediction));
-    io.print(fmt::format("saveSMAPCoeffs = {}\n\n", taskOpts.saveSMAPCoeffs));
-
-    io.print(fmt::format("E is {}\n", E));
-    io.flush();
-
-    if (io.verbosity > 2) {
-      auto M = generator.create_manifold(E, trainingRows, false);
-      auto Mp = generator.create_manifold(E, predictionRows, true);
-
-      print_vector<bool>("training rows", trainingRows);
-      print_vector<bool>("prediction rows", predictionRows);
-
-      io.print("dt\n");
-      for (int i = 0; i < M.nobs(); i++) {
-        io.print(fmt::format("[{}] dt0 = {} dt1 = {}\n", i, M.dt(i, 0), M.dt(i, 1)));
-        if (i > 5) {
-          break;
-        }
-      }
-      io.print("\n");
-
-      io.print("M Manifold\n");
-      for (int i = 0; i < M.nobs(); i++) {
-        for (int j = 0; j < M.E_actual(); j++) {
-          io.print(fmt::format("{} ", M(i, j)));
-        }
-        io.print("\n");
-      }
-      io.print("\n");
-
-      io.print("Mp Manifold\n");
-      for (int i = 0; i < Mp.nobs(); i++) {
-        for (int j = 0; j < Mp.E_actual(); j++) {
-          io.print(fmt::format("{} ", Mp(i, j)));
-        }
-        io.print("\n");
-      }
-    }
-  }
+  std::vector<int> iv;
+  std::copy(bv.begin(), bv.end(), std::back_inserter(iv));
+  return iv;
 }
 
 double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
@@ -456,10 +364,10 @@ std::vector<bool> generate_usable(std::vector<bool> touse, ManifoldGenerator& ge
  */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 22) {
+  if (argc < 23) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 22) {
+  if (argc > 23) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -500,7 +408,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.aspectRatio = atof(argv[18]);
   std::string distance(argv[19]);
   std::string requestedMetrics(argv[20]);
-  opts.cmdLine = argv[21];
+  bool copredictMode = atoi(argv[21]);
+  opts.cmdLine = argv[22];
 
   auto factorVariables = stata_numlist<bool>("factor_var");
   auto extrasEVarying = stata_numlist<bool>("z_e_varying");
@@ -572,7 +481,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     generator.add_dt_data(t, dtWeight, dt0);
   }
 
-  // The stata variable named `touse'
+  // The stata variable named `touse' (the basis for the usable variables)
   std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
@@ -602,13 +511,26 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  print_setup_info(argc, argv, opts, reqThreads, numExtras, dtMode, dtWeight, opts.metrics);
-
   auto usableToSave = std::make_unique<double[]>(usable.size());
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
-  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 2);
+  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 1 + 1);
+
+  // If doing coprediction, bring in the main data for this manifold
+  std::vector<ST_double> co_x;
+  std::vector<bool> coTrainingRows, coPredictionRows;
+  if (copredictMode) {
+    co_x = stata_columns<ST_double>(3 + numExtras + 2 + 1);
+    coTrainingRows = stata_columns<bool>(3 + numExtras + 3 + 1);
+    coPredictionRows = stata_columns<bool>(3 + numExtras + 4 + 1);
+
+    for (int i = 0; i < usable.size(); i++) {
+      if (!usable[i]) {
+        coTrainingRows[i] = false;
+      }
+    }
+  }
 
   // Read in some macros from Stata
   char buffer[200];
@@ -667,10 +589,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
 
     json taskGroup;
-
     taskGroup["generator"] = generator;
     taskGroup["opts"] = opts;
-
     taskGroup["Es"] = Es;
     taskGroup["libraries"] = libraries;
     taskGroup["k"] = k;
@@ -680,7 +600,11 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["full"] = full;
     taskGroup["saveFinalPredictions"] = saveFinalPredictions;
     taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
-    taskGroup["usable"] = usable;
+    taskGroup["copredictMode"] = copredictMode;
+    taskGroup["usable"] = bool_to_int(usable);
+    taskGroup["co_x"] = co_x;
+    taskGroup["coTrainingRows"] = bool_to_int(coTrainingRows);
+    taskGroup["coPredictionRows"] = bool_to_int(coPredictionRows);
     taskGroup["rngState"] = rngState;
     taskGroup["nextRV"] = nextRV;
 
@@ -688,61 +612,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
 
   return launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                           saveSMAPCoeffs, usable, rngState, nextRV, &io, keep_going, all_tasks_finished);
-}
-
-ST_retcode prepare_coprediction_task(int argc, char* argv[])
-{
-  if (argc < 3) {
-    return TOO_FEW_VARIABLES;
-  }
-  if (argc > 3) {
-    return TOO_MANY_VARIABLES;
-  }
-
-  //  reset_global_state();
-
-  int E = atoi(argv[0]);
-  int k = atoi(argv[1]);
-  std::string saveInputsFilename(argv[2]);
-
-  std::vector<ST_double> co_x = stata_columns<ST_double>(1);
-  std::vector<bool> coTrainingRows = stata_columns<bool>(2);
-  std::vector<bool> coPredictionRows = stata_columns<bool>(3);
-
-  //  if (!saveInputsFilename.empty()) {
-  //    json taskGroup;
-  //    //    taskGroup["generator"] = generator;
-  //    //    taskGroup["opts"] = taskOpts;
-  //    taskGroup["E"] = E;
-  //    taskGroup["trainingRows"] = coTrainingRows;
-  //    taskGroup["predictionRows"] = coPredictionRows;
-  //
-  //    append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
-  //  }
-
-  //  if (io.verbosity > 2) {
-  //    auto M = generator.create_manifold(E, coTrainingRows, false);
-  //    auto Mp = generator.create_manifold(E, coPredictionRows, true);
-  //    io.print("Coprediction M Manifold\n");
-  //    for (int i = 0; i < M.nobs(); i++) {
-  //      for (int j = 0; j < M.E_actual(); j++) {
-  //        io.print(fmt::format("{} ", M(i, j)));
-  //      }
-  //      io.print("\n");
-  //    }
-  //    io.print("\n");
-  //
-  //    io.print("Coprediction  Mp Manifold\n");
-  //    for (int i = 0; i < Mp.nobs(); i++) {
-  //      for (int j = 0; j < Mp.E_actual(); j++) {
-  //        io.print(fmt::format("{} ", Mp(i, j)));
-  //      }
-  //      io.print("\n");
-  //    }
-  //  }
-
-  return launch_coprediction_task(E, k, co_x, coTrainingRows, coPredictionRows, &io, keep_going, all_tasks_finished);
+                           saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState,
+                           nextRV, &io, keep_going, all_tasks_finished);
 }
 
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
@@ -838,10 +709,7 @@ STDLL stata_call(int argc, char* argv[])
       rc = SUCCESS;
     } else if (command == "collect_results") {
       io.print(io.get_and_clear_async_buffer());
-
       rc = save_all_task_results_to_stata(argc - 1, argv + 1);
-    } else if (command == "launch_coprediction_task") {
-      rc = prepare_coprediction_task(argc - 1, argv + 1);
     } else {
       rc = UNKNOWN_ERROR;
     }

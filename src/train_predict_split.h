@@ -197,6 +197,5 @@ public:
   }
 
   std::vector<bool> trainingRows() const { return _trainingRows; }
-
   std::vector<bool> predictionRows() const { return _predictionRows; }
 };
