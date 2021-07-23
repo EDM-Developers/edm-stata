@@ -92,7 +92,7 @@ std::vector<std::future<Prediction>> launch_task_group(
         if (k > 0) {
           kAdj = k;
         } else if (k < 0) {
-          kAdj = library;
+          kAdj = -1; // Leave a sentinel value so we know to skip the nearest neighbours calculation
         } else if (k == 0) {
           bool isSMap = opts.algorithm == Algorithm::SMap;
           int defaultK = generator.E_actual(E) + 1 + isSMap;
@@ -415,21 +415,23 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, k, dists, kNNInds, ystar, rc, kUsed);
+      simplex_prediction(Mp_i, t, opts, M, dists, kNNInds, ystar, rc, kUsed);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, k, dists, kNNInds, ystar, coeffs, rc, kUsed);
+      smap_prediction(Mp_i, t, opts, M, Mp, dists, kNNInds, ystar, coeffs, rc, kUsed);
     }
   } else {
     rc(0, Mp_i) = INVALID_ALGORITHM;
   }
 }
 
-void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k,
-                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                        Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
+                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
+  int k = kNNInds.size();
+
   // Find the smallest distance (closest neighbour) among the supplied neighbours.
   double minDist = MISSING;
   for (int j = 0; j < k; j++) {
@@ -466,11 +468,13 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   rc(t, Mp_i) = SUCCESS;
 }
 
-void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
                      Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
 {
+  int k = kNNInds.size();
+
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.
   Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
@@ -552,8 +556,8 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 // N.B. The equivalent function in Stata/Mata is called 'minindex'.
 std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k, std::vector<int> idx)
 {
-  // If we asked for all of the neighbours to be considered, just return this index vector directly.
-  if (k >= idx.size()) {
+  // If we asked for all of the neighbours to be considered (e.g. with k = -1), return this index vector directly.
+  if (k < 0) {
     return idx;
   }
 

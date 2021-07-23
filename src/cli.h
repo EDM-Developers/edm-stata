@@ -97,6 +97,7 @@ void append_to_dumpfile(std::string fName, const json& taskGroup)
 
   allTaskGroups.push_back(taskGroup);
 
+  // Add "o << std::setw(4) << allTaskGroups" to pretty-print the saved JSON
   std::ofstream o(fName);
   o << allTaskGroups << std::endl;
 }

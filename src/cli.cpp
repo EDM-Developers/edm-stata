@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
     }
   }
 
+  // Remove the "<< std::setw(4)" to save space on the saved JSON file
   std::ofstream o(fnameOut);
   o << std::setw(4) << results << std::endl;
 

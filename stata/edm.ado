@@ -492,6 +492,11 @@ program define edmExplore, eclass
 		error 111
 	}
 
+	// If we say 'use all neighbours', then this is implicitly using 'force' mode
+	if `k' < 0 {
+		local force = "force"
+	}
+
 	* default values
 	if "`theta'" == ""{
 		local theta = 1
@@ -996,7 +1001,7 @@ program define edmExplore, eclass
 
 		// Set library size (unless k=0, when an adaptive default is applied)
 		if `k' > 0 {
-			local lib_size = min(`k',`train_size')
+			local lib_size = min(`k', `train_size')
 		}
 		else if `k' < 0 {
 			local lib_size = `train_size'
@@ -1018,7 +1023,7 @@ program define edmExplore, eclass
 				local def_lib_size = `r(manifold_size)' + `is_smap' + 1
 				local lib_size = min(`def_lib_size',`train_size')
 			}
-			
+
 			if `k' != 0 {
 				local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `lib_size'" + char(10)
 			}
@@ -1046,7 +1051,7 @@ program define edmExplore, eclass
 					qui sum `mae'
 					drop `mae'
 					mat r[`task_num',4] = r(mean)
-					
+
 					if `save_prediction' {
 						cap replace `predict' = `x_p' if `x_p' !=.
 					}
@@ -1066,7 +1071,7 @@ program define edmExplore, eclass
 				}
 
 				local newTrainPredictSplit = 0
-			}	
+			}
 		}
 
 		if `mata_mode' & `round' > 1 & `dot' > 0 {
@@ -1236,6 +1241,11 @@ program define edmXmap, eclass
 			dis as error "direction() option must be set to oneway if predicted values are to be saved."
 			error 197
 		}
+	}
+
+	// If we say 'use all neighbours', then this is implicitly using 'force' mode
+	if `k' < 0 {
+		local force = "force"
 	}
 
 	* default values
@@ -1610,7 +1620,7 @@ program define edmXmap, eclass
 				foreach v of local max_e_manifold {
 					qui replace `usable' = 1 if `v' !=. & `touse'
 				}
-				
+
 				qui replace `usable' = 0 if `x_f' == .
 
 				if `missingdistance' <= 0 {
@@ -1656,7 +1666,7 @@ program define edmXmap, eclass
 			* z list
 			local co_z_vars = "`z_vars'"
 			local co_z_e_varying = "`z_e_varying'"
-			
+
 			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
@@ -1796,7 +1806,7 @@ program define edmXmap, eclass
 		forvalues rep = 1/`round' {
 
 			qui replace `u' = runiform() if `usable'
-			
+
 			if `mata_mode' {
 				cap drop `urank'
 				qui egen double `urank' =rank(`u') if `usable', unique
@@ -1828,7 +1838,10 @@ program define edmXmap, eclass
 						local k_size = min(`def_lib_size',`train_size')
 					}
 					else if `k' < 0  {
-						local k_size = `lib_size'
+						// The next line is just guessing there's only 1 point
+						// with zero distance to the target, so if there's more then
+						// this number will be off.
+						local k_size = `lib_size' - 1
 					}
 
 					if `k' != 0 {

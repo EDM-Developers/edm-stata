@@ -21,11 +21,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
                      Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going());
 
-void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k,
-                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                        Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
+                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
 
-void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
                      Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
