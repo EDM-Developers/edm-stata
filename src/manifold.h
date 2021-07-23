@@ -9,14 +9,12 @@ using json = nlohmann::json;
 
 class Manifold
 {
-  std::unique_ptr<double[]> _flat = nullptr;
+  std::shared_ptr<double[]> _flat = nullptr;
   std::vector<double> _y;
   int _nobs, _E_x, _E_dt, _E_extras, _E_actual;
   double _missing;
 
 public:
-  Manifold(){};
-
   Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, int nobs, int E_x, int E_dt, int E_extras,
            int E_actual, double missing)
     : _flat(std::move(flat))
@@ -107,7 +105,6 @@ public:
 class ManifoldGenerator
 {
 private:
-  bool _copredict = false;
   bool _use_dt = false;
   bool _add_dt0 = false;
   int _tau;
@@ -125,7 +122,7 @@ public:
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);
 
-  ManifoldGenerator(){};
+  ManifoldGenerator() = default;
 
   ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
                     const std::vector<std::vector<double>>& extras, const std::vector<bool>& extrasEVarying,
@@ -144,11 +141,7 @@ public:
     }
   }
 
-  void add_coprediction_data(const std::vector<double>& co_x)
-  {
-    _co_x = co_x;
-    _copredict = true;
-  }
+  void add_coprediction_data(const std::vector<double>& co_x) { _co_x = co_x; }
 
   void add_dt_data(const std::vector<double>& t, double dtWeight, bool dt0)
   {
@@ -158,7 +151,7 @@ public:
     _add_dt0 = dt0;
   }
 
-  Manifold create_manifold(int E, const std::vector<bool>& filter, bool prediction) const;
+  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction) const;
 
   int E_dt(int E) const { return (_use_dt) * (E - 1 + _add_dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_varying * (E - 1); }

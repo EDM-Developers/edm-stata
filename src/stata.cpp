@@ -9,25 +9,16 @@
 #endif
 #include <fmt/format.h>
 
-#define EIGEN_NO_DEBUG
-#define EIGEN_DONT_PARALLELIZE
-#include <Eigen/Core>
-
 #include <algorithm>
 #include <future>
 #include <numeric> // for std::accumulate
-#include <queue>
-#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "cli.h" // to save the inputs to a local file for debugging
 #include "stats.h"
 #include "train_predict_split.h" // Just for 'TrainPredictSplitter::requiresRandomNumbers', can simplify
-
-const double PI = 3.141592653589793238463;
 
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
@@ -288,44 +279,6 @@ std::vector<int> bool_to_int(std::vector<bool> bv)
   return iv;
 }
 
-double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
-{
-  std::vector<double> x_usable;
-  for (int i = 0; i < x.size(); i++) {
-    if (usable[i] && x[i] != MISSING) {
-      x_usable.push_back(x[i]);
-    }
-  }
-
-  Eigen::Map<const Eigen::ArrayXd> xMap(x_usable.data(), x_usable.size());
-  const Eigen::ArrayXd xCent = xMap - xMap.mean();
-  double xSD = std::sqrt((xCent * xCent).sum() / (xCent.size() - 1));
-  double defaultMissingDist = 2 / sqrt(PI) * xSD;
-
-  return defaultMissingDist;
-}
-
-Metric guess_appropriate_metric(std::vector<ST_double> data, int targetSample = 100)
-{
-  std::unordered_set<double> uniqueValues;
-
-  int sampleSize = 0;
-  for (int i = 0; i < data.size() && sampleSize < targetSample; i++) {
-    if (data[i] != MISSING) {
-      sampleSize += 1;
-      uniqueValues.insert(data[i]);
-    }
-  }
-
-  if (uniqueValues.size() <= 10) {
-    // The data is likely binary or categorical, calculate the indicator function for two values being identical
-    return Metric::CheckSame;
-  } else {
-    // The data is likely continuous, just take differences between the values
-    return Metric::Diff;
-  }
-}
-
 std::vector<std::future<Prediction>> futures;
 
 // In case we have some remnants of previous runs still
@@ -337,7 +290,8 @@ void reset_global_state()
   allTasksFinished = false;
 }
 
-std::vector<bool> generate_usable(std::vector<bool> touse, ManifoldGenerator& generator, int maxE, bool allowMissing)
+std::vector<bool> generate_usable(const std::vector<bool>& touse, const ManifoldGenerator& generator, int maxE,
+                                  bool allowMissing)
 {
   // Make the largest manifold we'll need in order to find missing values for 'usable'
   std::vector<bool> allTrue(touse.size());
@@ -345,7 +299,7 @@ std::vector<bool> generate_usable(std::vector<bool> touse, ManifoldGenerator& ge
     allTrue[i] = true;
   }
 
-  Manifold M = generator.create_manifold(maxE, allTrue, false);
+  Manifold M = generator.create_manifold(maxE, allTrue, false, false);
 
   // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
@@ -524,6 +478,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<bool> coTrainingRows, coPredictionRows;
   if (copredictMode) {
     co_x = stata_columns<ST_double>(3 + numExtras + 2 + 1);
+    generator.add_coprediction_data(co_x);
+
     coTrainingRows = stata_columns<bool>(3 + numExtras + 3 + 1);
     coPredictionRows = stata_columns<bool>(3 + numExtras + 4 + 1);
 
@@ -604,7 +560,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
     taskGroup["copredictMode"] = copredictMode;
     taskGroup["usable"] = bool_to_int(usable);
-    taskGroup["co_x"] = co_x;
     taskGroup["coTrainingRows"] = bool_to_int(coTrainingRows);
     taskGroup["coPredictionRows"] = bool_to_int(coPredictionRows);
     taskGroup["rngState"] = rngState;
@@ -614,7 +569,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
 
   futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
-                              saveFinalPredictions, saveSMAPCoeffs, copredictMode, usable, co_x, coTrainingRows,
+                              saveFinalPredictions, saveSMAPCoeffs, copredictMode, usable, coTrainingRows,
                               coPredictionRows, rngState, nextRV, &io, keep_going, all_tasks_finished);
 
   return SUCCESS;

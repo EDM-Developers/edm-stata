@@ -13,7 +13,6 @@ public:
   ConsoleIO() { this->verbosity = std::numeric_limits<int>::max(); }
   ConsoleIO(int v) { this->verbosity = v; }
   virtual void out(const char* s) const { std::cout << s; }
-  virtual void out_async(const char* s) const { out(s); }
   virtual void error(const char* s) const { std::cerr << s; }
   virtual void flush() const { fflush(stdout); }
 };
@@ -28,8 +27,7 @@ struct Inputs
 
 void to_json(json& j, const ManifoldGenerator& g)
 {
-  j = json{ { "_copredict", g._copredict },
-            { "_use_dt", g._use_dt },
+  j = json{ { "_use_dt", g._use_dt },
             { "_add_dt0", g._add_dt0 },
             { "_tau", g._tau },
             { "_missing", g._missing },
@@ -46,7 +44,6 @@ void to_json(json& j, const ManifoldGenerator& g)
 
 void from_json(const json& j, ManifoldGenerator& g)
 {
-  j.at("_copredict").get_to(g._copredict);
   j.at("_use_dt").get_to(g._use_dt);
   j.at("_add_dt0").get_to(g._add_dt0);
   j.at("_tau").get_to(g._tau);
@@ -69,7 +66,7 @@ void from_json(const json& j, ManifoldGenerator& g)
  * \param fname dump filename
  * \param pointer to InputVars struct to store the read
  */
-Inputs parse_dumpfile(json j)
+Inputs parse_dumpfile(const json& j)
 {
   int E = j["E"];
   Options opts = j["opts"];
@@ -89,7 +86,7 @@ Inputs read_dumpfile(std::string fName)
   return parse_dumpfile(j[0]);
 }
 
-void append_to_dumpfile(std::string fName, json taskGroup)
+void append_to_dumpfile(std::string fName, const json& taskGroup)
 {
   json allTaskGroups;
 

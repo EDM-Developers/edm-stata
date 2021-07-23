@@ -219,7 +219,7 @@ public:
     left_ = 1;
   }
 
-  void init(std::string rngState, double nextRV)
+  void init(const std::string& rngState, double nextRV)
   {
     unsigned long long state[312];
 

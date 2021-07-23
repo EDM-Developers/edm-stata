@@ -2,7 +2,8 @@
 
 #include "manifold.h"
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool prediction) const
+Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict,
+                                            bool prediction) const
 {
   std::vector<int> inds;
   std::vector<double> y;
@@ -21,7 +22,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (int i = 0; i < nobs; i++) {
     for (int j = 0; j < E; j++) {
-      if (prediction && _copredict) {
+      if (prediction && copredict) {
         flat[i * E_actual(E) + j] = lagged(_co_x, inds, i, j);
       } else {
         flat[i * E_actual(E) + j] = lagged(_x, inds, i, j);

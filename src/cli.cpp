@@ -19,7 +19,7 @@ std::vector<bool> int_to_bool(std::vector<int> iv)
 int main(int argc, char* argv[])
 {
   if (argc < 2) {
-    std::cerr << "Usage: ./edm_cli filename [numThreads=1]" << std::endl;
+    std::cerr << "Usage: ./edm_cli filename [numThreads=4]" << std::endl;
     return -1;
   }
 
@@ -30,16 +30,16 @@ int main(int argc, char* argv[])
     nthreads = atoi(argv[2]);
   }
 
-  std::cerr << "Using nthreads = " << nthreads << "\n";
+  std::cout << "Using nthreads = " << nthreads << "\n";
 
   ConsoleIO io;
 
-  std::cerr << "Read in the JSON input from " << fnameIn << "\n";
+  std::cout << "Read in the JSON input from " << fnameIn << "\n";
   std::ifstream i(fnameIn);
   json j;
   i >> j;
 
-  size_t ext = fnameIn.find_last_of(".");
+  size_t ext = fnameIn.find_last_of('.');
   fnameIn = fnameIn.substr(0, ext);
   std::string fnameOut = fnameIn + "-out.json";
 
@@ -51,10 +51,10 @@ int main(int argc, char* argv[])
   bool verb = true;
 
   int numTaskGroups = j.size();
-  std::cerr << "Number of task groups is " << numTaskGroups << "\n";
+  std::cout << "Number of task groups is " << numTaskGroups << "\n";
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
     if (verb) {
-      std::cerr << "Starting task group number " << taskGroupNum << "\n";
+      std::cout << "Starting task group number " << taskGroupNum << "\n";
     }
 
     json taskGroup = j[taskGroupNum];
@@ -62,11 +62,8 @@ int main(int argc, char* argv[])
     ManifoldGenerator generator = taskGroup["generator"];
     Options opts = taskGroup["opts"];
 
-    std::cerr << "Loading: " << opts.cmdLine << "\n";
-
-    if (opts.copredict) {
-      std::cerr << "Actually, skipping the coprediction for not (not yet implemented)\n";
-      continue;
+    if (verb) {
+      std::cout << "Loading: " << opts.cmdLine << "\n";
     }
 
     std::vector<int> Es = taskGroup["Es"];
@@ -80,29 +77,22 @@ int main(int argc, char* argv[])
     bool saveSMAPCoeffs = taskGroup["saveSMAPCoeffs"];
     bool copredictMode = taskGroup["copredictMode"];
     std::vector<bool> usable = int_to_bool(taskGroup["usable"]);
-    std::vector<double> co_x = taskGroup["co_x"];
     std::vector<bool> coTrainingRows = int_to_bool(taskGroup["coTrainingRows"]);
     std::vector<bool> coPredictionRows = int_to_bool(taskGroup["coPredictionRows"]);
     std::string rngState = taskGroup["rngState"];
     double nextRV = taskGroup["nextRV"];
 
-    std::cerr << "Loaded this part of the JSON\n";
-
     std::vector<std::future<Prediction>> futures = launch_task_group(
       generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions, saveSMAPCoeffs,
-      copredictMode, usable, co_x, coTrainingRows, coPredictionRows, rngState, nextRV, &io, nullptr, nullptr);
+      copredictMode, usable, coTrainingRows, coPredictionRows, rngState, nextRV, &io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     if (verb) {
-      std::cerr << "Waiting for results...\n";
+      std::cout << "Waiting for results...\n";
     }
 
-    if (verb) {
-      std::cerr << "Storing results...\n";
-    }
-
-    for (int i = 0; i < futures.size(); i++) {
-      const Prediction pred = futures[i].get();
+    for (int f = 0; f < futures.size(); f++) {
+      const Prediction pred = futures[f].get();
 
       results.push_back(pred);
       if (pred.rc > rc) {

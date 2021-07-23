@@ -1,8 +1,7 @@
 #include "stats.h"
+#include "common.h"
 
-#define EIGEN_NO_DEBUG
-#define EIGEN_DONT_PARALLELIZE
-#include <Eigen/Dense>
+#include <unordered_set>
 
 double median(std::vector<double> u)
 {
@@ -75,5 +74,45 @@ double mean_absolute_error(const std::vector<double>& y1, const std::vector<doub
     return 0;
   } else {
     return mae;
+  }
+}
+
+double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
+{
+  const double PI = 3.141592653589793238463;
+
+  std::vector<double> x_usable;
+  for (int i = 0; i < x.size(); i++) {
+    if (usable[i] && x[i] != MISSING) {
+      x_usable.push_back(x[i]);
+    }
+  }
+
+  Eigen::Map<const Eigen::ArrayXd> xMap(x_usable.data(), x_usable.size());
+  const Eigen::ArrayXd xCent = xMap - xMap.mean();
+  double xSD = std::sqrt((xCent * xCent).sum() / (xCent.size() - 1));
+  double defaultMissingDist = 2 / sqrt(PI) * xSD;
+
+  return defaultMissingDist;
+}
+
+Metric guess_appropriate_metric(std::vector<double> data, int targetSample = 100)
+{
+  std::unordered_set<double> uniqueValues;
+
+  int sampleSize = 0;
+  for (int i = 0; i < data.size() && sampleSize < targetSample; i++) {
+    if (data[i] != MISSING) {
+      sampleSize += 1;
+      uniqueValues.insert(data[i]);
+    }
+  }
+
+  if (uniqueValues.size() <= 10) {
+    // The data is likely binary or categorical, calculate the indicator function for two values being identical
+    return Metric::CheckSame;
+  } else {
+    // The data is likely continuous, just take differences between the values
+    return Metric::Diff;
   }
 }

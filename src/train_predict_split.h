@@ -51,7 +51,6 @@ public:
     }
   }
 
-  bool requiresRandomNumbersEachTask() const { return (_crossfold == 0) && !_full; }
   static bool requiresRandomNumbers(int crossfold, bool full) { return crossfold > 0 || !full; }
 
   void set_rng_state(const std::string& rngState, double nextRV)
