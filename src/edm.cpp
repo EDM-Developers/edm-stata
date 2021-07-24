@@ -152,21 +152,18 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   // Expand the metrics vector now we know the value of E
   std::vector<Metric> metrics;
 
-  for (int repeat = 0; repeat < E; repeat++) {
-    metrics.push_back(opts.metrics[0]);
-  }
-
-  // Add metrics for each dt variable (it is always treated as a continuous value)
-  for (int repeat = 0; repeat < generator.E_dt(E); repeat++) {
+  // Add metrics for each of the main variables and each dt variable.
+  // These are always treated as a continuous values (though perhaps in the future this will change).
+  for (int lagNum = 0; lagNum < E + generator.E_dt(E); lagNum++) {
     metrics.push_back(Metric::Diff);
   }
 
-  int j = 1;
-  for (int E_extra_count : generator.E_extras_counts(E)) {
-    for (int repeat = 0; repeat < E_extra_count; repeat++) {
-      metrics.push_back(opts.metrics[j]);
+  // The user specified how to treat the extra variables.
+  for (int k = 0; k < generator.numExtras(); k++) {
+    int numLags = (k < generator.numExtrasLagged()) ? E : 1;
+    for (int lagNum = 0; lagNum < numLags; lagNum++) {
+      metrics.push_back(opts.metrics[k]);
     }
-    j += 1;
   }
 
   opts.metrics = metrics;

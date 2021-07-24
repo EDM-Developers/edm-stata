@@ -283,7 +283,7 @@ end
 
 program define edmConstructManifolds, rclass
 	syntax anything , x(name) touse(name) [dt_value(name)] ///
-			[z_vars(string)] [z_e_varying(string)] ///
+			[z_vars(string)] [z_e_varying_count(real 0)] ///
 			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)]
 
 	// Generate lags for 'x' data
@@ -301,11 +301,12 @@ program define edmConstructManifolds, rclass
 		}
 	}
 
-	// Generate extra variables & their lags if requested
+	// Generate the lagged extra variables and then the unlagged extras
 	local z_count = wordcount("`z_vars'")
 	forvalues k=1/`z_count' {
+
 		local z_k : word `k' of `z_vars'
-		local z_k_varying : word `k' of `z_e_varying'
+		local z_k_varying = (`k' <= `z_e_varying_count')
 
 		forvalues i=0/`=`z_k_varying'*(`max_e'-1)' {
 			local z_`k'_`i' = "``++manifold_index''"
@@ -340,10 +341,26 @@ program define edmCountExtras, rclass
 	local extravars = strtrim("`anything'")
 	local z_names = ""
 	local z_count = 0
-	local z_e_varying = ""
 	local z_e_varying_count = 0
 	local z_factor_var = ""
 
+	// First, reorder the variables so that the "(e)" / lagged variables are first
+	local laggedvars = ""
+	local unlaggedvars = ""
+	foreach v of local extravars {
+		local e_varying = strpos("`v'", "(e)")
+		if `e_varying' {
+			local laggedvars = strtrim("`laggedvars' `v'")
+			local ++z_e_varying_count
+		}
+		else {
+			local unlaggedvars = strtrim("`unlaggedvars' `v'")
+		}
+	}
+
+	local extravars = strtrim("`laggedvars' `unlaggedvars'")
+
+	// Next, do the proper parsing, validation, and handle the "z."/"i." prefixes
 	foreach v of local extravars {
 		local z_prefix = strpos("`v'", "z.")
 		if `z_prefix' {
@@ -371,8 +388,6 @@ program define edmCountExtras, rclass
 				error 198
 			}
 			local v = substr("`v'", 1, `suffix_ind'-1)
-			local ++z_e_varying_count 
-			local z_e_varying = "`z_e_varying' 1"
 		}
 
 		tsunab v_list : `v'
@@ -385,9 +400,6 @@ program define edmCountExtras, rclass
 		forvalues i = 1/`v_count' {
 			local z_names = "`z_names' `=cond(`z_prefix', "z.", "")'`=cond(`i_prefix', "i.", "")'``i''`=cond(`e_varying', "(e)", "")'"
 			local ++z_count
-			if !`e_varying' {
-					local z_e_varying = "`z_e_varying' 0"
-			}
 			local z_factor_var = "`z_factor_var' `=cond(`i_prefix', 1, 0)'"
 		}
 	}
@@ -395,7 +407,6 @@ program define edmCountExtras, rclass
 	return local z_names = strtrim("`z_names'")
 	return local z_count = `z_count'
 	return local z_e_varying_count = `z_e_varying_count'
-	return local z_e_varying = strtrim("`z_e_varying'")
 	return local z_factor_var = strtrim("`z_factor_var'")
 end
 
@@ -590,7 +601,6 @@ program define edmExplore, eclass
 
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
-	local factor_var = "`r(factor_var)'"
 
 	if `parsed_dt' {
 		/* general algorithm for generating t patterns
@@ -725,8 +735,7 @@ program define edmExplore, eclass
 	local z_count = `r(z_count)'
 	local z_names = "`r(z_names)'"
 	local z_e_varying_count = `r(z_e_varying_count)'
-	local z_e_varying = "`r(z_e_varying)'"
-	local factor_var = strtrim("`factor_var' `r(z_factor_var)'")
+	local z_factor_var = "`r(z_factor_var)'"
 
 	local z_vars = ""
 	forvalues i = 1/`z_count' {
@@ -764,7 +773,7 @@ program define edmExplore, eclass
 			local manifold_vars = "`manifold_vars' `manifold_var'"
 		}
 		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
-			z_vars("`z_vars'") z_e_varying("`z_e_varying'") ///
+			z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 		forvalues i=1/`=`max_e'-1' {
@@ -828,7 +837,7 @@ program define edmExplore, eclass
 
 		* z list
 		local co_z_vars = "`z_vars'"
-		local co_z_e_varying = "`z_e_varying'"
+		local co_z_e_varying_count = `z_e_varying_count'
 
 		// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 		local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
@@ -839,7 +848,7 @@ program define edmExplore, eclass
 			local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 		}
 		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
-			z_vars("`co_z_vars'") z_e_varying("`co_z_e_varying'") ///
+			z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 		local co_mapping = "`r(max_e_manifold)'"
@@ -895,7 +904,7 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1369,15 +1378,13 @@ program define edmXmap, eclass
 
 	tempvar x y
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
-	local factor_var = "`r(factor_var)'"
 	edmPreprocessVariable "`2'", touse(`touse') out(`y')
 
 	edmCountExtras `extraembed'
 	local z_count = `r(z_count)'
 	local z_names = "`r(z_names)'"
 	local z_e_varying_count = `r(z_e_varying_count)'
-	local z_e_varying = "`r(z_e_varying)'"
-	local factor_var = strtrim("`factor_var' `r(z_factor_var)'")
+	local z_factor_var = "`r(z_factor_var)'"
 
 	local z_vars = ""
 	forvalues i = 1/`z_count' {
@@ -1597,7 +1604,7 @@ program define edmXmap, eclass
 				local manifold_vars = "`manifold_vars' `manifold_var'"
 			}
 			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
-				z_vars("`z_vars'") z_e_varying("`z_e_varying'") ///
+				z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
 
 			forvalues i=1/`=`max_e'-1' {
@@ -1665,7 +1672,7 @@ program define edmXmap, eclass
 
 			* z list
 			local co_z_vars = "`z_vars'"
-			local co_z_e_varying = "`z_e_varying'"
+			local co_z_e_varying_count = `z_e_varying_count'
 
 			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
@@ -1676,7 +1683,7 @@ program define edmXmap, eclass
 				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
 			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
-				z_vars("`co_z_vars'") z_e_varying("`co_z_e_varying'") ///
+				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
 
 			local co_mapping = "`r(max_e_manifold)'"
@@ -1745,7 +1752,7 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients

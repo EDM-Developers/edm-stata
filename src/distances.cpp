@@ -32,8 +32,9 @@ std::vector<double> lp_distances(int Mp_i, const Options& opts, const Manifold& 
         } else {
           dist_ij = opts.missingdistance;
         }
-      } else {
-        // Neither M[i,j] nor Mp[Mp_i, j] is missing.
+      } else { // Neither M[i,j] nor Mp[Mp_i, j] is missing.
+        // How do we compare them? Do we treat them like continuous values and subtract them,
+        // or treat them like unordered categorical variables and just check if they're the same?
         if (opts.metrics[j] == Metric::Diff) {
           dist_ij = M(i, j) - Mp(Mp_i, j);
         } else { // Metric::CheckSame

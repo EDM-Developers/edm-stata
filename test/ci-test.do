@@ -398,3 +398,12 @@ edm xmap y i.x
 
 // Make sure multiple library values are respected
 edm xmap x y, allowmissing dt library(10(5)70)
+
+// Check that the manifold is reordered so that e-varying extras are first
+gen v = runiform()
+edm xmap x y, extra(u v(e)) algorithm(smap) savesmap(beta) 
+
+ds, detail
+format beta* %3.0g
+list beta*
+drop beta*

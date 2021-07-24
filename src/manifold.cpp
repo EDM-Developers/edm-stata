@@ -41,7 +41,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   for (int i = 0; i < nobs; i++) {
     int offset = 0;
     for (int k = 0; k < _num_extras; k++) {
-      int numLags = _extrasEVarying[k] ? E : 1;
+      int numLags = (k < _num_extras_lagged) ? E : 1;
       for (int j = 0; j < numLags; j++) {
         flat[i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
       }
@@ -49,7 +49,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     }
   }
 
-  return { flat, y, nobs, E, E_dt(E), E_extras(E), E_actual(E), _missing };
+  return { flat, y, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E), _missing };
 }
 
 double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const

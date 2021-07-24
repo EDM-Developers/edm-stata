@@ -320,10 +320,10 @@ std::vector<bool> generate_usable(const std::vector<bool>& touse, const Manifold
  */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 23) {
+  if (argc < 24) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 23) {
+  if (argc > 24) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -366,9 +366,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::string requestedMetrics(argv[20]);
   bool copredictMode = atoi(argv[21]);
   opts.cmdLine = argv[22];
+  int numExtrasLagged = atoi(argv[23]);
 
-  auto factorVariables = stata_numlist<bool>("factor_var");
-  auto extrasEVarying = stata_numlist<bool>("z_e_varying");
+  auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
   if (distance == "l1" || distance == "L1" || distance == "mae" || distance == "MAE") {
     opts.distance = Distance::MeanAbsoluteError;
@@ -408,7 +408,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   std::vector<Metric> metrics;
   if (requestedMetrics == "auto" || requestedMetrics.empty()) {
-    for (bool isFactorVariable : factorVariables) {
+    for (bool isFactorVariable : extrasFactorVariables) {
       metrics.push_back(isFactorVariable ? Metric::CheckSame : Metric::Diff);
     }
   } else {
@@ -422,13 +422,13 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
     // If the user supplied fewer than the required number of metrics,
     // just repeat the last one to pad out the list.
-    while (metrics.size() < 1 + numExtras) {
+    while (metrics.size() < numExtras) {
       metrics.push_back(metrics.back());
     }
   }
   opts.metrics = metrics;
 
-  ManifoldGenerator generator = ManifoldGenerator(x, y, extras, extrasEVarying, MISSING, tau);
+  ManifoldGenerator generator = ManifoldGenerator(x, y, extras, numExtrasLagged, MISSING, tau);
 
   // Handle 'dt' flag
   if (dtMode) {
