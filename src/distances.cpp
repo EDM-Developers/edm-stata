@@ -69,37 +69,126 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   return { inds, dists };
 }
 
-// TODO: Use an Eigen Map/Matrix to avoid calculating off-diagonal entries twice.
+// This function compares the M(i,.) multivariate time series to the Mp(j,.) multivariate time series.
+// The M(i,.) observation has data for E consecutive time points (e.g. time(i), time(i+1), ..., time(i+E-1)) and
+// the Mp(j,.) observation corresponds to E consecutive time points (e.g. time(j), time(j+1), ..., time(j+E-1)).
+// At each time instant we observe n >= 1 pieces of data.
+// These may either be continuous data or unordered categorical data.
+//
+// The Wasserstein distance (using the 'curve-matching' strategy) is equivalent to the (minimum) cost of turning
+// the first time series into the second time series. In a simple example, say E = 2 and n = 1, and
+//         M(i,.) = [ 1, 2 ] and Mp(j,.) = [ 2, 2 ].
+// To turn M(i,.) into Mp(j,.) the first element needs to be increased by 1, so the overall cost is
+//         Wasserstein( M(i,.), Mp(j,.) ) = 1.
+// The distance can also reorder the points, so for example say
+//         M(i,.) = [ 1, 100 ] and Mp(j,.) = [ 100, 1 ].
+// If we just change the 1 to 100 and the 100 to 1 then the cost of each is 99 + 99 = 198.
+// However, Wasserstein can instead reorder these points at a cost of
+//         Wasserstein( M(i,.), Mp(j,.) ) = 2 * gamma * (time(1)-time(2))
+// so if the observations occur on a regular grid so time(i) = i then the distance will just be 2 * gamma.
+//
+// The return value of this function is a matrix which shows the pairwise costs associated to each
+// potential Wasserstein solution. E.g. the (n,m) element of the returned matrix shows the cost
+// of turning the individual point M(i, n) into Mp(j, m).
+//
+// When there are missing values in one or other observation, we can either ignore this time period
+// and compute the Wasserstein for the mismatched regime where M(i,.) is of size len_i and Mp(j,.) is
+// of size len_j, where len_i != len_j is possible. Alternatively, we can fill in the affected elements
+// of the cost matrix with some user-supplied 'missingDistance' value and then len_i == len_j is upheld.
 std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j, double gamma,
-                                                  double missingDistance, int& len_i, int& len_j)
+                                                  const Options& opts, int& len_i, int& len_j)
 {
-  bool skipMissing = (missingDistance == 0);
-  len_i = skipMissing ? M.num_not_missing(i) : M.E_actual();
-  len_j = skipMissing ? Mp.num_not_missing(j) : Mp.E_actual();
+  // The M(i,.) observation will be stored as one flat vector of length M.E_actual():
+  // - the first M.E() observations will the lagged version of the main time series
+  // - the next M.E() observations will be the lagged 'dt' time series (if it is included, i.e., if M.E_dt() > 0)
+  // - the next n * M.E() observations will be the n lagged extra variables,
+  //   so in total that is M.E_lagged_extras() = n * M.E() observations
+  // - the remaining M.E_actual() - M.E() - M.E_dt() - M.E_lagged_extras() are the unlagged extras and the distance
+  //   between those two vectors forms a kind of minimum distance which is added to the time-series curve matching
+  //   Wasserstein distance.
 
-  auto costMatrix = std::make_unique<double[]>(len_i * len_j);
-  double* nextCost = costMatrix.get();
+  bool skipMissing = (opts.missingdistance == 0);
 
-  for (int n = 0; n < len_i; n += 1) {
-    for (int m = 0; m < len_j; m += 1) {
+  auto M_i = M.laggedObsMap(i);
+  auto Mp_j = Mp.laggedObsMap(j);
 
-      double M_in = M(i, n);
-      double Mp_jm = Mp(j, m);
+  auto M_i_missing = (M_i.array() == M.missing()).colwise().any();
+  auto Mp_j_missing = (Mp_j.array() == Mp.missing()).colwise().any();
 
-      bool eitherMissing = (M_in == MISSING || Mp_jm == MISSING);
-      if (skipMissing && eitherMissing) {
-        continue;
-      }
+  if (skipMissing) {
+    len_i = M.E() - M_i_missing.sum();
+    len_j = Mp.E() - Mp_j_missing.sum();
+  } else {
+    len_i = M.E();
+    len_j = Mp.E();
+  }
 
-      if (eitherMissing) {
-        *nextCost = missingDistance * missingDistance;
+  int timeSeriesDim = M_i.rows();
+
+  double unlaggedDist = 0.0;
+  int numUnlaggedExtras = M.E_extras() - M.E_lagged_extras();
+  for (int e = 0; e < numUnlaggedExtras; e++) {
+    double x = M.unlagged_extras(i, e), y = Mp.unlagged_extras(j, e);
+    bool eitherMissing = (x == M.missing()) || (y == M.missing());
+
+    if (eitherMissing) {
+      unlaggedDist += opts.missingdistance;
+    } else {
+      if (opts.metrics[timeSeriesDim + e] == Metric::Diff) {
+        unlaggedDist += abs(x - y);
       } else {
-        *nextCost = (M_in - Mp_jm) * (M_in - Mp_jm) + gamma * (n - m) * (n - m);
+        unlaggedDist += x != y;
       }
-      nextCost += 1;
     }
   }
-  return costMatrix;
+
+  auto flatCostMatrix = std::make_unique<double[]>(len_i * len_j);
+  std::fill_n(flatCostMatrix.get(), len_i * len_j, unlaggedDist);
+  Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> costMatrix(flatCostMatrix.get(),
+                                                                                                len_i, len_j);
+
+  for (int k = 0; k < timeSeriesDim; k++) {
+    int n = 0;
+    for (int nn = 0; nn < M_i.cols(); nn++) {
+      int m = 0;
+      for (int mm = nn; mm < Mp_j.cols(); mm++) {
+        if (skipMissing && (M_i_missing[nn] || Mp_j_missing[mm])) {
+          continue;
+        }
+        double dist;
+        bool eitherMissing = M_i_missing[nn] || Mp_j_missing[mm];
+
+        if (eitherMissing) {
+          dist = opts.missingdistance;
+        } else {
+          if (opts.metrics[k] == Metric::Diff) {
+            dist = abs(M_i(k, nn) - Mp_j(k, mm));
+          } else {
+            dist = M_i(k, nn) != Mp_j(k, mm);
+          }
+        }
+
+        // For the first-time around, also add the time differences into the cost matrix.
+        if (k == 0) {
+          // TODO: Add the time variable into here.
+          dist += gamma * abs(nn - mm);
+        }
+
+        costMatrix(n, m) += dist;
+
+        // As the overall cost matrix is symmetric, just mirror the off-diagonal
+        // entries into the other half.
+        if (n != m) {
+          costMatrix(m, n) += dist;
+        }
+
+        m += 1;
+      }
+
+      n += 1;
+    }
+  }
+  return flatCostMatrix;
 }
 
 double approx_wasserstein(double* C, int len_i, int len_j, double eps, double stopErr)
@@ -160,17 +249,21 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
   std::vector<int> inds;
   std::vector<double> dists;
 
-  double gamma = Mp.range() / Mp.time_range() * opts.aspectRatio;
+  // PJL: A test fails if using Mp.range() / Mp.time_range() here.
+  double gamma = M.range() / M.time_range() * opts.aspectRatio;
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
   for (int i : inpInds) {
     int len_i, len_j;
-    auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, gamma, opts.missingdistance, len_i, len_j);
+    auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, gamma, opts, len_i, len_j);
 
     if (len_i > 0 && len_j > 0) {
-      dists.push_back(std::sqrt(wasserstein(C.get(), len_i, len_j)));
-      inds.push_back(i);
+      double dist_i = wasserstein(C.get(), len_i, len_j);
+      if (dist_i != 0) {
+        dists.push_back(dist_i);
+        inds.push_back(i);
+      }
     }
   }
 

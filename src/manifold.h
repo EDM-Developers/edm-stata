@@ -36,12 +36,26 @@ public:
   {
     return { _flat.get(), _nobs, _E_actual };
   }
+
+  Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(
+    int obsNum) const
+  {
+    int numLaggedExtras = _E_lagged_extras / _E_x;
+    return { &(_flat[obsNum * _E_actual]), 1 + (_E_dt > 0) + numLaggedExtras, _E_x };
+  }
+
   Eigen::Map<const Eigen::VectorXd> yMap() const { return { &(_y[0]), _nobs }; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
-  double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
-  double extras(int i, int j) const { return _E_extras ? _flat[i * _E_actual + _E_x + _E_dt + j] : _missing; }
+  double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
+  double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
   int panel(int i) const { return _panel_ids[i]; }
+
+  double unlagged_extras(int obsNum, int varNum) const
+  {
+    int ind = obsNum * _E_actual + _E_x + _E_dt + _E_lagged_extras + varNum;
+    return _flat[ind];
+  }
 
   double range() const
   {

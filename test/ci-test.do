@@ -9,6 +9,7 @@ if c(MP) {
 
 global EDM_VERBOSITY = 0
 global EDM_NTHREADS = 4
+global EDM_DISTANCE = "Wasserstein"
 global EDM_SAVE_INPUTS = "ci-test"
 cap rm ci-test.json
 
@@ -160,7 +161,7 @@ cor f.x f.y predicted_x predicted_y predicted_y_from_mx
 cor f.x predicted_x
 assert r(rho)>0.99
 cor f.y predicted_y
-assert r(rho)>0.99
+assert r(rho)>0.90
 cor f.y predicted_y_from_mx
 assert r(rho)>0.7
 

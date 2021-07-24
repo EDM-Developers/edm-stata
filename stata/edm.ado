@@ -469,7 +469,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 100000)] ///
+			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
 			[distance(string)] [metrics(string)] [idw(real 0)]
 
 	local cmdline = "edm explore `0'"
@@ -568,8 +568,7 @@ program define edmExplore, eclass
 
 	if ("`=strlower("`distance'")'" == "wasserstein") {
 		if ("`dt'" == "dt") {
-			di "Ignoring dt option as it cannot be specified with the Wasserstein distance"
-			local dt = ""
+			di "Combining the dt option with the Wasserstein distance is unadvised"
 		}
 		if ("`olddt'" == "olddt") {
 			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
@@ -1217,7 +1216,7 @@ program define edmXmap, eclass
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[aspectratio(real 100000)] [distance(string)] [metrics(string)] [idw(real 0)]
+			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)]
 
 	local cmdline = "edm xmap `0'"
 
@@ -1331,8 +1330,7 @@ program define edmXmap, eclass
 
 	if ("`=strlower("`distance'")'" == "wasserstein") {
 		if ("`dt'" == "dt") {
-			di "Ignoring dt option as it cannot be specified with the Wasserstein distance"
-			local dt = ""
+			di "Combining the dt option with the Wasserstein distance is unadvised"
 		}
 		if ("`olddt'" == "olddt") {
 			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
