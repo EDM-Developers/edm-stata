@@ -105,11 +105,11 @@ edm explore x, missingdistance(2)
 edm xmap x l.x, allowmissing
 edm xmap x l.x, missingdistance(2)
 
-edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
+edm xmap x l.x, extraembed(u) dt alg(smap) savesmap(newb) e(5)
 
-edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
+edm xmap x l3.x, extraembed(u) dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
 
-edm explore x, extraembed(u) allowmissing dt crossfold(5)
+edm explore x, extraembed(u) dt crossfold(5)
 
 edm explore d.x, dt
 
@@ -274,7 +274,7 @@ list pred
 drop pred
 
 
-edm xmap x y, oneway allowmissing dt dtweight(1) predict(pred)
+edm xmap x y, oneway dt dtweight(1) predict(pred)
 
 format pred %8.0g
 list pred
@@ -288,7 +288,7 @@ format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(3) extra(u1) dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
@@ -296,42 +296,42 @@ list beta*
 drop beta*
 
 
-edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) savesmap(beta) dtweight(10.0)
+edm xmap x y, e(3) extra(u1) dt alg(smap) savesmap(beta) dtweight(10.0)
 
 ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta) force
+edm xmap x y, e(4) extra(L(1/3).u1) dt alg(smap) savesmap(beta) force
 
 ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(2) extra(u1(e)) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(2) extra(u1(e)) dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(3) extra(z.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(3) extra(z.u1(e)) dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(3) extra(L5.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(3) extra(L5.u1(e)) dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(3) extra(z.L5.u1(e)) allowmissing dt alg(smap) savesmap(beta)
+edm xmap x y, e(3) extra(z.L5.u1(e)) dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
@@ -339,8 +339,8 @@ list beta*
 drop beta*
 
 // Check that [dtsave] works on both mata & plugin
-edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) oneway dtsave(plugin)
-edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) oneway dtsave(mata) mata
+edm xmap x y, e(3) extra(u1) dt alg(smap) oneway dtsave(plugin)
+edm xmap x y, e(3) extra(u1) dt alg(smap) oneway dtsave(mata) mata
 
 gen err = plugin != mata
 sum err
@@ -371,8 +371,8 @@ cap drop predmata
 cap drop prederr
 
 
-edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(plugin)
-edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(mata) mata
+edm explore x, e(3) extra(u1) dt alg(smap) dtsave(plugin)
+edm explore x, e(3) extra(u1) dt alg(smap) dtsave(mata) mata
 
 gen err = plugin != mata
 sum err
@@ -397,7 +397,7 @@ edm xmap i.x y
 edm xmap y i.x
 
 // Make sure multiple library values are respected
-edm xmap x y, allowmissing dt library(10(5)70)
+edm xmap x y, dt library(10(5)70)
 
 // Check that the manifold is reordered so that e-varying extras are first
 gen v = runiform()
