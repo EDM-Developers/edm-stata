@@ -68,8 +68,14 @@ double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vect
 
 double ManifoldGenerator::find_dt(const std::vector<int>& inds, int i, int j) const
 {
-  int ind1 = inds.at(i) + _add_dt0 * _tau - j * _tau;
-  int ind2 = ind1 - _tau;
+  int ind1, ind2;
+  if (_cumulative_dt) {
+    ind1 = inds.at(i) + _tau;
+    ind2 = ind1 - j * _tau;
+  } else {
+    ind1 = inds.at(i) + _add_dt0 * _tau - j * _tau;
+    ind2 = ind1 - _tau;
+  }
 
   if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing) || (_t[ind1] < _t[ind2])) {
     return _missing;
@@ -81,6 +87,7 @@ void to_json(json& j, const ManifoldGenerator& g)
 {
   j = json{ { "_use_dt", g._use_dt },
             { "_add_dt0", g._add_dt0 },
+            { "_cumulative_dt", g._cumulative_dt },
             { "_tau", g._tau },
             { "_missing", g._missing },
             { "_num_extras", g._num_extras },
@@ -98,6 +105,7 @@ void from_json(const json& j, ManifoldGenerator& g)
 {
   j.at("_use_dt").get_to(g._use_dt);
   j.at("_add_dt0").get_to(g._add_dt0);
+  j.at("_cumulative_dt").get_to(g._cumulative_dt);
   j.at("_tau").get_to(g._tau);
   j.at("_missing").get_to(g._missing);
   j.at("_num_extras").get_to(g._num_extras);

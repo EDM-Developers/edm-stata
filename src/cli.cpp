@@ -107,5 +107,6 @@ int main(int argc, char* argv[])
   std::ofstream o(fnameOut);
   o << std::setw(4) << results << std::endl;
 
+  std::cout << "rc is " << rc;
   return rc;
 }

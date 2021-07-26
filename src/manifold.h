@@ -77,8 +77,6 @@ public:
 
   double missing() const { return _missing; }
 
-  double time_range() const { return _nobs - 1; }
-
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
@@ -126,6 +124,7 @@ class ManifoldGenerator
 private:
   bool _use_dt = false;
   bool _add_dt0 = false;
+  bool _cumulative_dt = false;
   int _tau;
   double _missing;
   int _num_extras, _num_extras_lagged;
@@ -143,9 +142,10 @@ public:
 
   ManifoldGenerator() = default;
 
-  ManifoldGenerator(const std::vector<double>& x, const std::vector<double>& y,
+  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y,
                     const std::vector<std::vector<double>>& extras, int numExtrasLagged, double missing, int tau)
-    : _x(x)
+    : _t(t)
+    , _x(x)
     , _y(y)
     , _extras(extras)
     , _num_extras((int)extras.size())
@@ -156,12 +156,12 @@ public:
 
   void add_coprediction_data(const std::vector<double>& co_x) { _co_x = co_x; }
 
-  void add_dt_data(const std::vector<double>& t, double dtWeight, bool dt0)
+  void add_dt_data(double dtWeight, bool dt0, bool cumulativeDT)
   {
-    _t = t;
     _dtWeight = dtWeight;
     _use_dt = true;
     _add_dt0 = dt0;
+    _cumulative_dt = cumulativeDT;
   }
 
   void add_panel_ids(const std::vector<int>& panelIDs) { _panel_ids = panelIDs; }

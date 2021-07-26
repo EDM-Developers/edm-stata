@@ -95,7 +95,7 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
 // and compute the Wasserstein for the mismatched regime where M(i,.) is of size len_i and Mp(j,.) is
 // of size len_j, where len_i != len_j is possible. Alternatively, we can fill in the affected elements
 // of the cost matrix with some user-supplied 'missingDistance' value and then len_i == len_j is upheld.
-std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j, double gamma,
+std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
                                                   const Options& opts, int& len_i, int& len_j)
 {
   // The M(i,.) observation will be stored as one flat vector of length M.E_actual():
@@ -121,6 +121,32 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   } else {
     len_i = M.E();
     len_j = Mp.E();
+  }
+
+  double gamma = 1.0;
+  if (M.E_dt() > 0) {
+    // Imagine the M_i time series as a plot, and calculate the
+    // aspect ratio of this plot, so we can rescale the time variable
+    // to get the user-supplied aspect ratio.
+    double minData = std::numeric_limits<double>::max();
+    double maxData = std::numeric_limits<double>::min();
+    double maxTime = 0.0;
+    for (int t = 0; t < M_i.cols(); t++) {
+      if (M_i(0, t) != MISSING) {
+        if (M_i(0, t) < minData) {
+          minData = M_i(0, t);
+        }
+        if (M_i(0, t) > maxData) {
+          maxData = M_i(0, t);
+        }
+      }
+      if (M_i(1, t) != MISSING && M_i(1, t) > maxTime) {
+        maxTime = M_i(1, t);
+      }
+    }
+
+    double epsilon = 1e-6; // Some small number in case the following ratio gets wildly large/small
+    gamma = opts.aspectRatio * (maxData - minData + epsilon) / (maxTime + epsilon);
   }
 
   int timeSeriesDim = M_i.rows();
@@ -152,12 +178,11 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   std::fill_n(flatCostMatrix.get(), len_i * len_j, unlaggedDist);
   Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> costMatrix(flatCostMatrix.get(),
                                                                                                 len_i, len_j);
-
   for (int k = 0; k < timeSeriesDim; k++) {
     int n = 0;
     for (int nn = 0; nn < M_i.cols(); nn++) {
       int m = 0;
-      for (int mm = nn; mm < Mp_j.cols(); mm++) {
+      for (int mm = 0; mm < Mp_j.cols(); mm++) {
         if (skipMissing && (M_i_missing[nn] || Mp_j_missing[mm])) {
           continue;
         }
@@ -174,19 +199,12 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
           }
         }
 
-        // For the first-time around, also add the time differences into the cost matrix.
-        if (k == 0) {
-          // TODO: Add the time variable into here.
-          dist += gamma * abs(nn - mm);
+        // For the time data, we add in the 'gamma' scaling factor calculated earlier
+        if ((M.E_dt() > 0) && (k == 1)) {
+          dist *= gamma;
         }
 
         costMatrix(n, m) += dist;
-
-        // As the overall cost matrix is symmetric, just mirror the off-diagonal
-        // entries into the other half.
-        if (n != m) {
-          costMatrix(m, n) += dist;
-        }
 
         m += 1;
       }
@@ -255,14 +273,11 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
   std::vector<int> inds;
   std::vector<double> dists;
 
-  // PJL: A test fails if using Mp.range() / Mp.time_range() here.
-  double gamma = M.range() / M.time_range() * opts.aspectRatio;
-
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
   for (int i : inpInds) {
     int len_i, len_j;
-    auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, gamma, opts, len_i, len_j);
+    auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, opts, len_i, len_j);
 
     if (len_i > 0 && len_j > 0) {
       double dist_i = wasserstein(C.get(), len_i, len_j);

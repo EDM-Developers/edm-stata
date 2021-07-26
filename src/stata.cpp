@@ -320,10 +320,10 @@ std::vector<bool> generate_usable(const std::vector<bool>& touse, const Manifold
  */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 26) {
+  if (argc < 28) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 26) {
+  if (argc > 28) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -369,6 +369,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int numExtrasLagged = atoi(argv[23]);
   opts.idw = atof(argv[24]);
   opts.panelMode = atoi(argv[25]);
+  bool cumulativeDT = atoi(argv[26]);
+  bool wassDT = atoi(argv[27]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -430,13 +432,19 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   opts.metrics = metrics;
 
-  ManifoldGenerator generator = ManifoldGenerator(x, y, extras, numExtrasLagged, MISSING, tau);
+  std::vector<ST_double> t = stata_columns<ST_double>(1);
+  print_vector<ST_double>("t", t);
+
+  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, MISSING, tau);
 
   // Handle 'dt' flag
-  if (dtMode) {
-    std::vector<ST_double> t = stata_columns<ST_double>(1);
-    print_vector<ST_double>("t", t);
-    generator.add_dt_data(t, dtWeight, dt0);
+  if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
+    if (wassDT) {
+      dtWeight = 1.0;
+      dt0 = true;
+      cumulativeDT = true;
+    }
+    generator.add_dt_data(dtWeight, dt0, cumulativeDT);
   }
 
   // The stata variable named `touse' (the basis for the usable variables)

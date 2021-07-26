@@ -466,11 +466,15 @@ program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
 			[Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] ///
-			[COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] ///
+			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
 			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
-			[distance(string)] [metrics(string)] [idw(real 0)]
+			[distance(string)] [metrics(string)] [idw(real 0)] [cumdt(integer 0)] [wassdt(integer 1)]
+
+	if ("`strict'" != "strict") {
+		local force = "force"
+	}
 
 	local cmdline = "edm explore `0'"
 
@@ -566,10 +570,8 @@ program define edmExplore, eclass
 
 	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 
-	if ("`=strlower("`distance'")'" == "wasserstein") {
-		if ("`dt'" == "dt") {
-			di "Combining the dt option with the Wasserstein distance is unadvised"
-		}
+	local wasserstein_mode = ("`=strlower("`distance'")'" == "wasserstein")
+	if `wasserstein_mode' {
 		if ("`olddt'" == "olddt") {
 			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
 			local olddt = ""
@@ -713,7 +715,7 @@ program define edmExplore, eclass
 			qui sum `dt_value' if `touse'
 			local tsd = r(sd)
 			local parsed_dtw = `xsd'/`tsd'
-			if `tsd' == 0 {
+			if `tsd' == 0 & !`wasserstein_mode' {
 				// if there is no variance, no sampling required
 				local parsed_dtw = 0
 				local parsed_dt = 0
@@ -903,7 +905,7 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1212,11 +1214,15 @@ program define edmXmap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
 			[SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] ///
-			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [EXTRAembed(string)] ///
+			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)]
+			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)] [cumdt(integer 0)]
+
+	if ("`strict'" != "strict") {
+		local force = "force"
+	}
 
 	local cmdline = "edm xmap `0'"
 
@@ -1328,10 +1334,8 @@ program define edmXmap, eclass
 
 	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 
-	if ("`=strlower("`distance'")'" == "wasserstein") {
-		if ("`dt'" == "dt") {
-			di "Combining the dt option with the Wasserstein distance is unadvised"
-		}
+	local wasserstein_mode = ("`=strlower("`distance'")'" == "wasserstein")
+	if `wasserstein_mode' {
 		if ("`olddt'" == "olddt") {
 			di "Ignoring olddt option as it cannot be specified with the Wasserstein distance"
 			local olddt = ""
@@ -1549,7 +1553,7 @@ program define edmXmap, eclass
 				qui sum `dt_value' if `touse'
 				local tsd = r(sd)
 				local parsed_dtw = `xsd'/`tsd'
-				if `tsd' == 0 {
+				if `tsd' == 0 & !`wasserstein_mode' {
 					// if there is no variance, no sampling required
 					local parsed_dtw = 0
 					local parsed_dt = 0
@@ -1750,7 +1754,7 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients
