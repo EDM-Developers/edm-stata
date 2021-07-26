@@ -9,6 +9,8 @@ void to_json(json& j, const Options& o)
             { "k", o.k },
             { "nthreads", o.nthreads },
             { "missingdistance", o.missingdistance },
+            { "panelMode", o.panelMode },
+            { "idw", o.idw },
             { "thetas", o.thetas },
             { "algorithm", o.algorithm },
             { "taskNum", o.taskNum },
@@ -29,6 +31,8 @@ void from_json(const json& j, Options& o)
   j.at("k").get_to(o.k);
   j.at("nthreads").get_to(o.nthreads);
   j.at("missingdistance").get_to(o.missingdistance);
+  j.at("panelMode").get_to(o.panelMode);
+  j.at("idw").get_to(o.idw);
   j.at("thetas").get_to(o.thetas);
   j.at("algorithm").get_to(o.algorithm);
   j.at("taskNum").get_to(o.taskNum);

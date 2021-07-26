@@ -40,6 +40,9 @@ public:
   double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
   double extras(int i, int j) const { return _E_extras ? _flat[i * _E_actual + _E_x + _E_dt + j] : _missing; }
 
+  // TODO: Finish this properly
+  int panel(int i) const { return 0; }
+
   double range() const
   {
     double min = std::numeric_limits<double>::max();

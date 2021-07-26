@@ -55,11 +55,19 @@ NLOHMANN_JSON_SERIALIZE_ENUM(Metric, {
                                        { Metric::CheckSame, "CheckSame" },
                                      })
 
+struct DistanceIndexPairs
+{
+  std::vector<int> inds;
+  std::vector<double> dists;
+};
+
 struct Options
 {
   bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
   int k = 0, nthreads;
   double missingdistance;
+  bool panelMode;
+  double idw;
   std::vector<double> thetas;
   Algorithm algorithm;
   size_t taskNum = 1, numTasks = 1;

@@ -6,14 +6,15 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/Dense>
 
-std::vector<double> lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
+DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                std::vector<int> inpInds)
 {
-
-  std::vector<double> dists(M.nobs());
+  std::vector<int> inds;
+  std::vector<double> dists;
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
-  for (int i = 0; i < M.nobs(); i++) {
+  for (int i : inpInds) {
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
@@ -49,18 +50,17 @@ std::vector<double> lp_distances(int Mp_i, const Options& opts, const Manifold& 
       }
     }
 
-    if (dist_i != MISSING) {
+    if (dist_i != 0 && dist_i != MISSING) {
       if (opts.distance == Distance::MeanAbsoluteError) {
-        dists[i] = dist_i;
+        dists.push_back(dist_i);
       } else { // Distance::Euclidean
-        dists[i] = sqrt(dist_i);
+        dists.push_back(sqrt(dist_i));
       }
-    } else {
-      dists[i] = MISSING;
+      inds.push_back(i);
     }
   }
 
-  return dists;
+  return { inds, dists };
 }
 
 // TODO: Use an Eigen Map/Matrix to avoid calculating off-diagonal entries twice.
@@ -148,22 +148,25 @@ double wasserstein(double* C, int len_i, int len_j)
   return cost;
 }
 
-std::vector<double> wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
+DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                         std::vector<int> inpInds)
 {
-  std::vector<double> dists(M.nobs());
+  std::vector<int> inds;
+  std::vector<double> dists;
 
   double gamma = Mp.range() / Mp.time_range() * opts.aspectRatio;
 
-  for (int i = 0; i < M.nobs(); i++) {
+  // Compare every observation in the M manifold to the
+  // Mp_i'th observation in the Mp manifold.
+  for (int i : inpInds) {
     int len_i, len_j;
     auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, gamma, opts.missingdistance, len_i, len_j);
 
     if (len_i > 0 && len_j > 0) {
-      dists[i] = std::sqrt(wasserstein(C.get(), len_i, len_j));
-    } else {
-      dists[i] = MISSING;
+      dists.push_back(std::sqrt(wasserstein(C.get(), len_i, len_j)));
+      inds.push_back(i);
     }
   }
 
-  return dists;
+  return { inds, dists };
 }

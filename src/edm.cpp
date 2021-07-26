@@ -355,36 +355,22 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
-  std::vector<double> dists;
+  // Create a list of indices which may potentially be the neighbours of Mp(Mp_i,.)
+  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, opts, M, Mp);
 
+  DistanceIndexPairs potentialNN;
   if (opts.distance == Distance::Wasserstein) {
-    dists = wasserstein_distances(Mp_i, opts, M, Mp);
+    potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
   } else {
-    dists = lp_distances(Mp_i, opts, M, Mp);
+    potentialNN = lp_distances(Mp_i, opts, M, Mp, tryInds);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
 
-  // Create a list of possible neighbour indices.
-  // Screen out missing or zero distances.
-  // Also, for S-map we can't have any missing values in the Manifold, so insist on that also.
-  std::vector<int> possibleNeighbourIndices;
-  for (int i = 0; i < dists.size(); i++) {
-    if (dists[i] == 0) {
-      dists[i] = MISSING;
-    }
-
-    if (dists[i] != MISSING) {
-      if (!(opts.algorithm == Algorithm::SMap && M.any_missing(i))) {
-        possibleNeighbourIndices.push_back(i);
-      }
-    }
-  }
-
   // Do we have enough distances to find k neighbours?
-  int numValidDistances = possibleNeighbourIndices.size();
+  int numValidDistances = potentialNN.inds.size();
   int k = opts.k;
   *kUsed = numValidDistances;
   if (k > numValidDistances) {
@@ -404,7 +390,13 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
-  std::vector<int> kNNInds = kNearestNeighboursIndices(dists, k, possibleNeighbourIndices);
+  // If we asked for all of the neighbours to be considered (e.g. with k = -1), return this index vector directly.
+  DistanceIndexPairs kNNs;
+  if (k < 0 || k == potentialNN.inds.size()) {
+    kNNs = potentialNN;
+  } else {
+    kNNs = kNearestNeighbours(potentialNN, k);
+  }
 
   if (keep_going != nullptr && keep_going() == false) {
     return;
@@ -412,15 +404,79 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, dists, kNNInds, ystar, rc, kUsed);
+      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, dists, kNNInds, ystar, coeffs, rc, kUsed);
+      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
     }
   } else {
     rc(0, Mp_i) = INVALID_ALGORITHM;
   }
+}
+
+std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
+{
+  bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
+  bool skipMissingData = (opts.algorithm == Algorithm::SMap);
+
+  std::vector<int> inds;
+
+  for (int i = 0; i < M.nobs(); i++) {
+    if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
+      continue;
+    }
+
+    if (skipMissingData && M.any_missing(i)) {
+      continue;
+    }
+
+    inds.push_back(i);
+  }
+
+  return inds;
+}
+
+// For a given point, find the k nearest neighbours of this point.
+//
+// If there are many potential neighbours with the exact same distances, we
+// prefer the neighbours with the smallest index value. This corresponds
+// to a stable sort in C++ STL terminology.
+//
+// In typical use-cases of 'edm explore' the value of 'k' is small, like 5-20.
+// However for a typical 'edm xmap' the value of 'k' is set as large as possible.
+// If 'k' is small, the partial_sort is efficient as it only finds the 'k' smallest
+// distances. If 'k' is larger, then it is faster to simply sort the entire distance
+// vector.
+DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k)
+{
+  std::vector<int> idx(potentialNeighbours.inds.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
+  if (k >= (int)(idx.size() / 2)) {
+    auto comparator = [&potentialNeighbours](int i1, int i2) {
+      return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2];
+    };
+    std::stable_sort(idx.begin(), idx.end(), comparator);
+  } else {
+    auto stableComparator = [&potentialNeighbours](int i1, int i2) {
+      if (potentialNeighbours.dists[i1] != potentialNeighbours.dists[i2])
+        return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2];
+      else
+        return i1 < i2;
+    };
+    std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
+  }
+
+  std::vector<int> kNNInds(k);
+  std::vector<double> kNNDists(k);
+
+  for (int i = 0; i < k; i++) {
+    kNNInds[i] = potentialNeighbours.inds[idx[i]];
+    kNNDists[i] = potentialNeighbours.dists[idx[i]];
+  }
+
+  return { kNNInds, kNNDists };
 }
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
@@ -430,12 +486,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   int k = kNNInds.size();
 
   // Find the smallest distance (closest neighbour) among the supplied neighbours.
-  double minDist = MISSING;
-  for (int j = 0; j < k; j++) {
-    if (dists[kNNInds[j]] < minDist) {
-      minDist = dists[kNNInds[j]];
-    }
-  }
+  double minDist = *std::min_element(dists.begin(), dists.end());
 
   // Calculate our weighting of each neighbour, and the total sum of these weights.
   std::vector<double> w(k);
@@ -444,7 +495,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 
   int numNonZeroWeights = 0;
   for (int j = 0; j < k; j++) {
-    w[j] = exp(-theta * (dists[kNNInds[j]] / minDist));
+    w[j] = exp(-theta * (dists[j] / minDist));
     sumw = sumw + w[j];
     numNonZeroWeights += (w[j] > 0);
   }
@@ -479,9 +530,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   // Calculate the weight for each neighbour
   Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
-  Eigen::VectorXd d = distsMap(kNNInds);
-  d /= d.mean();
-  Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * d.array());
+  Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * (distsMap.array() / distsMap.mean()));
 
   // For the sake of debugging, count how many neighbours we end up with.
   if (opts.saveKUsed) {
@@ -529,50 +578,4 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
-}
-
-// For a given point, find the k nearest neighbours of this point.
-//
-// We are given the distances to all potential neighbours as a vector.
-// We return the 'k' indices of the neighbours.
-//
-// The distance vector may contain missing values which are coded as a massive
-// double value with the MISSING macro; this should be enough to put those
-// neighbours last in after sorting by closeness.
-//
-// If there are many potential neighbours with the exact same distances, we
-// prefer the neighbours with the smallest index value. This corresponds
-// to a stable sort in C++ STL terminology.
-//
-// In typical use-cases of 'edm explore' the value of 'k' is small, like 5-20.
-// However for a typical 'edm xmap' the value of 'k' is set as large as possible.
-// If 'k' is small, the partial_sort is efficient as it only finds the 'k' smallest
-// distances. If 'k' is larger, then it is faster to simply sort the entire distance
-// vector.
-//
-// N.B. The equivalent function in Stata/Mata is called 'minindex'.
-std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k, std::vector<int> idx)
-{
-  // If we asked for all of the neighbours to be considered (e.g. with k = -1), return this index vector directly.
-  if (k < 0) {
-    return idx;
-  }
-
-  if (k >= (int)(idx.size() / 2)) {
-    auto comparator = [&dists](int i1, int i2) { return dists[i1] < dists[i2]; };
-    std::stable_sort(idx.begin(), idx.end(), comparator);
-  } else {
-    auto stableComparator = [&dists](int i1, int i2) {
-      if (dists[i1] != dists[i2])
-        return dists[i1] < dists[i2];
-      else
-        return i1 < i2;
-    };
-    std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
-  }
-
-  // Remove the indices for the points which are not in the k nearest neighbour set.
-  idx.erase(idx.begin() + k, idx.end());
-
-  return idx;
 }
