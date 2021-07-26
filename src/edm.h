@@ -23,7 +23,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
-DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs &potentialNeighbours, int k);
+DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,

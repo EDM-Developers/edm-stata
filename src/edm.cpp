@@ -438,11 +438,6 @@ std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, cons
 }
 
 // For a given point, find the k nearest neighbours of this point.
-//
-// If there are many potential neighbours with the exact same distances, we
-// prefer the neighbours with the smallest index value. This corresponds
-// to a stable sort in C++ STL terminology.
-//
 // In typical use-cases of 'edm explore' the value of 'k' is small, like 5-20.
 // However for a typical 'edm xmap' the value of 'k' is set as large as possible.
 // If 'k' is small, the partial_sort is efficient as it only finds the 'k' smallest
@@ -450,28 +445,20 @@ std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, cons
 // vector.
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs &potentialNeighbours, int k)
 {
-  std::vector<int> idx(potentialNeighbours.inds.size());
-  std::iota(idx.begin(), idx.end(), 0);
+  std::vector<int> indsToPartition(potentialNeighbours.inds.size());
+  std::iota(indsToPartition.begin(), indsToPartition.end(), 0);
 
-  if (k >= (int)(idx.size() / 2)) {
-    auto comparator = [&potentialNeighbours](int i1, int i2) { return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2]; };
-    std::stable_sort(idx.begin(), idx.end(), comparator);
-  } else {
-    auto stableComparator = [&potentialNeighbours](int i1, int i2) {
-      if (potentialNeighbours.dists[i1] != potentialNeighbours.dists[i2])
-        return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2];
-      else
-        return i1 < i2;
-    };
-    std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), stableComparator);
-  }
+  auto comparator = [&potentialNeighbours](int i1, int i2) {
+    return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2];
+  };
+  std::nth_element(indsToPartition.begin(), indsToPartition.begin() + k, indsToPartition.end(), comparator);
 
   std::vector<int> kNNInds(k);
   std::vector<double> kNNDists(k);
 
   for (int i = 0; i < k; i++) {
-    kNNInds[i] = potentialNeighbours.inds[idx[i]];
-    kNNDists[i] = potentialNeighbours.dists[idx[i]];
+    kNNInds[i] = potentialNeighbours.inds[indsToPartition[i]];
+    kNNDists[i] = potentialNeighbours.dists[indsToPartition[i]];
   }
 
   return { kNNInds, kNNDists };
