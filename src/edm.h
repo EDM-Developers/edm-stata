@@ -21,6 +21,10 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
                      Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going());
 
+std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
+
+DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs &potentialNeighbours, int k);
+
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                         Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
@@ -29,5 +33,3 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
                      Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
-
-std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k, std::vector<int> idx);

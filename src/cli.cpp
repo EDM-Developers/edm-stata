@@ -62,6 +62,8 @@ int main(int argc, char* argv[])
     ManifoldGenerator generator = taskGroup["generator"];
     Options opts = taskGroup["opts"];
 
+    opts.nthreads = nthreads;
+
     if (verb) {
       std::cout << "Loading: " << opts.cmdLine << "\n";
     }

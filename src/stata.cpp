@@ -320,10 +320,10 @@ std::vector<bool> generate_usable(const std::vector<bool>& touse, const Manifold
  */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 24) {
+  if (argc < 25) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 24) {
+  if (argc > 25) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -367,6 +367,10 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   bool copredictMode = atoi(argv[21]);
   opts.cmdLine = argv[22];
   int numExtrasLagged = atoi(argv[23]);
+  opts.idw = atof(argv[24]);
+
+  // TODO: Add this properly
+  opts.panelMode = false;
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
