@@ -18,6 +18,12 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
+    // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
+    // then add the user-supplied penalty/distance for the mismatch.
+    if (opts.panelMode && opts.idw > 0) {
+      dist_i += opts.idw * (M.panel(i) != Mp.panel(Mp_i));
+    }
+
     for (int j = 0; j < M.E_actual(); j++) {
       // Get the sub-distance between M[i,j] and Mp[Mp_i, j]
       double dist_ij;

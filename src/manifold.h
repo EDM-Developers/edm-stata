@@ -11,14 +11,16 @@ class Manifold
 {
   std::shared_ptr<double[]> _flat = nullptr;
   std::vector<double> _y;
+  std::vector<int> _panel_ids;
   int _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
   double _missing;
 
 public:
-  Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, int nobs, int E_x, int E_dt, int E_extras,
-           int E_lagged_extras, int E_actual, double missing)
+  Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, std::vector<int> panelIDs, int nobs, int E_x,
+           int E_dt, int E_extras, int E_lagged_extras, int E_actual, double missing)
     : _flat(std::move(flat))
     , _y(y)
+    , _panel_ids(panelIDs)
     , _nobs(nobs)
     , _E_x(E_x)
     , _E_dt(E_dt)
@@ -39,9 +41,7 @@ public:
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _E_dt ? _flat[i * _E_actual + _E_x + j] : _missing; }
   double extras(int i, int j) const { return _E_extras ? _flat[i * _E_actual + _E_x + _E_dt + j] : _missing; }
-
-  // TODO: Finish this properly
-  int panel(int i) const { return 0; }
+  int panel(int i) const { return _panel_ids[i]; }
 
   double range() const
   {
@@ -118,6 +118,7 @@ private:
   double _dtWeight = 0.0;
   std::vector<double> _x, _y, _co_x, _t;
   std::vector<std::vector<double>> _extras;
+  std::vector<int> _panel_ids;
 
   double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
   double find_dt(const std::vector<int>& inds, int i, int j) const;
@@ -148,6 +149,8 @@ public:
     _use_dt = true;
     _add_dt0 = dt0;
   }
+
+  void add_panel_ids(const std::vector<int>& panelIDs) { _panel_ids = panelIDs; }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction) const;
 

@@ -320,10 +320,10 @@ std::vector<bool> generate_usable(const std::vector<bool>& touse, const Manifold
  */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 25) {
+  if (argc < 26) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 25) {
+  if (argc > 26) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -368,9 +368,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.cmdLine = argv[22];
   int numExtrasLagged = atoi(argv[23]);
   opts.idw = atof(argv[24]);
-
-  // TODO: Add this properly
-  opts.panelMode = false;
+  opts.panelMode = atoi(argv[25]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -492,6 +490,10 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
         coTrainingRows[i] = false;
       }
     }
+  }
+
+  if (opts.panelMode) {
+    generator.add_panel_ids(stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1));
   }
 
   // Read in some macros from Stata

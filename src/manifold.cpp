@@ -5,7 +5,9 @@
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict,
                                             bool prediction) const
 {
-  std::vector<int> inds;
+  bool panelMode = _panel_ids.size() > 0;
+
+  std::vector<int> inds, panelIDs;
   std::vector<double> y;
 
   int nobs = 0;
@@ -13,6 +15,9 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     if (filter[i]) {
       inds.push_back(i);
       y.push_back(_y[i]);
+      if (panelMode) {
+        panelIDs.push_back(_panel_ids[i]);
+      }
       nobs += 1;
     }
   }
@@ -49,7 +54,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     }
   }
 
-  return { flat, y, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E), _missing };
+  return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E), _missing };
 }
 
 double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const
@@ -70,4 +75,38 @@ double ManifoldGenerator::find_dt(const std::vector<int>& inds, int i, int j) co
     return _missing;
   }
   return _dtWeight * (_t[ind1] - _t[ind2]);
+}
+
+void to_json(json& j, const ManifoldGenerator& g)
+{
+  j = json{ { "_use_dt", g._use_dt },
+            { "_add_dt0", g._add_dt0 },
+            { "_tau", g._tau },
+            { "_missing", g._missing },
+            { "_num_extras", g._num_extras },
+            { "_num_extras_lagged", g._num_extras_lagged },
+            { "_dtWeight", g._dtWeight },
+            { "_x", g._x },
+            { "_y", g._y },
+            { "_co_x", g._co_x },
+            { "_t", g._t },
+            { "_extras", g._extras },
+            { "_panel_ids", g._panel_ids } };
+}
+
+void from_json(const json& j, ManifoldGenerator& g)
+{
+  j.at("_use_dt").get_to(g._use_dt);
+  j.at("_add_dt0").get_to(g._add_dt0);
+  j.at("_tau").get_to(g._tau);
+  j.at("_missing").get_to(g._missing);
+  j.at("_num_extras").get_to(g._num_extras);
+  j.at("_num_extras_lagged").get_to(g._num_extras_lagged);
+  j.at("_dtWeight").get_to(g._dtWeight);
+  j.at("_x").get_to(g._x);
+  j.at("_y").get_to(g._y);
+  j.at("_co_x").get_to(g._co_x);
+  j.at("_t").get_to(g._t);
+  j.at("_extras").get_to(g._extras);
+  j.at("_panel_ids").get_to(g._panel_ids);
 }

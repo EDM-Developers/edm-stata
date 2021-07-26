@@ -900,11 +900,11 @@ program define edmExplore, eclass
 		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 		set rngstate `rngstate'
 
-		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set', "launch_edm_tasks" ///
+		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -928,7 +928,7 @@ program define edmExplore, eclass
 		qui gen double `crossfoldu' = runiform() if `usable'
 		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
 	}
-	
+
 	if `num_usable' == 0 | (`num_usable' == 1 & "`full'" != "full") | (`crossfold' > 0 & `num_usable' < `crossfold') {
 		noi display as error "Invalid dimension or library specifications"
 		error 9
@@ -986,7 +986,7 @@ program define edmExplore, eclass
 				qui gen byte `train_set' = `u' < r(p50) & `u' !=.
 				qui gen byte `predict_set' = `u' >= r(p50) & `u' !=.
 			}
-			
+
 			qui gen byte `overlap' = (`train_set' == `predict_set') & `predict_set'
 			if "`full'" != "full" {
 				assert `overlap' == 0 if `predict_set'
@@ -997,7 +997,7 @@ program define edmExplore, eclass
 			// PJL: Try to clean up this part a bit.
 			tempvar counting_up not_in_crossfold_t
 			qui gen `counting_up' = _n if _n <= `num_usable'
-			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1) 
+			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1)
 			qui count if `not_in_crossfold_t' & _n <= `num_usable'
 			local train_size = r(N)
 		}
@@ -1748,11 +1748,11 @@ program define edmXmap, eclass
 			}
 
 
-			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set', "launch_edm_tasks" ///
+			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients
