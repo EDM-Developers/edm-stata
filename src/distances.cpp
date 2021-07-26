@@ -142,6 +142,12 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
     }
   }
 
+  // If we have panel data and the M[i] / Mp[j] observations come from different panels
+  // then add the user-supplied penalty/distance for the mismatch.
+  if (opts.panelMode && opts.idw > 0) {
+    unlaggedDist += opts.idw * (M.panel(i) != Mp.panel(j));
+  }
+
   auto flatCostMatrix = std::make_unique<double[]>(len_i * len_j);
   std::fill_n(flatCostMatrix.get(), len_i * len_j, unlaggedDist);
   Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> costMatrix(flatCostMatrix.get(),
