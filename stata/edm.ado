@@ -2423,7 +2423,7 @@ Univariate simplex projection with manifold construct x and its lag values
 		di "*std / sqrt(`=e(replicate)')"
 	} */
 	if `=e(force_compute)' == 1 {
-		di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+		//di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
 	}
 	if `=e(dt)' == 1 {
 		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
@@ -2460,8 +2460,6 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 		st_view(Mp, ., tokens(manifold), predict_use)
 	}
 
-	st_view(S, ., skip_obs, predict_use)
-
 	if (l <= 0) { //default value of local library size
 		k = cols(M)
 		l = k + 1 // local library size (E+1) + itself
@@ -2483,7 +2481,7 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 
 	for(i=1;i<=n;i++) {
 		b= Mp[i,.]
-		ystar[i] = mf_smap_single(M,b,y,l,theta,S[i],algorithm, save_mode*i, B, force_compute,missingdistance)
+		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B, force_compute,missingdistance)
 	}
 }
 end
@@ -2492,68 +2490,54 @@ end
 capture mata mata drop mf_smap_single()
 mata:
 mata set matastrict on
-real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
+real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
 {
-	/* real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, real scalar skip_obs, string scalar algorithm, real scalar save_index, real matrix Beta_smap, transmorphic scalar Acache) */
+	/* real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, transmorphic scalar Acache) */
 
 	/* M : manifold matrix
 	b : the vector used for prediction
 	y: existing predicted value for M (same number of rows with M)
 	l : library size
 	theta: exponential weighting parameter
-	skip_obs: number of closest neighbours to skip (to exclude itself sometimes) */
+	*/
 
 	/* sprintf("begin") */
 	real colvector d, w, a
 	real colvector ind, v
 	real scalar i,j,n,r,n_ls
 	n = rows(M)
-	d = J(n, 1, 0)
+	d = J(n, 1, .)
 
 	for(i=1;i<=n;i++) {
-		a= M[i,.] - b
+		if (algorithm =="smap" && (hasmissing(y[i]) | hasmissing(M[i,.]))) {
+			d[i] = .
+		} else {
+			a= M[i,.] - b
 
-		if (missingdistance !=0) {
-			a=editvalue(a,., missingdistance)
+			if (missingdistance !=0) {
+				a=editvalue(a,., missingdistance)
+			}
+
+			// d is Euclidean distance
+			d[i] = (a*a')^(1/2)
+
+			if (d[i] == 0) {
+				d[i] = .
+			}
 		}
-		// d is squared distance
-		d[i] = a*a'
 	}
 
-	minindex(d, l+skip_obs, ind, v)
+	minindex(d, l, ind, v)
 	// create weights for each point in the library
 
 	// find the smallest non-zero distance
 	real scalar d_base
-	real scalar pre_adj_skip_obs
-	pre_adj_skip_obs = skip_obs
-	for(j=1;j<=l;j++) {
-		if (d[ind[j+skip_obs]] == 0) {
-			skip_obs++
-		}
-		else {
-			break
-		}
-	}
-	if (pre_adj_skip_obs!=skip_obs) {
-		minindex(d, l+skip_obs, ind, v)
-	}
-	if (d[ind[1+skip_obs]] == 0) {
-		d= editvalue(d, 0,.)
-		/* sprintf("search failed") */
-		/* skip_obs++ */
-		skip_obs = 0
-		minindex(d, l+skip_obs, ind, v)
-	}
-	d_base = d[ind[1+skip_obs]]
-	/* if (d_base ==0) {
-		sprintf("error")
-	} */
-	/* sprintf("dbase %g with %g",d_base, skip_obs) */
-	w = J(l+skip_obs, 1, .)
-	if (rows(ind)<l+skip_obs) {
+	d_base = d[ind[1]]
+
+	w = J(l, 1, .)
+	if (rows(ind)<l) {
 		if (force_compute==1) {
-			l=rows(ind)-skip_obs // change l to match neighbor size
+			l=rows(ind) // change l to match neighbor size
 			/* sprintf("library size has been reduced for some observations")	 */
 			if (l<=0) {
 				sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
@@ -2565,15 +2549,16 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 			exit(error(503))
 		}
 	}
-	// note the w, X_ls, y_ls matrix are larger than necessary, the first skip_obs rows are not used
+
 	r = 0
 
 	if (algorithm == "" | algorithm == "simplex") {
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j] = exp(-theta*(d[ind[j]] / d_base)^(1/2))
+		for(j=1;j<=l;j++) {
+			w[j] = exp(-theta*(d[ind[j]] / d_base))
 		}
 		w = w/sum(w)
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
+
+		for(j=1;j<=l;j++) {
 			r = r +  y[ind[j]] * w[j]
 		}
 
@@ -2584,14 +2569,16 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		real colvector y_ls, b_ls, w_ls
 		real matrix X_ls, XpXi
 		real rowvector x_pred
-		real scalar mean_w
+		real scalar mean_d
 
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j] = d[ind[j]] ^ (1/2)
+		for(j=1;j<=l;j++) {
+			w[j] = d[ind[j]]
 		}
-		mean_w = mean(w)
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			w[j] = exp(-theta*(w[j] / mean_w))
+
+		mean_d = mean(w)
+
+		for(j=1;j<=l;j++) {
+			w[j] = exp(-theta*(w[j] / mean_d))
 		}
 
 		y_ls = J(l, 1, .)
@@ -2600,17 +2587,12 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 
 		real scalar rowc
 		rowc = 0
-		/* sprintf("start") */
-		for(j=1+skip_obs;j<=l+skip_obs;j++) {
-			if (hasmissing(y[ind[j]]) | hasmissing(M[ind[j],.])) {
-				continue
-			}
+
+		for(j=1;j<=l;j++) {
 			rowc++
 			if (algorithm == "llr") {
 				y_ls[rowc]    = y[ind[j]]
-				/* matlist(X_ls[j,.]) */
 				X_ls[rowc,.]    = M[ind[j],.]
-				/* matlist(X_ls[j,.]) */
 				w_ls[rowc] = w[j]
 			}
 			else if (algorithm =="smap") {
@@ -2623,8 +2605,8 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 			return(.)
 		}
 
-		y_ls =y_ls[1..rowc]
-		X_ls =X_ls[1..rowc,.]
+		y_ls = y_ls[1..rowc]
+		X_ls = X_ls[1..rowc,.]
 		w_ls = w_ls[1..rowc]
 
 		n_ls   = rows(X_ls)

@@ -75,7 +75,7 @@ jobs:
       run: mv ci-test.log reference.log
     - name: Run Test
       working-directory: ${{github.workspace}}/test
-      run: stata -e -q ci-test.do
+      run: stata -e -q ci-test.do Euclidean
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log ci-test.log
@@ -105,7 +105,7 @@ jobs:
       run: mv ci-test.log reference.log
     - name: Run Test
       working-directory: ${{github.workspace}}/arm/test
-      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do
+      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do Euclidean
     - name: Check Test Results
       working-directory: ${{github.workspace}}/arm/test
       run: diff -B reference.log ci-test.log
@@ -139,7 +139,7 @@ jobs:
       run: mv ci-test.log reference.log
     - name: Run Test
       working-directory: ${{github.workspace}}/x64/test
-      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do
+      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do Euclidean
     - name: Check Test Results
       working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log ci-test.log
@@ -173,7 +173,7 @@ jobs:
       run: mv ci-test.log reference.log
     - name: Run Test
       working-directory: ${{github.workspace}}/test
-      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q ci-test.do
+      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q ci-test.do Euclidean
     - name: Check Test Results
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "fc /W reference.log ci-test.log"

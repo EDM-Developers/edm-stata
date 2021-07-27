@@ -9,9 +9,21 @@ if c(MP) {
 
 global EDM_VERBOSITY = 0
 global EDM_NTHREADS = 4
-global EDM_DISTANCE = "Wasserstein"
 global EDM_SAVE_INPUTS = "ci-test"
 cap rm ci-test.json
+
+args suppliedDistance
+
+if "`suppliedDistance'" != "" {
+    local dist = "`suppliedDistance'"
+}
+else {
+    local dist = "Euclidean"
+}
+
+di "Running tests using the `dist' distance"
+global EDM_DISTANCE = "`dist'"
+
 
 gen t = _n
 tsset t
