@@ -24,15 +24,6 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
-// Declare some of the internal functions in edm.cpp which are not publicly listed in edm.h.
-std::vector<int> kNearestNeighboursIndices(const std::vector<double>& dists, int k);
-void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, int k, const std::vector<double>& d,
-                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
-void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp, int k,
-                     const std::vector<double>& d, std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
-
 // Compiler flags tried on Windows: "/GL" and "/GL /LTCG", both slightly worse. "/O2" is the default.
 
 std::vector<std::string> lowLevelInputDumps = { "logmapsmall.json", "logmaplarge.json", "affectsmall.json",

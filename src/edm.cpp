@@ -509,6 +509,30 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
   return { kNNInds, kNNDists };
 }
 
+// An alternative version of 'kNearestNeighbours' which doesn't sort the neighbours.
+// This version splits ties differently on different OS's, so it can't be used directly,
+// though perhaps a platform-independent implementation of std::nth_element would solve this problem.
+DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentialNeighbours, int k)
+{
+  std::vector<int> indsToPartition(potentialNeighbours.inds.size());
+  std::iota(indsToPartition.begin(), indsToPartition.end(), 0);
+
+  auto comparator = [&potentialNeighbours](int i1, int i2) {
+    return potentialNeighbours.dists[i1] < potentialNeighbours.dists[i2];
+  };
+  std::nth_element(indsToPartition.begin(), indsToPartition.begin() + k, indsToPartition.end(), comparator);
+
+  std::vector<int> kNNInds(k);
+  std::vector<double> kNNDists(k);
+
+  for (int i = 0; i < k; i++) {
+    kNNInds[i] = potentialNeighbours.inds[indsToPartition[i]];
+    kNNDists[i] = potentialNeighbours.dists[indsToPartition[i]];
+  }
+
+  return { kNNInds, kNNDists };
+}
+
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
                         Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)

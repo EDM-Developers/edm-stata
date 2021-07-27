@@ -6,6 +6,8 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/Dense>
 
+#include <cmath> // for std::isnormal
+
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inpInds)
 {
@@ -215,6 +217,7 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   return flatCostMatrix;
 }
 
+// TODO: Subtract the D(x,x) and D(y,y) parts from this.
 double approx_wasserstein(double* C, int len_i, int len_j, double eps, double stopErr)
 {
   Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> costMatrix(C, len_i, len_j);
@@ -237,8 +240,8 @@ double approx_wasserstein(double* C, int len_i, int len_j, double eps, double st
     if (iter % 10 == 0) {
       // Compute right marginal (diag(u) K diag(v))^T1
       Eigen::VectorXd tempColSums = (u.asDiagonal() * K * v.asDiagonal()).colwise().sum();
-      double L2err = (tempColSums.array() - c).matrix().norm();
-      if (L2err < stopErr) {
+      double LInfErr = (tempColSums.array() - c).abs().maxCoeff();
+      if (LInfErr < stopErr) {
         break;
       }
     }
@@ -253,13 +256,9 @@ double wasserstein(double* C, int len_i, int len_j)
 {
   // Create vectors which are just 1/len_i and 1/len_j of length len_i and len_j.
   auto w_1 = std::make_unique<double[]>(len_i);
+  std::fill_n(w_1.get(), len_i, 1.0 / len_i);
   auto w_2 = std::make_unique<double[]>(len_j);
-  for (int i = 0; i < len_i; i++) {
-    w_1[i] = 1.0 / len_i;
-  }
-  for (int i = 0; i < len_j; i++) {
-    w_2[i] = 1.0 / len_j;
-  }
+  std::fill_n(w_2.get(), len_j, 1.0 / len_j);
 
   int maxIter = 10000;
   double cost;
@@ -281,7 +280,13 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
 
     if (len_i > 0 && len_j > 0) {
       double dist_i = wasserstein(C.get(), len_i, len_j);
-      if (dist_i != 0) {
+
+      // Alternatively, the approximate version based on Sinkhorn's algorithm can be called with something like:
+      // double dist_i = approx_wasserstein(C.get(), len_i, len_j, 0.1, 0.1)
+      // In that case, the "std::isnormal" is really needed on the next line, as some
+      // instability gives us some 'nan' distances using that method.
+
+      if (dist_i != 0 && std::isnormal(dist_i)) {
         dists.push_back(dist_i);
         inds.push_back(i);
       }
