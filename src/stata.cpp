@@ -439,7 +439,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   // Handle 'dt' flag
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
-    if (wassDT) {
+    if (wassDT && !dtMode) {
       dtWeight = 1.0;
       dt0 = true;
       cumulativeDT = true;

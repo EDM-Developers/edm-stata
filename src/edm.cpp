@@ -26,6 +26,7 @@
 #include <Eigen/SVD>
 #include <algorithm> // std::partial_sort
 #include <cmath>
+#include <fstream> // just to create low-level input dumps
 
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
@@ -191,6 +192,18 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   }
 
   numTasksStarted += 1;
+
+  if (io != nullptr && io->verbosity > 4) {
+    json lowLevelInputDump;
+    lowLevelInputDump["generator"] = generator;
+    lowLevelInputDump["opts"] = opts;
+    lowLevelInputDump["E"] = E;
+    lowLevelInputDump["trainingRows"] = trainingRows;
+    lowLevelInputDump["predictionRows"] = predictionRows;
+
+    std::ofstream o("lowLevelInputDump.json");
+    o << lowLevelInputDump << std::endl;
+  }
 
   Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false);
   Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true);

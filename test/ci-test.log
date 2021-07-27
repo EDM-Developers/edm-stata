@@ -393,7 +393,7 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .94188         .039072 
+                 4               1          .90196         .045427 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+3
@@ -496,7 +496,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        5        1       .88149      .056817      .060435      .012346
+        5        1       .91558      .045844      .052989        .0135
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras
@@ -513,7 +513,7 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .79686          .13599 
+                 4               1          .78296          .13796 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+3
@@ -1605,7 +1605,7 @@ Additional variables in the embedding: u1 (+ time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1          .51847          .17838 
+                 7               1          .34631          .19762 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+5
@@ -4048,7 +4048,7 @@ Additional variables in the embedding: u1 (+ time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1          .47351          .17845 
+                 7               1         .034663          .25711 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
@@ -4098,7 +4098,7 @@ Note: Embedding includes the delta of the time variable with a weight of 1
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-    preddiff |         29    .1976166    .2859648   .0001569   1.097471
+    preddiff |         29           0           0          0          0
 
 . 
 . cap drop predplugin
@@ -4118,7 +4118,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1          .33621          .27126 
+                 7               1          .17476           1.318 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6

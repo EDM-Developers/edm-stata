@@ -1,4 +1,5 @@
-* cut-down test file
+cap rm lowLevelInputDump.json
+
 clear
 
 if c(MP) {
@@ -30,15 +31,18 @@ qui {
 
 keep in 300/50000
 
+
 cap rm logmaplarge.json
 
 timer clear
 timer on 1
 
-edm xmap x y, theta(0.2) algorithm(smap) saveinputs(logmaplarge) verbosity(1)
+edm xmap x y, theta(0.2) algorithm(smap) verbosity(10)
 
 timer off 1
 timer list
+
+!mv lowLevelInputDump.json logmaplarge.json
 
 keep in 1/5000
 
@@ -47,10 +51,12 @@ cap rm logmapsmall.json
 timer clear
 timer on 1
 
-edm explore x, e(10) saveinputs(logmapsmall)
+edm explore x, e(10) verbosity(10)
 
 timer off 1
 timer list
+
+!mv lowLevelInputDump.json logmapsmall.json
 
 clear
 
@@ -62,9 +68,11 @@ cap rm affectsmall.json
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(10) k(-1) force alg(smap) saveinputs(affectsmall) 
+edm xmap PA NA, dt e(10) k(-1) force alg(smap) verbosity(10)
 timer off 1
 timer list 1
+
+!mv lowLevelInputDump.json affectsmall.json
 
 keep in 1/5000
 
@@ -72,6 +80,8 @@ cap rm affectbige.json
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige)
+edm xmap PA NA, dt e(150) k(20) force alg(smap) saveinputs(affectbige)  verbosity(10)
 timer off 1
 timer list 1
+
+!mv lowLevelInputDump.json affectbige.json
