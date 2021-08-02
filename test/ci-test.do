@@ -74,13 +74,13 @@ edm explore z.x, tp(10)
 
 edm xmap y x, tp(10) direction(oneway)
 
-edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
+edm xmap y x, tp(10) copredict(testx) copredictvar(x2) direction(oneway)
 assert testx!=. if _n>2
 
-edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
+edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
 assert testx2 !=. if _n>2
 
-edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
+edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
 assert testx3 !=. if _n>2
 
 * check explore / xmap consistency
@@ -148,14 +148,14 @@ sum x_p xc_p
 assert xc_p!=. if x_p!=.
 
 gen y_copy = y
-edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
+edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
 assert xmap_y_p !=. if _n>1
 assert xmap_y_p == xmap_y if xmap_y !=.
 
 preserve
 drop if mod(t,17)==1
 //copredict with dt
-edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
+edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy) direction(oneway) predict(xmap_y_dt)
 assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
 assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
 

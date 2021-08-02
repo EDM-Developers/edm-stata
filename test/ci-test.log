@@ -246,7 +246,7 @@ Convergent Cross-mapping result for variables y and x
 Note: The embedding dimension E is 2
 
 . 
-. edm xmap y x, tp(10) copredict(testx) copredictvar(x2 y) direction(oneway)
+. edm xmap y x, tp(10) copredict(testx) copredictvar(x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -260,7 +260,7 @@ Note: The embedding dimension E is 2
 . assert testx!=. if _n>2
 
 . 
-. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2 z.y) direction(oneway)
+. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -274,7 +274,7 @@ Note: The embedding dimension E is 2
 . assert testx2 !=. if _n>2
 
 . 
-. edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2 z.y) direction(oneway)
+. edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -638,7 +638,7 @@ Note: Full sample used for the computation
 . 
 . gen y_copy = y
 
-. edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y)
+. edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -660,7 +660,7 @@ Note: The embedding dimension E is 2
 (12 observations deleted)
 
 . //copredict with dt
-. edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy y_copy) direction(oneway) predict(xmap_y_dt)
+. edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy) direction(oneway) predict(xmap_y_dt)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
