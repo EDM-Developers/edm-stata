@@ -22,6 +22,7 @@ begin
 	using PlutoUI
 	using Random
 	using Statistics
+	using Printf
 end
 
 # ╔═╡ 99f564e2-611e-4138-8003-343077495a17
@@ -41,7 +42,7 @@ begin
 	obs = 12
 	t = [symbols("t_$i") for i in 1:obs]
 	x = [symbols("x_$i") for i in 1:obs]
-	#y = [symbols("y_$i") for i in 1:obs]
+	y = [symbols("y_$i") for i in 1:obs]
 	z = [symbols("z_$i") for i in 1:obs]
 	
 	traw = [symbols(raw"t_{" * Base.string(i) * raw"}") for i in 1:obs]
@@ -98,12 +99,11 @@ begin
 		reduce(vcat, Mrows)
 	end;
 	
-	function manifold_set(M, E, tau)
+	function manifold_set(M)
 		mset = raw"\{"
 		
 		maxPoints = 3
 		numPoints = min(size(M, 1), maxPoints)
-		#return maxPoints
 		
 		for i = 1:numPoints
 			if i > 1
@@ -137,7 +137,7 @@ begin
 	
 	M_x = manifold(x, E, τ);
 	
-	M_x_set = manifold_set(M_x, E, τ);
+	M_x_set = manifold_set(M_x);
 	
 	L"M_x := \text{Manifold}(x, E,\tau) = %$M_x_set"
 end
@@ -593,6 +593,240 @@ L"
 %$predictStr
 \underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
 
+# ╔═╡ 6fae5864-ec11-4e94-98a9-ffc0fd421049
+md"## Adding more data to the manifold"
+
+# ╔═╡ 6ea2e5d4-ff50-4efe-b80a-29940e7455f9
+md"""
+It can be advantageous to combine data from multiple sources into a single EDM 
+analysis.
+
+The `extra` command will incorporate additional pieces of data into the manifold.
+As an example, the Stata command
+
+`edm explore x, extra(y)`
+
+will construct a manifold:
+"""
+
+# ╔═╡ 982d9067-da5b-4cbf-bcba-5c94ed2479b9
+begin
+	function manifold_with_extra(x, E, tau, extra)
+		Mrows = [reshape(x[(i + tau*(E-1)):-tau:(i)], 1, E) for i = 1:(obs-(E-1)*tau)]
+		M_x = reduce(vcat, Mrows)
+		
+		extraCol = [extra[(i + tau*(E-1))] for i = 1:(obs-(E-1)*tau)]
+		
+		hcat(M_x, extraCol)
+	end;
+	
+	M_x_extra = manifold_with_extra(x, E, τ, y);
+	
+	#M_x_extra_set = manifold_set(M_x_extra);
+	#L"M_{x,y} := %$M_x_extra_set"
+	
+	L"M_{x,y} := %$(latexify(M_x_extra))"
+end
+
+# ╔═╡ 12dff36b-59da-45bc-984d-a5063f204bd9
+md"""
+By default just one $y$ observation is added to each point in the manifold. 
+
+If $E$ lags of $y$ are required, then the command should be altered slightly to
+
+`edm explore x, extra(y(e))`
+
+and then the manifold will be:
+"""
+
+# ╔═╡ 66de25a9-4ed3-42e2-ae9f-427684a8fb1e
+begin
+	M_extras = manifold(y, E, τ);
+	M_x_extras = hcat(M_x, M_extras)	
+	#M_x_extras_set = manifold_set(M_x_extras)
+	#L"M_{x,y} := %$M_x_extras_set"
+	L"M_{x,y} := %$(latexify(M_x_extras))" 
+end
+
+# ╔═╡ dfdb3ef6-35b6-48f5-ae30-12b41d247c90
+md"""
+More than one `extra` variable can be added.
+If some extras are lagged extra variables are specified after some unlagged extras, then the package will reorder them so that all the lagged extras are first.
+"""
+
+# ╔═╡ 1e2bd033-a948-4a60-9b78-13d4d88813f7
+md"## What about irregularly sampled observations?"
+
+# ╔═╡ 0c29af04-ebd1-4d10-bd10-819b7a3a94d9
+md"""
+We don't always have observations of real-world phenomena at regular intervals.
+The `dt` option is designed to handle the situation when the times between each of the observations are irregular.
+
+For example, when the command
+
+`edm explore x, dt`
+
+is specified, the manifold will be constructed as if the `extra` option had said to include the time differences.
+"""
+
+# ╔═╡ 365746a0-2f0c-481f-b8b3-00774d981196
+md"Choose a value for $E$:"
+
+# ╔═╡ e694efa3-d618-4430-ac5b-d1922f5b4c1e
+@bind E_dt Slider(2:3)
+
+# ╔═╡ 8dcfb9ac-1f74-4cf7-8419-13b5cddcef74
+md"Choose a value for $\tau$:"
+
+# ╔═╡ 710cf6bf-7eac-478a-9783-4eed31c2360e
+@bind τ_dt Slider(1:4)
+
+# ╔═╡ f9f0a2fa-613e-48d3-ac8a-bae77a60f22f
+md"In this case ($E$ = $E_dt, τ = $τ_dt), the manifold will look like:"
+
+# ╔═╡ b87518c1-1bae-4496-bae2-6d2bdaa8ad69
+begin
+
+	function manifold_set_dt(n, E, tau)
+		mset = raw"\{"
+		
+		maxPoints = 2
+		numPoints = min(n, maxPoints)
+		
+		for i = 1:numPoints
+			if i > 1
+				mset *= ", "
+			end
+			
+			pointTimes = (i + tau*(E-1)):-tau:(i)
+			pointTimes
+			
+			mset *= raw"["
+			for j = 1:length(pointTimes)
+				if j > 1
+					mset *= raw"\,\,\,\,"
+				end
+				mset *= raw"x_{" * string(pointTimes[j]) * raw"}"
+			end
+			
+			for j = 1:length(pointTimes)
+				mset *= raw"\,\,\,\,"
+				if pointTimes[j]+tau <= obs
+					mset *= raw"(t_{" * string(pointTimes[j]+tau) * raw"}"
+					mset *= raw"-t_{" * string(pointTimes[j]) * raw"})"
+				else
+					mset *= "?"
+				end
+			end
+			
+			mset *= raw"]  "		
+		end
+		
+		if n > numPoints
+			mset *= raw", \dots "
+		end
+		
+		mset *= raw"\}"
+			
+		mset
+	end;
+	
+	M_x_dt_set = manifold_set_dt(size(M_x, 1), E_dt, τ_dt)
+	
+	L"M_{x,\mathrm{d}t} := %$M_x_dt_set"
+end
+
+# ╔═╡ c1d4a958-9fc0-4eda-aaa6-f28fa88551d6
+md"""If we define the notation that 
+
+$dt_{i}^{\tau} = (t_{i+\tau} - t_i)$
+
+then the manifold can be written as:
+"""
+
+# ╔═╡ 66a18830-0455-4c5a-9c96-719940d5e6c7
+begin
+	deltaT = [symbols(raw"dt_" * string(i)*raw"^τ") for i in 1:(obs)]
+	M_x_dt = manifold(x, E_dt, τ_dt);
+	M_dt = manifold(deltaT, E_dt, τ_dt);
+	M_x_and_dt = hcat(M_x_dt, M_dt)	
+	L"M_{x,\mathrm{d}t} := %$(latexify(M_x_and_dt))"
+end
+
+# ╔═╡ 9b15ced5-e4de-43e4-b1e5-9f380a788d34
+md"""
+If the *cumulative dt* option `cumdt` option is set, then the time differences are relative to the time of the prediction. That is
+"""
+
+# ╔═╡ 65d93d7f-f7f9-4598-9064-de8fbf490337
+begin
+
+	function manifold_set_cumdt(n, E, tau)
+		mset = raw"\{"
+		
+		maxPoints = 2
+		numPoints = min(n, maxPoints)
+		
+		for i = 1:numPoints
+			if i > 1
+				mset *= ", "
+			end
+			
+			pointTimes = (i + tau*(E-1)):-tau:(i)
+			pointTimes
+			
+			mset *= raw"["
+			for j = 1:length(pointTimes)
+				if j > 1
+					mset *= raw"\,\,\,\,"
+				end
+				mset *= raw"x_{" * string(pointTimes[j]) * raw"}"
+			end
+			
+			for j = 1:length(pointTimes)
+				mset *= raw"\,\,\,\,"
+				if pointTimes[j]+tau <= obs
+					mset *= raw"(t_{" * string(pointTimes[1]+p) * raw"}"
+					mset *= raw"-t_{" * string(pointTimes[j]) * raw"})"
+				else
+					mset *= "?"
+				end
+			end
+			
+			mset *= raw"]  "		
+		end
+		
+		if n > numPoints
+			mset *= raw", \dots "
+		end
+		
+		mset *= raw"\}"
+			
+		mset
+	end;
+	
+	M_x_cumdt_set = manifold_set_cumdt(size(M_x, 1), E_dt, τ_dt)
+	
+	L"M_{x,\Delta t} := %$M_x_cumdt_set"
+end
+
+# ╔═╡ 8c23501b-2bdd-4652-bb4c-8012772b758f
+md"""If we define the notation that 
+
+$\overline{\Delta} t_{ij}^{\tau p} = (t_{i+p} - t_{i-j\tau})$
+
+then the manifold can be written as:
+"""
+
+# ╔═╡ 95998f9b-0c04-47b6-b75e-d90582f56db8
+# begin
+# 	cumdeltaT = [symbols(raw" ̄Δ̄t_" * string(i)*raw"^τ") for i in 1:(obs)]
+# 	M_cumdt = manifold(cumdeltaT, E, τ);
+# 	M_x_cumdt = hcat(M_x, M_cumdt)	
+# 	L"M_{x,\mathrm{d}t} := %$(latexify(M_x_cumdt))"
+# end
+md"TODO..."
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -600,6 +834,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
@@ -1070,5 +1305,25 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
 # ╟─027667be-91db-4e4b-b4f2-07306ea7e4c1
 # ╟─1e00a8f0-94b0-430b-81b0-9846913878f5
+# ╟─6fae5864-ec11-4e94-98a9-ffc0fd421049
+# ╟─6ea2e5d4-ff50-4efe-b80a-29940e7455f9
+# ╟─982d9067-da5b-4cbf-bcba-5c94ed2479b9
+# ╟─12dff36b-59da-45bc-984d-a5063f204bd9
+# ╟─66de25a9-4ed3-42e2-ae9f-427684a8fb1e
+# ╟─dfdb3ef6-35b6-48f5-ae30-12b41d247c90
+# ╟─1e2bd033-a948-4a60-9b78-13d4d88813f7
+# ╟─0c29af04-ebd1-4d10-bd10-819b7a3a94d9
+# ╟─365746a0-2f0c-481f-b8b3-00774d981196
+# ╟─e694efa3-d618-4430-ac5b-d1922f5b4c1e
+# ╟─8dcfb9ac-1f74-4cf7-8419-13b5cddcef74
+# ╟─710cf6bf-7eac-478a-9783-4eed31c2360e
+# ╟─f9f0a2fa-613e-48d3-ac8a-bae77a60f22f
+# ╟─b87518c1-1bae-4496-bae2-6d2bdaa8ad69
+# ╟─c1d4a958-9fc0-4eda-aaa6-f28fa88551d6
+# ╟─66a18830-0455-4c5a-9c96-719940d5e6c7
+# ╟─9b15ced5-e4de-43e4-b1e5-9f380a788d34
+# ╟─65d93d7f-f7f9-4598-9064-de8fbf490337
+# ╟─8c23501b-2bdd-4652-bb4c-8012772b758f
+# ╟─95998f9b-0c04-47b6-b75e-d90582f56db8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
