@@ -205,7 +205,10 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
     o << lowLevelInputDump << std::endl;
   }
 
-  Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false);
+  // Note, we can't have missing data inside the training manifold when using the S-Map algorithm
+  bool skipMissing = (opts.algorithm == Algorithm::SMap);
+
+  Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false, skipMissing);
   Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true);
 
   return taskRunnerPool.enqueue([opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished] {
@@ -448,16 +451,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
   bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
-  bool skipMissingData = (opts.algorithm == Algorithm::SMap);
 
   std::vector<int> inds;
 
   for (int i = 0; i < M.nobs(); i++) {
     if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
-      continue;
-    }
-
-    if (skipMissingData && M.any_missing(i)) {
       continue;
     }
 

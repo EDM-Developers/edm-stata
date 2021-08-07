@@ -2,8 +2,8 @@
 
 #include "manifold.h"
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict,
-                                            bool prediction) const
+Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
+                                            bool skipMissing) const
 {
   bool panelMode = _panel_ids.size() > 0;
 
@@ -24,35 +24,56 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
 
-  // Fill in the lagged embedding of x (or co_x) in the first columns
+  // Fill in the manifold row-by-row (point-by-point)
+  int M_i = 0;
   for (int i = 0; i < nobs; i++) {
+    // Fill in the lagged embedding of x (or co_x) in the first columns
     for (int j = 0; j < E; j++) {
       if (prediction && copredict) {
-        flat[i * E_actual(E) + j] = lagged(_co_x, inds, i, j);
+        flat[M_i * E_actual(E) + j] = lagged(_co_x, inds, i, j);
       } else {
-        flat[i * E_actual(E) + j] = lagged(_x, inds, i, j);
+        flat[M_i * E_actual(E) + j] = lagged(_x, inds, i, j);
       }
     }
-  }
 
-  // Put the lagged embedding of dt in the next columns
-  for (int i = 0; i < nobs; i++) {
+    // Put the lagged embedding of dt in the next columns
     for (int j = 0; j < E_dt(E); j++) {
-      flat[i * E_actual(E) + E + j] = find_dt(inds, i, j);
+      flat[M_i * E_actual(E) + E + j] = find_dt(inds, i, j);
     }
-  }
 
-  // Finally put the extras in the last columns
-  for (int i = 0; i < nobs; i++) {
+    // Finally put the extras in the last columns
     int offset = 0;
     for (int k = 0; k < _num_extras; k++) {
       int numLags = (k < _num_extras_lagged) ? E : 1;
       for (int j = 0; j < numLags; j++) {
-        flat[i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
+        flat[M_i * E_actual(E) + E + E_dt(E) + offset + j] = lagged(_extras[k], inds, i, j);
       }
       offset += numLags;
     }
+
+    // Erase this point if we don't want missing values in the resulting manifold
+    if (skipMissing) {
+      bool foundMissing = false;
+      for (int j = 0; j < E_actual(E); j++) {
+        if (flat[M_i * E_actual(E) + j] == _missing) {
+          foundMissing = true;
+          break;
+        }
+      }
+
+      if (foundMissing) {
+        y.erase(y.begin() + M_i);
+        if (panelMode) {
+          panelIDs.erase(panelIDs.begin() + M_i);
+        }
+        continue;
+      }
+    }
+
+    M_i += 1;
   }
+
+  nobs = M_i;
 
   return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E), _missing };
 }

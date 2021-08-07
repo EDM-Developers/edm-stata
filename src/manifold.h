@@ -166,7 +166,8 @@ public:
 
   void add_panel_ids(const std::vector<int>& panelIDs) { _panel_ids = panelIDs; }
 
-  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction) const;
+  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
+                           bool skipMissing = false) const;
 
   int E_dt(int E) const { return (_use_dt) * (E - 1 + _add_dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
