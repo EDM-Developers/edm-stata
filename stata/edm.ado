@@ -235,7 +235,7 @@ end
 
 /*
 program define edmCoremap, eclass
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [tp(integer 1)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
+	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
  */
 
 program define hasMissingValues
@@ -465,7 +465,7 @@ end
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
-			[Predict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [tp(integer 1)] ///
+			[PRedict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
 			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
@@ -482,10 +482,7 @@ program define edmExplore, eclass
 	if `seed' != 0 {
 		set seed `seed'
 	}
-	if `tp' < 1 {
-		di as error "tp must be greater than or equal to 1"
-		error 9
-	}
+
 	* check predict
 	if "`predict'" !="" {
 		confirm new variable `predict'
@@ -522,8 +519,20 @@ program define edmExplore, eclass
 	}
 
 	* default values
-	if "`theta'" == ""{
+	if "`theta'" == "" {
 		local theta = 1
+	}
+
+	if "`predictionhorizon'" == "" {
+		local predictionhorizon = `tau'
+	}
+	else {
+		local predictionhorizon = real("`predictionhorizon'")
+
+		if `predictionhorizon' == . {
+			dis as error "Require [Predictionhorizon] to either be empty or an integer"
+			error 9
+		}
 	}
 
 	* identify data structure
@@ -704,10 +713,10 @@ program define edmExplore, eclass
 		}
 	}
 
-	// Get the vector of future values which we'll be trying to predict
+	// Get the vector of values which we'll try to predict
 	tempvar x_f
-	local future_step = `tp'-1 + `tau' //predict the future value with an offset defined by tp
-	qui gen double `x_f' = f`future_step'.`x' if `touse'
+	tsunab future_x : f(`predictionhorizon').`x'
+	qui gen double `x_f' = `future_x' if `touse'
 
 	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
@@ -1199,8 +1208,8 @@ end
 program define edmXmap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
-			[SAVEsmap(string)] [DETails] [DIrection(string)] [Predict(name)] [CI(integer 0)] ///
-			[tp(integer 0)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
+			[SAVEsmap(string)] [DETails] [DIrection(string)] [PRedict(name)] [CI(integer 0)] ///
+			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
@@ -1215,10 +1224,6 @@ program define edmXmap, eclass
 	* set seed
 	if `seed' != 0 {
 		set seed `seed'
-	}
-	if `tp' < 0 {
-		di as error "tp must be greater than or equal to 0"
-		error 9
 	}
 
 	if "`oneway'" == "oneway" {
@@ -1275,9 +1280,23 @@ program define edmXmap, eclass
 	if "`e'" =="" {
 		local e = "2"
 	}
+
 	if "`theta'" == ""{
 		local theta = 1
 	}
+
+	if "`predictionhorizon'" == "" {
+		local predictionhorizon = 0
+	}
+	else {
+		local predictionhorizon = real("`predictionhorizon'")
+
+		if `predictionhorizon' == . {
+			dis as error "Require [Predictionhorizon] to either be empty or an integer"
+			error 9
+		}
+	}
+
 	local l_ori "`library'"
 	if !inlist("`algorithm'","smap","simplex","llr","") {
 		dis as error "Not valid algorithm specification"
@@ -1612,7 +1631,8 @@ program define edmXmap, eclass
 
 		// Get the vector of values which we'll try to predict
 		tempvar x_f
-		qui gen double `x_f' = f`tp'.`y' if `touse'
+		tsunab future_y : f(`predictionhorizon').`y'
+		qui gen double `x_f' = `future_y' if `touse'
 
 		// Select the rows which we'll use in the analysis
 		tempvar usable

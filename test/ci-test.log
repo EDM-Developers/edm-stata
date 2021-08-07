@@ -221,7 +221,7 @@ Note: Random 50/50 split for training and validation data
 . assert teste!=. if (_n>1 & _n < _N)
 
 . 
-. edm explore z.x, tp(10)
+. edm explore z.x, p(10)
 
 Empirical Dynamic Modelling
 Univariate mapping with z.x and its lag values
@@ -234,7 +234,7 @@ Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
 . 
-. edm xmap y x, tp(10) direction(oneway)
+. edm xmap y x, p(10) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -246,7 +246,7 @@ Convergent Cross-mapping result for variables y and x
 Note: The embedding dimension E is 2
 
 . 
-. edm xmap y x, tp(10) copredict(testx) copredictvar(x2) direction(oneway)
+. edm xmap y x, p(10) copredict(testx) copredictvar(x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -260,7 +260,7 @@ Note: The embedding dimension E is 2
 . assert testx!=. if _n>2
 
 . 
-. edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
+. edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -274,7 +274,7 @@ Note: The embedding dimension E is 2
 . assert testx2 !=. if _n>2
 
 . 
-. edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
+. edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables y and x
@@ -614,7 +614,7 @@ Note: Full sample used for the computation
 . 
 . cap drop x_p xc_p
 
-. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
+. edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full p(2)
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -638,7 +638,7 @@ Note: Full sample used for the computation
 . 
 . gen y_copy = y
 
-. edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
+. edm xmap x y, p(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -4492,6 +4492,61 @@ beta2_b5_rep1   double  %10.0g                u predicting x or x|M(y) S-map coe
 . drop beta*
 
 . 
+. // See if the negative values of p are allowed
+. set seed 1
+
+. edm explore x, p(-1)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99701         .010503 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. edm xmap x y, p(-1)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              50          .26842          .17243 
+   x ~ x|M(y)              61           .8974         .061676 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. 
+. set seed 1
+
+. edm explore x, p(-1) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99701         .010503 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. edm xmap x y, p(-1) mata
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              50          .26842          .17243 
+   x ~ x|M(y)              61           .8974         .061676 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. 
 . // Check that panel data options are working
 . 
 . // The following idea won't work, as the 'usable' is different;
@@ -4526,7 +4581,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99419         .020622 
+                 2               1          .99417         .020694 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4541,7 +4596,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .98506         .032661 
+                 2               1          .98485          .03298 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4556,8 +4611,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .29957          .18302 
-   x ~ x|M(y)              62          .85877         .079391 
+   y ~ y|M(x)              50           .3049          .17919 
+   x ~ x|M(y)              62          .90346         .069855 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -4571,8 +4626,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .32964          .17805 
-   x ~ x|M(y)              62          .78655          .10183 
+   y ~ y|M(x)              50          .33651          .17637 
+   x ~ x|M(y)              62          .81008         .097074 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 

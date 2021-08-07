@@ -70,17 +70,17 @@ assert x2 !=. if (_n>1 & _n < _N)
 edm explore x, copredict(teste) copredictvar(y)
 assert teste!=. if (_n>1 & _n < _N)
 
-edm explore z.x, tp(10)
+edm explore z.x, p(10)
 
-edm xmap y x, tp(10) direction(oneway)
+edm xmap y x, p(10) direction(oneway)
 
-edm xmap y x, tp(10) copredict(testx) copredictvar(x2) direction(oneway)
+edm xmap y x, p(10) copredict(testx) copredictvar(x2) direction(oneway)
 assert testx!=. if _n>2
 
-edm xmap y x, tp(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
+edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
 assert testx2 !=. if _n>2
 
-edm xmap y x, extra(u1) tp(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
+edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
 assert testx3 !=. if _n>2
 
 * check explore / xmap consistency
@@ -143,12 +143,12 @@ cor x_p f.x
 cor xc_p f.x
 
 cap drop x_p xc_p
-edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full tp(2)
+edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full p(2)
 sum x_p xc_p
 assert xc_p!=. if x_p!=.
 
 gen y_copy = y
-edm xmap x y, tp(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
+edm xmap x y, p(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
 assert xmap_y_p !=. if _n>1
 assert xmap_y_p == xmap_y if xmap_y !=.
 
@@ -420,6 +420,15 @@ ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
+
+// See if the negative values of p are allowed
+set seed 1
+edm explore x, p(-1)
+edm xmap x y, p(-1)
+
+set seed 1
+edm explore x, p(-1) mata
+edm xmap x y, p(-1) mata
 
 // Check that panel data options are working
 
