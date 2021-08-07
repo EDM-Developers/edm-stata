@@ -57,10 +57,6 @@ end
 # ╔═╡ 489ec795-acf4-4096-9b80-25a1c29efe77
 md"So each one of $x_i$ is an *observation* of the $x$ time series."
 
-# ╔═╡ 0cae80a9-1d69-446f-a507-cc99cb76ed6c
-#md"We have $E$ = $E."
-#md"We have $\tau$ = $τ."
-
 # ╔═╡ 578cb599-4b44-4501-9798-e9d79e43b82c
 md"### Creating a time-delayed embedding"
 
@@ -79,13 +75,13 @@ So we select a $\tau$ which means we only look at every $\tau$th observation for
 md"Choose a value for $E$:"
 
 # ╔═╡ 8630c42d-1357-4d7e-8d26-75aa5afe404a
-@bind E Slider(2:4)
+@bind E Slider(2:4; default=4, show_value=true)
 
 # ╔═╡ afd006ee-2600-4a0b-a475-4172d22e4f6f
 md"Choose a value for $\tau$:"
 
 # ╔═╡ ce054612-97a2-48a0-9a49-4664d708823c
-@bind τ Slider(1:3)
+@bind τ Slider(1:3; default=2, show_value=true)
 
 # ╔═╡ 6f9345ef-a557-4271-a9a7-23cdef85c98b
 md"""
@@ -235,30 +231,25 @@ and similarly $\mathscr{P}_{j}$ refers to the $j$th point in $\mathscr{P}$.
 md"##### Next, look at the future values of each point"
 
 # ╔═╡ aaa5b419-65ca-41e0-a0fe-34af564c09d3
-#md"### The future values we will predict"
 md"""
-For each point, look $p$ time units into the future to see where the time series will go in the future.
-These are called the points' *look-ahead* values (**this terminology needs replacing**).
+Each point on the manifold refers to a small trajectory of a time series, and for each point we look $p$ observations into the future of the time series.
 """
-
-# ╔═╡ ad158c77-8a83-4ee0-9df6-bff0852ff896
-#= md"""
-TODO: Currently the formula (in explore mode) for the number of time periods ahead to consider is $T_p + \tau - 1$, whereas I would have thought it would simply be $T_p \times \tau$ units ahead?
-""" =#
 
 # ╔═╡ faf7fd88-aa9f-4b87-9e44-7a7dbfa14927
 md"Choose a value for $p$:"
 
 # ╔═╡ 2aa0c807-f3ab-426f-bf3b-6ec87c4ad2e9
-@bind p Slider(1:5)
-
-# ╔═╡ e4f62eab-a061-41a1-82a6-cf1cf4860ddf
-md"In the training manifold, this means each point of $\mathscr{L}$ matches the corresponding look-ahead value in $y^{\,\mathscr{L}}$:"
+@bind p Slider(-2:4; default=1, show_value=true)
 
 # ╔═╡ 20628228-a140-4b56-bc63-5742660822c7
 md"We have $p$ = $p."
 
-# ╔═╡ bf3906d4-729b-4f35-b0a1-b1eff5797602
+# ╔═╡ 07bbe29b-41ab-4b9b-9c37-7a93f7c7f1fb
+md"""
+So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say that $y_1^{\mathscr{P}}$ is the value it takes $p$ observations in the future, we get:
+"""
+
+# ╔═╡ 7b4b123c-6c91-48e4-9b08-70df7049f304
 begin
 	ahead = p
 	x_fut = [symbols("x_$(i + τ*(E-1) + ahead)") for i = 1:(obs-(E-1)*τ)]
@@ -268,11 +259,33 @@ begin
 	x_fut_train = x_fut[libraryPoints]
 	x_fut_pred = x_fut[predictionPoints]
 	
-	L_str = latexify(L, env=:raw)
-	matchStr = raw"\underset{\small \text{Matches}}{\Rightarrow} ";
-	y_L_str = latexify(x_fut_train, env=:raw) # [1:size(M_x,1)]
+	first_P_point = latexify(P[[1],:], env=:raw)
+	first_y_P = latexify(x_fut_pred[[1],:], env=:raw)
 	
- 	L"\mathscr{L} = %$L_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_str"
+	L"\mathscr{P}_{1} = %$first_P_point \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1^{\mathscr{P}} = %$first_y_P"
+end
+
+# ╔═╡ e9f56664-6d86-4a9c-b1a5-65d0af9bf1b0
+md"""
+This $p$ may be thought of as the *prediction horizon*, and in `explore` mode is defaults to τ and in `xmap` mode it defaults to 0.
+In the 
+"""
+
+# ╔═╡ ad158c77-8a83-4ee0-9df6-bff0852ff896
+md"""
+In the literature, instead of measuring the number of observations $p$ ahead, authors normally use the value $T_p$ to denote the amount of time this corresponds to.
+When data is regularly sampled (e.g. $t_i = i$) then there is no difference (e.g. $T_p = p$), however for irregularly sampled data the actual time difference may be different for each prediction.
+"""
+
+# ╔═╡ e4f62eab-a061-41a1-82a6-cf1cf4860ddf
+md"In the training set, this means each point of $\mathscr{L}$ matches the corresponding value in $y^{\,\mathscr{L}}$:"
+
+# ╔═╡ bf3906d4-729b-4f35-b0a1-b1eff5797602
+begin
+	L_str = latexify(L, env=:raw)
+	y_L_str = latexify(x_fut_train, env=:raw)
+	
+ 	L"\mathscr{L} = %$L_str \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = %$y_L_str"
 end
 
 # ╔═╡ 0c676a7d-1b7a-432b-8058-320a37188ab3
@@ -282,7 +295,7 @@ md"Similarly, for the prediction set:"
 begin
 	P_str = latexify(P, env=:raw)
 	y_P_str = latexify(x_fut_pred, env=:raw) # [1:size(P,1)]
-	L"\mathscr{P} = %$P_str \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str"
+	L"\mathscr{P} = %$P_str \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = %$y_P_str"
 end
 
 # ╔═╡ 71fdd13f-19de-46e5-b11f-3e2824275505
@@ -290,21 +303,24 @@ md"### What does `edm explore x` predict?"
 
 # ╔═╡ 7be9628d-4f92-4d4a-a1b1-a77141e77c30
 md"""
-When running `edm explore x`, we pretend that we don't know the value of $y^{\mathscr{P}}$ and that we want to predict it given we know the points in $\mathscr{P}$ which show the trajectory of $x$ just before the unknown $y^{\mathscr{P}}$ look-ahead values.
+When running `edm explore x`, we pretend that we don't know the values in $y^{\mathscr{P}}$ and that we want to predict them given we know $\mathscr{P}$, $\mathscr{L}$ and $y^{\,\mathscr{L}}$.
 """
 
 # ╔═╡ ed5c583a-8cc2-4bdf-9696-fcc58dcb22fb
 md"""
-We do this by relying on $\mathscr{L}$ and $\mathscr{P}$.
-
-E.g. to predict the first look-ahead value $y_1^{\mathscr{P}}$, we focus on the corresponding point of $\mathscr{P}$ which is:
+The first prediction is to try to find the value of $y_1^{\mathscr{P}}$ given the corresponding point $\mathscr{P}_1$:
 """
 
 # ╔═╡ b0cb6b70-9c50-48d6-8e96-15b591d53221
 begin
 	first_point_str = latexify(P[[1],:], env=:raw)
-	L"\mathscr{P}_{1} = %$first_point_str \quad %$matchStr \quad y_1^{\mathscr{P}} = \, ???"
+	L"\mathscr{P}_{1} = %$first_point_str \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1^{\mathscr{P}} = \, ???"
 end
+
+# ╔═╡ 1e4c550e-ae5a-4fbd-867c-88e5b8013397
+md"""
+The terminology we use is that $y_1^{\mathscr{P}}$ is the *target* and the point $\mathscr{P}_1$ is the *predictee*.
+"""
 
 # ╔═╡ 216f4400-2b75-4472-9661-c477d8931d45
 md"""
@@ -327,14 +343,15 @@ md"To summarise the whole procedure:"
 
 # ╔═╡ d790cbae-85ed-46b7-b0c2-75568802f115
 begin
-	getStr = raw"\underset{\small \text{Get}}{\Rightarrow} "
+	matchStr = raw"\underset{\small \text{Matches}}{\Rightarrow} "
+	getStr = raw"\underset{\small \text{Get predictee}}{\Rightarrow} "
 	kNNStr = raw"\underset{\small \text{Finds neighbours in}}{\Rightarrow} "
 	predictStr = raw"\underset{\small \text{Predicts}}{\Rightarrow} "
 	
 	#	\underbrace{\,\, y_i^{\mathscr{P}} }_{\text{Want to predict}}
 	
 	L"
-	\text{To predict }y_i^{\mathscr{P}}
+	\text{For target }y_i^{\mathscr{P}}
 	%$getStr
 	\mathscr{P}_{i}
 	%$kNNStr
@@ -359,65 +376,6 @@ md"""
 to assess the accuracy of these predictions.
 """
 
-# ╔═╡ 6a96e421-b6c8-4f4f-9f13-4c34d5443d1b
-md"### What does `copredict` do in explore mode?"
-
-# ╔═╡ 885b10fe-5585-462b-9109-b293863d67be
-md"""
-Imagine that we use the command:
-
-`edm explore x, copredictvar(z) copredict(out)`
-
-This will first do a normal
-
-`edm explore x`
-
-operation, then it will perform a second set of *copredictions*.
-This brings in a second time series $z$, and specifies that the predictions made in copredict mode should be stored in the Stata variable named `out`.
-"""
-
-# ╔═╡ 37585472-6078-4020-98f2-89ea31dbd4b9
-md"""
-In coprediction mode, the training set will include the entirety of the $M_x$ manifold and its look-ahead values:
-"""
-
-# ╔═╡ 80712325-3f89-409f-b0d3-d8eca06eae02
-begin
-	y_L_copred_str = latexify(x_fut, env=:raw)
-L"\mathscr{L} = M_x = %$M_x_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_copred_str"
-end
-
-# ╔═╡ b53ea6c9-5aaf-41fe-aaf1-4b65214f6acf
-md"""
-In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_z$ manifold for the $z$ time series:
-"""
-
-# ╔═╡ e84366f8-611c-4021-bd86-6f46780e1487
-begin
-	M_z = manifold(z, E, τ)
-	P_copred_z = M_z
-	P_copred_z_str = latexify(P_copred_z, env=:raw)
-	y_P_copred_str = y_L_copred_str
-	L"\mathscr{P} = M_z = %$P_copred_z_str \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_copred_str"
-end
-
-# ╔═╡ 3db5cd4f-6c4e-4c4f-be04-2be39f568959
-md"""
-The rest of the procedure is the same as before:
-"""
-
-# ╔═╡ fec658e0-d77c-45de-b906-b8b6b4942bad
-L"
-\text{To predict }y_i^{\mathscr{P}}
-%$getStr
-\underbrace{ \mathscr{P}_{i} }_{\color{red}{\text{Based on } z}}
-%$kNNStr
-\mathscr{L}
-%$matchStr
-\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
-%$predictStr
-\hat{y}_i^{\mathscr{P}}"
-
 # ╔═╡ 9f05a08a-a2ff-464b-9399-04047823b568
 md"### What does `edm xmap u v` do?"
 
@@ -427,9 +385,8 @@ Imagine that we use the command:
 
 `edm xmap u v, oneway`
 
-This, like the copredict case, will use two different time series, here labelled  $u$ and $v$.
-
-The $u$ variable's lagged embedding is constructed:
+This will consider two different time series, here labelled  $u$ and $v$.
+The lagged embedding $M_u$ is constructed:
 """
 
 # ╔═╡ 203af6eb-040f-41c3-abc1-a7a574681825
@@ -445,13 +402,13 @@ end
 
 # ╔═╡ a8130051-db98-46e6-97bb-f724d7a290d9
 md"The library set is a random subset of $L$ points of $M_u$.
-The size of the library $L$ is set based on the Stata parameter `library`."
+The library size parameter $L$ is set by the Stata parameter `library`."
 
 # ╔═╡ 7138b826-ed29-4f6b-8067-bff029271852
 md"Choose a value for $L$:"
 
 # ╔═╡ 93613b85-ae63-4785-b5aa-caa51dab6b73
-@bind library Slider(3:size(M_u,1))
+@bind library Slider(3:size(M_u,1); default=3, show_value=true)
 
 # ╔═╡ 99927d27-b407-4cbd-97cb-395b996b65fb
 md"The value of $L$ is $library."
@@ -481,17 +438,18 @@ end
 # ╔═╡ cc543a65-f38f-412b-a05e-3b7d5cabe573
 md"""
 The $v$ time series will be the values which we try to predict.
-Here we are simply predicting $p$ time units ahead, where the default case is actually $p = 0$.
+Here we are trying to predict $p$ observations ahead, where the default case is actually $p = 0$.
 The $p = 0$ case means we are using the $u$ time series to try to predict the contemporaneous value of $v$.
+A negative $p$ may be chosen, though this is a bit abnormal.
 """
 
 # ╔═╡ 9cad1bf1-9ad9-4683-b912-84d779827cea
 md"Choose a value for $p$:"
 
 # ╔═╡ 70af044f-4375-4c2b-936b-0acc62a4db4e
-@bind p_xmap Slider(0:5)
+@bind p_xmap Slider(-2:5; default=0, show_value=true)
 
-# ╔═╡ 8300696c-971c-41d7-bce1-a399d80c20cd
+# ╔═╡ 69816a32-c6c5-4e30-94f1-31727f567b73
 md"The value of $p$ is $p_xmap."
 
 # ╔═╡ 797b647c-f8e1-4681-b5b2-a8721aad940f
@@ -522,70 +480,9 @@ The prediction procedure is then the same as previous times, though the library 
 
 # ╔═╡ 15092345-e81a-4c28-81ae-e79e9d823853
 L"
-\underbrace{ \text{To predict }y_i^{\mathscr{P}} }_{\text{Based on } v}
+\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } v}
 %$getStr
 \underbrace{ \mathscr{P}_{i} }_{\text{Based on } u}
-%$kNNStr
-\underbrace{ \mathscr{L} }_{\text{Based on } u}
-%$matchStr
-\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
-%$predictStr
-\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
-
-# ╔═╡ d4166207-8fdf-484a-a6bb-835a966373a4
-md"### What does `copredict` do in xmap mode?"
-
-# ╔═╡ 4c572fa2-1177-4067-b129-5f4cf0bd302a
-md"""
-Imagine that we use the command:
-
-`edm xmap u v, oneway copredictvar(w) copredict(out)`
-
-Now we combine three different time series to create the predictions in the `out` Stata variable.
-"""
-
-# ╔═╡ 2da0ba39-c039-4b80-8f8b-863107ccaf96
-md"""
-In this case, the training manifold contains all the points in $M_u$:
-"""
-
-# ╔═╡ 770da5db-c46c-4a1d-a3f3-7df02321da05
-begin	
-	
-	M_u_str = (latexify(P_xmap))
-	
- 	y_L_str_xmap_copred = latexify(v_fut, env=:raw)
-	y_P_str_xmap_copred = y_L_str_xmap_copred
-	
-	L"\mathscr{L} = M_u = %$M_u_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_str_xmap_copred"
-end
-
-# ╔═╡ d51ef4c6-b5fd-4ea4-84d7-6ce137be89e7
-md"""
-The main change in coprediction is the prediction set is based on the new $w$ time series:
-"""
-
-# ╔═╡ dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
-begin
-	force_update_3 = p_xmap
-	
-	w = [symbols("w_$i") for i in 1:obs]
-	M_w = manifold(w, E, τ);	
-	P_xmap_copred = M_w
-
-	L"\mathscr{P} = M_w = %$(latexify(P_xmap_copred, env=:raw)) \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str_xmap_copred"
-end
-
-# ╔═╡ 027667be-91db-4e4b-b4f2-07306ea7e4c1
-md"""
-Finally, the prediction steps are the same, with:
-"""
-
-# ╔═╡ 1e00a8f0-94b0-430b-81b0-9846913878f5
-L"
-\underbrace{ \text{To predict }y_i^{\mathscr{P}} }_{\text{Based on } v}
-%$getStr
-\underbrace{ \mathscr{P}_{i} }_{\color{red}{ \text{Based on } w } }
 %$kNNStr
 \underbrace{ \mathscr{L} }_{\text{Based on } u}
 %$matchStr
@@ -673,13 +570,13 @@ is specified, the manifold will be constructed as if the `extra` option had said
 md"Choose a value for $E$:"
 
 # ╔═╡ e694efa3-d618-4430-ac5b-d1922f5b4c1e
-@bind E_dt Slider(2:3)
+@bind E_dt Slider(2:3; default=2, show_value=true)
 
 # ╔═╡ 8dcfb9ac-1f74-4cf7-8419-13b5cddcef74
 md"Choose a value for $\tau$:"
 
 # ╔═╡ 710cf6bf-7eac-478a-9783-4eed31c2360e
-@bind τ_dt Slider(1:4)
+@bind τ_dt Slider(1:4; default=2, show_value=true)
 
 # ╔═╡ f9f0a2fa-613e-48d3-ac8a-bae77a60f22f
 md"In this case ($E$ = $E_dt, τ = $τ_dt), the manifold will look like:"
@@ -826,6 +723,126 @@ then the manifold can be written as:
 # 	L"M_{x,\mathrm{d}t} := %$(latexify(M_x_cumdt))"
 # end
 md"TODO..."
+
+# ╔═╡ 6a96e421-b6c8-4f4f-9f13-4c34d5443d1b
+md"### What does `copredict` do in explore mode?"
+
+# ╔═╡ 885b10fe-5585-462b-9109-b293863d67be
+md"""
+Imagine that we use the command:
+
+`edm explore x, copredictvar(z) copredict(out)`
+
+This will first do a normal
+
+`edm explore x`
+
+operation, then it will perform a second set of *copredictions*.
+This brings in a second time series $z$, and specifies that the predictions made in copredict mode should be stored in the Stata variable named `out`.
+"""
+
+# ╔═╡ 37585472-6078-4020-98f2-89ea31dbd4b9
+md"""
+In coprediction mode, the training set will include the entirety of the $M_x$ manifold and its look-ahead values:
+"""
+
+# ╔═╡ 80712325-3f89-409f-b0d3-d8eca06eae02
+begin
+	y_L_copred_str = latexify(x_fut, env=:raw)
+L"\mathscr{L} = M_x = %$M_x_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_copred_str"
+end
+
+# ╔═╡ b53ea6c9-5aaf-41fe-aaf1-4b65214f6acf
+md"""
+In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_z$ manifold for the $z$ time series:
+"""
+
+# ╔═╡ e84366f8-611c-4021-bd86-6f46780e1487
+begin
+	M_z = manifold(z, E, τ)
+	P_copred_z = M_z
+	P_copred_z_str = latexify(P_copred_z, env=:raw)
+	y_P_copred_str = y_L_copred_str
+	L"\mathscr{P} = M_z = %$P_copred_z_str \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_copred_str"
+end
+
+# ╔═╡ 3db5cd4f-6c4e-4c4f-be04-2be39f568959
+md"""
+The rest of the procedure is the same as before:
+"""
+
+# ╔═╡ fec658e0-d77c-45de-b906-b8b6b4942bad
+L"
+\text{For target }y_i^{\mathscr{P}}
+%$getStr
+\underbrace{ \mathscr{P}_{i} }_{\color{red}{\text{Based on } z}}
+%$kNNStr
+\mathscr{L}
+%$matchStr
+\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
+%$predictStr
+\hat{y}_i^{\mathscr{P}}"
+
+# ╔═╡ d4166207-8fdf-484a-a6bb-835a966373a4
+md"### What does `copredict` do in xmap mode?"
+
+# ╔═╡ 4c572fa2-1177-4067-b129-5f4cf0bd302a
+md"""
+Imagine that we use the command:
+
+`edm xmap u v, oneway copredictvar(w) copredict(out)`
+
+Now we combine three different time series to create the predictions in the `out` Stata variable.
+"""
+
+# ╔═╡ 2da0ba39-c039-4b80-8f8b-863107ccaf96
+md"""
+In this case, the training set contains all the points in $M_u$:
+"""
+
+# ╔═╡ 770da5db-c46c-4a1d-a3f3-7df02321da05
+begin
+
+	M_u_str = (latexify(P_xmap))
+
+ 	y_L_str_xmap_copred = latexify(v_fut, env=:raw)
+	y_P_str_xmap_copred = y_L_str_xmap_copred
+
+	L"\mathscr{L} = M_u = %$M_u_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_str_xmap_copred"
+end
+
+# ╔═╡ d51ef4c6-b5fd-4ea4-84d7-6ce137be89e7
+md"""
+The main change in coprediction is the prediction set is based on the new $w$ time series:
+"""
+
+# ╔═╡ dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
+begin
+	force_update_3 = p_xmap
+
+	w = [symbols("w_$i") for i in 1:obs]
+	M_w = manifold(w, E, τ);
+	P_xmap_copred = M_w
+
+	L"\mathscr{P} = M_w = %$(latexify(P_xmap_copred, env=:raw)) \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str_xmap_copred"
+end
+
+# ╔═╡ 027667be-91db-4e4b-b4f2-07306ea7e4c1
+md"""
+Finally, the prediction steps are the same, with:
+"""
+
+# ╔═╡ 1e00a8f0-94b0-430b-81b0-9846913878f5
+L"
+\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } v}
+%$getStr
+\underbrace{ \mathscr{P}_{i} }_{\color{red}{ \text{Based on } w } }
+%$kNNStr
+\underbrace{ \mathscr{L} }_{\text{Based on } u}
+%$matchStr
+\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
+%$predictStr
+\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1222,7 +1239,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─2056d35f-b594-4ba6-b5ee-5f7db829194a
 # ╟─a9be623f-ada5-46c4-bdf3-d0a89a9812c9
 # ╟─489ec795-acf4-4096-9b80-25a1c29efe77
-# ╟─0cae80a9-1d69-446f-a507-cc99cb76ed6c
 # ╟─578cb599-4b44-4501-9798-e9d79e43b82c
 # ╟─b9b9315b-32b2-45a8-86af-c96585c88f00
 # ╟─569d0959-af43-4c88-a733-da272897b4bf
@@ -1251,11 +1267,14 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─3de1fca8-13ac-4358-bb41-ce947bbce460
 # ╟─0fe181b0-c244-4b67-97a0-cf452aa6f277
 # ╟─aaa5b419-65ca-41e0-a0fe-34af564c09d3
-# ╟─ad158c77-8a83-4ee0-9df6-bff0852ff896
 # ╟─faf7fd88-aa9f-4b87-9e44-7a7dbfa14927
 # ╟─2aa0c807-f3ab-426f-bf3b-6ec87c4ad2e9
-# ╟─e4f62eab-a061-41a1-82a6-cf1cf4860ddf
 # ╟─20628228-a140-4b56-bc63-5742660822c7
+# ╟─07bbe29b-41ab-4b9b-9c37-7a93f7c7f1fb
+# ╟─7b4b123c-6c91-48e4-9b08-70df7049f304
+# ╟─e9f56664-6d86-4a9c-b1a5-65d0af9bf1b0
+# ╟─ad158c77-8a83-4ee0-9df6-bff0852ff896
+# ╟─e4f62eab-a061-41a1-82a6-cf1cf4860ddf
 # ╟─bf3906d4-729b-4f35-b0a1-b1eff5797602
 # ╟─0c676a7d-1b7a-432b-8058-320a37188ab3
 # ╟─7ac81a86-de83-4fb8-9415-5a8d71d58ca4
@@ -1263,6 +1282,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─7be9628d-4f92-4d4a-a1b1-a77141e77c30
 # ╟─ed5c583a-8cc2-4bdf-9696-fcc58dcb22fb
 # ╟─b0cb6b70-9c50-48d6-8e96-15b591d53221
+# ╟─1e4c550e-ae5a-4fbd-867c-88e5b8013397
 # ╟─216f4400-2b75-4472-9661-c477d8931d45
 # ╟─535aaf80-9130-4417-81ef-8031da2f7c73
 # ╟─69dee0fe-4266-4444-a0f1-44db01b38dbd
@@ -1271,14 +1291,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─ec5e9c90-f7e8-49fa-a7c5-36fc527ebb1d
 # ╟─6b7788e1-4dfa-4249-b3ae-9323c144d8a5
 # ╟─e14e6991-ab3e-4ee3-84df-65474d682f95
-# ╟─6a96e421-b6c8-4f4f-9f13-4c34d5443d1b
-# ╟─885b10fe-5585-462b-9109-b293863d67be
-# ╟─37585472-6078-4020-98f2-89ea31dbd4b9
-# ╟─80712325-3f89-409f-b0d3-d8eca06eae02
-# ╟─b53ea6c9-5aaf-41fe-aaf1-4b65214f6acf
-# ╟─e84366f8-611c-4021-bd86-6f46780e1487
-# ╟─3db5cd4f-6c4e-4c4f-be04-2be39f568959
-# ╟─fec658e0-d77c-45de-b906-b8b6b4942bad
 # ╟─9f05a08a-a2ff-464b-9399-04047823b568
 # ╟─95058743-a0f0-4e40-998a-959fb3bcf98f
 # ╟─203af6eb-040f-41c3-abc1-a7a574681825
@@ -1292,19 +1304,11 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─cc543a65-f38f-412b-a05e-3b7d5cabe573
 # ╟─9cad1bf1-9ad9-4683-b912-84d779827cea
 # ╟─70af044f-4375-4c2b-936b-0acc62a4db4e
-# ╟─8300696c-971c-41d7-bce1-a399d80c20cd
+# ╟─69816a32-c6c5-4e30-94f1-31727f567b73
 # ╟─797b647c-f8e1-4681-b5b2-a8721aad940f
 # ╟─25720cde-ce24-4ceb-be88-539837b5bf39
 # ╟─1cff64b5-b3d9-41ce-aac0-c722821dda93
 # ╟─15092345-e81a-4c28-81ae-e79e9d823853
-# ╟─d4166207-8fdf-484a-a6bb-835a966373a4
-# ╟─4c572fa2-1177-4067-b129-5f4cf0bd302a
-# ╟─2da0ba39-c039-4b80-8f8b-863107ccaf96
-# ╟─770da5db-c46c-4a1d-a3f3-7df02321da05
-# ╟─d51ef4c6-b5fd-4ea4-84d7-6ce137be89e7
-# ╟─dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
-# ╟─027667be-91db-4e4b-b4f2-07306ea7e4c1
-# ╟─1e00a8f0-94b0-430b-81b0-9846913878f5
 # ╟─6fae5864-ec11-4e94-98a9-ffc0fd421049
 # ╟─6ea2e5d4-ff50-4efe-b80a-29940e7455f9
 # ╟─982d9067-da5b-4cbf-bcba-5c94ed2479b9
@@ -1325,5 +1329,21 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─65d93d7f-f7f9-4598-9064-de8fbf490337
 # ╟─8c23501b-2bdd-4652-bb4c-8012772b758f
 # ╟─95998f9b-0c04-47b6-b75e-d90582f56db8
+# ╟─6a96e421-b6c8-4f4f-9f13-4c34d5443d1b
+# ╟─885b10fe-5585-462b-9109-b293863d67be
+# ╟─37585472-6078-4020-98f2-89ea31dbd4b9
+# ╟─80712325-3f89-409f-b0d3-d8eca06eae02
+# ╟─b53ea6c9-5aaf-41fe-aaf1-4b65214f6acf
+# ╟─e84366f8-611c-4021-bd86-6f46780e1487
+# ╟─3db5cd4f-6c4e-4c4f-be04-2be39f568959
+# ╟─fec658e0-d77c-45de-b906-b8b6b4942bad
+# ╟─d4166207-8fdf-484a-a6bb-835a966373a4
+# ╟─4c572fa2-1177-4067-b129-5f4cf0bd302a
+# ╟─2da0ba39-c039-4b80-8f8b-863107ccaf96
+# ╟─770da5db-c46c-4a1d-a3f3-7df02321da05
+# ╟─d51ef4c6-b5fd-4ea4-84d7-6ce137be89e7
+# ╟─dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
+# ╟─027667be-91db-4e4b-b4f2-07306ea7e4c1
+# ╟─1e00a8f0-94b0-430b-81b0-9846913878f5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
