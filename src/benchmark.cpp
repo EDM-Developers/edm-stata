@@ -273,10 +273,10 @@ static void bm_run_tests(benchmark::State& state)
   bool verbose = false;
   int nthreads = 80;
 
-  ConsoleIO io;
+  ConsoleIO io(verbose);
 
   for (auto _ : state) {
-    auto results = run_tests(testInputs, nthreads, &io, verbose);
+    auto results = run_tests(testInputs, nthreads, &io);
   }
 }
 

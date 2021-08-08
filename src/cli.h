@@ -3,6 +3,11 @@
 #include <iomanip>
 #include <iostream>
 
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -10,7 +15,7 @@ using json = nlohmann::json;
 class ConsoleIO : public IO
 {
 public:
-  ConsoleIO() { this->verbosity = std::numeric_limits<int>::max(); }
+  ConsoleIO() { this->verbosity = 1; }
   ConsoleIO(int v) { this->verbosity = v; }
   virtual void out(const char* s) const { std::cout << s; }
   virtual void error(const char* s) const { std::cerr << s; }
@@ -74,37 +79,24 @@ std::vector<bool> int_to_bool(std::vector<int> iv)
   return bv;
 }
 
-json run_tests(json testInputs, int nthreads, IO* io, bool verb)
+json run_tests(json testInputs, int nthreads, IO* io)
 {
   int rc = 0;
   json results;
 
   int numTaskGroups = testInputs.size();
 
-  if (verb) {
-    std::cout << "Number of task groups is " << numTaskGroups << "\n";
-  }
+  io->print(fmt::format("Number of tests in this JSON file is {}\n", numTaskGroups));
 
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
-    if (verb) {
-      std::cout << "Starting task group number " << taskGroupNum << "\n";
-    }
-
     json taskGroup = testInputs[taskGroupNum];
 
     Options opts = taskGroup["opts"];
     opts.nthreads = nthreads;
 
-    if (verb) {
-      std::cout << "Loading: " << opts.cmdLine << "\n";
-    }
+    io->print(fmt::format("[{}] Starting the Stata command: {}\n", taskGroupNum, opts.cmdLine));
 
     ManifoldGenerator generator = taskGroup["generator"];
-
-    if (verb) {
-      std::cout << "Generator loaded!" << std::endl;
-    }
-
     std::vector<int> Es = taskGroup["Es"];
     std::vector<int> libraries = taskGroup["libraries"];
     int k = taskGroup["k"];
@@ -126,12 +118,9 @@ json run_tests(json testInputs, int nthreads, IO* io, bool verb)
       copredictMode, usable, coTrainingRows, coPredictionRows, rngState, nextRV, io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
-    if (verb) {
-      std::cout << "Waiting for results...\n";
-    }
-
     for (int f = 0; f < futures.size(); f++) {
       const Prediction pred = futures[f].get();
+      io->print(io->get_and_clear_async_buffer());
 
       results.push_back(pred);
       if (pred.rc > rc) {
@@ -140,9 +129,7 @@ json run_tests(json testInputs, int nthreads, IO* io, bool verb)
     }
   }
 
-  if (verb) {
-    std::cout << "rc is " << rc;
-  }
+  io->print(fmt::format("Return code is {}\n", rc));
 
   return results;
 }

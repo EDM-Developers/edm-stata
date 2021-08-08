@@ -193,6 +193,8 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
 
   numTasksStarted += 1;
 
+  // This hack is simply to dump some really low level data structures
+  // purely for the purpose of generating microbenchmarks.
   if (io != nullptr && io->verbosity > 4) {
     json lowLevelInputDump;
     lowLevelInputDump["generator"] = generator;

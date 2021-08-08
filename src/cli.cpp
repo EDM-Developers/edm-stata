@@ -23,16 +23,14 @@ int main(int argc, char* argv[])
     nthreads = atoi(argv[2]);
   }
 
-  std::cout << "Using nthreads = " << nthreads << "\n";
+  int verbosity = 1;
+  ConsoleIO io(verbosity);
 
-  ConsoleIO io;
-
-  std::cout << "Read in the JSON input from " << fnameIn << "\n";
   std::ifstream i(fnameIn);
   json testInputs;
   i >> testInputs;
 
-  json results = run_tests(testInputs, nthreads, &io, true);
+  json results = run_tests(testInputs, nthreads, &io);
 
   size_t ext = fnameIn.find_last_of('.');
   fnameIn = fnameIn.substr(0, ext);
