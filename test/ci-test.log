@@ -4492,4 +4492,89 @@ beta2_b5_rep1   double  %10.0g                u predicting x or x|M(y) S-map coe
 . drop beta*
 
 . 
+. // Check that panel data options are working
+. 
+. // The following idea won't work, as the 'usable' is different;
+. // the points which cross the boundary of panel ids are now thrown out
+. //
+. // // First run a couple of commands before adding panel data
+. // // and compare them against the idw(0) versions
+. // set seed 2
+. // edm explore x
+. //
+. // set seed 2
+. // edm xmap x y
+. 
+. 
+. // Set up some panel data structure
+. gen id = _n > _N / 2
+
+. xtset id t
+
+Panel variable: id (unbalanced)
+ Time variable: t, 2 to 100, but with gaps
+         Delta: 1 unit
+
+. 
+. // Run some commands with multispatial mode on & off
+. set seed 2
+
+. edm explore x
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99419         .020622 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set seed 2
+
+. edm explore x, idw(-1)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .98506         .032661 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set seed 2
+
+. edm xmap x y
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              50          .29957          .18302 
+   x ~ x|M(y)              62          .85877         .079391 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. 
+. set seed 2
+
+. edm xmap x y, idw(-1)
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              50          .32964          .17805 
+   x ~ x|M(y)              62          .78655          .10183 
+---------------------------------------------------------------
+Note: The embedding dimension E is 2
+
+. 
 end of do-file

@@ -420,3 +420,34 @@ ds, detail
 format beta* %3.0g
 list beta*
 drop beta*
+
+// Check that panel data options are working
+
+// The following idea won't work, as the 'usable' is different;
+// the points which cross the boundary of panel ids are now thrown out
+//
+// // First run a couple of commands before adding panel data
+// // and compare them against the idw(0) versions
+// set seed 2
+// edm explore x
+//
+// set seed 2
+// edm xmap x y
+
+
+// Set up some panel data structure
+gen id = _n > _N / 2
+xtset id t
+
+// Run some commands with multispatial mode on & off
+set seed 2
+edm explore x
+
+set seed 2
+edm explore x, idw(-1)
+
+set seed 2
+edm xmap x y
+
+set seed 2
+edm xmap x y, idw(-1)
