@@ -799,7 +799,7 @@ program define edmExplore, eclass
 	// with some missing values).
 	tempvar usable
 
-	if `mata_mode' {	
+	if `mata_mode' {
 		if `allow_missing_mode' {
 			// Work on any row of the manifold with >= 1 non-missing value
 			qui {
@@ -1807,10 +1807,14 @@ program define edmXmap, eclass
 				error 1
 			}
 
+
 			foreach i of numlist `e' {
 				if `lib_size' <= `i' + 1 {
-					di as error "Cannot estimate under the current library specification"
-					error 1
+					if "`lib_size_warning'" != "" {
+						di as text "Warning: library size is quite small relative to the chosen E"
+					}
+					local lib_size_warning = 1
+					break
 				}
 			}
 		}

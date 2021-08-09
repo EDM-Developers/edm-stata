@@ -125,6 +125,7 @@ private:
   bool _use_dt = false;
   bool _add_dt0 = false;
   bool _cumulative_dt = false;
+  bool _panel_mode = false;
   int _tau;
   double _missing;
   int _num_extras, _num_extras_lagged;
@@ -164,10 +165,16 @@ public:
     _cumulative_dt = cumulativeDT;
   }
 
-  void add_panel_ids(const std::vector<int>& panelIDs) { _panel_ids = panelIDs; }
+  void add_panel_ids(const std::vector<int>& panelIDs)
+  {
+    _panel_ids = panelIDs;
+    _panel_mode = true;
+  }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
                            bool skipMissing = false) const;
+
+  std::vector<bool> generate_usable(const std::vector<bool>& touse, int maxE, bool allowMissing) const;
 
   int E_dt(int E) const { return (_use_dt) * (E - 1 + _add_dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }

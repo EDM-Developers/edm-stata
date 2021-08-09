@@ -290,30 +290,6 @@ void reset_global_state()
   allTasksFinished = false;
 }
 
-std::vector<bool> generate_usable(const std::vector<bool>& touse, const ManifoldGenerator& generator, int maxE,
-                                  bool allowMissing)
-{
-  // Make the largest manifold we'll need in order to find missing values for 'usable'
-  std::vector<bool> allTrue(touse.size());
-  for (int i = 0; i < allTrue.size(); i++) {
-    allTrue[i] = true;
-  }
-
-  Manifold M = generator.create_manifold(maxE, allTrue, false, false);
-
-  // Generate the 'usable' variable
-  std::vector<bool> usable(touse.size());
-  for (int i = 0; i < usable.size(); i++) {
-    if (allowMissing) {
-      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
-    } else {
-      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
-    }
-  }
-
-  return usable;
-}
-
 /*
  * Read that information needed for the edm tasks which is doesn't change across
  * the various tasks, and store it in the 'opts' and 'generator' global variables.
@@ -447,12 +423,22 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     generator.add_dt_data(dtWeight, dt0, cumulativeDT);
   }
 
+  if (opts.panelMode) {
+    generator.add_panel_ids(stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1));
+  }
+
   // The stata variable named `touse' (the basis for the usable variables)
   std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
-  std::vector<bool> usable = generate_usable(touse, generator, maxE, allowMissing);
+  std::vector<bool> usable = generator.generate_usable(touse, maxE, allowMissing);
   print_vector<bool>("usable", usable);
+
+  auto usableToSave = std::make_unique<double[]>(usable.size());
+  for (int i = 0; i < usable.size(); i++) {
+    usableToSave[i] = usable[i];
+  }
+  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 1 + 1);
 
   if (allowMissing && opts.missingdistance == 0) {
     opts.missingdistance = default_missing_distance(x, usable);
@@ -477,12 +463,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  auto usableToSave = std::make_unique<double[]>(usable.size());
-  for (int i = 0; i < usable.size(); i++) {
-    usableToSave[i] = usable[i];
-  }
-  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 1 + 1);
-
   // If doing coprediction, bring in the main data for this manifold
   std::vector<ST_double> co_x;
   std::vector<bool> coTrainingRows, coPredictionRows;
@@ -498,10 +478,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
         coTrainingRows[i] = false;
       }
     }
-  }
-
-  if (opts.panelMode) {
-    generator.add_panel_ids(stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1));
   }
 
   // Read in some macros from Stata

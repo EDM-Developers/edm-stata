@@ -4547,6 +4547,54 @@ Convergent Cross-mapping result for variables x and y
 Note: The embedding dimension E is 2
 
 . 
+. // Set up some panel data structure without missing data
+. clear
+
+. set obs 100
+Number of observations (_N) was 0, now 100.
+
+. 
+. gen t = _n
+
+. tsset t
+
+Time variable: t, 1 to 100
+        Delta: 1 unit
+
+. 
+. gen double x = 0.2 if _n==1
+(99 missing values generated)
+
+. gen double y = 0.4 if _n==1
+(99 missing values generated)
+
+. 
+. * Create a dynamic system
+. local r_x 3.625
+
+. local r_y 3.77
+
+. local beta_xy = 0.05
+
+. local beta_yx=0.4
+
+. local tau = 1
+
+. drawnorm double u1 u2
+
+. qui {
+
+. 
+. gen id = _n > _N / 2
+
+. xtset id t
+
+Panel variable: id (weakly balanced)
+ Time variable: t, 1 to 100
+         Delta: 1 unit
+
+. 
+. 
 . // Check that panel data options are working
 . 
 . // The following idea won't work, as the 'usable' is different;
@@ -4561,27 +4609,61 @@ Note: The embedding dimension E is 2
 . // edm xmap x y
 . 
 . 
-. // Set up some panel data structure
-. gen id = _n > _N / 2
+. // Run some commands with multispatial mode on & off, with & without missing values
+. set seed 1
 
-. xtset id t
-
-Panel variable: id (unbalanced)
- Time variable: t, 2 to 100, but with gaps
-         Delta: 1 unit
-
-. 
-. // Run some commands with multispatial mode on & off
-. set seed 2
-
-. edm explore x
+. edm explore x, e(40)
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99417         .020694 
+                40               1          .97379          .12403 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+-30
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(40) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1          .97379          .12403 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+-30
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(40) allowmissing
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1          .82925          .11795 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(40) allowmissing mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1          .82925          .11795 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4589,47 +4671,183 @@ Note: Random 50/50 split for training and validation data
 . 
 . set seed 2
 
-. edm explore x, idw(-1)
+. edm explore x, e(40) idw(-1)
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .98485          .03298 
+                40               1          .89117          .10737 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+-30
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(40) idw(-1) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1          .96334          .11748 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+-30
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(40) idw(-1) allowmissing
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1           .7235          .12747 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(40) idw(-1) allowmissing mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                40               1          .77495          .11365 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
 . 
-. set seed 2
+. set seed 3
 
-. edm xmap x y
+. edm xmap x y, e(40)
+Warning: library size is quite small relative to the chosen E
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              50           .3049          .17919 
-   x ~ x|M(y)              62          .90346         .069855 
+   y ~ y|M(x)              22          .58293           .1436 
+   x ~ x|M(y)              22          .82724          .14766 
 ---------------------------------------------------------------
-Note: The embedding dimension E is 2
+Note: The embedding dimension E is 40
+
+. set seed 3
+
+. edm xmap x y, e(40) mata
+Warning: library size is quite small relative to the chosen E
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              22          .58293           .1436 
+   x ~ x|M(y)              22          .82724          .14766 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
+
+. set seed 3
+
+. edm xmap x y, e(40) allowmissing
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Missing values are assumed to have a distance of .25 and .23
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             100          .64241          .13023 
+   x ~ x|M(y)             100          .82638          .10415 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
+
+. set seed 3
+
+. edm xmap x y, e(40) allowmissing mata
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Missing values are assumed to have a distance of .25 and .23
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             100          .64241          .13023 
+   x ~ x|M(y)             100          .82638          .10415 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
 
 . 
-. set seed 2
+. set seed 4
 
-. edm xmap x y, idw(-1)
+. edm xmap x y, e(40) idw(-1)
+Warning: library size is quite small relative to the chosen E
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .33651          .17637 
-   x ~ x|M(y)              62          .81008         .097074 
+   y ~ y|M(x)              22           .5282          .15148 
+   x ~ x|M(y)              22           .4989          .16938 
 ---------------------------------------------------------------
-Note: The embedding dimension E is 2
+Note: The embedding dimension E is 40
+
+. set seed 4
+
+. edm xmap x y, e(40) idw(-1) mata
+Warning: library size is quite small relative to the chosen E
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)              22          .58293           .1436 
+   x ~ x|M(y)              22          .82724          .14766 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
+
+. set seed 4
+
+. edm xmap x y, e(40) idw(-1) allowmissing
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Missing values are assumed to have a distance of .25 and .23
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             100          .59469          .13713 
+   x ~ x|M(y)             100          .77555          .15126 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
+
+. set seed 4
+
+. edm xmap x y, e(40) idw(-1) allowmissing mata
+
+Empirical Dynamic Modelling
+Convergent Cross-mapping result for variables x and y
+Missing values are assumed to have a distance of .25 and .23
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             100          .64241          .13023 
+   x ~ x|M(y)             100          .82638          .10415 
+---------------------------------------------------------------
+Note: The embedding dimension E is 40
 
 . 
 end of do-file

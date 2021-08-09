@@ -84,6 +84,13 @@ double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vect
   if (index < 0) {
     return _missing;
   }
+
+  if (_panel_mode) {
+    if (_panel_ids[index] != _panel_ids[inds.at(i)]) {
+      return _missing;
+    }
+  }
+
   return vec[index];
 }
 
@@ -104,11 +111,35 @@ double ManifoldGenerator::find_dt(const std::vector<int>& inds, int i, int j) co
   return _dtWeight * (_t[ind1] - _t[ind2]);
 }
 
+std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE, bool allowMissing) const
+{
+  // Make the largest manifold we'll need in order to find missing values for 'usable'
+  std::vector<bool> allTrue(touse.size());
+  for (int i = 0; i < allTrue.size(); i++) {
+    allTrue[i] = true;
+  }
+
+  Manifold M = create_manifold(maxE, allTrue, false, false, false);
+
+  // Generate the 'usable' variable
+  std::vector<bool> usable(touse.size());
+  for (int i = 0; i < usable.size(); i++) {
+    if (allowMissing) {
+      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != _missing;
+    } else {
+      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != _missing;
+    }
+  }
+
+  return usable;
+}
+
 void to_json(json& j, const ManifoldGenerator& g)
 {
   j = json{ { "_use_dt", g._use_dt },
             { "_add_dt0", g._add_dt0 },
             { "_cumulative_dt", g._cumulative_dt },
+            { "_panel_mode", g._panel_mode },
             { "_tau", g._tau },
             { "_missing", g._missing },
             { "_num_extras", g._num_extras },
@@ -127,6 +158,7 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_use_dt").get_to(g._use_dt);
   j.at("_add_dt0").get_to(g._add_dt0);
   j.at("_cumulative_dt").get_to(g._cumulative_dt);
+  j.at("_panel_mode").get_to(g._panel_mode);
   j.at("_tau").get_to(g._tau);
   j.at("_missing").get_to(g._missing);
   j.at("_num_extras").get_to(g._num_extras);

@@ -430,6 +430,34 @@ set seed 1
 edm explore x, p(-1) mata
 edm xmap x y, p(-1) mata
 
+// Set up some panel data structure without missing data
+clear
+set obs 100
+
+gen t = _n
+tsset t
+
+gen double x = 0.2 if _n==1
+gen double y = 0.4 if _n==1
+
+* Create a dynamic system
+local r_x 3.625
+local r_y 3.77
+local beta_xy = 0.05
+local beta_yx=0.4
+local tau = 1
+drawnorm double u1 u2
+qui {
+    forvalues i=2/`=_N' {
+        replace x=l.x *(`r_x' *(1-l.x)-`beta_xy'*l.y) in `i'
+        replace y=l.y *(`r_y' *(1-l.y)-`beta_yx'*l`tau'.x) in `i'
+    }
+}
+
+gen id = _n > _N / 2
+xtset id t
+
+
 // Check that panel data options are working
 
 // The following idea won't work, as the 'usable' is different;
@@ -444,19 +472,39 @@ edm xmap x y, p(-1) mata
 // edm xmap x y
 
 
-// Set up some panel data structure
-gen id = _n > _N / 2
-xtset id t
-
-// Run some commands with multispatial mode on & off
-set seed 2
-edm explore x
-
-set seed 2
-edm explore x, idw(-1)
-
-set seed 2
-edm xmap x y
+// Run some commands with multispatial mode on & off, with & without missing values
+set seed 1
+edm explore x, e(40)
+set seed 1
+edm explore x, e(40) mata
+set seed 1
+edm explore x, e(40) allowmissing
+set seed 1
+edm explore x, e(40) allowmissing mata
 
 set seed 2
-edm xmap x y, idw(-1)
+edm explore x, e(40) idw(-1)
+set seed 2
+edm explore x, e(40) idw(-1) mata
+set seed 2
+edm explore x, e(40) idw(-1) allowmissing
+set seed 2
+edm explore x, e(40) idw(-1) allowmissing mata
+
+set seed 3
+edm xmap x y, e(40)
+set seed 3
+edm xmap x y, e(40) mata
+set seed 3
+edm xmap x y, e(40) allowmissing
+set seed 3
+edm xmap x y, e(40) allowmissing mata
+
+set seed 4
+edm xmap x y, e(40) idw(-1)
+set seed 4
+edm xmap x y, e(40) idw(-1) mata
+set seed 4
+edm xmap x y, e(40) idw(-1) allowmissing
+set seed 4
+edm xmap x y, e(40) idw(-1) allowmissing mata
