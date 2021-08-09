@@ -434,11 +434,18 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<bool> usable = generator.generate_usable(touse, maxE, allowMissing);
   print_vector<bool>("usable", usable);
 
+  int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
+
   auto usableToSave = std::make_unique<double[]>(usable.size());
   for (int i = 0; i < usable.size(); i++) {
     usableToSave[i] = usable[i];
   }
   write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 1 + 1);
+
+  if (numUsable == 0) {
+    SF_scal_save(FINISHED_SCALAR, 1.0);
+    return SUCCESS; // Let Stata give the error here.
+  }
 
   if (allowMissing && opts.missingdistance == 0) {
     opts.missingdistance = default_missing_distance(x, usable);
@@ -524,7 +531,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (!explore) {
     libraries = stata_numlist<int>("l_ori"); // The 'library' macro gets overwritten
     if (libraries.empty()) {
-      int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
       libraries.push_back(numUsable);
     }
   }
@@ -590,15 +596,24 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       for (auto& stats : pred.stats) {
+        ST_double rho = stats.rho;
+        if (rho == MISSING) {
+          rho = SV_missval;
+        }
 
-        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 3, stats.rho)) {
+        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 3, rho)) {
           io.error(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", stats.rho, resultMatrix,
                                stats.taskNum + 1, 3)
                      .c_str());
           rc = CANNOT_SAVE_RESULTS;
         }
 
-        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 4, stats.mae)) {
+        ST_double mae = stats.mae;
+        if (mae == MISSING) {
+          mae = SV_missval;
+        }
+
+        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 4, mae)) {
           io.error(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", stats.mae, resultMatrix,
                                stats.taskNum + 1, 4)
                      .c_str());

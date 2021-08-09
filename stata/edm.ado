@@ -760,6 +760,11 @@ program define edmExplore, eclass
 	local e_size = wordcount("`=r(numlist)'")
 	local max_e : word `e_size' of `e'
 
+	if (`max_e' > 100000) {
+		dis as error "The proposed embedding dimension E is too big."
+		error 121
+	}
+
 	numlist "`theta'"
 	local theta_size = wordcount("`=r(numlist)'")
 	local round = max(`crossfold', `replicate')
@@ -893,7 +898,7 @@ program define edmExplore, eclass
 		// PJL: Check that `savesmap' is not needed in explore mode.
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
-		local missing_dist_used = ""
+		local missing_dist_used = .
 
 		// The plugin will save the 'usable' it generates to to here
 		qui gen double `usable' = .
@@ -1277,7 +1282,7 @@ program define edmXmap, eclass
 
 	* default values
 	// PJL: If these are varlists then it is fine. If they are real values, we can delete these defaults
-	if "`e'" =="" {
+	if "`e'" == "" {
 		local e = "2"
 	}
 
@@ -1446,10 +1451,16 @@ program define edmXmap, eclass
 	}
 	edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
 
-	if (`e' < 1) {
-		dis as error "Some of the proposed number of dimensions for embedding is too small."
+	if (`e' < 2) {
+		dis as error "The proposed embedding dimension E is too small."
 		error 121
 	}
+
+	if (`e' > 100000) {
+		dis as error "The proposed embedding dimension E is too big."
+		error 121
+	}
+
 	local comap_constructed = 0
 
 	mat r2 = J(1,4,.)
@@ -1732,7 +1743,7 @@ program define edmXmap, eclass
 		if !`mata_mode' {
 			// Setup variables which the plugin will modify
 			scalar plugin_finished = 0
-			local missing_dist_used = ""
+			local missing_dist_used = .
 
 			// The plugin will save the 'usable' it generates to to here
 			qui gen double `usable' = .
