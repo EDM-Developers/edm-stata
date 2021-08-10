@@ -22,6 +22,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
                      Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going());
 
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
+std::vector<int> af_potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 

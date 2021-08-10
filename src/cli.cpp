@@ -1,4 +1,7 @@
 #include "cli.h"
+
+#include <arrayfire.h>
+
 #include <iostream>
 #include <queue>
 
@@ -22,6 +25,8 @@ int main(int argc, char* argv[])
   if (argc > 2) {
     nthreads = atoi(argv[2]);
   }
+
+  af::info();
 
   std::cout << "Using nthreads = " << nthreads << "\n";
 

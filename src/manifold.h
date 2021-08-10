@@ -117,6 +117,8 @@ public:
   int E_lagged_extras() const { return _E_lagged_extras; }
   int E_extras() const { return _E_extras; }
   int E_actual() const { return _E_actual; }
+  const std::vector<int>& panelIds() const { return _panel_ids; }
+  std::shared_ptr<double[]> flatf64() const { return _flat; }
 };
 
 class ManifoldGenerator

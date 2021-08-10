@@ -128,6 +128,7 @@ target_include_directories(edm_plugin PRIVATE include)
 target_include_directories(edm_plugin PRIVATE include/eigen3)
 
 # ↓↓↓ Third-party code ↓↓↓
+find_package(ArrayFire CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
@@ -139,6 +140,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(edm_plugin PRIVATE Threads::Threads)
+target_link_libraries(edm_plugin PRIVATE ArrayFire::af)
 
 # Formatting with clang-format
 include(ClangFormat)
@@ -154,6 +156,7 @@ target_include_directories(edm_cli PRIVATE include/eigen3)
 target_link_libraries(edm_cli PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_cli PRIVATE Threads::Threads)
 target_link_libraries(edm_cli PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(edm_cli PRIVATE ArrayFire::af)
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
@@ -170,4 +173,5 @@ target_include_directories(gbench PRIVATE include/eigen3)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(gbench PRIVATE ArrayFire::af)
 install(TARGETS gbench DESTINATION test OPTIONAL)
