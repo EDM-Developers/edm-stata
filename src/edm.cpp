@@ -444,7 +444,9 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (k < 0 || k == potentialNN.inds.size()) {
     kNNs = potentialNN;
   } else {
-    kNNs = kNearestNeighbours(potentialNN, k);
+    kNNs =
+       useArrayFire ? af_kNearestNeighbours(potentialNN, k)
+                    : kNearestNeighbours(potentialNN, k);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -570,6 +572,45 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
     kNNInds[i] = potentialNeighbours.inds[idx[i]];
     kNNDists[i] = potentialNeighbours.dists[idx[i]];
   }
+
+  return { kNNInds, kNNDists };
+}
+
+DistanceIndexPairs af_kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k)
+{
+  using af::array;
+  using af::iota;
+  using af::sort;
+
+  const size_t pnIndSize = potentialNeighbours.inds.size();
+
+  array inIndices(pnIndSize, potentialNeighbours.inds.data());
+  array inDists(pnIndSize, potentialNeighbours.dists.data());
+
+  // TODO Check with Patrick if Second Arm's could do with topk since it is optimized for small k
+  // values and would avoid full sorting
+  //
+  // topk may not do, because the comparator used for partial_sort preserves order
+  // of elements when they are equal.
+  //
+  //if (k >= (int)(pnIndSize / 2)) {
+  //    // User full sorting
+  //} else {
+  //    // Use arrayfire topk
+  //}
+  array odists, oidx;
+  sort(odists, oidx, inDists, inIndices);
+
+  const af::seq ks(k);
+  array aKNNInds  = oidx(ks); // Assuming Indices in potentialNeighbours are not sorted
+  array aKNNDists = odists(ks);
+
+  // return { aKNNInds, aKNNDists };
+  std::vector<int> kNNInds(k);
+  std::vector<double> kNNDists(k);
+
+  aKNNInds.host(kNNInds.data());
+  aKNNDists.host(kNNDists.data());
 
   return { kNNInds, kNNDists };
 }
