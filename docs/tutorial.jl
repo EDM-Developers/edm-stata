@@ -28,6 +28,12 @@ end
 # ╔═╡ 99f564e2-611e-4138-8003-343077495a17
 md"# EDM tutorial"
 
+# ╔═╡ 3ffe80af-0484-46e6-a4d6-bcfd4f0ca2f7
+md"""
+This page has interactive sliders to adjust some hyperparameters.
+Press the "Edit or run this notebook" button to launch this page inside a Binder instance to enable this functionality. This may take some time to launch, and it might be necessary to run (pressing Shift+Enter) the first cell manually.
+"""
+
 # ╔═╡ 6c40aa11-f636-4af3-bd11-53f4f21e4846
 md"### Start with the data"
 
@@ -75,7 +81,9 @@ So we select a $\tau$ which means we only look at every $\tau$th observation for
 md"Choose a value for $E$:"
 
 # ╔═╡ 8630c42d-1357-4d7e-8d26-75aa5afe404a
-@bind E Slider(2:4; default=4, show_value=true)
+begin 
+	@bind E Slider(2:4; default=3, show_value=true)
+end
 
 # ╔═╡ afd006ee-2600-4a0b-a475-4172d22e4f6f
 md"Choose a value for $\tau$:"
@@ -142,7 +150,7 @@ end
 md"""
 The manifold is a collection of these time-delayed *embedding vectors*.
 For short, we just refer to each vector as a *point* on the manifold.
-While the manifold notation above is the most accurate (a set of vectors) we will henceforward use the more convenient matrix notation for manifolds:
+While the manifold notation above is the most accurate (a set of vectors) we will henceforward use the more convenient matrix notation:
 """
 
 # ╔═╡ 152aa84f-71e7-446a-b435-b5daa57fd4b1
@@ -312,10 +320,7 @@ The first prediction is to try to find the value of $y_1^{\mathscr{P}}$ given th
 """
 
 # ╔═╡ b0cb6b70-9c50-48d6-8e96-15b591d53221
-begin
-	first_point_str = latexify(P[[1],:], env=:raw)
-	L"\mathscr{P}_{1} = %$first_point_str \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1^{\mathscr{P}} = \, ???"
-end
+L"\mathscr{P}_{1} = %$(latexify(P[[1],:], env=:raw)) \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1^{\mathscr{P}} = \, ???"
 
 # ╔═╡ 1e4c550e-ae5a-4fbd-867c-88e5b8013397
 md"""
@@ -328,9 +333,12 @@ Looking over all the points in $\mathscr{L}$, we find the indices of the $k$ poi
 
 Let's pretend we have $k=2$ and the most similar points are $\mathscr{L}_{3}$ and $\mathscr{L}_{5}$.
 We will choose the notatation $\mathcal{NN}_k(1) = \{ 3, 5 \}$ to describe this set of $k$ nearest neighbours of $\mathscr{P}_{1}$.
-
-Then we predict that
 """
+
+# ╔═╡ f29669bf-e5e1-4828-a4b0-311f5665a9c3
+md"###### Using the simplex algorithm
+Then, if we have chosen the `algorithm` to be the simplex algorithm, we predict that
+"
 
 # ╔═╡ 535aaf80-9130-4417-81ef-8031da2f7c73
 L"y_{1}^{\mathscr{P}} \approx \hat{y}_1^{\mathscr{P}} := w_1 \times y_{3}^{\,\mathscr{L}} + w_2 \times y_{5}^{\,\mathscr{L}}"
@@ -339,33 +347,89 @@ L"y_{1}^{\mathscr{P}} \approx \hat{y}_1^{\mathscr{P}} := w_1 \times y_{3}^{\,\ma
 md"""where $w_1$ and $w_2$ are some weights with add up to 1. Basically we are predicting that $y_1^{\mathscr{P}}$ is a weighted average of the points $\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(1)}$."""
 
 # ╔═╡ 657baf6f-4e4b-408c-918d-f007211699ea
-md"To summarise the whole procedure:"
+md"To summarise the whole simplex procedure:"
 
 # ╔═╡ d790cbae-85ed-46b7-b0c2-75568802f115
 begin
-	matchStr = raw"\underset{\small \text{Matches}}{\Rightarrow} "
+	extractStr = raw"\underset{\small \text{Extracts}}{\Rightarrow} "
 	getStr = raw"\underset{\small \text{Get predictee}}{\Rightarrow} "
-	kNNStr = raw"\underset{\small \text{Finds neighbours in}}{\Rightarrow} "
-	predictStr = raw"\underset{\small \text{Predicts}}{\Rightarrow} "
-	
-	#	\underbrace{\,\, y_i^{\mathscr{P}} }_{\text{Want to predict}}
+	findInLStr = raw"\underset{\small \text{Find neighbours in } \mathscr{L}}{\Rightarrow} "
+	predictStr = raw"\underset{\small \text{Make prediction}}{\Rightarrow} "
 	
 	L"
+	\begin{align}
 	\text{For target }y_i^{\mathscr{P}}
-	%$getStr
+	&%$getStr
 	\mathscr{P}_{i}
-	%$kNNStr
-	\mathscr{L}
-	%$matchStr
+	%$findInLStr
+	\mathcal{NN}_k(i) \\
+	&\,\,\,\,%$extractStr
 	\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
 	%$predictStr
-	\hat{y}_i^{\mathscr{P}}"
+	\hat{y}_i^{\mathscr{P}}
+	\end{align}"
 end
+
+# ╔═╡ 28e51576-d9bb-46ff-bf24-4c16736b625c
+md"###### Using the S-map algorithm
+If however we chose `algorithm` to be the S-map algorithm, then we predict
+"
+
+# ╔═╡ 0b9081dd-5100-4232-a6be-c2d3d8e3f66f
+L"y_{1}^{\mathscr{P}} \approx \hat{y}_1^{\mathscr{P}} := \sum_{j=1}^E w_{1j} \times  \mathscr{P}_{1j}"
+
+# ╔═╡ 0a0df400-ca3f-4c5a-82b6-a536671e7d51
+md"""
+where the $\{ w_{1j} \}_{j=1,\cdots,E}$ weights are calculated by solving a lineary system based on the points in $\{ \mathscr{L}_j \}_{j \in \mathcal{NN}_k(1)}$ and $\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(1)}$.
+"""
+
+# ╔═╡ bd345675-ab21-4bdf-bbf3-99966a3d46bd
+md"Given the specific"
+
+# ╔═╡ fb293078-489d-4f86-afe2-abf75040af6d
+L"\mathscr{P}_1 = %$(latexify(P[[1],:]))"
+
+# ╔═╡ 2265c861-f5cf-468b-a523-e7352359c17f
+md"in this example, the prediction would look like:"
+
+# ╔═╡ 9c7a4ecb-37bb-448e-8d13-f608725a1f2e
+begin
+	weights = [symbols("w_{1$i}") for i in 1:E]
+	weightedSum = sum(weights.*P[1,:])
+	L"y_{1}^{\mathscr{P}} \approx \hat{y}_1^{\mathscr{P}} :=  %$weightedSum"
+end
+
+# ╔═╡ 94660506-0de1-4013-b7bf-79f49e09820b
+md"To summarise the whole S-map procedure:"
+
+# ╔═╡ 5d65f348-3a8e-4185-b9a1-24c5dec2303f
+begin
+	weightStr = raw"\underset{\small \text{Calculate}}{\Rightarrow}"
+	
+	L"
+	\begin{align}
+	\text{For target }y_i^{\mathscr{P}}
+	&%$getStr
+	\mathscr{P}_{i}
+	%$findInLStr
+	\mathcal{NN}_k(i) \\
+	&\,\,\,\,%$extractStr
+	\{ \mathscr{L}_j, y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
+	%$weightStr
+	\{ w_{ij} \}_{j=1,\ldots,E} 
+	%$predictStr
+	\hat{y}_i^{\mathscr{P}}
+	\end{align}"
+end
+
+# ╔═╡ f6e12684-be4a-4fa9-8a2a-3ea6b205fe9a
+md"##### Assessing the prediction quality"
 
 # ╔═╡ ec5e9c90-f7e8-49fa-a7c5-36fc527ebb1d
 md"""
-We make a prediction $\hat{y}_j^{\mathscr{P}}$ for each true value $y_j^{\mathscr{P}}$ in the prediction set.
-Then we can use
+We calculate the $\hat{y}_i^{\mathscr{P}}$ predictions for each target in the prediction set (so $i = 1, \dots, |\mathscr{P}|$), and store the predictions in a vector $\hat{y}^{\mathscr{P}}$.
+
+As we have the true value of $y_i^{\mathscr{P}}$ for each target in the prediction set, we can compare our $\hat{y}_i^{\mathscr{P}}$ predictions and assess their quality using their correlation
 """
 
 # ╔═╡ 6b7788e1-4dfa-4249-b3ae-9323c144d8a5
@@ -373,8 +437,11 @@ L" \rho := \mathrm{Correlation}(y^{\mathscr{P}} , \hat{y}^{\mathscr{P}}) "
 
 # ╔═╡ e14e6991-ab3e-4ee3-84df-65474d682f95
 md"""
-to assess the accuracy of these predictions.
+or using the mean absolute error
 """
+
+# ╔═╡ 98e1b0ae-da11-4abc-b82a-39f57d86eafb
+L"\text{MAE} := \frac{1}{| \mathscr{P} |} \sum_{i=1}^{| \mathscr{P} |} | y_i^{\mathscr{P}} - \hat{y}_i^{\mathscr{P}} | ."
 
 # ╔═╡ 9f05a08a-a2ff-464b-9399-04047823b568
 md"### What does `edm xmap u v` do?"
@@ -464,12 +531,16 @@ begin
  	y_L_str_xmap = latexify(v_fut_train[1:size(L_xmap,1)], env=:raw)
 	y_P_str_xmap = latexify(v_fut_pred[1:size(P_xmap,1)], env=:raw)
 	
+	matchStr = raw"\underset{\small \text{Matches}}{\Rightarrow} "
+	
 	L"\mathscr{L} = %$L_xmap_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_str_xmap"
 end
 
 # ╔═╡ 25720cde-ce24-4ceb-be88-539837b5bf39
 begin
-	force_update = p_xmap
+	P_xmap
+	matchStr
+	y_P_str_xmap
 L"\mathscr{P} = %$(latexify(P_xmap, env=:raw)) \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str_xmap"
 end
 
@@ -479,16 +550,19 @@ The prediction procedure is then the same as previous times, though the library 
 """
 
 # ╔═╡ 15092345-e81a-4c28-81ae-e79e9d823853
-L"
-\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } v}
-%$getStr
-\underbrace{ \mathscr{P}_{i} }_{\text{Based on } u}
-%$kNNStr
-\underbrace{ \mathscr{L} }_{\text{Based on } u}
-%$matchStr
-\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
-%$predictStr
-\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
+begin
+	kNNStr = raw"\underset{\small \text{Find neighbours in}}{\Rightarrow} "
+	L"
+	\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } v}
+	%$getStr
+	\underbrace{ \mathscr{P}_{i} }_{\text{Based on } u}
+	%$kNNStr
+	\underbrace{ \mathscr{L} }_{\text{Based on } u}
+	%$matchStr
+	\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
+	%$predictStr
+	\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
+end
 
 # ╔═╡ 6fae5864-ec11-4e94-98a9-ffc0fd421049
 md"## Adding more data to the manifold"
@@ -524,6 +598,12 @@ begin
 	
 	L"M_{x,y} := %$(latexify(M_x_extra))"
 end
+
+# ╔═╡ 3ddc8e19-b61a-4ad8-9d6c-1c38dbe7308d
+md"""
+After extra variables are added, the manifold $M_{x,y}$ no longer has $E$ columns.
+In these cases, we make a distinction between $E$ which selects the number of lags for each time series, and the *actual* $E$ which is size of each point (i.e. the number of columns).
+"""
 
 # ╔═╡ 12dff36b-59da-45bc-984d-a5063f204bd9
 md"""
@@ -748,13 +828,15 @@ In coprediction mode, the training set will include the entirety of the $M_x$ ma
 
 # ╔═╡ 80712325-3f89-409f-b0d3-d8eca06eae02
 begin
+	M_x_str
+	matchStr
 	y_L_copred_str = latexify(x_fut, env=:raw)
 L"\mathscr{L} = M_x = %$M_x_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_copred_str"
 end
 
 # ╔═╡ b53ea6c9-5aaf-41fe-aaf1-4b65214f6acf
 md"""
-In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_z$ manifold for the $z$ time series:
+In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_z$ manifold for the $z$ time series and $y^{\mathscr{P}}$ to:
 """
 
 # ╔═╡ e84366f8-611c-4021-bd86-6f46780e1487
@@ -762,20 +844,23 @@ begin
 	M_z = manifold(z, E, τ)
 	P_copred_z = M_z
 	P_copred_z_str = latexify(P_copred_z, env=:raw)
-	y_P_copred_str = y_L_copred_str
+	
+	matchStr
+	
+	y_P_copred_str = latexify(z_fut, env=:raw)
 	L"\mathscr{P} = M_z = %$P_copred_z_str \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_copred_str"
 end
 
 # ╔═╡ 3db5cd4f-6c4e-4c4f-be04-2be39f568959
 md"""
-The rest of the procedure is the same as before:
+The rest of the simplex procedure is the same as before:
 """
 
 # ╔═╡ fec658e0-d77c-45de-b906-b8b6b4942bad
 L"
-\text{For target }y_i^{\mathscr{P}}
+\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{ \text{Based on } z }
 %$getStr
-\underbrace{ \mathscr{P}_{i} }_{\color{red}{\text{Based on } z}}
+\underbrace{ \mathscr{P}_{i} }_{ \text{Based on } z }
 %$kNNStr
 \mathscr{L}
 %$matchStr
@@ -806,37 +891,41 @@ begin
 	M_u_str = (latexify(P_xmap))
 
  	y_L_str_xmap_copred = latexify(v_fut, env=:raw)
-	y_P_str_xmap_copred = y_L_str_xmap_copred
 
 	L"\mathscr{L} = M_u = %$M_u_str \quad %$matchStr \quad y^{\,\mathscr{L}} = %$y_L_str_xmap_copred"
 end
 
 # ╔═╡ d51ef4c6-b5fd-4ea4-84d7-6ce137be89e7
 md"""
-The main change in coprediction is the prediction set is based on the new $w$ time series:
+The main change in coprediction is the prediction set and the targets are based on the new $w$ time series:
 """
 
 # ╔═╡ dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
 begin
-	force_update_3 = p_xmap
-
 	w = [symbols("w_$i") for i in 1:obs]
 	M_w = manifold(w, E, τ);
 	P_xmap_copred = M_w
+	
+	matchStr
+	
+	co_ahead = p_xmap
+	w_fut = [symbols("w_$(i + τ*(E-1) + co_ahead)") for i = 1:(obs-(E-1)*τ)]
+	y_P_str_xmap_copred = latexify(w_fut, env=:raw)
+
 
 	L"\mathscr{P} = M_w = %$(latexify(P_xmap_copred, env=:raw)) \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str_xmap_copred"
 end
 
 # ╔═╡ 027667be-91db-4e4b-b4f2-07306ea7e4c1
 md"""
-Finally, the prediction steps are the same, with:
+Finally, the simplex prediction steps are the same, with:
 """
 
 # ╔═╡ 1e00a8f0-94b0-430b-81b0-9846913878f5
 L"
-\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } v}
+\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } w}
 %$getStr
-\underbrace{ \mathscr{P}_{i} }_{\color{red}{ \text{Based on } w } }
+\underbrace{ \mathscr{P}_{i} }_{ \text{Based on } w }
 %$kNNStr
 \underbrace{ \mathscr{L} }_{\text{Based on } u}
 %$matchStr
@@ -1235,6 +1324,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╟─7499784c-0ffd-48af-9b0d-d6937bcf9b0a
 # ╟─99f564e2-611e-4138-8003-343077495a17
+# ╟─3ffe80af-0484-46e6-a4d6-bcfd4f0ca2f7
 # ╟─6c40aa11-f636-4af3-bd11-53f4f21e4846
 # ╟─2056d35f-b594-4ba6-b5ee-5f7db829194a
 # ╟─a9be623f-ada5-46c4-bdf3-d0a89a9812c9
@@ -1284,13 +1374,25 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─b0cb6b70-9c50-48d6-8e96-15b591d53221
 # ╟─1e4c550e-ae5a-4fbd-867c-88e5b8013397
 # ╟─216f4400-2b75-4472-9661-c477d8931d45
+# ╟─f29669bf-e5e1-4828-a4b0-311f5665a9c3
 # ╟─535aaf80-9130-4417-81ef-8031da2f7c73
 # ╟─69dee0fe-4266-4444-a0f1-44db01b38dbd
 # ╟─657baf6f-4e4b-408c-918d-f007211699ea
 # ╟─d790cbae-85ed-46b7-b0c2-75568802f115
+# ╟─28e51576-d9bb-46ff-bf24-4c16736b625c
+# ╟─0b9081dd-5100-4232-a6be-c2d3d8e3f66f
+# ╟─0a0df400-ca3f-4c5a-82b6-a536671e7d51
+# ╟─bd345675-ab21-4bdf-bbf3-99966a3d46bd
+# ╟─fb293078-489d-4f86-afe2-abf75040af6d
+# ╟─2265c861-f5cf-468b-a523-e7352359c17f
+# ╟─9c7a4ecb-37bb-448e-8d13-f608725a1f2e
+# ╟─94660506-0de1-4013-b7bf-79f49e09820b
+# ╟─5d65f348-3a8e-4185-b9a1-24c5dec2303f
+# ╟─f6e12684-be4a-4fa9-8a2a-3ea6b205fe9a
 # ╟─ec5e9c90-f7e8-49fa-a7c5-36fc527ebb1d
 # ╟─6b7788e1-4dfa-4249-b3ae-9323c144d8a5
 # ╟─e14e6991-ab3e-4ee3-84df-65474d682f95
+# ╟─98e1b0ae-da11-4abc-b82a-39f57d86eafb
 # ╟─9f05a08a-a2ff-464b-9399-04047823b568
 # ╟─95058743-a0f0-4e40-998a-959fb3bcf98f
 # ╟─203af6eb-040f-41c3-abc1-a7a574681825
@@ -1312,6 +1414,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─6fae5864-ec11-4e94-98a9-ffc0fd421049
 # ╟─6ea2e5d4-ff50-4efe-b80a-29940e7455f9
 # ╟─982d9067-da5b-4cbf-bcba-5c94ed2479b9
+# ╟─3ddc8e19-b61a-4ad8-9d6c-1c38dbe7308d
 # ╟─12dff36b-59da-45bc-984d-a5063f204bd9
 # ╟─66de25a9-4ed3-42e2-ae9f-427684a8fb1e
 # ╟─dfdb3ef6-35b6-48f5-ae30-12b41d247c90
