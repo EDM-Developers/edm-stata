@@ -125,6 +125,7 @@ public:
   int E_actual() const { return _E_actual; }
   const std::vector<int>& panelIds() const { return _panel_ids; }
   std::shared_ptr<double[]> flatf64() const { return _flat; }
+  const std::vector<double>& yvec() const { return _y; }
 };
 
 class ManifoldGenerator

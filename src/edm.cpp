@@ -455,8 +455,12 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (opts.algorithm == Algorithm::Simplex) {
-    for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
+    if (useArrayFire) {
+      af_simplex_prediction(Mp_i, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
+    } else {
+      for (int t = 0; t < opts.thetas.size(); t++) {
+        simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
+      }
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
@@ -674,6 +678,54 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   // Store the results & return value.
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
+}
+
+void af_simplex_prediction(int Mp_i, const Options& opts, const Manifold& M, const std::vector<double>& dists,
+                           const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
+                           Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+{
+    using af::array;
+
+    const dim_t k = kNNInds.size();
+    const dim_t t = opts.thetas.size();
+
+    // kNNInds and dists are always of same size
+    array ainds(k, kNNInds.data());
+    array adists(k, dists.data());
+    array aMy(M.nobs(), M.yvec().data());
+
+    // Create [1 t 1 1] shape so that
+    // we can reduce along dimension 0 later
+    array othetas(1, t, opts.thetas.data());
+
+    double minDist = af::min<double>(adists);
+
+    array thetas = af::tile(othetas, k, 1);     // reshape to [k t 1 1]
+    array tadist = af::tile(adists, 1, t);      // reshape to [k t 1 1]
+
+    array ws   = af::exp( -thetas * ( tadist / minDist ) );
+    array sumw = af::sum(ws, 0);                // Reduce for each theta
+
+    if (opts.saveKUsed) {
+        *kUsed = af::count<int>(ws);
+    }
+
+    array y = aMy(ainds);
+    array ty = af::tile(y, 1, t);               // reshape to [k t 1 1]
+    array tsumw = af::tile(sumw, k, 1);         // reshape to [k t 1 1]
+
+    array rt = ty * (ws / tsumw);
+    array r  = af::sum(rt, 0);
+
+    std::vector<double> rs(r.elements());
+
+    if (r.elements() > 0) {
+      r.host(rs.data());
+      for (int ti = 0; ti < t; ++ti) {
+        ystar(ti, Mp_i) = rs[ti];
+        rc(ti, Mp_i) = SUCCESS;
+      }
+    }
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
