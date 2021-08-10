@@ -7,6 +7,9 @@
 #include <Eigen/Dense>
 
 #include <cmath> // for std::isnormal
+#include <vector>
+
+#include <arrayfire.h>
 
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inpInds)
@@ -69,6 +72,95 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   }
 
   return { inds, dists };
+}
+
+DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                   std::vector<int> inpInds)
+{
+  using af::anyTrue;
+  using af::array;
+  using af::constant;
+  using af::select;
+  using af::sum;
+  using af::tile;
+
+  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
+  array mData1(M.E_actual(), M.nobs(), M.flatf64().get());    // Matrix
+  array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get()); // Matrix
+
+  // Char is the internal representation of bool in ArrayFire
+  // af::array template constructor also only works for char
+  std::vector<char> mopts;
+  for(int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+  }
+  array metricOpts(M.E_actual(), mopts.data());
+
+  // Above arrays will most likely be available once Manifold is changed
+  // to have af::arrays
+  /////////////////////////////////////////////////////////////////////////////
+
+  // Even inpInds might be changed to af::array
+  const dim_t idxSz = inpInds.size();
+  array i(idxSz, inpInds.data());
+
+  //////////////// BEGIN LP-DISTANCES COMPUTATION
+  array zero  = constant(0.0, 1, idxSz, f64);
+  array mssng = constant(MISSING_D, 1, idxSz, f64);
+  array disti = constant(0.0, 1, idxSz, f64);
+  array Ma    = mData1(af::span, i); //Fetch columns corresponding to indices
+  array Mpa   = mData2(af::span, i); //Fetch columns corresponding to indices
+
+  // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
+  // then add the user-supplied penalty/distance for the mismatch.
+  if (opts.panelMode && opts.idw > 0) {
+      array MPanel(1, M.nobs(), M.panelIds().data());   // Vector
+      array MpPanel(1, Mp.nobs(), Mp.panelIds().data()); // Vector
+
+      // If give dist_i[] is not same as MISSING marker, add penality
+      array MpiPanel = tile(MpPanel(af::span, Mp_i), 1, idxSz);
+      disti += (opts.idw * (MPanel(i) != MpiPanel));
+  }
+  /////////////// BEGIN E-actual loop
+  const bool isMissingDistOptZero = opts.missingdistance == 0;
+
+  array Mpa_Mp_i = tile(mData2(af::span, Mp_i), 1, idxSz);
+
+  array dMssng2d = (Ma == MISSING_D || Mpa_Mp_i == MISSING_D);
+
+  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
+
+  array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
+
+  array distIJ   = (opts.distance == Distance::MeanAbsoluteError ?
+                    (af::abs(distVals) / M.E_actual()) : (distVals * distVals));
+  array dist_ij  = sum(distIJ, 0);
+
+  // exclude criteria sets dist_i to MISSING and doesn't accumulate E_actual contributions
+  array exclude  = anyTrue(dMssng2d, 0) * isMissingDistOptZero;
+
+  disti = (exclude * mssng + (1 - exclude) * (disti + dist_ij));
+  /////////////// END E-actual loop
+
+  array valids = (disti != zero && disti != mssng);
+  array indexs = where(valids);
+
+  array inds, dists; // Return tuple
+  if (indexs.elements() > 0) { // Extract only valid values
+      array validDists = disti(indexs);
+      dists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
+      inds  = i(indexs);
+  }
+  //////////////// END LP-DISTANCES COMPUTATION
+
+  std::vector<int> retInds(inds.elements());
+  std::vector<double> retDists(dists.elements());
+
+  if (inds.elements() > 0) { // Extract only valid values
+      inds.host(retInds.data());
+      dists.host(retDists.data());
+  }
+  return {retInds, retDists};
 }
 
 // This function compares the M(i,.) multivariate time series to the Mp(j,.) multivariate time series.

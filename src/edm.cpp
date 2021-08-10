@@ -28,6 +28,8 @@
 #include <cmath>
 #include <fstream> // just to create low-level input dumps
 
+#include <arrayfire.h>
+
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
@@ -387,6 +389,9 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
                      Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going())
 {
+  af::setDevice(0);
+  constexpr bool useArrayFire = true;
+
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
   // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
@@ -396,13 +401,17 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   // Create a list of indices which may potentially be the neighbours of Mp(Mp_i,.)
-  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, opts, M, Mp);
+  std::vector<int> tryInds =
+          useArrayFire ? af_potential_neighbour_indices(Mp_i, opts, M, Mp)
+                       : potential_neighbour_indices(Mp_i, opts, M, Mp);
 
   DistanceIndexPairs potentialNN;
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
   } else {
-    potentialNN = lp_distances(Mp_i, opts, M, Mp, tryInds);
+    potentialNN =
+       useArrayFire ? af_lp_distances(Mp_i, opts, M, Mp, tryInds)
+                    : lp_distances(Mp_i, opts, M, Mp, tryInds);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -470,6 +479,56 @@ std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, cons
     inds.push_back(i);
   }
 
+  return inds;
+}
+
+std::vector<int> af_potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
+{
+  using af::array;
+  using af::anyTrue;
+  using af::iota;
+
+  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
+  const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
+
+  array result;
+
+  if (skipOtherPanels && skipMissingData) {
+      array m2dData(M.E_actual(), M.nobs(), M.flatf64().get()); // Matrix
+      array mP1Ids(M.nobs(), M.panelIds().data());              // Vector
+      array mP2Ids(Mp.nobs(), Mp.panelIds().data());            // Vector
+
+      array anyMsng2D   = (m2dData == M.missing());
+      array anyMsngDta  = anyTrue(anyMsng2D, 0);                // Vector
+      array valids      = !(anyMsngDta || (mP1Ids != mP2Ids));  // Vector
+
+      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
+  } else if (skipOtherPanels) {
+      array mP1Ids(M.nobs(), M.panelIds().data());              // Vector
+      array mP2Ids(Mp.nobs(), Mp.panelIds().data());            // Vector
+
+      array valids = !(mP1Ids != mP2Ids);                       // Vector
+
+      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
+  } else if (skipMissingData) {
+      array m2dData(M.E_actual(), M.nobs(), M.flatf64().get()); // Matrix
+
+      array anyMsng2D   = (m2dData == M.missing());
+      array anyMsngDta  = anyTrue(anyMsng2D, 0);                // Vector
+      array valids      = !(anyMsngDta);                        // Vector
+
+      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
+  } else {
+      using af::dim4;
+
+      result = iota(dim4(M.nobs()), dim4(1), s32);
+  }
+  //return result;
+
+  std::vector<int> inds(result.elements());
+  if (inds.size()) {
+      result.host(inds.data());
+  }
   return inds;
 }
 
