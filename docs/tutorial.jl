@@ -276,7 +276,6 @@ end
 # ╔═╡ e9f56664-6d86-4a9c-b1a5-65d0af9bf1b0
 md"""
 This $p$ may be thought of as the *prediction horizon*, and in `explore` mode is defaults to τ and in `xmap` mode it defaults to 0.
-In the 
 """
 
 # ╔═╡ ad158c77-8a83-4ee0-9df6-bff0852ff896
@@ -306,6 +305,11 @@ begin
 	L"\mathscr{P} = %$P_str \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = %$y_P_str"
 end
 
+# ╔═╡ b26cfd13-0749-4986-97d7-0dffc899757b
+md"""
+We may refer to elements of the $y^{\mathscr{L}}$ vector as *projections* as they come about by taking the $x$ time series and projecting it into the future by $p$ observations.
+"""
+
 # ╔═╡ 71fdd13f-19de-46e5-b11f-3e2824275505
 md"### What does `edm explore x` predict?"
 
@@ -332,7 +336,7 @@ md"""
 Looking over all the points in $\mathscr{L}$, we find the indices of the $k$ points which are the most similar to $\mathscr{P}_{1}$.
 
 Let's pretend we have $k=2$ and the most similar points are $\mathscr{L}_{3}$ and $\mathscr{L}_{5}$.
-We will choose the notatation $\mathcal{NN}_k(1) = \{ 3, 5 \}$ to describe this set of $k$ nearest neighbours of $\mathscr{P}_{1}$.
+We will choose the notation $\mathcal{NN}_k(1) = \{ 3, 5 \}$ to describe this set of $k$ nearest neighbours of $\mathscr{P}_{1}$.
 """
 
 # ╔═╡ f29669bf-e5e1-4828-a4b0-311f5665a9c3
@@ -380,7 +384,7 @@ L"y_{1}^{\mathscr{P}} \approx \hat{y}_1^{\mathscr{P}} := \sum_{j=1}^E w_{1j} \ti
 
 # ╔═╡ 0a0df400-ca3f-4c5a-82b6-a536671e7d51
 md"""
-where the $\{ w_{1j} \}_{j=1,\cdots,E}$ weights are calculated by solving a lineary system based on the points in $\{ \mathscr{L}_j \}_{j \in \mathcal{NN}_k(1)}$ and $\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(1)}$.
+where the $\{ w_{1j} \}_{j=1,\cdots,E}$ weights are calculated by solving a linear system based on the points in $\{ \mathscr{L}_j \}_{j \in \mathcal{NN}_k(1)}$ and $\{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(1)}$.
 """
 
 # ╔═╡ bd345675-ab21-4bdf-bbf3-99966a3d46bd
@@ -546,7 +550,7 @@ end
 
 # ╔═╡ 1cff64b5-b3d9-41ce-aac0-c722821dda93
 md"""
-The prediction procedure is then the same as previous times, though the library and prediction sets all contain values from the $u$ time series whereas the look-ahead $y$ vectors contain values from the $v$ time series.
+The prediction procedure is then the same as previous times, though the library and prediction sets all contain values from the $u$ time series whereas the $y$ projection vectors contain (usually contemporaneous) values from the $v$ time series.
 """
 
 # ╔═╡ 15092345-e81a-4c28-81ae-e79e9d823853
@@ -823,7 +827,7 @@ This brings in a second time series $z$, and specifies that the predictions made
 
 # ╔═╡ 37585472-6078-4020-98f2-89ea31dbd4b9
 md"""
-In coprediction mode, the training set will include the entirety of the $M_x$ manifold and its look-ahead values:
+In coprediction mode, the training set will include the entirety of the $M_x$ manifold and its projections:
 """
 
 # ╔═╡ 80712325-3f89-409f-b0d3-d8eca06eae02
@@ -1368,6 +1372,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─bf3906d4-729b-4f35-b0a1-b1eff5797602
 # ╟─0c676a7d-1b7a-432b-8058-320a37188ab3
 # ╟─7ac81a86-de83-4fb8-9415-5a8d71d58ca4
+# ╟─b26cfd13-0749-4986-97d7-0dffc899757b
 # ╟─71fdd13f-19de-46e5-b11f-3e2824275505
 # ╟─7be9628d-4f92-4d4a-a1b1-a77141e77c30
 # ╟─ed5c583a-8cc2-4bdf-9696-fcc58dcb22fb
