@@ -508,3 +508,25 @@ set seed 4
 edm xmap x y, e(40) idw(-1) allowmissing
 set seed 4
 edm xmap x y, e(40) idw(-1) allowmissing mata
+
+// Drop some rows of the dataset & make sure the plugin can handle this
+// (i.e. can it replicate a kind of 'tsfill' hehaviour).
+drop if mod(t,7) == 0
+
+set seed 1
+edm explore x, e(5)
+set seed 1
+edm explore x, e(5) mata
+set seed 1
+edm explore x, e(5) allowmissing
+set seed 1
+edm explore x, e(5) allowmissing mata
+
+set seed 2
+edm explore x, e(5) idw(-1)
+set seed 2
+edm explore x, e(5) idw(-1) mata
+set seed 2
+edm explore x, e(5) idw(-1) allowmissing
+set seed 2
+edm explore x, e(5) idw(-1) allowmissing mata

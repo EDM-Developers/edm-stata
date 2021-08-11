@@ -735,7 +735,7 @@ program define edmExplore, eclass
 		}
 	}
 
-	if !`parsed_dt' {
+	if !`parsed_dt' & !`mata_mode' {
 		tempvar before_tsfill
 		qui tsset
 		qui gen `before_tsfill' = 1
@@ -1132,7 +1132,7 @@ program define edmExplore, eclass
 	}
 
 	/* mat r = r[2...,.] */
-	if !`parsed_dt' {
+	if !`parsed_dt' & !`mata_mode' {
 		qui keep if `before_tsfill' != .
 		drop `before_tsfill'
 	}
@@ -1611,7 +1611,7 @@ program define edmXmap, eclass
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
 
-		if !`parsed_dt' & `direction_num' == 1 {
+		if !`parsed_dt' & `direction_num' == 1 & !`mata_mode' {
 			tempvar before_tsfill
 			qui tsset
 			qui gen `before_tsfill' = 1
@@ -2050,7 +2050,7 @@ program define edmXmap, eclass
 		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 	}
 
-	if !`parsed_dt' {
+	if !`parsed_dt' & !`mata_mode' {
 		qui keep if `before_tsfill' != .
 		drop `before_tsfill'
 	}

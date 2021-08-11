@@ -4850,4 +4850,128 @@ Missing values are assumed to have a distance of .25 and .23
 Note: The embedding dimension E is 40
 
 . 
+. // Drop some rows of the dataset & make sure the plugin can handle this
+. // (i.e. can it replicate a kind of 'tsfill' hehaviour).
+. drop if mod(t,7) == 0
+(14 observations deleted)
+
+. 
+. set seed 1
+
+. edm explore x, e(5)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1           .8789          .10988 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1           .8789          .10988 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) allowmissing
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .91052         .071871 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) allowmissing mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .91052         .071871 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set seed 2
+
+. edm explore x, e(5) idw(-1)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .74406          .11602 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .83073         .093066 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) allowmissing
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .86975         .076242 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) allowmissing mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+Missing values are assumed to have a distance of .25 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .90033         .065827 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
 end of do-file
