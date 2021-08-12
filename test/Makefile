@@ -12,3 +12,6 @@ plugin:
 
 format:
 	cd .. && make format
+
+test:
+	cd .. && make test && make install
