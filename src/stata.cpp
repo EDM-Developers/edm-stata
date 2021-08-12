@@ -290,16 +290,12 @@ void reset_global_state()
   allTasksFinished = false;
 }
 
-/*
- * Read that information needed for the edm tasks which is doesn't change across
- * the various tasks, and store it in the 'opts' and 'generator' global variables.
- */
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 28) {
+  if (argc < 29) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 28) {
+  if (argc > 29) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -347,6 +343,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.panelMode = atoi(argv[25]);
   bool cumulativeDT = atoi(argv[26]);
   bool wassDT = atoi(argv[27]);
+  int p = atoi(argv[28]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -411,7 +408,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<ST_double> t = stata_columns<ST_double>(1);
   print_vector<ST_double>("t", t);
 
-  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, MISSING, tau);
+  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
 
   // Handle 'dt' flag
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
@@ -420,7 +417,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
       dt0 = true;
       cumulativeDT = true;
     }
-    generator.add_dt_data(dtWeight, dt0, cumulativeDT);
+    generator.add_dt_data(dtWeight, dt0, cumulativeDT, allowMissing);
   }
 
   if (opts.panelMode) {

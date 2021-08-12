@@ -1,6 +1,11 @@
 #define CATCH_CONFIG_MAIN // This tells Catch to provide a main() - only do this in one cpp file
 #include <catch2/catch.hpp>
 
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY
+#endif
+#include <fmt/format.h>
+
 #include "edm.h"
 #include "manifold.h"
 
@@ -17,13 +22,14 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
 {
   std::vector<double> t = { 1, 2, 3, 4 };
   std::vector<double> x = { 11, 12, 13, 14 };
+  int p = 1;
   std::vector<double> y = { 12, 13, 14, MISSING };
 
   std::vector<std::vector<double>> extras;
   int numExtrasLagged = 0;
   int tau = 1;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
 
   SECTION("Basic manifold, no extras or dt")
   {
@@ -52,8 +58,8 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
 
   SECTION("Manifold with dt (not allowing missing)")
   {
-
-    generator.add_dt_data(1.0, true, false);
+    bool allowMissing = false;
+    generator.add_dt_data(1.0, true, false, allowMissing);
 
     int E = 2;
 
@@ -89,6 +95,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 1)", "[missingDataManifold]"
   std::vector<double> t = { 1.0, 2.5, 3.0, 4.5, 5.0, 6.0 };
   std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
   int tau = 1;
+  int p = 1;
   std::vector<double> y = { 12, MISSING, 14, 15, 16, MISSING };
 
   std::vector<std::vector<double>> extras;
@@ -101,11 +108,18 @@ TEST_CASE("Missing data dt manifold creation (tau = 1)", "[missingDataManifold]"
 
   int E = 2;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau);
-  generator.add_dt_data(1.0, true, false);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
 
   SECTION("Allowing missing values")
   {
+    bool allowMissing = true;
+    generator.add_dt_data(1.0, true, false, allowMissing);
+
+    std::vector<double> discrete_time = { 0, 1, 2, 3, 4, 5 };
+    for (int i = 0; i < t.size(); i++) {
+      REQUIRE(generator._discrete_time[i] == discrete_time[i]);
+    }
+
     std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E, true);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == true);
@@ -129,7 +143,9 @@ TEST_CASE("Missing data dt manifold creation (tau = 1)", "[missingDataManifold]"
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
 
     for (int i = 0; i < M.nobs(); i++) {
+      CAPTURE(i);
       for (int j = 0; j < M.E_actual(); j++) {
+        CAPTURE(j);
         REQUIRE(M(i, j) == M_true[i][j]);
       }
       REQUIRE(M.y(i) == y_true[i]);
@@ -138,6 +154,14 @@ TEST_CASE("Missing data dt manifold creation (tau = 1)", "[missingDataManifold]"
 
   SECTION("Not allowing missing values")
   {
+    bool allowMissing = false;
+    generator.add_dt_data(1.0, true, false, allowMissing);
+
+    std::vector<double> discrete_time = { 0, 1, MISSING, 2, 3, 4 };
+    for (int i = 0; i < t.size(); i++) {
+      REQUIRE(generator._discrete_time[i] == discrete_time[i]);
+    }
+
     std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E, false);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == false); // x.at(-1) missing and nothing before it to bring forward
@@ -158,7 +182,9 @@ TEST_CASE("Missing data dt manifold creation (tau = 1)", "[missingDataManifold]"
     std::vector<double> y_true = { 15.0, 16.0 };
 
     for (int i = 0; i < M.nobs(); i++) {
+      CAPTURE(i);
       for (int j = 0; j < M.E_actual(); j++) {
+        CAPTURE(j);
         REQUIRE(M(i, j) == M_true[i][j]);
       }
       REQUIRE(M.y(i) == y_true[i]);
@@ -171,6 +197,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
   std::vector<double> t = { 1.0, 2.5, 3.0, 4.5, 5.0, 6.0 };
   std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
   int tau = 2;
+  int p = 1;
   std::vector<double> y = { 12, MISSING, 14, 15, 16, MISSING };
 
   std::vector<std::vector<double>> extras;
@@ -178,11 +205,13 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 
   int E = 2;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau);
-  generator.add_dt_data(1.0, true, false);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
 
   SECTION("Allowing missing values")
   {
+    bool allowMissing = true;
+    generator.add_dt_data(1.0, true, false, allowMissing);
+
     std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E, true);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == true);
@@ -198,15 +227,21 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     REQUIRE(M.ySize() == 4);
     REQUIRE(M.E_actual() == 4);
 
-    std::vector<std::vector<double>> M_true = { { 11.0, MISSING, 1.5, MISSING },
-                                                { MISSING, 12.0, 1.5, 0.5 },
-                                                { 14.0, MISSING, 0.5, 1.5 },
-                                                { 15.0, 14.0, 1.0, 0.5 } };
+    std::vector<std::vector<double>> M_true = {
+      { 11.0, MISSING, 1.5, MISSING },
+      //  { 12.0, MISSING, 0.5, MISSING},
+      { MISSING, 11.0, 1.5, 2.0 },
+      { 14.0, 12.0, 0.5, 2.0 },
+      { 15.0, MISSING, 1.0, 2.0 },
+      //  { 16.0, 14.0, MISSING, 1.5},
+    };
 
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
 
     for (int i = 0; i < M.nobs(); i++) {
+      CAPTURE(i);
       for (int j = 0; j < M.E_actual(); j++) {
+        CAPTURE(j);
         REQUIRE(M(i, j) == M_true[i][j]);
       }
       REQUIRE(M.y(i) == y_true[i]);
@@ -215,12 +250,15 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 
   SECTION("Not allowing missing values")
   {
+    bool allowMissing = false;
+    generator.add_dt_data(1.0, true, false, allowMissing);
+
     std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E, false);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == false); // x.at(-1) missing and nothing before it to bring forward
     REQUIRE(usable[1] == false); // y is missing
     REQUIRE(usable[2] == false); // can't start on missing x
-    REQUIRE(usable[3] == true);  //  <---- currently fails; needs to be able to skip over the previous missing value
+    REQUIRE(usable[3] == true);
     REQUIRE(usable[4] == true);
     REQUIRE(usable[5] == false); // dt0 and y is missing
 
@@ -230,12 +268,14 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     REQUIRE(M.ySize() == 2);
     REQUIRE(M.E_actual() == 4);
 
-    std::vector<std::vector<double>> M_true = { { 14.0, 12.0, 0.5, 2.0 }, { 15.0, 14.0, 1.0, 0.5 } };
+    std::vector<std::vector<double>> M_true = { { 14.0, 11.0, 0.5, 3.5 }, { 15.0, 12.0, 1.0, 2.5 } };
 
     std::vector<double> y_true = { 15.0, 16.0 };
 
     for (int i = 0; i < M.nobs(); i++) {
+      CAPTURE(i);
       for (int j = 0; j < M.E_actual(); j++) {
+        CAPTURE(j);
         REQUIRE(M(i, j) == M_true[i][j]);
       }
       REQUIRE(M.y(i) == y_true[i]);

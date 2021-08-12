@@ -735,14 +735,6 @@ program define edmExplore, eclass
 		}
 	}
 
-	if !`parsed_dt' & !`mata_mode' {
-		tempvar before_tsfill
-		qui tsset
-		qui gen `before_tsfill' = 1
-		qui tsfill
-		qui replace `touse' = 0 if !`before_tsfill'
-	}
-
 	edmCountExtras `extraembed'
 	local z_count = `r(z_count)'
 	local z_names = "`r(z_names)'"
@@ -917,7 +909,7 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 		local missingdistance = `missing_dist_used'
 		qui compress `usable'
@@ -1132,10 +1124,6 @@ program define edmExplore, eclass
 	}
 
 	/* mat r = r[2...,.] */
-	if !`parsed_dt' & !`mata_mode' {
-		qui keep if `before_tsfill' != .
-		drop `before_tsfill'
-	}
 
 	mat cfull = r[1,3]
 	local cfullname= subinstr("`ori_x'",".","/",.)
@@ -1611,14 +1599,6 @@ program define edmXmap, eclass
 			local parsed_dtw`direction_num' = `parsed_dtw'
 		}
 
-		if !`parsed_dt' & `direction_num' == 1 & !`mata_mode' {
-			tempvar before_tsfill
-			qui tsset
-			qui gen `before_tsfill' = 1
-			qui tsfill
-			qui replace `touse' = 0 if !`before_tsfill'
-		}
-
 		edmManifoldSize, e(`max_e') dt(`parsed_dt') dt0(`parsed_dt0') ///
 			num_extras(`z_count') num_eextras(`z_e_varying_count')
 		local manifold_size = `r(manifold_size)'
@@ -1772,7 +1752,7 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 			// Collect a list of all the variables created to store the SMAP coefficients
@@ -2048,11 +2028,6 @@ program define edmXmap, eclass
 	if ("`copredictvar'" != "") {
 		qui gen double `copredict' = `co_x_p'
 		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
-	}
-
-	if !`parsed_dt' & !`mata_mode' {
-		qui keep if `before_tsfill' != .
-		drop `before_tsfill'
 	}
 
 	mat cfull = (r1[1,3],r2[1,3])

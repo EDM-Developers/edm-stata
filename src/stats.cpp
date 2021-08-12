@@ -70,7 +70,7 @@ double mean_absolute_error(const std::vector<double>& y1, const std::vector<doub
   Eigen::Map<const Eigen::ArrayXd> y1Map(y1.data(), y1.size());
   Eigen::Map<const Eigen::ArrayXd> y2Map(y2.data(), y2.size());
   double mae = (y1Map - y2Map).abs().mean();
-  if (mae < 1e-10) {
+  if (mae < 1e-8) {
     return 0;
   } else {
     return mae;

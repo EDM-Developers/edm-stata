@@ -127,6 +127,7 @@ private:
   bool _cumulative_dt = false;
   bool _panel_mode = false;
   int _tau;
+  int _p;
   double _missing;
   int _num_extras, _num_extras_lagged;
   double _dtWeight = 0.0;
@@ -137,14 +138,20 @@ private:
   double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
   double find_dt(const std::vector<int>& inds, int i, int j) const;
 
+  double find_time_unit() const;
+  bool search_discrete_time(int target, int& k, int direction, int panel) const;
+  std::vector<int> get_lagged_indices(int i, int startIndex, int E, int panel) const;
+
 public:
+  std::vector<double> _discrete_time;
+
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);
 
   ManifoldGenerator() = default;
 
   ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<std::vector<double>>& extras, int numExtrasLagged, double missing, int tau)
+                    const std::vector<std::vector<double>>& extras, int numExtrasLagged, double missing, int tau, int p)
     : _t(t)
     , _x(x)
     , _y(y)
@@ -153,16 +160,39 @@ public:
     , _num_extras_lagged(numExtrasLagged)
     , _missing(missing)
     , _tau(tau)
-  {}
+    , _p(p)
+  {
+
+    int unit = find_time_unit();
+
+    // Create a time index which is a discrete count of the number of 'unit' time units.
+    for (int i = 0; i < t.size(); i++) {
+      if (t[i] != missing) {
+        _discrete_time.push_back(t[i] / unit);
+      } else {
+        _discrete_time.push_back(missing);
+      }
+    }
+  }
 
   void add_coprediction_data(const std::vector<double>& co_x) { _co_x = co_x; }
 
-  void add_dt_data(double dtWeight, bool dt0, bool cumulativeDT)
+  void add_dt_data(double dtWeight, bool dt0, bool cumulativeDT, bool allowMissing)
   {
     _dtWeight = dtWeight;
     _use_dt = true;
     _add_dt0 = dt0;
     _cumulative_dt = cumulativeDT;
+
+    int countUp = 0;
+    for (int i = 0; i < _t.size(); i++) {
+      if (_t[i] != _missing && (allowMissing || (_x[i] != _missing))) {
+        _discrete_time[i] = countUp;
+        countUp += 1;
+      } else {
+        _discrete_time[i] = _missing;
+      }
+    }
   }
 
   void add_panel_ids(const std::vector<int>& panelIDs)
