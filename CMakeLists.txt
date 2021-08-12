@@ -142,7 +142,7 @@ target_link_libraries(edm_plugin PRIVATE Threads::Threads)
 
 # Formatting with clang-format
 include(ClangFormat)
-clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/stata.cpp)
+clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/test.cpp src/stata.cpp)
 
 # ↓↓↓ Developer builds ↓↓↓
 # Command-line interface executable
@@ -171,3 +171,16 @@ target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
 install(TARGETS gbench DESTINATION test OPTIONAL)
+
+find_package(Catch2 REQUIRED)
+add_executable(edm_test ${COMMON_SRC} src/test.cpp)
+target_link_libraries(edm_test PRIVATE Catch2::Catch2)
+
+set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
+
+target_include_directories(edm_test PRIVATE include)
+target_include_directories(edm_test PRIVATE include/eigen3)
+target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
+target_link_libraries(edm_test PRIVATE Threads::Threads)
+target_link_libraries(edm_test PRIVATE nlohmann_json::nlohmann_json)
+install(TARGETS edm_test DESTINATION test OPTIONAL)

@@ -2,6 +2,6 @@
     "name": "edm",
     "version-string": "1.5.2",
     "dependencies": [
-        "benchmark", "fmt", "nlohmann-json"
+        "benchmark", "catch2", "fmt", "nlohmann-json"
     ]
 }

@@ -1,7 +1,7 @@
 EDM_BUILD_DIR ?= build
 EDM_BUILD_CONFIG ?= release
 
-all: $(EDM_BUILD_DIR)/CMakeCache.txt plugin cli gbench install
+all: $(EDM_BUILD_DIR)/CMakeCache.txt plugin test cli gbench install
 
 $(EDM_BUILD_DIR)/CMakeCache.txt:
 	cmake -B $(EDM_BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(EDM_BUILD_CONFIG)
@@ -17,6 +17,10 @@ cli: $(EDM_BUILD_DIR)/CMakeCache.txt
 .PHONY: gbench
 gbench: $(EDM_BUILD_DIR)/CMakeCache.txt
 	cmake --build $(EDM_BUILD_DIR) --config $(EDM_BUILD_CONFIG) --parallel 12 --target gbench
+
+.PHONY: test
+test: $(EDM_BUILD_DIR)/CMakeCache.txt
+	cmake --build $(EDM_BUILD_DIR) --config $(EDM_BUILD_CONFIG) --parallel 12 --target edm_test
 
 .PHONY: install
 install:

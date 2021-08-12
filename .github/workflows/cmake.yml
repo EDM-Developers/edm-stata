@@ -70,13 +70,13 @@ jobs:
     runs-on: linux
     needs: build-linux
     steps:
-    - name: Prepare Test
+    - name: Prepare integration test
       working-directory: ${{github.workspace}}/test
       run: mv ci-test.log reference.log
-    - name: Run Test
+    - name: Run integration test
       working-directory: ${{github.workspace}}/test
       run: stata -e -q ci-test.do Euclidean
-    - name: Check Test Results
+    - name: Check test results
       working-directory: ${{github.workspace}}/test
       run: diff -B reference.log ci-test.log
 
@@ -88,11 +88,18 @@ jobs:
       run: rm -rf ${{github.workspace}}/build
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
-    - name: Build CLI
+    - name: Build unit tests with address sanitizer
+      run: cmake --build ${{github.workspace}}/build --target edm_test --parallel 8
+    - name: Build CLI with address sanitizer
       run: cmake --build ${{github.workspace}}/build --target edm_cli --parallel 8
+    - name: Install unit tests
+      run: cp ${{github.workspace}}/build/edm_test ${{github.workspace}}/test
     - name: Install CLI
       run: cp ${{github.workspace}}/build/edm_cli ${{github.workspace}}/test
-    - name: Run Test
+    - name: Run unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/test
+      run: ./edm_test
+    - name: Run CLI test with address sanitizer
       working-directory: ${{github.workspace}}/test
       run: ./edm_cli ci-test.json
 
@@ -100,13 +107,13 @@ jobs:
     runs-on: macos
     needs: build-mac-arm
     steps:
-    - name: Prepare Test
+    - name: Prepare integration test
       working-directory: ${{github.workspace}}/arm/test
       run: mv ci-test.log reference.log
-    - name: Run Test
+    - name: Run integration test
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do Euclidean
-    - name: Check Test Results
+    - name: Check test results
       working-directory: ${{github.workspace}}/arm/test
       run: diff -B reference.log ci-test.log
 
@@ -120,13 +127,22 @@ jobs:
     - name: Configure CMake
       working-directory: ${{github.workspace}}/arm
       run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
-    - name: Build CLI
+    - name: Build unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/arm
+      run: cmake --build build --target edm_test --parallel 8
+    - name: Build CLI with address sanitizer
       working-directory: ${{github.workspace}}/arm
       run: cmake --build build --target edm_cli --parallel 8
+    - name: Install unit tests
+      working-directory: ${{github.workspace}}/arm
+      run: cp build/edm_test test
     - name: Install CLI
       working-directory: ${{github.workspace}}/arm
       run: cp build/edm_cli test
-    - name: Run Test
+    - name: Run unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/arm/test
+      run: ./edm_test
+    - name: Run CLI test with address sanitizer
       working-directory: ${{github.workspace}}/arm/test
       run: ./edm_cli ci-test.json
 
@@ -134,13 +150,13 @@ jobs:
     runs-on: macos
     needs: build-mac-x64
     steps:
-    - name: Prepare Test
+    - name: Prepare integration test
       working-directory: ${{github.workspace}}/x64/test
       run: mv ci-test.log reference.log
-    - name: Run Test
+    - name: Run integration test
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q ci-test.do Euclidean
-    - name: Check Test Results
+    - name: Check test results
       working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log ci-test.log
 
@@ -154,13 +170,22 @@ jobs:
     - name: Configure CMake
       working-directory: ${{github.workspace}}/x64
       run: env /usr/bin/arch -x86_64 cmake -B build -DCMAKE_BUILD_TYPE=Debug
-    - name: Build CLI
+    - name: Build unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/x64
+      run: env /usr/bin/arch -x86_64 cmake --build build --target edm_test --parallel 8
+    - name: Build CLI with address sanitizer
       working-directory: ${{github.workspace}}/x64
       run: env /usr/bin/arch -x86_64 cmake --build build --target edm_cli --parallel 8
+    - name: Install unit tests
+      working-directory: ${{github.workspace}}/x64
+      run: cp build/edm_test test
     - name: Install CLI
       working-directory: ${{github.workspace}}/x64
       run: cp build/edm_cli test
-    - name: Run Test
+    - name: Run unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/x64/test
+      run: env /usr/bin/arch -x86_64 ./edm_test
+    - name: Run CLI test with address sanitizer
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 ./edm_cli ci-test.json
 
@@ -168,13 +193,13 @@ jobs:
     runs-on: windows
     needs: build-windows
     steps:
-    - name: Prepare Test
+    - name: Prepare integration test
       working-directory: ${{github.workspace}}/test
       run: mv ci-test.log reference.log
-    - name: Run Test
+    - name: Run integration test
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q ci-test.do Euclidean
-    - name: Check Test Results
+    - name: Check test results
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "fc /W reference.log ci-test.log"
 
@@ -182,11 +207,18 @@ jobs:
     runs-on: windows
     needs: test-windows
     steps:
-    - name: Build CLI
+    - name: Build unit tests with address sanitizer
+      run: cmake --build ${{github.workspace}}/build --config Debug --target edm_test
+    - name: Build CLI with address sanitizer
       run: cmake --build ${{github.workspace}}/build --config Debug --target edm_cli
+    - name: Install unit tests
+      run: cp ${{github.workspace}}/build/Debug/edm_test.exe test
     - name: Install CLI
       run: cp ${{github.workspace}}/build/Debug/edm_cli.exe test
-    - name: Run Test
+    - name: Run unit tests with address sanitizer
+      working-directory: ${{github.workspace}}/test
+      run: .\edm_test.exe
+    - name: Run CLI test with address sanitizer
       working-directory: ${{github.workspace}}/test
       run: .\edm_cli.exe ci-test.json
 
@@ -194,7 +226,7 @@ jobs:
     runs-on: linux
     needs: test-cli-linux
     steps:
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/test
       run: stata -e -q speed-test.do
 
@@ -205,7 +237,7 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
       run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
 
@@ -216,7 +248,7 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
       run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q speed-test.do
 
@@ -224,7 +256,7 @@ jobs:
     runs-on: windows
     needs: test-cli-windows
     steps:
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q speed-test.do
 
@@ -232,7 +264,7 @@ jobs:
     runs-on: linux
     needs: speed-test-linux
     steps:
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/test
       run: stata -e -q single-thread-speed-test.do
 
@@ -243,7 +275,7 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
       run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/arm/test
       run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do
 
@@ -254,7 +286,7 @@ jobs:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
       run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do
 
@@ -262,6 +294,6 @@ jobs:
     runs-on: windows
     needs: speed-test-windows
     steps:
-    - name: Run Test
+    - name: Run integration benchmark
       working-directory: ${{github.workspace}}/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q single-thread-speed-test.do
