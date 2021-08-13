@@ -30,6 +30,8 @@
 
 #include <arrayfire.h>
 
+constexpr bool useArrayFire = true;
+
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
@@ -390,7 +392,6 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
                      Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going())
 {
   af::setDevice(0);
-  constexpr bool useArrayFire = true;
 
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
@@ -463,8 +464,12 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
       }
     }
   } else if (opts.algorithm == Algorithm::SMap) {
-    for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
+    if (useArrayFire) {
+      af_smap_prediction(Mp_i, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
+    } else {
+      for (int t = 0; t < opts.thetas.size(); t++) {
+        smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
+      }
     }
   } else {
     rc(0, Mp_i) = INVALID_ALGORITHM;
@@ -681,51 +686,46 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 }
 
 void af_simplex_prediction(int Mp_i, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                           const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                           Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+                           const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
+                           Eigen::Map<MatrixXi> rc, int* kUsed)
 {
-    using af::array;
+  using af::array;
 
-    const dim_t k = kNNInds.size();
-    const dim_t t = opts.thetas.size();
+  const dim_t indsCount   = kNNInds.size();
+  const dim_t thetasCount = opts.thetas.size();
 
-    // kNNInds and dists are always of same size
-    array ainds(k, kNNInds.data());
-    array adists(k, dists.data());
-    array aMy(M.nobs(), M.yvec().data());
+  // kNNInds and dists are always of same size
+  array  ainds(indsCount, kNNInds.data());
+  array adists(indsCount, dists.data());
+  array    aMy( M.nobs(), M.yvec().data());
 
-    // Create [1 t 1 1] shape so that
-    // we can reduce along dimension 0 later
-    array othetas(1, t, opts.thetas.data());
+  // Create [1 thetasCount 1 1] shape so that
+  // we can reduce along dimension 0 later
+  array othetas(1, thetasCount, opts.thetas.data());
 
-    double minDist = af::min<double>(adists);
+  double minDist = af::min<double>(adists);
 
-    array thetas = af::tile(othetas, k, 1);     // reshape to [k t 1 1]
-    array tadist = af::tile(adists, 1, t);      // reshape to [k t 1 1]
+  array thetas  = af::tile(othetas, indsCount, 1);            // reshape to [indsCount thetasCount 1 1]
+  array tadist  = af::tile(adists, 1, thetasCount);           // reshape to [indsCount thetasCount 1 1]
+  array weights = af::exp( -thetas * ( tadist / minDist ) );
+  array sumw    = af::sum(weights, 0);                        // Reduce for each theta
+  array y       = aMy(ainds);
+  array ty      = af::tile(y, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
+  array tsumw   = af::tile(sumw, indsCount, 1);               // reshape to [indsCount thetasCount 1 1]
+  array rt      = ty * (weights / tsumw);
+  array r       = af::sum(rt, 0);
 
-    array ws   = af::exp( -thetas * ( tadist / minDist ) );
-    array sumw = af::sum(ws, 0);                // Reduce for each theta
-
-    if (opts.saveKUsed) {
-        *kUsed = af::count<int>(ws);
+  std::vector<double> rs(r.elements());
+  if (r.elements() > 0) {
+    r.host(rs.data());
+    for (int t = 0; t < thetasCount; ++t) {
+      ystar(t, Mp_i) = rs[t];
+      rc(t, Mp_i) = SUCCESS;
     }
-
-    array y = aMy(ainds);
-    array ty = af::tile(y, 1, t);               // reshape to [k t 1 1]
-    array tsumw = af::tile(sumw, k, 1);         // reshape to [k t 1 1]
-
-    array rt = ty * (ws / tsumw);
-    array r  = af::sum(rt, 0);
-
-    std::vector<double> rs(r.elements());
-
-    if (r.elements() > 0) {
-      r.host(rs.data());
-      for (int ti = 0; ti < t; ++ti) {
-        ystar(ti, Mp_i) = rs[ti];
-        rc(ti, Mp_i) = SUCCESS;
-      }
-    }
+  }
+  if (opts.saveKUsed) {
+    *kUsed = af::count<int>(weights);
+  }
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
@@ -789,4 +789,90 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   ystar(t, Mp_i) = r;
   rc(t, Mp_i) = SUCCESS;
+}
+
+void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
+                        Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXd> coeffs,
+                        Eigen::Map<MatrixXi> rc, int* kUsed)
+{
+  using af::array;
+  using af::matmulTN;
+  using af::mean;
+  using af::pinverse;
+  using af::select;
+  using af::span;
+  using af::tile;
+
+  const dim_t indsCount   = kNNInds.size();
+  const dim_t thetasCount = opts.thetas.size();
+
+  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
+  array mData1( M.E_actual(),  M.nobs(), M.flatf64().get());
+  array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get());
+
+  // kNNInds and dists are always of same size
+  array  ainds(indsCount, kNNInds.data());
+  array adists(indsCount, dists.data());
+  array    aMy( M.nobs(), M.yvec().data());
+
+  // Create [1 thetasCount 1 1] shape so that we can reduce along dimension 0 later
+  array othetas(1, thetasCount, opts.thetas.data());
+
+  double meanDist = mean<double>(adists);
+  array thetas    = tile(othetas, indsCount, 1);            // reshape to [indsCount thetasCount 1 1]
+  array tadist    = tile(adists, 1, thetasCount);           // reshape to [indsCount thetasCount 1 1]
+  array weights   = af::exp( -thetas * ( tadist / meanDist ) );
+  array y         = aMy(ainds);
+  array ty        = tile(y, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
+  array y_ls      = ty * weights;                           // [indsCount thetasCount 1 1] shape
+
+  const dim_t MEactualp1 = M.E_actual() + 1;
+
+  array icsOuts(MEactualp1, thetasCount, f64);
+
+  // TODO check if pinverse works with batching and change logic
+  for (int t = 0; t < thetasCount; ++t) {
+      // Each column is a vector for given theta
+      array w = weights(span, t);
+      array yls = y_ls(span, t);
+
+      array X_ls_cj = af::constant(1.0, af::dim4(MEactualp1, indsCount), f64);
+      X_ls_cj(af::seq(1, af::end), span) = mData1(span, ainds);
+
+      X_ls_cj *= tile(w.T(), MEactualp1);
+
+      icsOuts(span, t) = matmulTN(pinverse(X_ls_cj, 1e-9), yls);
+
+      //array A   = matmulNT(X_ls_cj, X_ls_cj); // A is [ MEactualp1 MEactualp1 1 1 ]
+      //array B   = matmul(X_ls_cj, yls);       // B is [ MEactualp1 1 1 1 ]
+  }
+
+  array Mp_i_j = mData2(span, Mp_i);
+  array rj     = icsOuts(af::seq(1, af::end), span) * tile(Mp_i_j, 1, thetasCount);
+  array r      = icsOuts(0, span) + sum(rj, 0);
+
+  std::vector<double> rs(r.elements());
+  if (r.elements() > 0) {
+    r.host(rs.data());
+    for (int t = 0; t < thetasCount; ++t) {
+      ystar(t, Mp_i) = rs[t];
+      rc(t, Mp_i) = SUCCESS;
+    }
+  }
+  // If the 'savesmap' option is given, save the 'ics' coefficients
+  // for the largest value of theta.
+  if (opts.saveSMAPCoeffs) {
+    array lastTheta  = icsOuts(span, thetasCount - 1);
+    array icsl       = select(lastTheta == 0.0, double(MISSING_D), lastTheta);
+    std::vector<double> host_ics(MEactualp1);
+    icsl.host(host_ics.data());
+    for (int j = 0; j < MEactualp1; j++) {
+      coeffs(Mp_i, j) = host_ics[j];
+    }
+  }
+  // For the sake of debugging, count how many neighbours we end up with.
+  if (opts.saveKUsed) {
+    *kUsed = af::count<int>(weights);
+  }
 }
