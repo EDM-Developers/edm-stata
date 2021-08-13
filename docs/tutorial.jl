@@ -937,6 +937,233 @@ L"
 %$predictStr
 \underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}"
 
+# ╔═╡ a29ab0d0-ea70-480f-90f6-5418534b27df
+md"""
+### Missing data 
+
+To explain how the package handles missing data given different options, it is easiest to work by example.
+
+Let's say we have the following time series and $(NAN) represents a missing value:
+"""
+
+# ╔═╡ 12bbff2f-ac5d-4904-ad0c-3fd3efdb1243
+begin
+	tMiss = [ 1.0, 2.5, 3.0, 4.5, 5.0, 6.0 ]
+  	xMiss = [ 11, 12, NaN, 14, 15, 16 ]
+	yMiss = [ 12, NaN, 14, 15, 16, NaN ]
+
+	dfMiss = DataFrame(t = tMiss, x = xMiss)
+end
+
+# ╔═╡ 7b2ff2ef-904c-45ab-9ef6-000118fa2d8a
+md"For now, let's say $E = 2$, $\tau = 1$ and $p = 1$."
+
+# ╔═╡ f7f37b62-ef27-4e31-97ea-e78e6f839028
+md"""
+The manifold of $x$ and it's projections $y$ will have missing values in them:
+"""
+
+# ╔═╡ 43c39e42-4f21-4c57-8ac2-7d5d18f1745b
+begin
+	M_x_miss = [ 11 NaN;
+				 12 11;
+				 NaN 12;
+				 14 NaN;
+				 15 14;
+				 16 15]
+	y_miss = [ 12; NaN; 14; 15; 16; NaN]
+	
+	L"M_x = %$(latexify(M_x_miss, env=:raw)) %$matchStr y = %$(latexify(y_miss, env=:raw))"
+end
+
+# ╔═╡ 50ee9c7d-51e2-4f6c-a2de-c4b543ac83ef
+md"""
+By default, the points which contain missing values *will not be added to the library or prediction sets*.
+
+For example, if we let the library and prediction sets be as big as possible then we will have:
+"""
+
+# ╔═╡ 042db7fe-2936-4663-8893-a43142b6ffc1
+begin
+	P_valid = vec(.! any(isnan.(M_x_miss), dims=2) )
+	L_valid = P_valid .& (.! isnan.(y_miss))
+	
+	L_miss = M_x_miss[L_valid,:]
+	y_L_miss = y_miss[L_valid]
+	
+	L"\mathscr{L} = %$(latexify(L_miss, env=:raw)) %$matchStr y^{\mathscr{L}} = %$(latexify(y_L_miss, env=:raw))"
+end
+
+# ╔═╡ 25eb0830-0ce1-47dc-8856-eda9a91a3473
+begin
+	P_miss = M_x_miss[P_valid,:]
+	y_P_miss = y_miss[P_valid]
+	
+	L"\mathscr{P} = %$(latexify(P_miss, env=:raw)) %$matchStr y^{\mathscr{P}} = %$(latexify(y_P_miss, env=:raw))"
+end
+
+# ╔═╡ 16f1ec0c-085a-474f-885c-94e8123eaeba
+md"""
+In general, $\mathscr{P}$ is less restrictive than $\mathscr{L}$ because it is fine for the targets in $y^{\mathscr{P}}$ to be missing values.
+We can make predictions even though we don't observe the true values.
+However those predictions without a corresponding true value cannot be used in the $\rho$/MAE calculations.
+"""
+
+# ╔═╡ c41f553f-a656-482e-9b60-bbe25941da39
+md"""
+For the case when some targets are missing, we might generate predictions anyway.
+This is the case if you set the `predict` option which saves the predictions to a Stata variables.
+However, if `predict` is not set, then the $\mathscr{P}$ prediction set will not include targets which have missing values as they do not contribute to the $\rho$/MAE which is the only thing requested by the user.
+"""
+
+# ╔═╡ 1134c18a-76c7-4b9c-bff6-f795954f5db4
+md"#### The `allowmissing` flag"
+
+# ╔═╡ cc25480d-aae7-4462-9c45-0c4ba6838a06
+md"""
+If we set the `allowmissing` option, then a point is included in the manifold even with missing values (so long as it's not 100% missing every component).
+
+The largest possible library and prediction sets with `allowmissing` in this example would be:
+"""
+
+# ╔═╡ 420dae80-0f3b-445a-afa0-6492b4de9579
+begin
+	P_am_valid = vec(any(.! isnan.(M_x_miss), dims=2) )
+	
+	L_am_valid = P_am_valid .& (.! isnan.(y_miss))
+	
+	L_am_miss = M_x_miss[L_am_valid,:]
+	y_L_am_miss = y_miss[L_am_valid]
+	
+	L"\mathscr{L} = %$(latexify(L_am_miss, env=:raw)) %$matchStr y^{\mathscr{L}} = %$(latexify(y_L_am_miss, env=:raw))"
+end
+
+# ╔═╡ f20109a8-7cdf-46f0-bb8d-36f1e16f6310
+begin
+	P_am_miss = M_x_miss[P_am_valid,:]
+	y_P_am_miss = y_miss[P_am_valid]
+	
+	L"\mathscr{P} = %$(latexify(P_am_miss, env=:raw)) %$matchStr y^{\mathscr{P}} = %$(latexify(y_P_am_miss, env=:raw))"
+end
+
+# ╔═╡ b3296c31-ace4-4f8a-9eb4-9de85e15dd3d
+md"""
+This discussion is implicitly assuming the `algorithm` is set to the simplex algorithm.
+When the S-map algorithm is chosen, then we cannot let missing values into the library set $\mathscr{L}$.
+This may change in a future implementation of the S-map algorithm.
+"""
+
+# ╔═╡ 393fa77e-f65d-4a3c-9e88-431e5030486f
+md"""
+#### The `dt` flag
+
+When we add `dt`, we tell the package to remove missing observations and to also add the time between the observations into the manifold.
+
+So, in this example, instead of the observed time series being:
+"""
+
+# ╔═╡ 23fa3b59-8152-4be9-ad70-b815c9517548
+dfMiss
+
+# ╔═╡ 750bbba1-8af9-4760-a3fc-3f7fbf3bd329
+md"the `dt` basically acts as if the supplied data were:"
+
+# ╔═╡ aa10e962-f312-4897-964c-e33e8df9bf6f
+begin
+	tMissDT = [ 1.0, 2.5, 4.5, 5.0, 6.0 ]
+  	xMissDT = [ 11, 12, 14, 15, 16 ]
+	yMissDT = [ 12, 14, 15, 16, NaN ]
+
+	dfMissDT = DataFrame(t = tMissDT, x = xMissDT)
+end
+
+# ╔═╡ 5a3af8a1-788e-424a-b68c-96c80f817886
+md"The resulting manifold and projections are:"
+
+# ╔═╡ 1d37c724-6f6d-4a7f-a8ad-aaae28bc32d5
+begin
+	M_x_miss_dt = [ 11 NaN 1.5 NaN;
+				 12 11 2.0 1.5;
+				 14 12 0.5 2.0;
+				 15 14 1.0 0.5;
+				 16 15 NaN 1.0]
+	y_miss_dt = [ 12; 14; 15; 16; NaN]
+	
+	L"M_x = %$(latexify(M_x_miss_dt, env=:raw)) %$matchStr y = %$(latexify(y_miss_dt, env=:raw))"
+end
+
+# ╔═╡ 568660d0-af25-44a6-be84-0ee58ead31d3
+md"The largest possible library and prediction sets with `dt` in this example would be:"
+
+# ╔═╡ aa289a3f-10be-414e-ac4c-d2e331786d10
+begin
+	P_dt_valid = vec(.! any(isnan.(M_x_miss_dt), dims=2) )
+	L_dt_valid = P_dt_valid .& (.! isnan.(y_miss_dt))
+	
+	L_miss_dt = M_x_miss_dt[L_dt_valid,:]
+	y_L_miss_dt = y_miss_dt[L_dt_valid]
+	
+	L"\mathscr{L} = %$(latexify(L_miss_dt, env=:raw)) %$matchStr y^{\mathscr{L}} = %$(latexify(y_L_miss_dt, env=:raw))"
+end
+
+# ╔═╡ 259abc33-ef51-47d7-8c12-e307eb800b37
+begin
+	P_miss_dt = M_x_miss_dt[P_dt_valid,:]
+	y_P_miss_dt = y_miss_dt[P_dt_valid]
+	
+	L"\mathscr{P} = %$(latexify(P_miss_dt, env=:raw)) %$matchStr y^{\mathscr{P}} = %$(latexify(y_P_miss_dt, env=:raw))"
+end
+
+# ╔═╡ 480e2e49-041b-4ba8-b0db-fa24121a4f06
+md"""
+#### Both `allowmissing` and `dt` flags
+
+If we set both flags, we tell the package to allow missing observations and to also add the time between the observations into the manifold.
+
+So the time series
+"""
+
+# ╔═╡ 04a3ad75-f2a2-414a-b745-c680448780e3
+dfMiss
+
+# ╔═╡ a3d9085c-33b5-4361-bc52-fcde45f4a13a
+md"will generate the manifold"
+
+# ╔═╡ 6649d53e-c358-4efd-a95f-393addbe630a
+begin
+	M_x_miss_am_dt = [ 11 NaN 1.5 NaN;
+				       12 11 0.5 1.5;
+				       NaN 12 1.5 0.5;
+				       14 NaN 0.5 1.5;
+				       15 14 1.0 0.5;
+				       16 15 NaN 1.0]
+	y_miss_am_dt = [ 12; NaN; 14; 15; 16; NaN]
+	
+	L"M_x = %$(latexify(M_x_miss_am_dt, env=:raw)) %$matchStr y = %$(latexify(y_miss_am_dt, env=:raw))"
+end
+
+# ╔═╡ 9d9b8e70-c59d-43cf-a941-ba2f37c57e2b
+md"and the largest possible library and prediction sets would be"
+
+# ╔═╡ ad2431ae-d3fb-4ce1-bd32-edcee1e22322
+begin
+	P_am_dt_valid = vec(any(.!  isnan.(M_x_miss_am_dt), dims=2) )
+	L_am_dt_valid = P_am_dt_valid .& (.! isnan.(y_miss_am_dt))
+	
+	L_miss_am_dt = M_x_miss_am_dt[L_am_dt_valid,:]
+	y_L_miss_am_dt = y_miss_am_dt[L_am_dt_valid]
+	
+	L"\mathscr{L} = %$(latexify(L_miss_am_dt, env=:raw)) %$matchStr y^{\mathscr{L}} = %$(latexify(y_L_miss_am_dt, env=:raw))"
+end
+
+# ╔═╡ 42e39981-cc8b-4eea-9dea-8d7cabbd23da
+begin
+	P_miss_am_dt = M_x_miss_am_dt[P_am_dt_valid,:]
+	y_P_miss_am_dt = y_miss_am_dt[P_am_dt_valid]
+	
+	L"\mathscr{P} = %$(latexify(P_miss_am_dt, env=:raw)) %$matchStr y^{\mathscr{P}} = %$(latexify(y_P_miss_am_dt, env=:raw))"
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -1453,5 +1680,36 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─dd793d3f-45f2-4eca-bc2e-3eaa67b59e41
 # ╟─027667be-91db-4e4b-b4f2-07306ea7e4c1
 # ╟─1e00a8f0-94b0-430b-81b0-9846913878f5
+# ╟─a29ab0d0-ea70-480f-90f6-5418534b27df
+# ╟─12bbff2f-ac5d-4904-ad0c-3fd3efdb1243
+# ╟─7b2ff2ef-904c-45ab-9ef6-000118fa2d8a
+# ╟─f7f37b62-ef27-4e31-97ea-e78e6f839028
+# ╟─43c39e42-4f21-4c57-8ac2-7d5d18f1745b
+# ╟─50ee9c7d-51e2-4f6c-a2de-c4b543ac83ef
+# ╟─042db7fe-2936-4663-8893-a43142b6ffc1
+# ╟─25eb0830-0ce1-47dc-8856-eda9a91a3473
+# ╟─16f1ec0c-085a-474f-885c-94e8123eaeba
+# ╟─c41f553f-a656-482e-9b60-bbe25941da39
+# ╟─1134c18a-76c7-4b9c-bff6-f795954f5db4
+# ╟─cc25480d-aae7-4462-9c45-0c4ba6838a06
+# ╟─420dae80-0f3b-445a-afa0-6492b4de9579
+# ╟─f20109a8-7cdf-46f0-bb8d-36f1e16f6310
+# ╟─b3296c31-ace4-4f8a-9eb4-9de85e15dd3d
+# ╟─393fa77e-f65d-4a3c-9e88-431e5030486f
+# ╟─23fa3b59-8152-4be9-ad70-b815c9517548
+# ╟─750bbba1-8af9-4760-a3fc-3f7fbf3bd329
+# ╟─aa10e962-f312-4897-964c-e33e8df9bf6f
+# ╟─5a3af8a1-788e-424a-b68c-96c80f817886
+# ╟─1d37c724-6f6d-4a7f-a8ad-aaae28bc32d5
+# ╟─568660d0-af25-44a6-be84-0ee58ead31d3
+# ╟─aa289a3f-10be-414e-ac4c-d2e331786d10
+# ╟─259abc33-ef51-47d7-8c12-e307eb800b37
+# ╟─480e2e49-041b-4ba8-b0db-fa24121a4f06
+# ╟─04a3ad75-f2a2-414a-b745-c680448780e3
+# ╟─a3d9085c-33b5-4361-bc52-fcde45f4a13a
+# ╟─6649d53e-c358-4efd-a95f-393addbe630a
+# ╟─9d9b8e70-c59d-43cf-a941-ba2f37c57e2b
+# ╟─ad2431ae-d3fb-4ce1-bd32-edcee1e22322
+# ╟─42e39981-cc8b-4eea-9dea-8d7cabbd23da
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
