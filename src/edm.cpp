@@ -797,8 +797,10 @@ void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const 
                         Eigen::Map<MatrixXi> rc, int* kUsed)
 {
   using af::array;
+  using af::dim4;
   using af::matmulTN;
   using af::mean;
+  using af::moddims;
   using af::pinverse;
   using af::select;
   using af::span;
@@ -820,37 +822,29 @@ void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const 
   array othetas(1, thetasCount, opts.thetas.data());
 
   double meanDist = mean<double>(adists);
-  array thetas    = tile(othetas, indsCount, 1);            // reshape to [indsCount thetasCount 1 1]
-  array tadist    = tile(adists, 1, thetasCount);           // reshape to [indsCount thetasCount 1 1]
+  array thetas    = tile(othetas, indsCount, 1);                // reshape to [indsCount thetasCount 1 1]
+  array tadist    = tile(adists, 1, thetasCount);               // reshape to [indsCount thetasCount 1 1]
   array weights   = af::exp( -thetas * ( tadist / meanDist ) );
   array y         = aMy(ainds);
-  array ty        = tile(y, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
-  array y_ls      = ty * weights;                           // [indsCount thetasCount 1 1] shape
+  array ty        = tile(y, 1, thetasCount);                    // reshape to [indsCount thetasCount 1 1]
+  array y_ls      = ty * weights;                               // [indsCount thetasCount 1 1] shape
 
   const dim_t MEactualp1 = M.E_actual() + 1;
+  array X_ls_cj          = af::constant(1.0, dim4(MEactualp1, indsCount), f64);
+  X_ls_cj(af::seq(1, af::end), span) = mData1(span, ainds);
 
-  array icsOuts(MEactualp1, thetasCount, f64);
+  array weightsR  = moddims(weights, 1, indsCount, thetasCount);// [         1 indsCount thetasCount 1]
+  array weightsT  = tile(weightsR, MEactualp1);                 // [MEactualp1 indsCount thetasCount 1]
+  array X_ls_cj_T = tile(X_ls_cj, 1, 1, thetasCount);           // [MEactualp1 indsCount thetasCount 1]
+  array y_ls_R    = moddims(y_ls, indsCount, 1, thetasCount);   // [ indsCount         1 thetasCount 1]
 
-  // TODO check if pinverse works with batching and change logic
-  for (int t = 0; t < thetasCount; ++t) {
-      // Each column is a vector for given theta
-      array w = weights(span, t);
-      array yls = y_ls(span, t);
+  X_ls_cj_T *= weightsT;
 
-      array X_ls_cj = af::constant(1.0, af::dim4(MEactualp1, indsCount), f64);
-      X_ls_cj(af::seq(1, af::end), span) = mData1(span, ainds);
-
-      X_ls_cj *= tile(w.T(), MEactualp1);
-
-      icsOuts(span, t) = matmulTN(pinverse(X_ls_cj, 1e-9), yls);
-
-      //array A   = matmulNT(X_ls_cj, X_ls_cj); // A is [ MEactualp1 MEactualp1 1 1 ]
-      //array B   = matmul(X_ls_cj, yls);       // B is [ MEactualp1 1 1 1 ]
-  }
-
-  array Mp_i_j = mData2(span, Mp_i);
-  array rj     = icsOuts(af::seq(1, af::end), span) * tile(Mp_i_j, 1, thetasCount);
-  array r      = icsOuts(0, span) + sum(rj, 0);
+  array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), y_ls_R);
+  icsOuts       = moddims(icsOuts, MEactualp1, thetasCount);    // This should be just meta-data change
+  array Mp_i_j  = mData2(span, Mp_i);
+  array rj      = icsOuts(af::seq(1, af::end), span) * tile(Mp_i_j, 1, thetasCount);
+  array r       = icsOuts(0, span) + sum(rj, 0);
 
   std::vector<double> rs(r.elements());
   if (r.elements() > 0) {
