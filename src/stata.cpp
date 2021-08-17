@@ -408,7 +408,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<ST_double> t = stata_columns<ST_double>(1);
   print_vector<ST_double>("t", t);
 
-  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, tau, p);
 
   // Handle 'dt' flag
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {

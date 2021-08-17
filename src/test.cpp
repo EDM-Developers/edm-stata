@@ -29,7 +29,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
   int numExtrasLagged = 0;
   int tau = 1;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, tau, p);
 
   SECTION("Basic manifold, no extras or dt")
   {
@@ -129,10 +129,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
   std::vector<double> y = { 12, MISSING, 14, 15, 16, MISSING };
 
-  std::vector<std::vector<double>> extras;
-  int numExtrasLagged = 0;
+  // std::vector<std
+  // int numExtrasLagged = 0;::vector<double>> extras;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+  ManifoldGenerator generator(t, x, y, {}, 0, tau, p);
 
   REQUIRE(generator.calculate_time_increment() == 0.5);
 
@@ -240,7 +240,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 
   int E = 2;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, tau, p);
 
   SECTION("Allowing missing values")
   {
@@ -313,7 +313,7 @@ TEST_CASE("Check negative times work", "[negativeTimes]")
   std::vector<std::vector<double>> extras;
   int numExtrasLagged = 0;
 
-  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, tau, p);
 
   REQUIRE(generator.calculate_time_increment() == 0.5);
 

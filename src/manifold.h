@@ -1,5 +1,8 @@
 #pragma once
 
+/* global variable placeholder for missing values */
+const double MISSING = 1.0e+100;
+
 #include <memory>
 #include <vector>
 
@@ -13,11 +16,10 @@ class Manifold
   std::vector<double> _y;
   std::vector<int> _panel_ids;
   int _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
-  double _missing;
 
 public:
   Manifold(std::unique_ptr<double[]>& flat, std::vector<double> y, std::vector<int> panelIDs, int nobs, int E_x,
-           int E_dt, int E_extras, int E_lagged_extras, int E_actual, double missing)
+           int E_dt, int E_extras, int E_lagged_extras, int E_actual)
     : _flat(std::move(flat))
     , _y(y)
     , _panel_ids(panelIDs)
@@ -27,7 +29,6 @@ public:
     , _E_extras(E_extras)
     , _E_lagged_extras(E_lagged_extras)
     , _E_actual(E_actual)
-    , _missing(missing)
   {}
 
   double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
@@ -63,7 +64,7 @@ public:
     double max = std::numeric_limits<double>::min();
 
     for (int i = 0; i < _nobs * _E_actual; i++) {
-      if (_flat[i] != _missing) {
+      if (_flat[i] != MISSING) {
         if (_flat[i] < min) {
           min = _flat[i];
         }
@@ -75,12 +76,12 @@ public:
     return max - min;
   }
 
-  double missing() const { return _missing; }
+  double missing() const { return MISSING; }
 
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) == _missing) {
+      if (operator()(obsNum, j) == MISSING) {
         return true;
       }
     }
@@ -90,7 +91,7 @@ public:
   bool any_not_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != _missing) {
+      if (operator()(obsNum, j) != MISSING) {
         return true;
       }
     }
@@ -101,7 +102,7 @@ public:
   {
     int count = 0;
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != _missing) {
+      if (operator()(obsNum, j) != MISSING) {
         count += 1;
       }
     }
@@ -128,7 +129,6 @@ private:
   bool _panel_mode = false;
   int _tau;
   int _p;
-  double _missing;
   int _num_extras, _num_extras_lagged;
   double _dtWeight = 0.0;
   std::vector<double> _x, _y, _co_x, _t;
@@ -153,14 +153,13 @@ public:
   ManifoldGenerator() = default;
 
   ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<std::vector<double>>& extras, int numExtrasLagged, double missing, int tau, int p)
+                    const std::vector<std::vector<double>>& extras, int numExtrasLagged, int tau, int p)
     : _t(t)
     , _x(x)
     , _y(y)
     , _extras(extras)
     , _num_extras((int)extras.size())
     , _num_extras_lagged(numExtrasLagged)
-    , _missing(missing)
     , _tau(tau)
     , _p(p)
   {
@@ -171,7 +170,7 @@ public:
 
     // Create a time index which is a discrete count of the number of 'unit' time units.
     for (int i = 0; i < t.size(); i++) {
-      if (t[i] != missing) {
+      if (t[i] != MISSING) {
         _observation_number.push_back(std::round((t[i] - minT) / unit));
       } else {
         _observation_number.push_back(-1);
@@ -190,7 +189,7 @@ public:
 
     int countUp = 0;
     for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != _missing && (allowMissing || (_x[i] != _missing))) {
+      if (_t[i] != MISSING && (allowMissing || (_x[i] != MISSING))) {
         _observation_number[i] = countUp;
         countUp += 1;
       } else {

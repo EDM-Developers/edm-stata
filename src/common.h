@@ -11,9 +11,6 @@
 #define CANNOT_SAVE_RESULTS 1000
 #define UNKNOWN_ERROR 8000
 
-/* global variable placeholder for missing values */
-#define MISSING 1.0e+100
-
 typedef int retcode;
 
 #include <future>

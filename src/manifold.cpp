@@ -37,7 +37,7 @@ double ManifoldGenerator::calculate_time_increment() const
     double timeDiff = _t[i] - _t[i - 1];
 
     // In the panel data case, we may get consecutive times which are negative at the boundary of panels.
-    if (timeDiff <= 0 || _t[i] == _missing || _t[i - 1] == _missing) {
+    if (timeDiff <= 0 || _t[i] == MISSING || _t[i - 1] == MISSING) {
       continue;
     }
 
@@ -147,10 +147,9 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
     std::vector<int> laggedIndices = get_lagged_indices(i, pointNumToStartIndex.at(i), E, panel);
 
-    double missing = _missing;
-    auto lookup_vec = [&laggedIndices, missing](const std::vector<double>& vec, int j) {
+    auto lookup_vec = [&laggedIndices](const std::vector<double>& vec, int j) {
       if (laggedIndices[j] < 0) {
-        return missing;
+        return MISSING;
       } else {
         return vec[laggedIndices[j]];
       }
@@ -179,22 +178,22 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
         int target = _observation_number[k] + _p;
         int direction = _p > 0 ? 1 : -1;
 
-        if (tNow != _missing && find_observation_num(target, k, direction, panel)) {
+        if (tNow != MISSING && find_observation_num(target, k, direction, panel)) {
           double tPred = _t[k];
           flat[M_i * E_actual(E) + E + 0] = _dtWeight * (tPred - tNow);
 
         } else {
-          flat[M_i * E_actual(E) + E + 0] = _missing;
+          flat[M_i * E_actual(E) + E + 0] = MISSING;
         }
       }
 
       for (int j = 1; j < E_dt(E); j++) {
         double tNext = lookup_vec(_t, j - 1);
         double tNow = lookup_vec(_t, j);
-        if (tNext != _missing && tNow != _missing) {
+        if (tNext != MISSING && tNow != MISSING) {
           flat[M_i * E_actual(E) + E + j] = _dtWeight * (tNext - tNow);
         } else {
-          flat[M_i * E_actual(E) + E + j] = _missing;
+          flat[M_i * E_actual(E) + E + j] = MISSING;
         }
       }
     }
@@ -213,7 +212,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     if (skipMissing) {
       bool foundMissing = false;
       for (int j = 0; j < E_actual(E); j++) {
-        if (flat[M_i * E_actual(E) + j] == _missing) {
+        if (flat[M_i * E_actual(E) + j] == MISSING) {
           foundMissing = true;
           break;
         }
@@ -233,7 +232,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
   nobs = M_i;
 
-  return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E), _missing };
+  return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
 }
 
 double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vector<int>& pointNumToStartIndex, int i,
@@ -249,13 +248,13 @@ double ManifoldGenerator::lagged(const std::vector<double>& vec, const std::vect
 
     index -= 1;
     if (index < 0) {
-      return _missing;
+      return MISSING;
     }
   }
 
   if (_panel_mode) {
     if (_panel_ids[index] != _panel_ids[pointNumToStartIndex.at(i)]) {
-      return _missing;
+      return MISSING;
     }
   }
 
@@ -273,8 +272,8 @@ double ManifoldGenerator::find_dt(const std::vector<int>& pointNumToStartIndex, 
     ind2 = ind1 - _tau;
   }
 
-  if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == _missing) || (_t[ind2] == _missing) || (_t[ind1] < _t[ind2])) {
-    return _missing;
+  if ((ind1 >= _t.size()) || (ind2 < 0) || (_t[ind1] == MISSING) || (_t[ind2] == MISSING) || (_t[ind1] < _t[ind2])) {
+    return MISSING;
   }
   return _dtWeight * (_t[ind1] - _t[ind2]);
 }
@@ -293,9 +292,9 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
   std::vector<bool> usable(touse.size());
   for (int i = 0; i < usable.size(); i++) {
     if (allowMissing) {
-      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != _missing;
+      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
     } else {
-      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != _missing;
+      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
     }
   }
 
@@ -310,7 +309,6 @@ void to_json(json& j, const ManifoldGenerator& g)
             { "_panel_mode", g._panel_mode },
             { "_tau", g._tau },
             { "_p", g._p },
-            { "_missing", g._missing },
             { "_num_extras", g._num_extras },
             { "_num_extras_lagged", g._num_extras_lagged },
             { "_dtWeight", g._dtWeight },
@@ -331,7 +329,6 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_panel_mode").get_to(g._panel_mode);
   j.at("_tau").get_to(g._tau);
   j.at("_p").get_to(g._p);
-  j.at("_missing").get_to(g._missing);
   j.at("_num_extras").get_to(g._num_extras);
   j.at("_num_extras_lagged").get_to(g._num_extras_lagged);
   j.at("_dtWeight").get_to(g._dtWeight);
