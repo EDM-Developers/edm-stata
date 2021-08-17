@@ -135,15 +135,17 @@ private:
   std::vector<std::vector<double>> _extras;
   std::vector<int> _panel_ids;
 
+  std::vector<int> _observation_number;
+
   double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
   double find_dt(const std::vector<int>& inds, int i, int j) const;
 
-  double find_time_unit() const;
-  bool search_discrete_time(int target, int& k, int direction, int panel) const;
+  bool find_observation_num(int target, int& k, int direction, int panel) const;
   std::vector<int> get_lagged_indices(int i, int startIndex, int E, int panel) const;
 
 public:
-  std::vector<double> _discrete_time;
+  double calculate_time_increment() const;
+  int get_observation_num(int i);
 
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);
@@ -163,14 +165,14 @@ public:
     , _p(p)
   {
 
-    int unit = find_time_unit();
+    double unit = calculate_time_increment();
 
     // Create a time index which is a discrete count of the number of 'unit' time units.
     for (int i = 0; i < t.size(); i++) {
       if (t[i] != missing) {
-        _discrete_time.push_back(t[i] / unit);
+        _observation_number.push_back(std::round(t[i] / unit));
       } else {
-        _discrete_time.push_back(missing);
+        _observation_number.push_back(-1); // This is implictly assuming that the 't' time variable is never negative..
       }
     }
   }
@@ -187,10 +189,10 @@ public:
     int countUp = 0;
     for (int i = 0; i < _t.size(); i++) {
       if (_t[i] != _missing && (allowMissing || (_x[i] != _missing))) {
-        _discrete_time[i] = countUp;
+        _observation_number[i] = countUp;
         countUp += 1;
       } else {
-        _discrete_time[i] = _missing;
+        _observation_number[i] = -1;
       }
     }
   }
