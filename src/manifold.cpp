@@ -278,7 +278,7 @@ double ManifoldGenerator::find_dt(const std::vector<int>& pointNumToStartIndex, 
   return _dtWeight * (_t[ind1] - _t[ind2]);
 }
 
-std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE, bool allowMissing) const
+std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE) const
 {
   // Make the largest manifold we'll need in order to find missing values for 'usable'
   std::vector<bool> allTrue(touse.size());
@@ -291,7 +291,7 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
   // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
   for (int i = 0; i < usable.size(); i++) {
-    if (allowMissing) {
+    if (_allow_missing) {
       usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
     } else {
       usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;

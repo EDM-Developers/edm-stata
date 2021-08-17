@@ -308,7 +308,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
   bool dt0 = atoi(argv[2]);
-  double dtWeight = atof(argv[3]);
+  double dtWeight = dtMode ? atof(argv[3]) : 0.0;
   std::string alg = std::string(argv[4]);
   if (alg.empty() || alg == "simplex") {
     opts.algorithm = Algorithm::Simplex;
@@ -408,27 +408,32 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   std::vector<ST_double> t = stata_columns<ST_double>(1);
   print_vector<ST_double>("t", t);
 
-  ManifoldGenerator generator = ManifoldGenerator(t, x, y, extras, numExtrasLagged, tau, p);
+  std::vector<ST_double> co_x;
+  if (copredictMode) {
+    co_x = stata_columns<ST_double>(3 + numExtras + 2 + 1);
+  }
 
-  // Handle 'dt' flag
+  std::vector<int> panelIDs;
+  if (opts.panelMode) {
+    panelIDs = stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1);
+  }
+
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
     if (wassDT && !dtMode) {
       dtWeight = 1.0;
       dt0 = true;
       cumulativeDT = true;
     }
-    generator.add_dt_data(dtWeight, dt0, cumulativeDT, allowMissing);
   }
 
-  if (opts.panelMode) {
-    generator.add_panel_ids(stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1));
-  }
+  const ManifoldGenerator generator(t, x, y, tau, p, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
+                                    cumulativeDT, allowMissing);
 
   // The stata variable named `touse' (the basis for the usable variables)
   std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
-  std::vector<bool> usable = generator.generate_usable(touse, maxE, allowMissing);
+  std::vector<bool> usable = generator.generate_usable(touse, maxE);
   print_vector<bool>("usable", usable);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
@@ -467,13 +472,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  // If doing coprediction, bring in the main data for this manifold
-  std::vector<ST_double> co_x;
   std::vector<bool> coTrainingRows, coPredictionRows;
   if (copredictMode) {
-    co_x = stata_columns<ST_double>(3 + numExtras + 2 + 1);
-    generator.add_coprediction_data(co_x);
-
     coTrainingRows = stata_columns<bool>(3 + numExtras + 3 + 1);
     coPredictionRows = stata_columns<bool>(3 + numExtras + 4 + 1);
 

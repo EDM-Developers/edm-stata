@@ -123,10 +123,11 @@ public:
 class ManifoldGenerator
 {
 private:
-  bool _use_dt = false;
-  bool _add_dt0 = false;
-  bool _cumulative_dt = false;
-  bool _panel_mode = false;
+  bool _use_dt;
+  bool _add_dt0;
+  bool _cumulative_dt;
+  bool _panel_mode;
+  bool _allow_missing;
   int _tau;
   int _p;
   int _num_extras, _num_extras_lagged;
@@ -152,62 +153,63 @@ public:
 
   ManifoldGenerator() = default;
 
-  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y,
-                    const std::vector<std::vector<double>>& extras, int numExtrasLagged, int tau, int p)
+  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y, int tau,
+                    int p, const std::vector<double>& co_x = {}, const std::vector<int>& panelIDs = {},
+                    const std::vector<std::vector<double>>& extras = {}, int numExtrasLagged = 0, double dtWeight = 0.0,
+                    bool dt0 = false, bool cumulativeDT = false, bool allowMissing = false)
     : _t(t)
     , _x(x)
     , _y(y)
+    , _tau(tau)
+    , _p(p)
+    , _co_x(co_x)
+    , _panel_ids(panelIDs)
     , _extras(extras)
     , _num_extras((int)extras.size())
     , _num_extras_lagged(numExtrasLagged)
-    , _tau(tau)
-    , _p(p)
+    , _dtWeight(dtWeight)
+    , _add_dt0(dt0)
+    , _cumulative_dt(cumulativeDT)
+    , _allow_missing(allowMissing)
   {
 
-    double unit = calculate_time_increment();
+    if (panelIDs.size() > 0) {
+      _panel_mode = true;
+    }
 
-    double minT = *std::min_element(t.begin(), t.end());
+    if (dtWeight == 0.0) {
+      _use_dt = false;
 
-    // Create a time index which is a discrete count of the number of 'unit' time units.
-    for (int i = 0; i < t.size(); i++) {
-      if (t[i] != MISSING) {
-        _observation_number.push_back(std::round((t[i] - minT) / unit));
-      } else {
-        _observation_number.push_back(-1);
+      double unit = calculate_time_increment();
+      double minT = *std::min_element(t.begin(), t.end());
+
+      // Create a time index which is a discrete count of the number of 'unit' time units.
+      for (int i = 0; i < t.size(); i++) {
+        if (t[i] != MISSING) {
+          _observation_number.push_back(std::round((t[i] - minT) / unit));
+        } else {
+          _observation_number.push_back(-1);
+        }
+      }
+    } else {
+      _use_dt = true;
+
+      int countUp = 0;
+      for (int i = 0; i < _t.size(); i++) {
+        if (_t[i] != MISSING && (allowMissing || (_x[i] != MISSING))) {
+          _observation_number.push_back(countUp);
+          countUp += 1;
+        } else {
+          _observation_number.push_back(-1);
+        }
       }
     }
-  }
-
-  void add_coprediction_data(const std::vector<double>& co_x) { _co_x = co_x; }
-
-  void add_dt_data(double dtWeight, bool dt0, bool cumulativeDT, bool allowMissing)
-  {
-    _dtWeight = dtWeight;
-    _use_dt = true;
-    _add_dt0 = dt0;
-    _cumulative_dt = cumulativeDT;
-
-    int countUp = 0;
-    for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != MISSING && (allowMissing || (_x[i] != MISSING))) {
-        _observation_number[i] = countUp;
-        countUp += 1;
-      } else {
-        _observation_number[i] = -1;
-      }
-    }
-  }
-
-  void add_panel_ids(const std::vector<int>& panelIDs)
-  {
-    _panel_ids = panelIDs;
-    _panel_mode = true;
   }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
                            bool skipMissing = false) const;
 
-  std::vector<bool> generate_usable(const std::vector<bool>& touse, int maxE, bool allowMissing) const;
+  std::vector<bool> generate_usable(const std::vector<bool>& touse, int maxE) const;
 
   int E_dt(int E) const { return (_use_dt) * (E - 1 + _add_dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
