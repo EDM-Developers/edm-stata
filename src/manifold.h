@@ -167,12 +167,14 @@ public:
 
     double unit = calculate_time_increment();
 
+    double minT = *std::min_element(t.begin(), t.end());
+
     // Create a time index which is a discrete count of the number of 'unit' time units.
     for (int i = 0; i < t.size(); i++) {
       if (t[i] != missing) {
-        _observation_number.push_back(std::round(t[i] / unit));
+        _observation_number.push_back(std::round((t[i] - minT) / unit));
       } else {
-        _observation_number.push_back(-1); // This is implictly assuming that the 't' time variable is never negative..
+        _observation_number.push_back(-1);
       }
     }
   }

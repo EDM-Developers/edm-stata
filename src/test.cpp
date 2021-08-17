@@ -136,11 +136,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
   REQUIRE(generator.calculate_time_increment() == 0.5);
 
-  std::vector<int> obsNums = { 2, 5, 6, 9, 10, 12 };
+  std::vector<int> obsNums = { 0, 3, 4, 7, 8, 10 };
   for (int i = 0; i < obsNums.size(); i++) {
     REQUIRE(generator.get_observation_num(i) == obsNums[i]);
   }
-  
 
   SECTION("Default")
   {
@@ -298,5 +297,28 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     std::vector<std::vector<double>> M_true = { { 14.0, 11.0, 0.5, 3.5 }, { 15.0, 12.0, 1.0, 2.5 } };
     std::vector<double> y_true = { 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+  }
+}
+
+TEST_CASE("Check negative times work", "[negativeTimes]")
+{
+  std::vector<double> t = { -9.0, -7.5, -7.0, -6.5, -5.0, -4.0 };
+  std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
+  std::vector<double> y = { 12, MISSING, 14, 15, 16, MISSING };
+
+  int tau = 1;
+  int p = 1;
+  int E = 2;
+
+  std::vector<std::vector<double>> extras;
+  int numExtrasLagged = 0;
+
+  ManifoldGenerator generator(t, x, y, extras, numExtrasLagged, MISSING, tau, p);
+
+  REQUIRE(generator.calculate_time_increment() == 0.5);
+
+  std::vector<int> obsNums = { 0, 3, 4, 5, 8, 10 };
+  for (int i = 0; i < obsNums.size(); i++) {
+    REQUIRE(generator.get_observation_num(i) == obsNums[i]);
   }
 }
