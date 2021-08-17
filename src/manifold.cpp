@@ -123,13 +123,12 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   bool panelMode = _panel_ids.size() > 0;
 
   std::vector<int> pointNumToStartIndex, panelIDs;
-  std::vector<double> y;
 
   int nobs = 0;
   for (int i = 0; i < filter.size(); i++) {
     if (filter[i]) {
       pointNumToStartIndex.push_back(i);
-      y.push_back(_y[i]);
+
       if (panelMode) {
         panelIDs.push_back(_panel_ids[i]);
       }
@@ -137,6 +136,8 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     }
   }
 
+  const std::vector<double>& yTS = (_xmap.size() == 0) ? _x : _xmap;
+  std::vector<double> y;
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
 
   // Fill in the manifold row-by-row (point-by-point)
@@ -155,6 +156,24 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
       }
     };
 
+    // What is the target of this point in the manifold?
+    int targetIndex = pointNumToStartIndex[i];
+    if (_p != 0) {
+      // At what time does the prediction occur?
+      int target = _observation_number[targetIndex] + _p;
+
+      int direction = _p > 0 ? 1 : -1;
+
+      if (find_observation_num(target, targetIndex, direction, panel)) {
+        y.push_back(yTS[targetIndex]);
+      } else {
+        targetIndex = -1;
+        y.push_back(MISSING);
+      }
+    } else {
+      y.push_back(yTS[targetIndex]);
+    }
+
     // Fill in the lagged embedding of x (or co_x) in the first columns
     for (int j = 0; j < E; j++) {
       if (prediction && copredict) {
@@ -172,14 +191,8 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
         flat[M_i * E_actual(E) + E + 0] = 0; // Special case for contemporaneous predictions.
       } else {
         double tNow = lookup_vec(_t, 0);
-
-        // At what time does the prediction occur?
-        int k = pointNumToStartIndex[i];
-        int target = _observation_number[k] + _p;
-        int direction = _p > 0 ? 1 : -1;
-
-        if (tNow != MISSING && find_observation_num(target, k, direction, panel)) {
-          double tPred = _t[k];
+        if (tNow != MISSING && targetIndex >= 0) {
+          double tPred = _t[targetIndex];
           flat[M_i * E_actual(E) + E + 0] = _dtWeight * (tPred - tNow);
 
         } else {
@@ -313,7 +326,7 @@ void to_json(json& j, const ManifoldGenerator& g)
             { "_num_extras_lagged", g._num_extras_lagged },
             { "_dtWeight", g._dtWeight },
             { "_x", g._x },
-            { "_y", g._y },
+            { "_xmap", g._xmap },
             { "_co_x", g._co_x },
             { "_t", g._t },
             { "_observation_number", g._observation_number },
@@ -333,7 +346,7 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_num_extras_lagged").get_to(g._num_extras_lagged);
   j.at("_dtWeight").get_to(g._dtWeight);
   j.at("_x").get_to(g._x);
-  j.at("_y").get_to(g._y);
+  j.at("_xmap").get_to(g._xmap);
   j.at("_co_x").get_to(g._co_x);
   j.at("_t").get_to(g._t);
   j.at("_observation_number").get_to(g._observation_number);

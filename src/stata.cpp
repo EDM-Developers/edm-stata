@@ -373,8 +373,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(2);
 
-  // Read in the target vector 'y' from Stata
-  std::vector<ST_double> y = stata_columns<ST_double>(3);
+  // Read in the time series which forms the basis of the y targets.
+  // In 'explore' mode, it is just 'x' again so nothing is needed.
+  std::vector<ST_double> xmap;
+  if (!explore) {
+    xmap = stata_columns<ST_double>(3);
+  }
 
   // Read in the extras
   std::vector<std::vector<ST_double>> extras(numExtras);
@@ -426,7 +430,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  const ManifoldGenerator generator(t, x, y, tau, p, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
+  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
                                     cumulativeDT, allowMissing);
 
   // The stata variable named `touse' (the basis for the usable variables)

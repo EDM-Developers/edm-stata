@@ -132,7 +132,7 @@ private:
   int _p;
   int _num_extras, _num_extras_lagged;
   double _dtWeight = 0.0;
-  std::vector<double> _x, _y, _co_x, _t;
+  std::vector<double> _x, _xmap, _co_x, _t;
   std::vector<std::vector<double>> _extras;
   std::vector<int> _panel_ids;
 
@@ -153,15 +153,16 @@ public:
 
   ManifoldGenerator() = default;
 
-  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, const std::vector<double>& y, int tau,
-                    int p, const std::vector<double>& co_x = {}, const std::vector<int>& panelIDs = {},
-                    const std::vector<std::vector<double>>& extras = {}, int numExtrasLagged = 0, double dtWeight = 0.0,
-                    bool dt0 = false, bool cumulativeDT = false, bool allowMissing = false)
+  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, int tau, int p,
+                    const std::vector<double>& xmap = {}, const std::vector<double>& co_x = {},
+                    const std::vector<int>& panelIDs = {}, const std::vector<std::vector<double>>& extras = {},
+                    int numExtrasLagged = 0, double dtWeight = 0.0, bool dt0 = false, bool cumulativeDT = false,
+                    bool allowMissing = false)
     : _t(t)
     , _x(x)
-    , _y(y)
     , _tau(tau)
     , _p(p)
+    , _xmap(xmap)
     , _co_x(co_x)
     , _panel_ids(panelIDs)
     , _extras(extras)
@@ -172,7 +173,6 @@ public:
     , _cumulative_dt(cumulativeDT)
     , _allow_missing(allowMissing)
   {
-
     if (panelIDs.size() > 0) {
       _panel_mode = true;
     }

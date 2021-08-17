@@ -713,10 +713,12 @@ program define edmExplore, eclass
 		}
 	}
 
-	// Get the vector of values which we'll try to predict
-	tempvar x_f
-	tsunab future_x : f(`predictionhorizon').`x'
-	qui gen double `x_f' = `future_x' if `touse'
+	if `mata_mode' {
+		// Get the vector of values which we'll try to predict
+		tempvar x_f
+		tsunab future_x : f(`predictionhorizon').`x'
+		qui gen double `x_f' = `future_x' if `touse'
+	}
 
 	// Calculate the default value for 'dtweight'
 	if `parsed_dt' {
@@ -905,7 +907,7 @@ program define edmExplore, eclass
 		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
 		set rngstate `rngstate'
 
-		plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
+		plugin call edm_plugin `timevar' `x' `x' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -1620,10 +1622,12 @@ program define edmXmap, eclass
 			local max_e_manifold = "`r(max_e_manifold)'"
 		}
 
-		// Get the vector of values which we'll try to predict
-		tempvar x_f
-		tsunab future_y : f(`predictionhorizon').`y'
-		qui gen double `x_f' = `future_y' if `touse'
+		if `mata_mode' {
+			// Get the vector of values which we'll try to predict
+			tempvar x_f
+			tsunab future_y : f(`predictionhorizon').`y'
+			qui gen double `x_f' = `future_y' if `touse'
+		}
 
 		// Select the rows which we'll use in the analysis
 		tempvar usable
@@ -1748,7 +1752,7 @@ program define edmXmap, eclass
 			}
 
 
-			plugin call edm_plugin `timevar' `x' `x_f' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
+			plugin call edm_plugin `timevar' `x' `y' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
