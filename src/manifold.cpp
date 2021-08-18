@@ -283,21 +283,45 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
 
 std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE) const
 {
-  // Make the largest manifold we'll need in order to find missing values for 'usable'
-  std::vector<bool> allTrue(touse.size());
-  for (int i = 0; i < allTrue.size(); i++) {
-    allTrue[i] = true;
-  }
-
-  Manifold M = create_manifold(maxE, allTrue, false, false, false);
+  bool copredict = false; // TODO: Need to handle coprediction's usable
+  bool prediction = false;
 
   // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
-  for (int i = 0; i < usable.size(); i++) {
+
+  const std::vector<double>& yTS = (_xmap.size() == 0) ? _x : _xmap;
+
+  auto point = std::make_unique<double[]>(E_actual(maxE));
+  double target;
+
+  for (int i = 0; i < _t.size(); i++) {
+    if (!touse[i]) {
+      usable[i] = false;
+      continue;
+    }
+
+    fill_in_point(i, maxE, copredict, prediction, yTS, point.get(), &target);
+
     if (_allow_missing) {
-      usable[i] = touse[i] && M.any_not_missing(i) && M.y(i) != MISSING;
+      bool observedAny = false;
+      for (int j = 0; j < E_actual(maxE); j++) {
+        if (point[j] != MISSING) {
+          observedAny = true;
+          break;
+        }
+      }
+
+      usable[i] = observedAny && target != MISSING;
     } else {
-      usable[i] = touse[i] && !M.any_missing(i) && M.y(i) != MISSING;
+      bool foundMissing = false;
+      for (int j = 0; j < E_actual(maxE); j++) {
+        if (point[j] == MISSING) {
+          foundMissing = true;
+          break;
+        }
+      }
+
+      usable[i] = !foundMissing && target != MISSING;
     }
   }
 
