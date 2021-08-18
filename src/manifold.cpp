@@ -154,8 +154,6 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     }
   }
 
-  const std::vector<double>& yTS = (_xmap.size() == 0) ? _x : _xmap;
-
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
 
   std::vector<double> y;
@@ -167,7 +165,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
   for (int i = 0; i < nobs; i++) {
     double* point = &(flat[M_i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, yTS, point, &target);
+    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, point, &target);
 
     // Erase this point if we don't want missing values in the resulting manifold
     if (skipMissing) {
@@ -197,11 +195,12 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
 }
 
-void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, const std::vector<double>& yTS,
-                                      double* point, double* target) const
+void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double* point,
+                                      double* target) const
 {
-
   int panel = _panel_mode ? _panel_ids[i] : -1;
+  bool use_co_x = copredict && prediction;
+  const std::vector<double>& yTS = (use_co_x ? _co_x : (_xmap_mode ? _xmap : _x));
 
   std::vector<int> laggedIndices = get_lagged_indices(i, E, panel);
 
@@ -234,7 +233,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
   for (int j = 0; j < E; j++) {
-    if (prediction && copredict) {
+    if (use_co_x) {
       point[j] = lookup_vec(_co_x, j);
     } else {
       point[j] = lookup_vec(_x, j);
@@ -289,8 +288,6 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
   // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
 
-  const std::vector<double>& yTS = (_xmap.size() == 0) ? _x : _xmap;
-
   auto point = std::make_unique<double[]>(E_actual(maxE));
   double target;
 
@@ -300,7 +297,7 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
       continue;
     }
 
-    fill_in_point(i, maxE, copredict, prediction, yTS, point.get(), &target);
+    fill_in_point(i, maxE, copredict, prediction, point.get(), &target);
 
     if (_allow_missing) {
       bool observedAny = false;
