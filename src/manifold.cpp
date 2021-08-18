@@ -17,11 +17,6 @@ double gcd(double a, double b)
     return (gcd(b, a - floor(a / b) * b));
 }
 
-int ManifoldGenerator::get_observation_num(int i)
-{
-  return _observation_number[i];
-}
-
 double ManifoldGenerator::calculate_time_increment() const
 {
   // Find the units which time is measured in.
@@ -51,6 +46,40 @@ double ManifoldGenerator::calculate_time_increment() const
   }
 
   return unit;
+}
+
+void ManifoldGenerator::setup_observation_numbers()
+{
+  if (!_use_dt) {
+    // In normal situations (non-dt)
+    double unit = calculate_time_increment();
+    double minT = *std::min_element(_t.begin(), _t.end());
+
+    // Create a time index which is a discrete count of the number of 'unit' time units.
+    for (int i = 0; i < _t.size(); i++) {
+      if (_t[i] != MISSING) {
+        _observation_number.push_back(std::round((_t[i] - minT) / unit));
+      } else {
+        _observation_number.push_back(-1);
+      }
+    }
+  } else {
+    // In 'dt' mode
+    int countUp = 0;
+    for (int i = 0; i < _t.size(); i++) {
+      if (_t[i] != MISSING && (_allow_missing || (_x[i] != MISSING))) {
+        _observation_number.push_back(countUp);
+        countUp += 1;
+      } else {
+        _observation_number.push_back(-1);
+      }
+    }
+  }
+}
+
+int ManifoldGenerator::get_observation_num(int i)
+{
+  return _observation_number[i];
 }
 
 bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, int panel) const

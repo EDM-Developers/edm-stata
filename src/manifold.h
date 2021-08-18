@@ -138,6 +138,8 @@ private:
 
   std::vector<int> _observation_number;
 
+  void setup_observation_numbers();
+
   double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
   double find_dt(const std::vector<int>& inds, int i, int j) const;
 
@@ -177,33 +179,10 @@ public:
       _panel_mode = true;
     }
 
-    if (dtWeight == 0.0) {
-      _use_dt = false;
+    // TODO: Bring in dtMode here.
+    _use_dt = (dtWeight > 0.0);
 
-      double unit = calculate_time_increment();
-      double minT = *std::min_element(t.begin(), t.end());
-
-      // Create a time index which is a discrete count of the number of 'unit' time units.
-      for (int i = 0; i < t.size(); i++) {
-        if (t[i] != MISSING) {
-          _observation_number.push_back(std::round((t[i] - minT) / unit));
-        } else {
-          _observation_number.push_back(-1);
-        }
-      }
-    } else {
-      _use_dt = true;
-
-      int countUp = 0;
-      for (int i = 0; i < _t.size(); i++) {
-        if (_t[i] != MISSING && (allowMissing || (_x[i] != MISSING))) {
-          _observation_number.push_back(countUp);
-          countUp += 1;
-        } else {
-          _observation_number.push_back(-1);
-        }
-      }
-    }
+    setup_observation_numbers();
   }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,

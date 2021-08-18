@@ -123,6 +123,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
     std::vector<int> obsNums = { 0, 3, 4, 7, 8, 10 };
     for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
@@ -150,6 +151,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
     std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
@@ -183,6 +185,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
     std::vector<int> obsNums = { 0, 1, 2, 3, 4, 5 };
     for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
@@ -297,6 +300,7 @@ TEST_CASE("Check negative times work", "[negativeTimes]")
 
   std::vector<int> obsNums = { 0, 3, 4, 5, 8, 10 };
   for (int i = 0; i < obsNums.size(); i++) {
+    CAPTURE(i);
     REQUIRE(generator.get_observation_num(i) == obsNums[i]);
   }
 }
