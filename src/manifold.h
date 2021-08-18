@@ -139,9 +139,8 @@ private:
   std::vector<int> _observation_number;
 
   void setup_observation_numbers();
-
-  double lagged(const std::vector<double>& vec, const std::vector<int>& inds, int i, int j) const;
-  double find_dt(const std::vector<int>& inds, int i, int j) const;
+  void fill_in_point(int i, int E, bool copredict, bool prediction, const std::vector<double>& yTS, double* point,
+                     double* target) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
   std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
