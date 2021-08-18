@@ -144,7 +144,7 @@ private:
   double find_dt(const std::vector<int>& inds, int i, int j) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
-  std::vector<int> get_lagged_indices(int i, int startIndex, int E, int panel) const;
+  std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
 
 public:
   double calculate_time_increment() const;
@@ -175,9 +175,7 @@ public:
     , _cumulative_dt(cumulativeDT)
     , _allow_missing(allowMissing)
   {
-    if (panelIDs.size() > 0) {
-      _panel_mode = true;
-    }
+    _panel_mode = (panelIDs.size() > 0);
 
     // TODO: Bring in dtMode here.
     _use_dt = (dtWeight > 0.0);

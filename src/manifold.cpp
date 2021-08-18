@@ -67,7 +67,7 @@ void ManifoldGenerator::setup_observation_numbers()
     // In 'dt' mode
     int countUp = 0;
     for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != MISSING && (_allow_missing || (_x[i] != MISSING))) {
+      if (_t[i] != MISSING && (_allow_missing || (_x[i] != MISSING))) { // TODO: What about co_x missing here?
         _observation_number.push_back(countUp);
         countUp += 1;
       } else {
@@ -84,13 +84,10 @@ int ManifoldGenerator::get_observation_num(int i)
 
 bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, int panel) const
 {
-
-  bool panelMode = _panel_ids.size() > 0;
-
   // Loop either forward or back until we find the right index or give up.
   while (k >= 0 && k < _observation_number.size()) {
     // If in panel mode, make sure we don't wander over a panel boundary.
-    if (panelMode) {
+    if (_panel_mode) {
       if (panel != _panel_ids[k]) {
         return false;
       }
@@ -121,7 +118,7 @@ bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, 
   return false;
 }
 
-std::vector<int> ManifoldGenerator::get_lagged_indices(int i, int startIndex, int E, int panel) const
+std::vector<int> ManifoldGenerator::get_lagged_indices(int startIndex, int E, int panel) const
 {
 
   std::vector<int> laggedIndices(E);
@@ -136,9 +133,9 @@ std::vector<int> ManifoldGenerator::get_lagged_indices(int i, int startIndex, in
 
   for (int j = 1; j < E; j++) {
     // Find the discrete time we're searching for.
-    int target = pointStartObsNum - j * _tau;
+    int targetObsNum = pointStartObsNum - j * _tau;
 
-    if (find_observation_num(target, k, -1, panel)) {
+    if (find_observation_num(targetObsNum, k, -1, panel)) {
       laggedIndices[j] = k;
     }
   }
@@ -149,33 +146,29 @@ std::vector<int> ManifoldGenerator::get_lagged_indices(int i, int startIndex, in
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
                                             bool skipMissing) const
 {
-  bool panelMode = _panel_ids.size() > 0;
-
-  std::vector<int> pointNumToStartIndex, panelIDs;
-
   int nobs = 0;
+  std::vector<int> pointNumToStartIndex;
   for (int i = 0; i < filter.size(); i++) {
     if (filter[i]) {
       pointNumToStartIndex.push_back(i);
-
-      if (panelMode) {
-        panelIDs.push_back(_panel_ids[i]);
-      }
       nobs += 1;
     }
   }
 
   const std::vector<double>& yTS = (_xmap.size() == 0) ? _x : _xmap;
-  std::vector<double> y;
+
   auto flat = std::make_unique<double[]>(nobs * E_actual(E));
+
+  std::vector<double> y;
+  std::vector<int> panelIDs;
 
   // Fill in the manifold row-by-row (point-by-point)
   int M_i = 0;
 
   for (int i = 0; i < nobs; i++) {
-    int panel = panelMode ? panelIDs[i] : -1;
+    int panel = _panel_mode ? _panel_ids[pointNumToStartIndex[i]] : -1;
 
-    std::vector<int> laggedIndices = get_lagged_indices(i, pointNumToStartIndex.at(i), E, panel);
+    std::vector<int> laggedIndices = get_lagged_indices(pointNumToStartIndex[i], E, panel);
 
     auto lookup_vec = [&laggedIndices](const std::vector<double>& vec, int j) {
       if (laggedIndices[j] < 0) {
@@ -187,20 +180,22 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
     // What is the target of this point in the manifold?
     int targetIndex = pointNumToStartIndex[i];
+    double target;
+
     if (_p != 0) {
       // At what time does the prediction occur?
-      int target = _observation_number[targetIndex] + _p;
+      int targetObsNum = _observation_number[targetIndex] + _p;
 
       int direction = _p > 0 ? 1 : -1;
 
-      if (find_observation_num(target, targetIndex, direction, panel)) {
-        y.push_back(yTS[targetIndex]);
+      if (find_observation_num(targetObsNum, targetIndex, direction, panel)) {
+        target = yTS[targetIndex];
       } else {
         targetIndex = -1;
-        y.push_back(MISSING);
+        target = MISSING;
       }
     } else {
-      y.push_back(yTS[targetIndex]);
+      target = yTS[targetIndex];
     }
 
     // Fill in the lagged embedding of x (or co_x) in the first columns
@@ -261,12 +256,13 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
       }
 
       if (foundMissing) {
-        y.erase(y.begin() + M_i);
-        if (panelMode) {
-          panelIDs.erase(panelIDs.begin() + M_i);
-        }
         continue;
       }
+    }
+
+    y.push_back(target);
+    if (_panel_mode) {
+      panelIDs.push_back(panel);
     }
 
     M_i += 1;
