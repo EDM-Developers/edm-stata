@@ -956,7 +956,23 @@ begin
 end
 
 # ╔═╡ 7b2ff2ef-904c-45ab-9ef6-000118fa2d8a
-md"For now, let's say $E = 2$, $\tau = 1$ and $p = 1$."
+md"Let's also fix $E = 2$, $\tau = 1$ and $p = 1$ for these examples."
+
+# ╔═╡ a8b14249-19f1-4f21-aa47-e11b3c4e9ce7
+md"""
+Here we have one obviously missing value for $x$ at time 3.
+However, there are some hidden missing values also.
+
+By default, the package will assume that your data was measured at a regular time interval and will insert missing values as necessary to create a regular grid.
+For example, the above time series will be treated as if it were:
+"""
+
+# ╔═╡ 1f26c940-a41a-48c2-80b4-f90a3c3efa3b
+begin
+	tMissFill = [ 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0 ]
+  	xMissFill = [ 11,  NaN, NaN, 12, NaN, NaN, NaN, 14, 15, NaN, 16 ]
+	dfMissFill = DataFrame(t = tMissFill, x = xMissFill)
+end
 
 # ╔═╡ f7f37b62-ef27-4e31-97ea-e78e6f839028
 md"""
@@ -964,20 +980,28 @@ The manifold of $x$ and it's projections $y$ will have missing values in them:
 """
 
 # ╔═╡ 43c39e42-4f21-4c57-8ac2-7d5d18f1745b
-begin
+begin	
 	M_x_miss = [ 11 NaN;
-				 12 11;
+				 NaN 11;
+				 NaN NaN;
+				 12 NaN;
 				 NaN 12;
+				 NaN NaN;
+				 NaN NaN;
 				 14 NaN;
 				 15 14;
-				 16 15]
-	y_miss = [ 12; NaN; 14; 15; 16; NaN]
+				 NaN 15;
+				 16 NaN]
+	
+	y_miss = [ NaN; NaN; 12; NaN; NaN; NaN; 14; 15; NaN; 16; NaN]
 	
 	L"M_x = %$(latexify(M_x_miss, env=:raw)) %$matchStr y = %$(latexify(y_miss, env=:raw))"
 end
 
 # ╔═╡ 50ee9c7d-51e2-4f6c-a2de-c4b543ac83ef
 md"""
+We can see that the original missing value, combined with some slightly irregular sampling, created a reconstructed manifold that is mostly missing values!
+
 By default, the points which contain missing values *will not be added to the library or prediction sets*.
 
 For example, if we let the library and prediction sets be as big as possible then we will have:
@@ -1002,9 +1026,19 @@ begin
 	L"\mathscr{P} = %$(latexify(P_miss, env=:raw)) %$matchStr y^{\mathscr{P}} = %$(latexify(y_P_miss, env=:raw))"
 end
 
+# ╔═╡ 92049e5d-9a54-4b99-93d6-2971b77a99fc
+md"""
+Here we see that the resulting library set is totally empty, and the prediction set contains just one point!
+
+This is because for a point to be in the library set (with default options) it must be fully observed and the corresponding $y$ projection must also be observed.
+
+For a point to be in the prediction set (with default options) it needs to be fully observed but it is ok for the corresponding $y$ target to be missing.
+
+"""
+
 # ╔═╡ 16f1ec0c-085a-474f-885c-94e8123eaeba
 md"""
-In general, $\mathscr{P}$ is less restrictive than $\mathscr{L}$ because it is fine for the targets in $y^{\mathscr{P}}$ to be missing values.
+The $\mathscr{P}$ is less restrictive than $\mathscr{L}$ because it is fine for the targets in $y^{\mathscr{P}}$ to be missing values.
 We can make predictions even though we don't observe the true values.
 However those predictions without a corresponding true value cannot be used in the $\rho$/MAE calculations.
 """
@@ -1021,7 +1055,9 @@ md"#### The `allowmissing` flag"
 
 # ╔═╡ cc25480d-aae7-4462-9c45-0c4ba6838a06
 md"""
-If we set the `allowmissing` option, then a point is included in the manifold even with missing values (so long as it's not 100% missing every component).
+If we set the `allowmissing` option, then a point is included in the manifold even with some missing values.
+The only caveat to this rule is that points which are totally missing will always be discarded.
+
 
 The largest possible library and prediction sets with `allowmissing` in this example would be:
 """
@@ -1071,10 +1107,11 @@ md"the `dt` basically acts as if the supplied data were:"
 # ╔═╡ aa10e962-f312-4897-964c-e33e8df9bf6f
 begin
 	tMissDT = [ 1.0, 2.5, 4.5, 5.0, 6.0 ]
+	dtMissDT = [1.5, 2.0, 0.5, 1.0, NaN ]
   	xMissDT = [ 11, 12, 14, 15, 16 ]
 	yMissDT = [ 12, 14, 15, 16, NaN ]
 
-	dfMissDT = DataFrame(t = tMissDT, x = xMissDT)
+	dfMissDT = DataFrame(t = tMissDT, x = xMissDT, dt = dtMissDT)
 end
 
 # ╔═╡ 5a3af8a1-788e-424a-b68c-96c80f817886
@@ -1683,11 +1720,14 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─a29ab0d0-ea70-480f-90f6-5418534b27df
 # ╟─12bbff2f-ac5d-4904-ad0c-3fd3efdb1243
 # ╟─7b2ff2ef-904c-45ab-9ef6-000118fa2d8a
+# ╟─a8b14249-19f1-4f21-aa47-e11b3c4e9ce7
+# ╟─1f26c940-a41a-48c2-80b4-f90a3c3efa3b
 # ╟─f7f37b62-ef27-4e31-97ea-e78e6f839028
 # ╟─43c39e42-4f21-4c57-8ac2-7d5d18f1745b
 # ╟─50ee9c7d-51e2-4f6c-a2de-c4b543ac83ef
 # ╟─042db7fe-2936-4663-8893-a43142b6ffc1
 # ╟─25eb0830-0ce1-47dc-8856-eda9a91a3473
+# ╟─92049e5d-9a54-4b99-93d6-2971b77a99fc
 # ╟─16f1ec0c-085a-474f-885c-94e8123eaeba
 # ╟─c41f553f-a656-482e-9b60-bbe25941da39
 # ╟─1134c18a-76c7-4b9c-bff6-f795954f5db4
