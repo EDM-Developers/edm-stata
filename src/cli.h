@@ -121,6 +121,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
     for (int f = 0; f < futures.size(); f++) {
       const Prediction pred = futures[f].get();
       io->print(io->get_and_clear_async_buffer());
+      io->flush();
 
       results.push_back(pred);
       if (pred.rc > rc) {

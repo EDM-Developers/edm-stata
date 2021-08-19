@@ -279,6 +279,13 @@ std::vector<int> bool_to_int(std::vector<bool> bv)
   return iv;
 }
 
+std::vector<double> bool_to_double(std::vector<bool> bv)
+{
+  std::vector<double> dv;
+  std::copy(bv.begin(), bv.end(), std::back_inserter(dv));
+  return dv;
+}
+
 std::vector<std::future<Prediction>> futures;
 
 // In case we have some remnants of previous runs still
@@ -430,23 +437,21 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
-                                    cumulativeDT, allowMissing);
-
   // The stata variable named `touse' (the basis for the usable variables)
   std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
   print_vector<bool>("touse", touse);
 
+  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
+                                    cumulativeDT, allowMissing);
+
+  // Generate the 'usable' variable
   std::vector<bool> usable = generator.generate_usable(touse, maxE);
-  print_vector<bool>("usable", usable);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
-
-  auto usableToSave = std::make_unique<double[]>(usable.size());
-  for (int i = 0; i < usable.size(); i++) {
-    usableToSave[i] = usable[i];
+  {
+    std::vector<double> usableToSave = bool_to_double(usable);
+    write_stata_column(usableToSave.data(), (int)usableToSave.size(), 3 + numExtras + 1 + 1);
   }
-  write_stata_column(usableToSave.get(), (int)usable.size(), 3 + numExtras + 1 + 1);
 
   if (numUsable == 0) {
     SF_scal_save(FINISHED_SCALAR, 1.0);

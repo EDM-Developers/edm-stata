@@ -140,14 +140,14 @@ private:
   std::vector<int> _observation_number;
 
   void setup_observation_numbers();
-  void fill_in_point(int i, int E, bool copredict, bool prediction, double* point, double* target) const;
+  void fill_in_point(int i, int E, bool copredict, bool prediction, double* point, double &target) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
   std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
 
 public:
   double calculate_time_increment() const;
-  int get_observation_num(int i);
+  int get_observation_num(int i) const { return _observation_number[i]; }
 
   friend void to_json(json& j, const ManifoldGenerator& g);
   friend void from_json(const json& j, ManifoldGenerator& g);

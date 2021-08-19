@@ -76,11 +76,6 @@ void ManifoldGenerator::setup_observation_numbers()
   }
 }
 
-int ManifoldGenerator::get_observation_num(int i)
-{
-  return _observation_number[i];
-}
-
 bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, int panel) const
 {
   // Loop either forward or back until we find the right index or give up.
@@ -165,7 +160,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
   for (int i = 0; i < nobs; i++) {
     double* point = &(flat[M_i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, point, &target);
+    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, point, target);
 
     // Erase this point if we don't want missing values in the resulting manifold
     if (skipMissing) {
@@ -196,11 +191,10 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 }
 
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double* point,
-                                      double* target) const
+                                      double &target) const
 {
   int panel = _panel_mode ? _panel_ids[i] : -1;
   bool use_co_x = copredict && prediction;
-  const std::vector<double>& yTS = (use_co_x ? _co_x : (_xmap_mode ? _xmap : _x));
 
   std::vector<int> laggedIndices = get_lagged_indices(i, E, panel);
 
@@ -218,17 +212,22 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
   if (_p != 0) {
     // At what time does the prediction occur?
     int targetObsNum = _observation_number[targetIndex] + _p;
-
     int direction = _p > 0 ? 1 : -1;
-
-    if (find_observation_num(targetObsNum, targetIndex, direction, panel)) {
-      *target = yTS[targetIndex];
-    } else {
+    if (!find_observation_num(targetObsNum, targetIndex, direction, panel)) {
       targetIndex = -1;
-      *target = MISSING;
+    }
+  }
+
+  if (targetIndex >= 0) {
+    if (use_co_x) {
+      target = _co_x[targetIndex];
+    } else if (_xmap_mode) {
+      target = _xmap[targetIndex];
+    } else {
+      target = _x[targetIndex];
     }
   } else {
-    *target = yTS[targetIndex];
+    target = MISSING;
   }
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
@@ -280,15 +279,45 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
   }
 }
 
+bool is_usable(double* point, double target, int E_actual, bool allowMissing, bool targetRequired)
+{
+  if (targetRequired && target == MISSING) {
+    return false;
+  }
+
+  if (allowMissing) {
+    // If we are allowed to have missing values in the points, just
+    // need to ensure that we don't allow a 100% missing point.
+    for (int j = 0; j < E_actual; j++) {
+      if (point[j] != MISSING) {
+        return true;
+      }
+    }
+    return false;
+
+  } else {
+    // Check that there are no missing values in the points.
+    for (int j = 0; j < E_actual; j++) {
+      if (point[j] == MISSING) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
 std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE) const
 {
-  bool copredict = false; // TODO: Need to handle coprediction's usable
+  // TODO: Need to handle coprediction's usable
+  bool copredict = false;
   bool prediction = false;
+  bool targetRequired = true;
 
   // Generate the 'usable' variable
   std::vector<bool> usable(touse.size());
 
-  auto point = std::make_unique<double[]>(E_actual(maxE));
+  int E = E_actual(maxE);
+  auto point = std::make_unique<double[]>(E);
   double target;
 
   for (int i = 0; i < _t.size(); i++) {
@@ -297,29 +326,9 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
       continue;
     }
 
-    fill_in_point(i, maxE, copredict, prediction, point.get(), &target);
+    fill_in_point(i, maxE, copredict, prediction, point.get(), target);
 
-    if (_allow_missing) {
-      bool observedAny = false;
-      for (int j = 0; j < E_actual(maxE); j++) {
-        if (point[j] != MISSING) {
-          observedAny = true;
-          break;
-        }
-      }
-
-      usable[i] = observedAny && target != MISSING;
-    } else {
-      bool foundMissing = false;
-      for (int j = 0; j < E_actual(maxE); j++) {
-        if (point[j] == MISSING) {
-          foundMissing = true;
-          break;
-        }
-      }
-
-      usable[i] = !foundMissing && target != MISSING;
-    }
+    usable[i] = is_usable(point.get(), target, E, _allow_missing, targetRequired);
   }
 
   return usable;
@@ -331,6 +340,7 @@ void to_json(json& j, const ManifoldGenerator& g)
             { "_add_dt0", g._add_dt0 },
             { "_cumulative_dt", g._cumulative_dt },
             { "_panel_mode", g._panel_mode },
+            { "_xmap_mode", g._xmap_mode },
             { "_tau", g._tau },
             { "_p", g._p },
             { "_num_extras", g._num_extras },
@@ -351,6 +361,7 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_add_dt0").get_to(g._add_dt0);
   j.at("_cumulative_dt").get_to(g._cumulative_dt);
   j.at("_panel_mode").get_to(g._panel_mode);
+  j.at("_xmap_mode").get_to(g._xmap_mode);
   j.at("_tau").get_to(g._tau);
   j.at("_p").get_to(g._p);
   j.at("_num_extras").get_to(g._num_extras);
