@@ -192,6 +192,8 @@ global EDM_SAVE_INPUTS = "ci-test"
 clear
 set obs 100
 
+set seed 1
+
 gen t = _n
 tsset t
 
