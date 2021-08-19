@@ -9,15 +9,6 @@
 #include "edm.h"
 #include "manifold.h"
 
-std::vector<bool> trueVec(size_t size)
-{
-  std::vector<bool> v(size);
-  for (int i = 0; i < v.size(); i++) {
-    v[i] = true;
-  }
-  return v;
-}
-
 void print_manifold(const Manifold& M)
 {
   auto stringVersion = [](double v) { return (v == MISSING) ? std::string(" . ") : fmt::format("{:.1f}", v); };
@@ -58,7 +49,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
   {
     ManifoldGenerator generator(t, x, tau, p);
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 4); // Not allowing first point because x.at(-1) doesn't exist
     REQUIRE(usable[0] == false);
     REQUIRE(usable[1] == true);
@@ -84,7 +75,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     bool allowMissing = false;
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
 
     REQUIRE(usable.size() == 4);
     REQUIRE(usable[0] == false); // Not allowing first point because x.at(-1) doesn't exist
@@ -127,7 +118,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == false); // x is missing
     REQUIRE(usable[1] == false); // y is missing
@@ -155,7 +146,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == false); // x.at(-1) missing and nothing before it to bring forward
     REQUIRE(usable[1] == true);
@@ -189,7 +180,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == true);
     REQUIRE(usable[1] == false); // y is missing
@@ -228,7 +219,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     bool allowMissing = true;
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == true);
     REQUIRE(usable[1] == false); // y is missing
@@ -261,7 +252,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     bool allowMissing = false;
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
 
-    std::vector<bool> usable = generator.generate_usable(trueVec(t.size()), E);
+    std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
     REQUIRE(usable[0] == false); // x.at(-1) missing and nothing before it to bring forward
     REQUIRE(usable[1] == false); // y is missing

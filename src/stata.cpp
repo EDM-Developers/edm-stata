@@ -420,12 +420,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   std::vector<ST_double> co_x;
   if (copredictMode) {
-    co_x = stata_columns<ST_double>(3 + numExtras + 2 + 1);
+    co_x = stata_columns<ST_double>(3 + numExtras + 1 + 1);
   }
 
   std::vector<int> panelIDs;
   if (opts.panelMode) {
-    panelIDs = stata_columns<int>(3 + numExtras + 2 + 3 * copredictMode + 1);
+    panelIDs = stata_columns<int>(3 + numExtras + 1 + 3 * copredictMode + 1);
   }
 
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
@@ -436,20 +436,16 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
-  // The stata variable named `touse' (the basis for the usable variables)
-  std::vector<bool> touse = stata_columns<bool>(3 + numExtras + 1);
-  print_vector<bool>("touse", touse);
-
   const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
                                     cumulativeDT, allowMissing);
 
   // Generate the 'usable' variable
-  std::vector<bool> usable = generator.generate_usable(touse, maxE);
+  std::vector<bool> usable = generator.generate_usable(maxE);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
   {
     std::vector<double> usableToSave = bool_to_double(usable);
-    write_stata_column(usableToSave.data(), (int)usableToSave.size(), 3 + numExtras + 1 + 1);
+    write_stata_column(usableToSave.data(), (int)usableToSave.size(), 3 + numExtras + 1);
   }
 
   if (numUsable == 0) {
@@ -482,8 +478,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   std::vector<bool> coTrainingRows, coPredictionRows;
   if (copredictMode) {
-    coTrainingRows = stata_columns<bool>(3 + numExtras + 3 + 1);
-    coPredictionRows = stata_columns<bool>(3 + numExtras + 4 + 1);
+    coTrainingRows = stata_columns<bool>(3 + numExtras + 2 + 1);
+    coPredictionRows = stata_columns<bool>(3 + numExtras + 3 + 1);
 
     for (int i = 0; i < usable.size(); i++) {
       if (!usable[i]) {

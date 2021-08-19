@@ -914,7 +914,7 @@ program define edmExplore, eclass
 		// Instead, just save it as a local and have the plugin read it using the Stata C API.
 		local rngstate = c(rngstate)
 
-		plugin call edm_plugin `timevar' `x' `x' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
+		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -1148,7 +1148,7 @@ program define edmExplore, eclass
 		local result_matrix = "r"
 		local save_predict_mode = ("`predict'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call edm_plugin `predict' `co_x_p', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call edm_plugin `predict' `co_x_p' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	if ("`copredictvar'" != "") {
@@ -1783,7 +1783,7 @@ program define edmXmap, eclass
 				local co_xvar = ""
 			}
 
-			plugin call edm_plugin `timevar' `x' `y' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
+			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -2021,7 +2021,7 @@ program define edmXmap, eclass
 			local result_matrix = "r1"
 			local save_predict_mode = "`predict'" != ""
 			local save_copredict_mode = 0 // Only possible for the final direction
-			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
 		* reset the panel structure
@@ -2072,7 +2072,7 @@ program define edmXmap, eclass
 		local result_matrix = "r`num_directions'"
 		local save_predict_mode = ("`predict'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call edm_plugin `predict' `co_x_p' `all_savesmap_vars`num_directions'', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call edm_plugin `predict' `co_x_p' `all_savesmap_vars`num_directions'' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	if ("`copredictvar'" != "") {

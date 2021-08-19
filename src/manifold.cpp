@@ -306,7 +306,7 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
   }
 }
 
-std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& touse, int maxE) const
+std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
 {
   // TODO: Need to handle coprediction's usable
   bool copredict = false;
@@ -314,20 +314,14 @@ std::vector<bool> ManifoldGenerator::generate_usable(const std::vector<bool>& to
   bool targetRequired = true;
 
   // Generate the 'usable' variable
-  std::vector<bool> usable(touse.size());
+  std::vector<bool> usable(_t.size());
 
   int E = E_actual(maxE);
   auto point = std::make_unique<double[]>(E);
   double target;
 
   for (int i = 0; i < _t.size(); i++) {
-    if (!touse[i]) {
-      usable[i] = false;
-      continue;
-    }
-
     fill_in_point(i, maxE, copredict, prediction, point.get(), target);
-
     usable[i] = is_usable(point.get(), target, E, _allow_missing, targetRequired);
   }
 
