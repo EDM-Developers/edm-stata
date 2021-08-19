@@ -263,10 +263,10 @@ program define edmPreprocessVariable, rclass
 	else if substr("`1'", 1, 2) == "i." {  // treat as a factor variable
 		local factor_var = "1"
 		local varname = substr("`1'", 3, .)
-		qui gen double `out' = `varname'
+		qui gen double `out' = `varname' if `touse'
 	}
 	else {
-		qui gen double `out' = `1'
+		qui gen double `out' = `1' if `touse'
 	}
 	return local factor_var = "`factor_var'"
 end
