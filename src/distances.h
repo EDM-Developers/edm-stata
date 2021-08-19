@@ -8,3 +8,5 @@ DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold
                                    std::vector<int> inds);
 DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                          std::vector<int> inds);
+DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                            std::vector<int> inds);

@@ -408,7 +408,9 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   DistanceIndexPairs potentialNN;
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
+    potentialNN =
+       useArrayFire ? af_wasserstein_distances(Mp_i, opts, M, Mp, tryInds)
+                    : wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
   } else {
     potentialNN =
        useArrayFire ? af_lp_distances(Mp_i, opts, M, Mp, tryInds)
