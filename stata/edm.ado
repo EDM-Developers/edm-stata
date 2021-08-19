@@ -618,6 +618,9 @@ program define edmExplore, eclass
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 
+	qui count if `touse'
+	local num_touse = r(N)
+	
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
@@ -1132,8 +1135,8 @@ program define edmExplore, eclass
 	matrix colnames cfull = `cfullname'
 	matrix rownames cfull = rho
 	/* mat list cfull */
-	ereturn post cfull, esample(`usable')
-	ereturn scalar N = `num_usable'
+	ereturn post cfull, esample(`touse')
+	ereturn scalar N = `num_touse'
 	/* ereturn post r, esample(`usable') dep("`y'") properties("r") */
 	ereturn local subcommand = "explore"
 	ereturn local direction = "oneway"
@@ -1410,6 +1413,9 @@ program define edmXmap, eclass
 	marksample touse
 	markout `touse' `timevar' `panel_id'
 	sort `panel_id' `timevar'
+
+	qui count if `touse'
+	local num_touse = r(N)
 
 	* create manifold as variables
 	tokenize "`anything'"
@@ -2053,8 +2059,9 @@ program define edmXmap, eclass
 		mat cfull = cfull[1...,1]
 	}
 	/* mat list cfull */
-	ereturn post cfull, esample(`usable')
-	ereturn scalar N = `num_usable'
+	ereturn post cfull, esample(`touse')
+	ereturn scalar N = `num_touse'
+	
 	ereturn local subcommand = "xmap"
 	ereturn matrix xmap_1  = r1
 	if "`direction'" == "both" {

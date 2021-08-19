@@ -53,7 +53,11 @@ keep in 300/500
 * identify optimal E
 edm explore x, e(2/10)
 
+ereturn list
+
 edm xmap x y, k(5)
+
+ereturn list
 
 edm xmap x y, e(6) lib(8) force
 

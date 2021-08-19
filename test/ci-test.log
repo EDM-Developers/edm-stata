@@ -103,6 +103,41 @@ Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
 . 
+. ereturn list
+
+scalars:
+                  e(N) =  201
+           e(e_offset) =  0
+     e(report_actuale) =  1
+                e(tau) =  1
+          e(replicate) =  1
+          e(crossfold) =  0
+        e(rep_details) =  0
+                 e(ci) =  0
+      e(force_compute) =  1
+              e(panel) =  0
+                 e(dt) =  0
+
+macros:
+            e(cmdline) : "edm explore x, e(2/10)"
+                e(cmd) : "edm"
+               e(mode) : "plugin"
+          e(algorithm) : "simplex"
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data"
+                  e(x) : "x"
+          e(direction) : "oneway"
+         e(subcommand) : "explore"
+         e(properties) : "b"
+
+matrices:
+                  e(b) :  1 x 1
+     e(explore_result) :  9 x 4
+
+functions:
+             e(sample)   
+
+. 
 . edm xmap x y, k(5)
 
 Empirical Dynamic Modelling
@@ -115,6 +150,44 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
 Note: Number of neighbours (k) is adjusted to 5
 Note: The embedding dimension E is 2
+
+. 
+. ereturn list
+
+scalars:
+                  e(N) =  201
+             e(e_main) =  2
+           e(e_actual) =  2
+           e(e_offset) =  0
+              e(theta) =  1
+                e(tau) =  1
+          e(replicate) =  1
+        e(rep_details) =  0
+                 e(ci) =  0
+      e(force_compute) =  1
+              e(panel) =  0
+                 e(dt) =  0
+
+macros:
+            e(cmdline) : "edm xmap x y, k(5)"
+                e(cmd) : "edm"
+               e(mode) : "plugin"
+          e(direction) : "both"
+        e(cmdfootnote) : "Note: Number of neighbours (k) is adjusted to 5
+"
+          e(algorithm) : "simplex"
+                  e(y) : "y"
+                  e(x) : "x"
+         e(subcommand) : "xmap"
+         e(properties) : "b"
+
+matrices:
+                  e(b) :  1 x 2
+             e(xmap_2) :  1 x 4
+             e(xmap_1) :  1 x 4
+
+functions:
+             e(sample)   
 
 . 
 . edm xmap x y, e(6) lib(8) force
@@ -795,12 +868,13 @@ predicted~mx |   0.7831   1.0000
 . jackknife: edm xmap x y, e(2)
 (running edm on estimation sample)
 
-Jackknife replications (200)
+Jackknife replications (201)
 ----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5 
 ..................................................    50
 ..................................................   100
 ..................................................   150
 ..................................................   200
+.
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -817,27 +891,28 @@ Note: The embedding dimension E is 2
              |              Jackknife
              | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
-      y|M(x) |    .542135   .0914957     5.93   0.000     .3617095    .7225605
-      x|M(y) |   .9427227   .0140109    67.29   0.000     .9150939    .9703515
+      y|M(x) |    .542135   .0915032     5.92   0.000     .3617001    .7225698
+      x|M(y) |   .9427227   .0140127    67.28   0.000     .9150911    .9703542
 ------------------------------------------------------------------------------
 
 . 
 . jackknife: edm explore x, e(2)
 (running edm on estimation sample)
 
-Jackknife replications (199)
+Jackknife replications (201)
 ----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5 
 ..................................................    50
 ..................................................   100
 ..................................................   150
-.................................................
+..................................................   200
+.
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99846        .0083042 
+                 2               1          .99932        .0067173 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -847,7 +922,7 @@ Note: Random 50/50 split for training and validation data
              |              Jackknife
              | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
-           x |   .9984628   .0106503    93.75   0.000     .9774601    1.019465
+           x |   .9993227   .0127011    78.68   0.000     .9742775    1.024368
 ------------------------------------------------------------------------------
 
 . 
