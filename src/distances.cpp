@@ -7,9 +7,12 @@
 #include <Eigen/Dense>
 
 #include <cmath> // for std::isnormal
+#include <limits>
 #include <vector>
 
 #include <arrayfire.h>
+
+using af::array;
 
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inpInds)
@@ -372,6 +375,189 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
 
     if (len_i > 0 && len_j > 0) {
       double dist_i = wasserstein(C.get(), len_i, len_j);
+
+      // Alternatively, the approximate version based on Sinkhorn's algorithm can be called with something like:
+      // double dist_i = approx_wasserstein(C.get(), len_i, len_j, 0.1, 0.1)
+      // In that case, the "std::isnormal" is really needed on the next line, as some
+      // instability gives us some 'nan' distances using that method.
+
+      if (dist_i != 0 && std::isnormal(dist_i)) {
+        dists.push_back(dist_i);
+        inds.push_back(i);
+      }
+    }
+  }
+
+  return { inds, dists };
+}
+
+array af_wasserstein_cost_matrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
+        const Manifold& M, const array& M_i, const array& M_i_missing, const array& x, const int& len_i,
+        const Manifold& Mp, const array& Mp_j, const array& Mp_j_missing, const array& y, const int& len_j,
+        const bool arePanelIdsSame)
+{
+  using af::array;
+  using af::constant;
+  using af::dim4;
+  using af::moddims;
+  using af::seq;
+  using af::span;
+  using af::sum;
+  using af::tile;
+  using af::where;
+
+  double gamma = 1.0;
+  if (M.E_dt() > 0) {
+    array firstColumn = M_i(span, 0);
+    array nonMissings = firstColumn != MISSING;
+    array validIndexs = where(nonMissings);
+    array validValues = firstColumn(validIndexs);
+    double minData    = af::min<double>(validValues);
+    double maxData    = af::max<double>(validValues);
+    double maxTime    = af::max<double>(M_i(span, 1));
+
+    // Some small number in case the following ratio gets wildly large/small
+    constexpr double epsilon = 1e-6;
+
+    gamma = opts.aspectRatio * (maxData - minData + epsilon) / (maxTime + epsilon);
+  }
+
+  const int timeSeriesDim   = M_i.dims(1);
+  double unlaggedDist = 0.0;
+  {
+    const int numUnlaggedExtras = M.E_extras() - M.E_lagged_extras();
+
+    array eitherMissing = (x == M.missing() || y == M.missing());
+
+    array cond    = metricOpts(seq(timeSeriesDim, numUnlaggedExtras + timeSeriesDim - 1));
+    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(f64));
+    array dists   = (eitherMissing * opts.missingdistance + (1 - eitherMissing) * ulDists);
+    unlaggedDist  = sum<double>(dists);
+  }
+
+  if (opts.panelMode && opts.idw > 0) {
+      unlaggedDist += opts.idw * arePanelIdsSame;
+  }
+
+  const seq timeSeries(timeSeriesDim);
+  array costMatrix = af::constant(unlaggedDist, len_j, len_i, f64);
+
+  array cmIsMetricDiff = metricOpts(timeSeries);
+  cmIsMetricDiff = tile(moddims(cmIsMetricDiff, 1, 1, timeSeriesDim), len_j, len_i);
+
+  if (skipMissing) {
+    // In this case: Unless both entries are available, no need to process anything else
+    array idxM_i_missing  = where(!M_i_missing);
+    array idxMp_j_missing = where(!Mp_j_missing);
+
+    array Mp_j_k = moddims(Mp_j(idxMp_j_missing, timeSeries), len_j, 1, timeSeriesDim);
+    array M_i_k  = moddims( M_i( idxM_i_missing, timeSeries), 1, len_i, timeSeriesDim);
+    array cmMp_j = tile(Mp_j_k, 1, len_i);
+    array cmM_i  = tile( M_i_k, len_j);
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+
+    if (M.E_dt() > 0) {
+        // For time series k = 1, scale by gamma
+        cmDiff(span, span, 1) *= gamma;
+    }
+    // TODO - If possible(performance wise), try to massage shapes in above ops to sum along 0
+    //      - Another alternative is to check if reorder + sum(,0) is better
+    costMatrix += sum(cmDiff, 2); // Add results to unlaggedDist
+  } else {
+    array Mp_j_missingT  = tile(Mp_j_missing, 1, M_i_missing.dims(0));     // cost matrix shape
+    array  M_i_missingT  = tile(M_i_missing.T(), Mp_j_missing.dims(0));    // cost matrix shape
+    array eitherMissing  = (M_i_missingT || Mp_j_missingT);                // one of the entries missing
+    array eitherMissingT = tile(eitherMissing, 1, 1, timeSeriesDim);       // [len_j len_i timeSeriesDim 1]
+
+    array missingDist = constant(opts.missingdistance, len_j, len_i, timeSeriesDim);
+
+    array Mp_j_k = moddims(Mp_j(span, timeSeries), len_j, 1, timeSeriesDim);
+    array M_i_k  = moddims( M_i(span, timeSeries), 1, len_i, timeSeriesDim);
+    array cmMp_j = tile(Mp_j_k, 1, len_i);
+    array cmM_i  = tile( M_i_k, len_j);
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDist = select(eitherMissingT, opts.missingdistance, cmDiff);
+
+    if (M.E_dt() > 0) {
+        // For time series k = 1, scale by gamma
+        cmDist(span, span, 1) *= gamma;
+    }
+    // TODO - If possible(performance wise), try to massage shapes in above ops to sum along 0
+    //      - Another alternative is to check if reorder + sum(,0) is better
+    costMatrix += sum(cmDist, 2); // Add results to unlaggedDist
+  }
+
+  return costMatrix;
+}
+
+DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                            std::vector<int> inpInds)
+{
+  using af::anyTrue;
+  using af::seq;
+
+  const bool skipMissing = (opts.missingdistance == 0);
+
+  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
+  const array mData1(M.E_actual(), M.nobs(), M.flatf64().get());    // Matrix
+  const array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get()); // Matrix
+
+  // Char is the internal representation of bool in ArrayFire
+  // af::array template constructor also only works for char
+  std::vector<char> mopts;
+  for(int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+  }
+  const array metricOpts(M.E_actual(), mopts.data());
+
+  // Precompute values that are iteration invariant
+  const array Mp_j(Mp.E(), 1 + Mp.E_dt() > 0 + Mp.E_lagged_extras() / Mp.E(), Mp.laggedObsMapf64(Mp_i).get());
+
+  const array Mp_j_missing = anyTrue(Mp_j == Mp.missing(), 1);
+
+  const int numUnlaggedExtrasEnd = M.E_extras() - M.E_lagged_extras();
+
+  const seq xseq(M.E_actual() + M.E() + M.E_dt(),
+                 M.E_actual() + M.E() + M.E_dt() + numUnlaggedExtrasEnd - 1);
+  const seq yseq(Mp.E_actual() + Mp.E() + Mp.E_dt(),
+                 Mp.E_actual() + Mp.E() + Mp.E_dt() + numUnlaggedExtrasEnd - 1);
+
+  const array y   = mData2(yseq, Mp_i);
+  const int len_j = (skipMissing ? Mp.E() - af::sum<int>(Mp_j_missing) : Mp.E());
+
+  // Return Items
+  std::vector<int> inds;
+  std::vector<double> dists;
+
+  // Since both len_i and len_j should be greater than zero
+  // to collect valid indices and respective distances, just return empty handed
+  if (len_j <= 0) {
+      return { inds, dists };
+  }
+
+  // Compare every observation in the M manifold to the
+  // Mp_i'th observation in the Mp manifold.
+  for (int i : inpInds)
+  {
+    array M_i(M.E(), 1 +  M.E_dt() > 0 +  M.E_lagged_extras() /  M.E(),  M.laggedObsMapf64(i).get());
+
+    array M_i_missing = anyTrue(M_i ==  M.missing(), 1);
+
+    array x = mData1(xseq, i);
+
+    const int len_i = (skipMissing ?  M.E() - af::sum<int>( M_i_missing) :  M.E());
+
+    if (len_i > 0) { // Short-check for len_j already passed
+      // TODO af_wasserstein_cost_matrix can be further vectorized to run for all i's
+      array cm = af_wasserstein_cost_matrix(
+                      skipMissing, opts, metricOpts,
+                      M, M_i, M_i_missing, x, len_i,
+                      Mp, Mp_j, Mp_j_missing, y, len_j,
+                      (M.panel(i) != Mp.panel(Mp_i))
+                    );
+      std::vector<double> C(cm.elements());
+      cm.host(C.data());
+      double dist_i = wasserstein(C.data(), len_i, len_j);
 
       // Alternatively, the approximate version based on Sinkhorn's algorithm can be called with something like:
       // double dist_i = approx_wasserstein(C.get(), len_i, len_j, 0.1, 0.1)
