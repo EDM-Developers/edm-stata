@@ -1967,6 +1967,11 @@ program define edmXmap, eclass
 						if `mata_mode' {
 							break mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`algorithm'","`savesmap_vars'","`force'",`missingdistance`direction_num'')
 
+							// Ignore super tiny S-map coefficients (the plugin seems to do this)
+							foreach smapvar of local savesmap_vars {
+								qui replace `smapvar' = . if abs(`smapvar') < 1e-8
+							}
+
 							qui corr `x_f' `x_p' if `predict_set'
 							mat r`direction_num'[`task_num',3] = r(rho)
 
