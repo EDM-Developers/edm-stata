@@ -1077,7 +1077,7 @@ program define edmExplore, eclass
 
 				if `mata_mode' {
 					local savesmap_vars ""
-					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`lib_size',"`algorithm'", "`savesmap_vars'","`force'", `missingdistance')
+					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'")
 
 					qui corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -1132,7 +1132,7 @@ program define edmExplore, eclass
 
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
-			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`theta',`lib_size',"`algorithm'", "","`force'",`missingdistance')
+			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", `theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
 		}
 	}
 
@@ -1965,7 +1965,7 @@ program define edmXmap, eclass
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
 						if `mata_mode' {
-							break mata: smap_block("``manifold''","", "`x_f'", "`x_p'","`train_set'","`predict_set'",`j',`k_size', "`algorithm'","`savesmap_vars'","`force'",`missingdistance`direction_num'')
+							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', `idw', "`panel_id'")
 
 							// Ignore super tiny S-map coefficients (the plugin seems to do this)
 							foreach smapvar of local savesmap_vars {
@@ -2052,7 +2052,7 @@ program define edmXmap, eclass
 		// set to new id t for mainfold construction
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
-			break mata: smap_block("``manifold''","`co_mapping'", "`x_f'", "`co_x_p'","`co_train_set'","`co_predict_set'",`last_theta',`k_size',"`algorithm'","","`force'",`missingdistance')
+			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", `last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
 		}
 	}
 
@@ -2487,14 +2487,20 @@ end
 capture mata mata drop smap_block()
 mata:
 mata set matastrict on
-void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar algorithm, string scalar savesmap_vars, string scalar force, real scalar missingdistance)
+void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar algorithm, string scalar savesmap_vars, string scalar force, real scalar missingdistance, real scalar idw, string scalar panel_id)
 {
 	real scalar force_compute, k, i
 	force_compute = force == "force" // check whether we need to force the computation if k is too high
-	real matrix M, Mp, y, ystar,S
+	real matrix M, Mp, y, ystar, train_panel_ids, predict_panel_ids
 	st_view(M, ., tokens(manifold), train_use) //base manifold
 	st_view(y, ., prediction, train_use) // known prediction of the base manifold
 	st_view(ystar, ., result, predict_use)
+
+	if (idw != 0) {
+		st_view(train_panel_ids, ., panel_id, train_use)
+		st_view(predict_panel_ids, ., panel_id, predict_use)
+	}
+
 	if (p_manifold != "") {
 		//data used for prediction is different than the source manifold
 		st_view(Mp, ., tokens(p_manifold), predict_use)
@@ -2524,7 +2530,13 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 
 	for(i=1;i<=n;i++) {
 		b= Mp[i,.]
-		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B, force_compute,missingdistance)
+		if (idw != 0) {
+			targetPanel = predict_panel_ids[i]
+		}
+		else {
+			targetPanel = .
+		}
+		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B, force_compute, missingdistance, idw, train_panel_ids, targetPanel)
 	}
 }
 end
@@ -2533,7 +2545,7 @@ end
 capture mata mata drop mf_smap_single()
 mata:
 mata set matastrict on
-real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance)
+real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance, real scalar idw, real matrix panel_ids, real scalar targetPanel)
 {
 	/* real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, transmorphic scalar Acache) */
 
@@ -2561,9 +2573,25 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 				a=editvalue(a,., missingdistance)
 			}
 
-			// d is Euclidean distance
-			d[i] = (a*a')^(1/2)
+			// d is (temporarily) the squared Euclidean distance
+			d[i] = (a*a')
 
+			// If we have panel data, penalise the points if they
+			// come from different panels
+			if (idw != 0) {
+				if (panel_ids[i] != targetPanel) {
+					if (idw < 0) {
+						d[i] = .
+					}
+					else {
+						d[i] = d[i] + idw
+					}
+				}
+			}
+
+			// Now do is the Euclidean distance
+			d[i] = d[i]^(1/2)
+			
 			if (d[i] == 0) {
 				d[i] = .
 			}

@@ -4769,7 +4769,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .96334          .11748 
+                40               1          .89117          .10737 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+-30
 Note: Random 50/50 split for training and validation data
@@ -4799,7 +4799,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .77495          .11365 
+                40               1          .74542          .12371 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4891,8 +4891,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              22          .58293           .1436 
-   x ~ x|M(y)              22          .82724          .14766 
+   y ~ y|M(x)              22           .5282          .15148 
+   x ~ x|M(y)              22           .4989          .16938 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -4921,8 +4921,8 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             100          .64241          .13023 
-   x ~ x|M(y)             100          .82638          .10415 
+   y ~ y|M(x)             100          .59469          .13713 
+   x ~ x|M(y)             100          .77555          .15126 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -5015,7 +5015,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .83073         .093066 
+                 5               1          .74406          .11602 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5045,7 +5045,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .90033         .065827 
+                 5               1          .86975         .076242 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
