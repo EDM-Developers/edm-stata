@@ -282,9 +282,9 @@ program define edmManifoldSize, rclass
 end
 
 program define edmConstructManifolds, rclass
-	syntax anything , x(name) touse(name) [dt_value(name)] ///
+	syntax anything , x(name) t(name) touse(name) [dt_value(name)] ///
 			[z_vars(string)] [z_e_varying_count(real 0)] ///
-			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)]
+			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)] [Predictionhorizon(int 0)]
 
 	// Generate lags for 'x' data
 	local manifold_index = 0
@@ -297,7 +297,13 @@ program define edmConstructManifolds, rclass
 	if `dt' {
 		forvalues i=`=(1 - `dt0')'/`=`max_e'-1' {
 			local t_`i' = "``++manifold_index''"
-			qui gen double `t_`i'' = `=cond(`i'==0, "f", "l`=`i'-1'")'.`dt_value' * `dtw' if `touse'
+			if (`i' == 0) {
+				tsunab prediction_time : f(`predictionhorizon').`t'
+				qui gen double `t_0' = `dtw' * (`prediction_time' - `t') if `touse'
+			}
+			else {
+				qui gen double `t_`i'' = `dtw' * l`=`i'-1'.`dt_value' if `touse'
+			}
 		}
 	}
 
@@ -786,9 +792,9 @@ program define edmExplore, eclass
 			tempvar manifold_var
 			local manifold_vars = "`manifold_vars' `manifold_var'"
 		}
-		edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
+		edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') dt_value(`dt_value') ///
 			z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
-			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
+			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
 
 		forvalues i=1/`=`max_e'-1' {
 			local mapping_`i' = "`r(mapping_`i')'"
@@ -857,9 +863,9 @@ program define edmExplore, eclass
 			tempvar co_manifold_var
 			local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 		}
-		edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
+		edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
 			z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
+			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
 		local co_mapping = "`r(max_e_manifold)'"
 
@@ -1635,9 +1641,9 @@ program define edmXmap, eclass
 				tempvar manifold_var
 				local manifold_vars = "`manifold_vars' `manifold_var'"
 			}
-			edmConstructManifolds `manifold_vars' , x(`x') touse(`touse') dt_value(`dt_value') ///
+			edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') dt_value(`dt_value') ///
 				z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
-				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw')
+				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
 
 			forvalues i=1/`=`max_e'-1' {
 				local mapping_`i' = "`r(mapping_`i')'"
@@ -1709,9 +1715,9 @@ program define edmXmap, eclass
 				tempvar co_manifold_var
 				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') touse(`touse') dt_value(`dt_value_co') ///
+			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
 				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight')
+				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
 			local co_mapping = "`r(max_e_manifold)'"
 

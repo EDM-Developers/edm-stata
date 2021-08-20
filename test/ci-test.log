@@ -4091,7 +4091,7 @@ Missing values are assumed to have a distance of .25 with all values.
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              87          .16004          .59017 
+   y ~ y|M(x)              87          .14248          .52444 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 7 (including 4 extras)
 Note: Embedding includes the delta of the time variable with a weight of .65
