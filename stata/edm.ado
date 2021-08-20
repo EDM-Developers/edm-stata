@@ -907,13 +907,11 @@ program define edmExplore, eclass
 		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 		// Instead, just save it as a local and have the plugin read it using the Stata C API.
 		local rngstate = c(rngstate)
-		mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-		set rngstate `rngstate'
 
 		plugin call edm_plugin `timevar' `x' `x' `z_vars' `touse' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
-				"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
+				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
 				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 		local missingdistance = `missing_dist_used'
@@ -1747,8 +1745,6 @@ program define edmXmap, eclass
 			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 			// Instead, just save it as a local and have the plugin read it using the Stata C API.
 			local rngstate = c(rngstate)
-			mata: st_local("next_rv", strofreal( runiform(1, 1) ) )
-			set rngstate `rngstate'
 
 			if `copredict_mode' {
 				local co_xvar = "`co_x'"
@@ -1757,11 +1753,10 @@ program define edmXmap, eclass
 				local co_xvar = ""
 			}
 
-
 			plugin call edm_plugin `timevar' `x' `y' `z_vars' `touse' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
-					"`max_e'" "`allow_missing_mode'" "`next_rv'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
+					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
 					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 			local missingdistance`direction_num' = `missing_dist_used'

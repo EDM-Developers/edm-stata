@@ -28,15 +28,14 @@ public:
     _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
   };
 
-  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, const std::string& rngState,
-                       double nextRV)
+  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, const std::string& rngState)
     : _explore(explore)
     , _full(full)
     , _crossfold(crossfold)
     , _usable(usable)
   {
     // Sync the local random number generator with Stata's
-    set_rng_state(rngState, nextRV);
+    set_rng_state(rngState);
 
     _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
 
@@ -53,7 +52,7 @@ public:
 
   static bool requiresRandomNumbers(int crossfold, bool full) { return crossfold > 0 || !full; }
 
-  void set_rng_state(const std::string& rngState, double nextRV)
+  void set_rng_state(const std::string& rngState)
   {
     unsigned long long state[312];
 
@@ -66,29 +65,11 @@ public:
     _rng.left_ = 312;
     _rng.next_ = _rng.state_;
 
-    // Go through this batch of rv's and find the closest to the
-    // observed 'nextRV'
-    int bestInd = -1;
-    double minDist = 1.0;
-
-    for (int i = 0; i < 320; i++) {
-      double dist = std::abs(_rng.getReal2() - nextRV);
-      if (dist < minDist) {
-        minDist = dist;
-        bestInd = i;
-      }
-    }
-
-    // Reset the state to the beginning on this batch
-    for (int i = 0; i < 312; i++) {
-      _rng.state_[i] = state[i];
-    }
-
-    _rng.left_ = 312;
-    _rng.next_ = _rng.state_;
-
     // Burn all the rv's which are already used
-    for (int i = 0; i < bestInd; i++) {
+    std::string countStr = rngState.substr(3 + 312 * 16 + 4, 8);
+    long long numUsed = std::stoull(countStr, nullptr, 16);
+
+    for (int i = 0; i < numUsed; i++) {
       _rng.getReal2();
     }
   }

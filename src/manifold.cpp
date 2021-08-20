@@ -191,7 +191,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 }
 
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double* point,
-                                      double &target) const
+                                      double& target) const
 {
   int panel = _panel_mode ? _panel_ids[i] : -1;
   bool use_co_x = copredict && prediction;

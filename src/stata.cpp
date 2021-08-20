@@ -299,10 +299,10 @@ void reset_global_state()
 
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 29) {
+  if (argc < 28) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 29) {
+  if (argc > 28) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -338,19 +338,18 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int tau = atoi(argv[13]);
   int maxE = atoi(argv[14]);
   bool allowMissing = atoi(argv[15]);
-  double nextRV = std::stod(argv[16]);
-  opts.thetas = numlist_to_vector<double>(std::string(argv[17]));
-  opts.aspectRatio = atof(argv[18]);
-  std::string distance(argv[19]);
-  std::string requestedMetrics(argv[20]);
-  bool copredictMode = atoi(argv[21]);
-  opts.cmdLine = argv[22];
-  int numExtrasLagged = atoi(argv[23]);
-  opts.idw = atof(argv[24]);
-  opts.panelMode = atoi(argv[25]);
-  bool cumulativeDT = atoi(argv[26]);
-  bool wassDT = atoi(argv[27]);
-  int p = atoi(argv[28]);
+  opts.thetas = numlist_to_vector<double>(std::string(argv[16]));
+  opts.aspectRatio = atof(argv[17]);
+  std::string distance(argv[18]);
+  std::string requestedMetrics(argv[19]);
+  bool copredictMode = atoi(argv[20]);
+  opts.cmdLine = argv[21];
+  int numExtrasLagged = atoi(argv[22]);
+  opts.idw = atof(argv[23]);
+  opts.panelMode = atoi(argv[24]);
+  bool cumulativeDT = atoi(argv[25]);
+  bool wassDT = atoi(argv[26]);
+  int p = atoi(argv[27]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -565,14 +564,13 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["coTrainingRows"] = bool_to_int(coTrainingRows);
     taskGroup["coPredictionRows"] = bool_to_int(coPredictionRows);
     taskGroup["rngState"] = rngState;
-    taskGroup["nextRV"] = nextRV;
 
     append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
   }
 
   futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
                               saveFinalPredictions, saveSMAPCoeffs, copredictMode, usable, coTrainingRows,
-                              coPredictionRows, rngState, nextRV, &io, keep_going, all_tasks_finished);
+                              coPredictionRows, rngState, &io, keep_going, all_tasks_finished);
 
   return SUCCESS;
 }
