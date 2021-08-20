@@ -1077,7 +1077,8 @@ program define edmExplore, eclass
 
 				if `mata_mode' {
 					local savesmap_vars ""
-					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'")
+					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
+						`j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'")
 
 					qui corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -1086,7 +1087,10 @@ program define edmExplore, eclass
 					qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
 					qui sum `mae'
 					drop `mae'
-					mat r[`task_num',4] = r(mean)
+					mat r[`task_num', 4] = r(mean)
+					if r(mean) < 1e-8 {
+						mat r[`task_num', 4] = 0
+					}
 
 					if `save_prediction' {
 						cap replace `predict' = `x_p' if `x_p' !=.
@@ -1132,7 +1136,8 @@ program define edmExplore, eclass
 
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
-			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", `theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
+			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
+				`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
 		}
 	}
 
@@ -1965,7 +1970,8 @@ program define edmXmap, eclass
 						local save_prediction = (`task_num' == `num_tasks' & "`predict'" != "")
 
 						if `mata_mode' {
-							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', `idw', "`panel_id'")
+							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
+								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', `idw', "`panel_id'")
 
 							// Ignore super tiny S-map coefficients (the plugin seems to do this)
 							foreach smapvar of local savesmap_vars {
@@ -1979,7 +1985,10 @@ program define edmXmap, eclass
 							qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
 							qui sum `mae'
 							drop `mae'
-							mat r`direction_num'[`task_num',4] = r(mean)
+							mat r`direction_num'[`task_num', 4] = r(mean)
+							if r(mean) < 1e-8 {
+								mat r`direction_num'[`task_num', 4] = 0
+							}
 
 							if `save_prediction' {
 								cap replace `predict' = `x_p' if `x_p' != .
@@ -2052,7 +2061,8 @@ program define edmXmap, eclass
 		// set to new id t for mainfold construction
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
-			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", `last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
+			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
+				`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
 		}
 	}
 
@@ -2591,7 +2601,7 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 
 			// Now do is the Euclidean distance
 			d[i] = d[i]^(1/2)
-			
+
 			if (d[i] == 0) {
 				d[i] = .
 			}
