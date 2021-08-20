@@ -932,9 +932,11 @@ program define edmExplore, eclass
 			di as error "Not enough observations for cross-validations"
 			error 149
 		}
-		tempvar crossfoldu crossfoldunum
-		qui gen double `crossfoldu' = runiform() if `usable'
-		qui egen `crossfoldunum'= rank(`crossfoldu'), unique
+		if `mata_mode' {
+			tempvar crossfoldu crossfoldunum
+			qui gen double `crossfoldu' = runiform() if `usable'
+			qui egen `crossfoldunum'= rank(`crossfoldu'), unique
+		}
 	}
 
 	if `num_usable' == 0 | (`num_usable' == 1 & "`full'" != "full") | (`crossfold' > 0 & `num_usable' < `crossfold') {
@@ -961,13 +963,30 @@ program define edmExplore, eclass
 		tempvar u
 	}
 
+	// Count how many random numbers we'll need
+	if (`crossfold' > 0) {
+		local numRVs = `num_usable'
+	}
+	else {
+		if ("`full'" != "full") {
+			local numRVs = `num_usable' * `round'
+		}
+		else {
+			local numRVs = 0
+		}
+	}
+
+	if !`mata_mode' {
+		 mata: burn_rvs(`numRVs')
+	}
+
 	forvalues t=1/`round' {
 
 		local newTrainPredictSplit = 1
 
 		// Generate some random numbers (if we're in a mode which needs them
 		// to separate the testing and prediction sets.)
-		if `crossfold' == 0 & "`full'" != "full" {
+		if `mata_mode' & `crossfold' == 0 & "`full'" != "full" {
 			if `t' == 1 {
 				qui gen double `u' = runiform() if `usable'
 			}
@@ -1815,14 +1834,19 @@ program define edmXmap, eclass
 			}
 		}
 
+		// Count how many random numbers we'll need
+		local numRVs = `num_usable' * `round'
+		
+		if !`mata_mode' {
+			 mata: burn_rvs(`numRVs')
+		}
 
 		qui gen double `u' = .
 
 		forvalues rep = 1/`round' {
 
-			qui replace `u' = runiform() if `usable'
-
 			if `mata_mode' {
+				qui replace `u' = runiform() if `usable'
 				cap drop `urank'
 				qui egen double `urank' =rank(`u') if `usable', unique
 			}
@@ -2438,6 +2462,16 @@ Univariate simplex projection with manifold construct x and its lag values
 	/* di as txt "For more information, please refer to {help edm:help file} and the article." */
 end
 
+capture mata mata drop burn_rvs()
+mata:
+mata set matastrict on
+void burn_rvs(real scalar num)
+{
+	for(i=1;i<=num;i++) {
+		x = runiform(1, 1)
+	}
+}
+end
 
 capture mata mata drop smap_block()
 mata:
