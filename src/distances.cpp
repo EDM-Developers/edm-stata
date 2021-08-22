@@ -77,95 +77,6 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   return { inds, dists };
 }
 
-DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                   std::vector<int> inpInds)
-{
-  using af::anyTrue;
-  using af::array;
-  using af::constant;
-  using af::select;
-  using af::sum;
-  using af::tile;
-
-  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
-  array mData1(M.E_actual(), M.nobs(), M.flatf64().get());    // Matrix
-  array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get()); // Matrix
-
-  // Char is the internal representation of bool in ArrayFire
-  // af::array template constructor also only works for char
-  std::vector<char> mopts;
-  for(int j = 0; j < M.E_actual(); j++) {
-      mopts.push_back(opts.metrics[j] == Metric::Diff);
-  }
-  array metricOpts(M.E_actual(), mopts.data());
-
-  // Above arrays will most likely be available once Manifold is changed
-  // to have af::arrays
-  /////////////////////////////////////////////////////////////////////////////
-
-  // Even inpInds might be changed to af::array
-  const dim_t idxSz = inpInds.size();
-  array i(idxSz, inpInds.data());
-
-  //////////////// BEGIN LP-DISTANCES COMPUTATION
-  array zero  = constant(0.0, 1, idxSz, f64);
-  array mssng = constant(MISSING_D, 1, idxSz, f64);
-  array disti = constant(0.0, 1, idxSz, f64);
-  array Ma    = mData1(af::span, i); //Fetch columns corresponding to indices
-  array Mpa   = mData2(af::span, i); //Fetch columns corresponding to indices
-
-  // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
-  // then add the user-supplied penalty/distance for the mismatch.
-  if (opts.panelMode && opts.idw > 0) {
-      array MPanel(1, M.nobs(), M.panelIds().data());   // Vector
-      array MpPanel(1, Mp.nobs(), Mp.panelIds().data()); // Vector
-
-      // If give dist_i[] is not same as MISSING marker, add penality
-      array MpiPanel = tile(MpPanel(af::span, Mp_i), 1, idxSz);
-      disti += (opts.idw * (MPanel(i) != MpiPanel));
-  }
-  /////////////// BEGIN E-actual loop
-  const bool isMissingDistOptZero = opts.missingdistance == 0;
-
-  array Mpa_Mp_i = tile(mData2(af::span, Mp_i), 1, idxSz);
-
-  array dMssng2d = (Ma == MISSING_D || Mpa_Mp_i == MISSING_D);
-
-  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
-
-  array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
-
-  array distIJ   = (opts.distance == Distance::MeanAbsoluteError ?
-                    (af::abs(distVals) / M.E_actual()) : (distVals * distVals));
-  array dist_ij  = sum(distIJ, 0);
-
-  // exclude criteria sets dist_i to MISSING and doesn't accumulate E_actual contributions
-  array exclude  = anyTrue(dMssng2d, 0) * isMissingDistOptZero;
-
-  disti = (exclude * mssng + (1 - exclude) * (disti + dist_ij));
-  /////////////// END E-actual loop
-
-  array valids = (disti != zero && disti != mssng);
-  array indexs = where(valids);
-
-  array inds, dists; // Return tuple
-  if (indexs.elements() > 0) { // Extract only valid values
-      array validDists = disti(indexs);
-      dists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
-      inds  = i(indexs);
-  }
-  //////////////// END LP-DISTANCES COMPUTATION
-
-  std::vector<int> retInds(inds.elements());
-  std::vector<double> retDists(dists.elements());
-
-  if (inds.elements() > 0) { // Extract only valid values
-      inds.host(retInds.data());
-      dists.host(retDists.data());
-  }
-  return {retInds, retDists};
-}
-
 // This function compares the M(i,.) multivariate time series to the Mp(j,.) multivariate time series.
 // The M(i,.) observation has data for E consecutive time points (e.g. time(i), time(i+1), ..., time(i+E-1)) and
 // the Mp(j,.) observation corresponds to E consecutive time points (e.g. time(j), time(j+1), ..., time(j+E-1)).
@@ -397,9 +308,101 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
   return { inds, dists };
 }
 
-array af_wasserstein_cost_matrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
+
+/////////////////////////////////////////////////////////////// ArrayFire PORTED versions BEGIN HERE
+
+
+DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                   std::vector<int> inpInds)
+{
+  using af::anyTrue;
+  using af::array;
+  using af::constant;
+  using af::select;
+  using af::sum;
+  using af::tile;
+
+  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
+  array mData1(M.E_actual(), M.nobs(), M.flatf64().get());    // Matrix
+  array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get()); // Matrix
+
+  // Char is the internal representation of bool in ArrayFire
+  // af::array template constructor also only works for char
+  std::vector<char> mopts;
+  for(int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+  }
+  array metricOpts(M.E_actual(), mopts.data());
+
+  // Above arrays will most likely be available once Manifold is changed
+  // to have af::arrays
+  /////////////////////////////////////////////////////////////////////////////
+
+  // Even inpInds might be changed to af::array
+  const dim_t idxSz = inpInds.size();
+  array i(idxSz, inpInds.data());
+
+  //////////////// BEGIN LP-DISTANCES COMPUTATION
+  array zero  = constant(0.0, 1, idxSz, f64);
+  array mssng = constant(MISSING_D, 1, idxSz, f64);
+  array disti = constant(0.0, 1, idxSz, f64);
+  array Ma    = mData1(af::span, i); //Fetch columns corresponding to indices
+
+  // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
+  // then add the user-supplied penalty/distance for the mismatch.
+  if (opts.panelMode && opts.idw > 0) {
+      array MPanel(1, M.nobs(), M.panelIds().data());   // Vector
+      array MpPanel(1, Mp.nobs(), Mp.panelIds().data()); // Vector
+
+      // If give dist_i[] is not same as MISSING marker, add penality
+      array MpiPanel = tile(MpPanel(af::span, Mp_i), 1, idxSz);
+      disti += (opts.idw * (MPanel(i) != MpiPanel));
+  }
+  /////////////// BEGIN E-actual loop
+  const bool isMissingDistOptZero = opts.missingdistance == 0;
+
+  array Mpa_Mp_i = tile(mData2(af::span, Mp_i), 1, idxSz);
+
+  array dMssng2d = (Ma == MISSING_D || Mpa_Mp_i == MISSING_D);
+
+  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
+
+  array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
+
+  array distIJ   = (opts.distance == Distance::MeanAbsoluteError ?
+                    (af::abs(distVals) / M.E_actual()) : (distVals * distVals));
+  array dist_ij  = sum(distIJ, 0);
+
+  // exclude criteria sets dist_i to MISSING and doesn't accumulate E_actual contributions
+  array exclude  = anyTrue(dMssng2d, 0) * isMissingDistOptZero;
+
+  disti = (exclude * mssng + (1 - exclude) * (disti + dist_ij));
+  /////////////// END E-actual loop
+
+  array valids = (disti != zero && disti != mssng);
+  array indexs = where(valids);
+
+  array inds, dists; // Return tuple
+  if (indexs.elements() > 0) { // Extract only valid values
+      array validDists = disti(indexs);
+      dists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
+      inds  = i(indexs);
+  }
+  //////////////// END LP-DISTANCES COMPUTATION
+
+  std::vector<int> retInds(inds.elements());
+  std::vector<double> retDists(dists.elements());
+
+  if (inds.elements() > 0) { // Extract only valid values
+      inds.host(retInds.data());
+      dists.host(retDists.data());
+  }
+  return {retInds, retDists};
+}
+
+array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
         const Manifold& M, const array& M_i, const array& M_i_missing, const array& x, const int& len_i,
-        const Manifold& Mp, const array& Mp_j, const array& Mp_j_missing, const array& y, const int& len_j,
+        const array& Mp_j, const array& Mp_j_missing, const array& y, const int& len_j,
         const bool arePanelIdsSame)
 {
   using af::array;
@@ -435,7 +438,7 @@ array af_wasserstein_cost_matrix(const bool& skipMissing, const Options& opts, c
 
     array eitherMissing = (x == M.missing() || y == M.missing());
 
-    array cond    = metricOpts(seq(timeSeriesDim, numUnlaggedExtras + timeSeriesDim - 1));
+    array cond    = metricOpts(seq(timeSeriesDim, timeSeriesDim + numUnlaggedExtras - 1));
     array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(f64));
     array dists   = (eitherMissing * opts.missingdistance + (1 - eitherMissing) * ulDists);
     unlaggedDist  = sum<double>(dists);
@@ -466,16 +469,12 @@ array af_wasserstein_cost_matrix(const bool& skipMissing, const Options& opts, c
         // For time series k = 1, scale by gamma
         cmDiff(span, span, 1) *= gamma;
     }
-    // TODO - If possible(performance wise), try to massage shapes in above ops to sum along 0
-    //      - Another alternative is to check if reorder + sum(,0) is better
     costMatrix += sum(cmDiff, 2); // Add results to unlaggedDist
   } else {
     array Mp_j_missingT  = tile(Mp_j_missing, 1, M_i_missing.dims(0));     // cost matrix shape
     array  M_i_missingT  = tile(M_i_missing.T(), Mp_j_missing.dims(0));    // cost matrix shape
     array eitherMissing  = (M_i_missingT || Mp_j_missingT);                // one of the entries missing
     array eitherMissingT = tile(eitherMissing, 1, 1, timeSeriesDim);       // [len_j len_i timeSeriesDim 1]
-
-    array missingDist = constant(opts.missingdistance, len_j, len_i, timeSeriesDim);
 
     array Mp_j_k = moddims(Mp_j(span, timeSeries), len_j, 1, timeSeriesDim);
     array M_i_k  = moddims( M_i(span, timeSeries), 1, len_i, timeSeriesDim);
@@ -488,8 +487,6 @@ array af_wasserstein_cost_matrix(const bool& skipMissing, const Options& opts, c
         // For time series k = 1, scale by gamma
         cmDist(span, span, 1) *= gamma;
     }
-    // TODO - If possible(performance wise), try to massage shapes in above ops to sum along 0
-    //      - Another alternative is to check if reorder + sum(,0) is better
     costMatrix += sum(cmDist, 2); // Add results to unlaggedDist
   }
 
@@ -523,23 +520,23 @@ DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const
 
   const int numUnlaggedExtrasEnd = M.E_extras() - M.E_lagged_extras();
 
-  const seq xseq(M.E_actual() + M.E() + M.E_dt(),
-                 M.E_actual() + M.E() + M.E_dt() + numUnlaggedExtrasEnd - 1);
-  const seq yseq(Mp.E_actual() + Mp.E() + Mp.E_dt(),
-                 Mp.E_actual() + Mp.E() + Mp.E_dt() + numUnlaggedExtrasEnd - 1);
+  const seq xseq(M.E() + M.E_dt() + M.E_lagged_extras(),
+                 M.E() + M.E_dt() + M.E_lagged_extras() + numUnlaggedExtrasEnd - 1);
+  const seq yseq(Mp.E() + Mp.E_dt() + Mp.E_lagged_extras(),
+                 Mp.E() + Mp.E_dt() + Mp.E_lagged_extras() + numUnlaggedExtrasEnd - 1);
 
   const array y   = mData2(yseq, Mp_i);
   const int len_j = (skipMissing ? Mp.E() - af::sum<int>(Mp_j_missing) : Mp.E());
 
-  // Return Items
-  std::vector<int> inds;
-  std::vector<double> dists;
-
   // Since both len_i and len_j should be greater than zero
   // to collect valid indices and respective distances, just return empty handed
   if (len_j <= 0) {
-      return { inds, dists };
+      return {};
   }
+
+  // Return Items
+  std::vector<int> inds;
+  std::vector<double> dists;
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
@@ -554,11 +551,11 @@ DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const
     const int len_i = (skipMissing ?  M.E() - af::sum<int>( M_i_missing) :  M.E());
 
     if (len_i > 0) { // Short-check for len_j already passed
-      // TODO af_wasserstein_cost_matrix can be further vectorized to run for all i's
-      array cm = af_wasserstein_cost_matrix(
+      // TODO afWassersteinCostMatrix can be further vectorized to run for all i's
+      array cm = afWassersteinCostMatrix(
                       skipMissing, opts, metricOpts,
                       M, M_i, M_i_missing, x, len_i,
-                      Mp, Mp_j, Mp_j_missing, y, len_j,
+                      Mp_j, Mp_j_missing, y, len_j,
                       (M.panel(i) != Mp.panel(Mp_i))
                     );
       std::vector<double> C(cm.elements());
@@ -578,4 +575,238 @@ DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const
   }
 
   return { inds, dists };
+}
+
+DistanceIndexPairsOnGPU afLPDistances(int Mp_i, const Options& opts,
+                                      const Manifold& hostM, const Manifold& hostMp,
+                                      const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                      const af::array& inIndices, const af::array& metricOpts)
+{
+  // This function runs on small matrices of shape [M_Eactual inIndices.elements() 1 1]
+  const dim_t idxSz = inIndices.elements();
+
+  if(idxSz <= 0) {
+      return {};
+  }
+  using af::constant;
+  using af::select;
+  using af::span;
+  using af::tile;
+
+  array zero  = constant(0.0, 1, idxSz, f64);
+  array mssng = constant(MISSING_D, 1, idxSz, f64);
+  array Ma    = M.mdata(span, inIndices);
+
+  array disti = constant(0.0, 1, idxSz, f64);
+  // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
+  // then add the user-supplied penalty/distance for the mismatch.
+  if (opts.panelMode && opts.idw > 0) {
+      // If give dist_i[] is not same as MISSING marker, add penality
+      disti += (opts.idw * (M.panel(inIndices) != hostMp.panel(Mp_i)));
+  }
+
+  const bool isMissingDistOptZero = opts.missingdistance == 0;
+
+  array Mpa_Mp_i = tile(Mp.mdata(span, Mp_i), 1, idxSz);
+
+  array dMssng2d = (Ma == MISSING_D || Mpa_Mp_i == MISSING_D);
+  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
+  array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
+  array distIJ   = (opts.distance == Distance::MeanAbsoluteError ?
+                    (af::abs(distVals) / M.E_actual) : (distVals * distVals));
+  array dist_ij  = af::sum(distIJ, 0);
+
+  // exclude criteria sets dist_i to MISSING and doesn't accumulate E_actual contributions
+  array exclude  = af::anyTrue(dMssng2d, 0) * isMissingDistOptZero;
+
+  disti = (exclude * mssng + (1 - exclude) * (disti + dist_ij));
+
+  array valids = (disti != zero && disti != mssng);
+  array indexs = where(valids);
+
+  array outIndices, outDists;
+  if (indexs.elements() > 0) { // Extract only valid values
+      array validDists = disti(indexs);
+      outDists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
+      outIndices  = inIndices(indexs);
+  }
+  return { outIndices, outDists.T() }; // T will moddims to distance vector along axis 0
+}
+
+array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
+        const ManifoldOnGPU& M, const array& M_i, const array& M_i_missing, const array& x, const int& len_i,
+        const array& Mp_j, const array& Mp_j_missing, const array& y, const int& len_j,
+        const bool arePanelIdsSame)
+{
+  using af::array;
+  using af::constant;
+  using af::dim4;
+  using af::moddims;
+  using af::seq;
+  using af::span;
+  using af::sum;
+  using af::tile;
+  using af::where;
+
+  double gamma = 1.0;
+  if (M.E_dt > 0) {
+    array firstColumn = M_i(span, 0);
+    array nonMissings = firstColumn != MISSING_D;
+    array validIndexs = where(nonMissings);
+    array validValues = firstColumn(validIndexs);
+    double minData    = af::min<double>(validValues);
+    double maxData    = af::max<double>(validValues);
+    double maxTime    = af::max<double>(M_i(span, 1));
+
+    // Some small number in case the following ratio gets wildly large/small
+    constexpr double epsilon = 1e-6;
+
+    gamma = opts.aspectRatio * (maxData - minData + epsilon) / (maxTime + epsilon);
+  }
+
+  const int timeSeriesDim   = M_i.dims(1);
+  double unlaggedDist = 0.0;
+  {
+    const int numUnlaggedExtras = M.E_extras - M.E_lagged_extras;
+
+    array eitherMissing = (x == M.missing || y == M.missing);
+
+    array cond    = metricOpts(seq(timeSeriesDim, numUnlaggedExtras + timeSeriesDim - 1));
+    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(f64));
+    array dists   = (eitherMissing * opts.missingdistance + (1 - eitherMissing) * ulDists);
+    unlaggedDist  = sum<double>(dists);
+  }
+
+  if (opts.panelMode && opts.idw > 0) {
+      unlaggedDist += opts.idw * arePanelIdsSame;
+  }
+
+  const seq timeSeries(timeSeriesDim);
+  array costMatrix = af::constant(unlaggedDist, len_j, len_i, f64);
+
+  array cmIsMetricDiff = metricOpts(timeSeries);
+  cmIsMetricDiff = tile(moddims(cmIsMetricDiff, 1, 1, timeSeriesDim), len_j, len_i);
+
+  if (skipMissing) {
+    // In this case: Unless both entries are available, no need to process anything else
+    array idxM_i_missing  = where(!M_i_missing);
+    array idxMp_j_missing = where(!Mp_j_missing);
+
+    array Mp_j_k = moddims(Mp_j(idxMp_j_missing, timeSeries), len_j, 1, timeSeriesDim);
+    array M_i_k  = moddims( M_i( idxM_i_missing, timeSeries), 1, len_i, timeSeriesDim);
+    array cmMp_j = tile(Mp_j_k, 1, len_i);
+    array cmM_i  = tile( M_i_k, len_j);
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+
+    if (M.E_dt > 0) {
+        // For time series k = 1, scale by gamma
+        cmDiff(span, span, 1) *= gamma;
+    }
+    costMatrix += sum(cmDiff, 2); // Add results to unlaggedDist
+  } else {
+    array Mp_j_missingT  = tile(Mp_j_missing, 1, M_i_missing.dims(0));     // cost matrix shape
+    array  M_i_missingT  = tile(M_i_missing.T(), Mp_j_missing.dims(0));    // cost matrix shape
+    array eitherMissing  = (M_i_missingT || Mp_j_missingT);                // one of the entries missing
+    array eitherMissingT = tile(eitherMissing, 1, 1, timeSeriesDim);       // [len_j len_i timeSeriesDim 1]
+
+    array Mp_j_k = moddims(Mp_j(span, timeSeries), len_j, 1, timeSeriesDim);
+    array M_i_k  = moddims( M_i(span, timeSeries), 1, len_i, timeSeriesDim);
+    array cmMp_j = tile(Mp_j_k, 1, len_i);
+    array cmM_i  = tile( M_i_k, len_j);
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDist = select(eitherMissingT, opts.missingdistance, cmDiff);
+
+    if (M.E_dt > 0) {
+        // For time series k = 1, scale by gamma
+        cmDist(span, span, 1) *= gamma;
+    }
+    costMatrix += sum(cmDist, 2); // Add results to unlaggedDist
+  }
+
+  return costMatrix;
+}
+
+DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts,
+                                               const Manifold& hostM, const Manifold& hostMp,
+                                               const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                               const af::array& inIndices, const af::array& metricOpts)
+{
+  using af::anyTrue;
+  using af::seq;
+
+  const bool skipMissing = (opts.missingdistance == 0);
+
+  // Precompute values that are iteration invariant
+  const seq mpjRange0( Mp.E_x );
+  const seq mpjRange1( Mp_i, Mp_i + 1 + (Mp.E_dt > 0) + Mp.E_lagged_extras / Mp.E_x );
+
+  const array Mp_j = Mp.mdata(mpjRange0, mpjRange1);
+
+  const array Mp_j_missing = anyTrue(Mp_j == Mp.missing, 1);
+
+  const int numUnlaggedExtrasEnd = M.E_extras - M.E_lagged_extras;
+
+  const seq xseq(M.E_x + M.E_dt + M.E_lagged_extras,
+                 M.E_x + M.E_dt + M.E_lagged_extras + numUnlaggedExtrasEnd - 1);
+  const seq yseq(Mp.E_x + Mp.E_dt + Mp.E_lagged_extras,
+                 Mp.E_x + Mp.E_dt + Mp.E_lagged_extras + numUnlaggedExtrasEnd - 1);
+
+  const array y   = Mp.mdata(yseq, Mp_i);
+  const int len_j = (skipMissing ? Mp.E_x - af::sum<int>(Mp_j_missing) : Mp.E_x);
+
+  // Since both len_i and len_j should be greater than zero
+  // to collect valid indices and respective distances, just return empty handed
+  if (len_j <= 0) {
+      return {};
+  }
+
+  // Return Items
+  std::vector<int> inds;
+  std::vector<double> dists;
+
+  std::vector<int> inpInds(inIndices.elements());
+  inIndices.host(inpInds.data());
+
+  // Compare every observation in the M manifold to the Mp_i'th observation in the Mp manifold.
+  for (int i : inpInds)
+  {
+    const seq miRange0( M.E_x );
+    const seq miRange1( i, i + 1 + (M.E_dt > 0) + M.E_lagged_extras / M.E_x );
+
+    array M_i = M.mdata(miRange0, miRange1);
+
+    array M_i_missing = anyTrue(M_i ==  M.missing, 1);
+
+    array x = M.mdata(xseq, i);
+
+    const int len_i = (skipMissing ?  M.E_x - af::sum<int>( M_i_missing) :  M.E_x);
+
+    if (len_i > 0) { // Short-check for len_j already passed
+      // TODO I think afWassersteinCostMatrix can be further vectorized to run for all i's
+      array cm = afWassersteinCostMatrix(
+                      skipMissing, opts, metricOpts,
+                      M, M_i, M_i_missing, x, len_i,
+                      Mp_j, Mp_j_missing, y, len_j,
+                      (hostM.panel(i) != hostMp.panel(Mp_i))
+                    );
+      std::vector<double> C(cm.elements());
+      cm.host(C.data());
+      double dist_i = wasserstein(C.data(), len_i, len_j);
+
+      // Alternative: approximate version based on Sinkhorn's algorithm
+      // double dist_i = approx_wasserstein(C.get(), len_i, len_j, 0.1, 0.1)
+      // In that case, the "std::isnormal" is really needed on the next line, as some
+      // instability gives us some 'nan' distances using that method.
+      if (dist_i != 0 && std::isnormal(dist_i)) {
+        dists.push_back(dist_i);
+        inds.push_back(i);
+      }
+    }
+  }
+
+  if (inds.size() > 0) {
+    return { array(inds.size(), inds.data()), array(dists.size(), dists.data()) };
+  } else {
+    return {};
+  }
 }

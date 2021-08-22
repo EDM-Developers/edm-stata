@@ -4,9 +4,19 @@
 
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inds);
-DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                   std::vector<int> inds);
 DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                          std::vector<int> inds);
+
+DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                   std::vector<int> inds);
 DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                             std::vector<int> inds);
+
+DistanceIndexPairsOnGPU afLPDistances(int Mp_i, const Options& opts,
+                                      const Manifold& hostM, const Manifold& hostMp,
+                                      const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                      const af::array& inds, const af::array& metricOpts);
+DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts,
+                                               const Manifold& hostM, const Manifold& hostMp,
+                                               const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                               const af::array& inds, const af::array& metricOpts);

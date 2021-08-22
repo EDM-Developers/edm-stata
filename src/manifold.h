@@ -13,7 +13,17 @@ const double MISSING_D = 1.0e+100;
 #include <Eigen/Dense>
 
 #include <nlohmann/json.hpp>
+#include <arrayfire.h>
+
 using json = nlohmann::json;
+
+struct ManifoldOnGPU {
+  af::array mdata;      // shape [_E_actual _nobs 1 1] - manifold
+  af::array yvec;       // Shape [_nobs 1 1 1]
+  af::array panel;      // Shape [_nobs 1 1 1] - panel ids
+  int nobs, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
+  double missing;
+};
 
 class Manifold
 {
@@ -130,6 +140,8 @@ public:
   std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const {
       return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
   }
+
+  operator ManifoldOnGPU() const;
 };
 
 class ManifoldGenerator
