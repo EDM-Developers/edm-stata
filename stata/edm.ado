@@ -290,7 +290,12 @@ program define edmConstructManifolds, rclass
 	local manifold_index = 0
 	forvalues i=0/`=`max_e'-1' {
 		local x_`i' = "``++manifold_index''"
-		qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+		if !`dt' {
+			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
+		}
+		else {
+			qui gen double `x_`i'' = `x'[_n-`tau'*`i'] if `touse'
+		}
 	}
 
 	// Generate lags for the 'dt' if requested
@@ -625,106 +630,37 @@ program define edmExplore, eclass
 
 	qui count if `touse'
 	local num_touse = r(N)
-	
+
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
+	if "`copredictvar'" != "" {
+		* build prediction manifold
+		tokenize "`copredictvar'"
+		tempvar co_x
+		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
+	}
+
 	if `mata_mode' & `parsed_dt' {
-		tempvar dt0_value dt_value_new
+		tempvar dt0_value dt_value
 		qui gen `dt0_value' = .
-		qui gen `dt_value_new' = .
+		qui gen `dt_value' = .
 		mata: calculate_dt("`timevar'", "`x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
-				"`dt0_value'", "`dt_value_new'")
-
-		/* general algorithm for generating t patterns
-		1. keep only touse
-		2. drop all missings
-		3. regenerate t
-		4. generate oldt_pattern
-		 */
-		qui {
-			preserve
-			keep if `touse'
-			if !`allow_missing_mode' {
-				keep if `x' != .
-			}
-			xtset
-			local original_t = r(timevar)
-
-			if "`=r(panelvar)'" == "." {
-				local original_id = ""
-				local byori =""
-			}
-			else {
-				local original_id = r(panelvar)
-				local byori ="by `original_id': "
-				/* keep if `original_id' !=. */
-			}
-			tempvar newt
-			sort `original_id' `original_t'
-			`byori' gen `newt' = _n
-			if "`original_id'" != ""{
-				xtset `original_id' `newt'
-			}
-			else {
-				tsset `newt'
-			}
-
-			tempvar dt_value
-			qui gen double `dt_value' = d.`original_t'
-			keep `original_id' `original_t' `newt' `dt_value'
-			/* assert `original_id' !=. & `original_t' !=. */
-			tempfile updatedt_main
-			save `updatedt_main'
-			restore
-
-			// update copredict mainfold
-			if "`copredictvar'" != "" {
-				preserve
-				keep if `touse'
-				// this part is for filtering only
-				if !`allow_missing_mode' {
-					tempvar co_x_new
-					edmPreprocessVariable "`copredictvar'", touse(`touse') out(`co_x_new')
-					keep if `co_x_new' !=.
-				}
-
-				tempvar newt_co
-				sort `original_id' `original_t'
-				`byori' gen `newt_co' = _n
-				if "`original_id'" != ""{
-					qui xtset `original_id' `newt_co'
-				}
-				else {
-					qui tsset `newt_co'
-				}
-
-				tempvar dt_value_co
-				gen double `dt_value_co' = d.`original_t'
-
-				keep `original_id' `original_t' `newt_co' `dt_value_co'
-				tempfile updatedt_co
-				save `updatedt_co'
-				restore
-			}
-
-			merge m:1 `original_id' `original_t' using `updatedt_main', assert(master match) nogen
-			if "`copredictvar'" != "" {
-				merge m:1 `original_id' `original_t' using `updatedt_co', assert(master match) nogen
-			}
-
-			sort `original_id' `newt'
-			if "`original_id'" != ""{
-				qui xtset `original_id' `newt'
-			}
-			else {
-				qui tsset `newt'
-			}
-			if !inlist("`parsed_dtsave'","",".") {
-				clonevar `parsed_dtsave' = `dt_value'
-				qui label variable `parsed_dtsave' "Time delta (`original_t')"
-			}
+				"`dt0_value'", "`dt_value'")
+		pause
+		if "`copredictvar'" != "" {
+			tempvar co_dt0_value co_dt_value
+			qui gen `co_dt0_value' = .
+			qui gen `co_dt_value' = .
+			mata: calculate_dt("`timevar'", "`co_x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
+					"`co_dt0_value'", "`co_dt_value'")
 		}
+
+		if !inlist("`parsed_dtsave'","",".") {
+			clonevar `parsed_dtsave' = `dt_value'
+			qui label variable `parsed_dtsave' "Time delta (`timevar')"
+		}
+
 	}
 
 	if `mata_mode' {
@@ -777,7 +713,7 @@ program define edmExplore, eclass
 	numlist "`theta'"
 	local theta_size = wordcount("`=r(numlist)'")
 	local round = max(`crossfold', `replicate')
-	
+
 	local task_num = 1
 	local num_tasks = `round'*`theta_size'*`e_size'
 	mat r = J(`num_tasks', 4, .)
@@ -810,7 +746,7 @@ program define edmExplore, eclass
 	}
 
 	// Choose which rows of the manifold we will use for the analysis
-	// (this mainly depends on whether we're keeping or discarding rows 
+	// (this mainly depends on whether we're keeping or discarding rows
 	// with some missing values).
 	tempvar usable
 
@@ -854,10 +790,6 @@ program define edmExplore, eclass
 		tempvar co_train_set co_predict_set
 
 		* build prediction manifold
-		tokenize "`copredictvar'"
-		tempvar co_x
-		edmPreprocessVariable "`1'", touse(`touse') out(`co_x')
-
 		* z list
 		local co_z_vars = "`z_vars'"
 		local co_z_e_varying_count = `z_e_varying_count'
@@ -870,7 +802,8 @@ program define edmExplore, eclass
 				tempvar co_manifold_var
 				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
+			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') ///
+				dt0_value(`co_dt0_value') dt_value(`co_dt_value') ///
 				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
@@ -892,7 +825,7 @@ program define edmExplore, eclass
 
 			gen byte `co_train_set' = `co_usable'
 			gen byte `co_predict_set' = `co_usable'
-		
+
 
 			//restore t
 			if `parsed_dt' {
@@ -967,7 +900,7 @@ program define edmExplore, eclass
 				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 		local missingdistance = `missing_dist_used'
-		
+
 		if `parsed_dt' {
 			local parsed_dtw = `dtw_used'
 			if `dtw_used' < 0 {
@@ -1199,7 +1132,7 @@ program define edmExplore, eclass
 
 	if "`copredictvar'" != "" {
 		tempvar co_x_p
-		qui gen double `co_x_p'=.
+		qui gen double `co_x_p' = .
 
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
@@ -1281,16 +1214,6 @@ program define edmExplore, eclass
 		ereturn local extraembed = "`z_names'"
 	}
 	if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
-		if `mata_mode' { // TODO: Do we actually need this?
-			sort `original_id' `original_t'
-			qui xtset `original_id' `original_t'
-			if "`original_id'" != ""{
-				qui xtset `original_id' `original_t'
-			}
-			else {
-				qui tsset `original_t'
-			}
-		}
 		if `parsed_dt' ==0 {
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
@@ -1531,6 +1454,11 @@ program define edmXmap, eclass
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 	edmPreprocessVariable "`2'", touse(`touse') out(`y')
 
+	if "`copredictvar'" != "" {
+		tempvar co_x
+		edmPreprocessVariable "`copredictvar'", touse(`touse') out(`co_x')
+	}
+
 	edmCountExtras `extraembed'
 	local z_count = `r(z_count)'
 	local z_names = "`r(z_names)'"
@@ -1571,122 +1499,24 @@ program define edmXmap, eclass
 		local parsed_dtw = "`dtweight'"
 
 		if `mata_mode' & `parsed_dt' {
-			tempvar dt0_value dt_value_new
+			tempvar dt0_value dt_value
 			qui gen `dt0_value' = .
-			qui gen `dt_value_new' = .
+			qui gen `dt_value' = .
 			mata: calculate_dt("`timevar'", "`x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
-					"`dt0_value'", "`dt_value_new'")
-
-
-			/* general algorithm for generating t patterns
-			1. keep only touse
-			2. drop all missings
-			3. regenerate t
-			4. generate oldt_pattern
-			*/
-			qui {
-				// update main mainfold
-				preserve
-				keep if `touse'
-				if !`allow_missing_mode' {
-					keep if `x' != .
-				}
-				qui xtset
-				local original_t = r(timevar)
-				if "`=r(panelvar)'" == "." {
-					local original_id = ""
-					local byori =""
-				}
-				else {
-					local original_id = r(panelvar)
-					local byori ="by `original_id': "
-				}
-				tempvar newt
-				sort `original_id' `original_t'
-				`byori' gen `newt' = _n
-				if "`original_id'" != ""{
-					qui xtset `original_id' `newt'
-				}
-				else {
-					qui tsset `newt'
-				}
-
-				tempvar dt_value
-				gen double `dt_value' = d.`original_t'
-				keep `original_id' `original_t' `newt' `dt_value'
-				tempfile updatedt_main
-				save `updatedt_main'
-				restore
-
-				// update copredict mainfold
-				if "`copredictvar'" != "" {
-					preserve
-					keep if `touse'
-					// this part is for filtering only
-					if !`allow_missing_mode' {
-						tempvar co_x_new
-						edmPreprocessVariable "`copredictvar'", touse(`touse') out(`co_x_new')
-						keep if `co_x_new' !=.
-					}
-					tempvar newt_co
-					sort `original_id' `original_t'
-					`byori' gen `newt_co' = _n
-					if "`original_id'" != ""{
-						qui xtset `original_id' `newt_co'
-					}
-					else {
-						qui tsset `newt_co'
-					}
-
-					tempvar dt_value_co
-					gen double `dt_value_co' = d.`original_t'
-					/* sum `dt_value_co' */
-					keep `original_id' `original_t' `newt_co' `dt_value_co'
-					tempfile updatedt_co
-					save `updatedt_co'
-					restore
-				}
-
-				merge m:1 `original_id' `original_t' using `updatedt_main', assert(master match) nogen
-				if "`copredictvar'" != "" {
-					merge m:1 `original_id' `original_t' using `updatedt_co', assert(master match) nogen
-				}
-				/* tempvar mergevar
-				merge m:1 `original_id' `original_t' using `updatedt_main', assert(master match) gen(`mergevar')
-
-				noi {
-
-					tab `mergevar'
-
-					if "`original_id'" !="" {
-						assert `mergevar' ==3 if  `original_t'!=. & `original_id'!=. & `touse' & `x' !=.
-					}
-					else {
-						assert `mergevar' ==3 if  `original_t'!=. & `touse'  & `x' !=.
-					}
-
-				}
-
-				drop `mergevar'
-				*/
-				/* merge m:1 `original_id' `original_t' using `updatedt_main', assert(master match)  */
-				/* tab _merge */
-
-
-				sum `original_t' `newt'
-				sort `original_id' `newt'
-				if "`original_id'" != ""{
-					qui xtset `original_id' `newt'
-				}
-				else {
-					qui tsset `newt'
-				}
-				if !inlist("`parsed_dtsave'","",".") {
-					clonevar `parsed_dtsave' = `dt_value'
-					qui label variable `parsed_dtsave' "Time delta (`original_t')"
-				}
+					"`dt0_value'", "`dt_value'")
+			pause
+			if "`copredictvar'" != "" {
+				tempvar co_dt0_value co_dt_value
+				qui gen `co_dt0_value' = .
+				qui gen `co_dt_value' = .
+				mata: calculate_dt("`timevar'", "`co_x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
+						"`co_dt0_value'", "`co_dt_value'")
 			}
 
+			if !inlist("`parsed_dtsave'","",".") {
+				clonevar `parsed_dtsave' = `dt_value'
+				qui label variable `parsed_dtsave' "Time delta (`timevar')"
+			}
 		}
 
 		// To give both explore & xmap the same name for this variable:
@@ -1783,9 +1613,6 @@ program define edmXmap, eclass
 			tempvar co_train_set co_predict_set
 
 			* build prediction manifold
-			tempvar co_x
-			edmPreprocessVariable "`copredictvar'", touse(`touse') out(`co_x')
-
 			* z list
 			local co_z_vars = "`z_vars'"
 			local co_z_e_varying_count = `z_e_varying_count'
@@ -1798,7 +1625,8 @@ program define edmXmap, eclass
 					tempvar co_manifold_var
 					local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 				}
-				edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
+				edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') ///
+					dt0_value(`co_dt0_value') dt_value(`co_dt_value') ///
 					z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
 					max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
@@ -1961,7 +1789,7 @@ program define edmXmap, eclass
 
 		// Count how many random numbers we'll need
 		local numRVs = `num_usable' * `round'
-		
+
 		if !`mata_mode' {
 			 mata: burn_rvs(`numRVs')
 		}
@@ -2023,7 +1851,7 @@ program define edmXmap, eclass
 						qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
 						local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
 
-						local mapping_name "`xx'" 
+						local mapping_name "`xx'"
 
 						forvalues ii=1/`=`e'-1' {
 							local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
@@ -2058,7 +1886,7 @@ program define edmXmap, eclass
 							local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
 							local ++ii
 						}
-						local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'" 
+						local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'"
 					}
 
 					if `mata_mode' & "`savemanifold'" !="" {
@@ -2137,19 +1965,7 @@ program define edmXmap, eclass
 			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
-		* reset the panel structure
 		if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
-			if `mata_mode' { // TODO: Do we actually need this?
-				sort `original_id' `original_t'
-				qui xtset `original_id' `original_t'
-				if "`original_id'" != ""{
-					qui xtset `original_id' `original_t'
-				}
-				else {
-					qui tsset `original_t'
-				}
-			}
-			
 			if `parsed_dt' == 0 {
 				if "`direction'" == "oneway" {
 					local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
@@ -2217,7 +2033,7 @@ program define edmXmap, eclass
 	/* mat list cfull */
 	ereturn post cfull, esample(`touse')
 	ereturn scalar N = `num_touse'
-	
+
 	ereturn local subcommand = "xmap"
 	ereturn matrix xmap_1  = r1
 	if "`direction'" == "both" {
