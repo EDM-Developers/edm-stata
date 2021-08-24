@@ -28,6 +28,8 @@ char* DTW_USED = (char*)"_dtw_used";
 char* RNG_STATE = (char*)"_rngstate";
 
 char* NUM_NEIGHBOURS = (char*)"_k";
+char* SAVE_DT = (char*)"_dtsave";
+char* SAVE_MANIFOLD = (char*)"_savemanifold";
 char* SAVE_PREDICTION = (char*)"_predict";
 char* SAVE_SMAP = (char*)"_savesmap";
 char* SAVE_INPUTS = (char*)"_saveinputs";
@@ -149,12 +151,12 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
  */
 void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bool>& filter = {})
 {
-  bool useFilter = (filter.size() > 0);
+  bool useEveryRow = (filter.size() == 0);
   int obs = 0;
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      if ((useFilter && filter[r]) || !useFilter) {
+      if (useEveryRow || filter[r]) {
         // Convert MISSING back to Stata's missing value
         ST_double value = (data[obs] == MISSING) ? SV_missval : data[obs];
         ST_retcode rc = SF_vstore(j, i, value);
@@ -178,15 +180,15 @@ void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bo
 void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, ST_int j0,
                          const std::vector<bool>& filter = {})
 {
-  bool useFilter = (filter.size() > 0);
+  bool useEveryRow = (filter.size() == 0);
   int obs = 0;
   int r = 0; // Count each row that isn't filtered by Stata 'if'
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
-      if ((useFilter && filter[r]) || !useFilter) {
+      if (useEveryRow || filter[r]) {
         for (ST_int j = j0; j < j0 + matrixNumCols; j++) {
           // Convert MISSING back to Stata's missing value
-          ST_double value = matrix[(j - j0) * matrixNumRows + obs];
+          ST_double value = matrix[obs * matrixNumCols + (j - j0)];
           if (value == MISSING) {
             value = SV_missval;
           }
@@ -316,7 +318,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
   bool dt0 = atoi(argv[2]);
-  double dtWeight = dtMode ? atof(argv[3]) : 0.0;
+  opts.dtWeight = dtMode ? atof(argv[3]) : 0.0;
   std::string alg = std::string(argv[4]);
   if (alg.empty() || alg == "simplex") {
     opts.algorithm = Algorithm::Simplex;
@@ -377,6 +379,58 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     opts.nthreads = nlcores;
   }
 
+  // Read in some macros from Stata
+  char buffer[200];
+
+  // What is k?
+  if (SF_macro_use(NUM_NEIGHBOURS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  int k = atoi(buffer);
+
+  // Are we saving the manifold?
+  if (SF_macro_use(SAVE_MANIFOLD, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool saveManifold = !(std::string(buffer).empty());
+
+  // Are we saving the dt variable?
+  if (SF_macro_use(SAVE_DT, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool saveDT = !(std::string(buffer).empty());
+
+  // Are we saving the predictions?
+  if (SF_macro_use(SAVE_PREDICTION, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool saveFinalPredictions = !(std::string(buffer).empty());
+
+  // Are we saving the S-map coefficients (only in xmap mode)?
+  bool saveSMAPCoeffs;
+  if (explore) {
+    saveSMAPCoeffs = false;
+  } else {
+    if (SF_macro_use(SAVE_SMAP, buffer, 200)) {
+      io.print("Got an error rc from macro_use!\n");
+    }
+    saveSMAPCoeffs = !(std::string(buffer).empty());
+  }
+
+  // Are we saving the inputs to a JSON file?
+  if (SF_macro_use(SAVE_INPUTS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  std::string saveInputsFilename(buffer);
+
+  // Number of replications
+  if (SF_macro_use(NUM_REPS, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  int numReps = atoi(buffer);
+
+  std::vector<int> Es = stata_numlist<int>("e");
+
   // Read in the main data from Stata
   std::vector<ST_double> x = stata_columns<ST_double>(2);
 
@@ -431,7 +485,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
     if (wassDT && !dtMode) {
-      dtWeight = 1.0;
+      opts.dtWeight = 1.0;
       dt0 = true;
       cumulativeDT = true;
     }
@@ -442,24 +496,57 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
 
-  if (dtMode && dtWeight == 0.0) {
-    dtWeight = default_dt_weight(t, x, panelIDs);
-    if (dtWeight < 0) {
+  if (dtMode && opts.dtWeight == 0.0) {
+    // If we have to set the default 'dt' weight, then make a manifold with dtweight of 1 then
+    // we can rescale this by the appropriate variances in the future.
+    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0,
+                                        cumulativeDT, allowMissing);
+    double DT_WEIGHT = 1.0;
+    Manifold manifold = dtgenerator.create_manifold(maxE, {}, false, false, DT_WEIGHT);
+    std::vector<double> dts(manifold.nobs());
+    for (int i = 0; i < dts.size(); i++) {
+      dts[i] = manifold.dt(i, 1);
+    }
+
+    opts.dtWeight = default_dt_weight(dts, x, panelIDs);
+    if (opts.dtWeight < 0) {
       dtMode = false;
     }
   }
-  SF_macro_save(DTW_USED, (char*)fmt::format("{}", dtWeight).c_str());
+  SF_macro_save(DTW_USED, (char*)fmt::format("{}", opts.dtWeight).c_str());
 
-  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
+  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0,
                                     cumulativeDT, allowMissing);
 
-  // Generate the 'usable' variable
+  // Save some variables back to Stata, like usable, and the manifold (if savemanifold) or the dt (if dtsave).
+  // Start by generating the 'usable' variable.
   std::vector<bool> usable = generator.generate_usable(maxE);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
   {
     std::vector<double> usableToSave = bool_to_double(usable);
     write_stata_column(usableToSave.data(), (int)usableToSave.size(), 3 + numExtras + 1);
+  }
+
+  // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
+  if (saveDT) {
+    double SAVE_DT_WEIGHT = 1.0;
+    Manifold manifold = generator.create_manifold(maxE, {}, false, false, SAVE_DT_WEIGHT);
+
+    std::vector<double> dts(manifold.nobs());
+    for (int i = 0; i < dts.size(); i++) {
+      dts[i] = manifold.dt(i, 1);
+    }
+    ST_int startCol = 3 + numExtras + 1 + 3 * copredictMode + opts.panelMode + 1;
+    write_stata_column(dts.data(), (int)dts.size(), startCol);
+  }
+
+  // Save the manifold back to Stata if requested.
+  if (saveManifold) {
+    Manifold manifold = generator.create_manifold(maxE, {}, false, false, opts.dtWeight);
+
+    ST_int startCol = 3 + numExtras + 1 + 3 * copredictMode + opts.panelMode + saveDT + 1;
+    write_stata_columns(manifold.data(), manifold.nobs(), manifold.E_actual(), startCol);
   }
 
   if (numUsable == 0) {
@@ -496,46 +583,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
       }
     }
   }
-
-  // Read in some macros from Stata
-  char buffer[200];
-
-  // What is k?
-  if (SF_macro_use(NUM_NEIGHBOURS, buffer, 200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  int k = atoi(buffer);
-
-  // Are we saving the predictions?
-  if (SF_macro_use(SAVE_PREDICTION, buffer, 200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  bool saveFinalPredictions = !(std::string(buffer).empty());
-
-  // Are we saving the S-map coefficients (only in xmap mode)?
-  bool saveSMAPCoeffs;
-  if (explore) {
-    saveSMAPCoeffs = false;
-  } else {
-    if (SF_macro_use(SAVE_SMAP, buffer, 200)) {
-      io.print("Got an error rc from macro_use!\n");
-    }
-    saveSMAPCoeffs = !(std::string(buffer).empty());
-  }
-
-  // Are we saving the inputs to a JSON file?
-  if (SF_macro_use(SAVE_INPUTS, buffer, 200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  std::string saveInputsFilename(buffer);
-
-  // Number of replications
-  if (SF_macro_use(NUM_REPS, buffer, 200)) {
-    io.print("Got an error rc from macro_use!\n");
-  }
-  int numReps = atoi(buffer);
-
-  std::vector<int> Es = stata_numlist<int>("e");
 
   std::vector<int> libraries;
   if (!explore) {

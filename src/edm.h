@@ -9,6 +9,11 @@ std::vector<std::future<Prediction>> launch_task_group(
   const std::vector<bool>& coTrainingRows, const std::vector<bool>& coPredictionRows, const std::string& rngState,
   IO* io, bool keep_going(), void all_tasks_finished());
 
+// Below are the 'private' members of edm.cpp; they are added here just so they can be accessed for testing.
+
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int taskNum, int E, int k,
                                         bool savePrediction, bool saveSMAPCoeffs, const std::vector<bool>& trainingRows,
                                         const std::vector<bool>& predictionRows, IO* io, bool keep_going(),
@@ -17,19 +22,17 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
 Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,
                     IO* io, bool keep_going(), void all_tasks_finished());
 
-void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going());
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
+                     Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going());
 
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
+                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXi> rc,
+                        int* kUsed);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
-                     Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
+                     Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed);

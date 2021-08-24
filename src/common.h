@@ -63,6 +63,7 @@ struct Options
   bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
   int k = 0, nthreads;
   double missingdistance;
+  double dtWeight;
   bool panelMode;
   double idw;
   std::vector<double> thetas;

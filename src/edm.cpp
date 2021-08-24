@@ -210,8 +210,8 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   // Note, we can't have missing data inside the training manifold when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
 
-  Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false, skipMissing);
-  Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true);
+  Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false, opts.dtWeight, skipMissing);
+  Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true, opts.dtWeight);
 
   return taskRunnerPool.enqueue([opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished] {
     return edm_task(opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished);
@@ -228,15 +228,15 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
   std::fill_n(ystar.get(), numThetas * numPredictions, MISSING);
-  Eigen::Map<Eigen::MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
+  Eigen::Map<MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
 
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
   std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING);
-  Eigen::Map<Eigen::MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
+  Eigen::Map<MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
-  Eigen::Map<Eigen::Matrix<retcode, -1, -1>> rcView(rc.get(), numThetas, numPredictions);
+  Eigen::Map<MatrixXi> rcView(rc.get(), numThetas, numPredictions);
 
   std::vector<int> kUsed;
   for (int i = 0; i < numPredictions; i++) {
@@ -379,9 +379,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 // In this case, the algorithm may cheat by pulling out the identical trajectory from the training manifold
 // and using this as the prediction. As such, we throw away any neighbours which have a distance of 0 from
 // the target point.
-void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
-                     Eigen::Map<Eigen::MatrixXd> coeffs, int* kUsed, bool keep_going())
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
+                     Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going())
 {
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
@@ -534,8 +533,8 @@ DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentia
 }
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, Eigen::Map<Eigen::MatrixXd> ystar,
-                        Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXi> rc,
+                        int* kUsed)
 {
   int k = kNNInds.size();
 
@@ -571,15 +570,14 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
-                     Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
+                     Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed)
 {
   int k = kNNInds.size();
 
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.
-  Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
+  MatrixXd X_ls_cj(k, M.E_actual() + 1);
   X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
 
   // Calculate the weight for each neighbour
@@ -602,13 +600,13 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   Eigen::VectorXd y_ls = M.yMap()(kNNInds).array() * w.array();
 
   // The old way to solve this system:
-  // Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // Eigen::BDCSVD<MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
   //  Eigen::VectorXd ics = svd.solve(y_ls);
 
   // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
   // see https://scicomp.stackexchange.com/a/33375
   const int svdOpts = Eigen::ComputeThinU | Eigen::ComputeThinV; // 'ComputeFull*' would probably work identically here.
-  Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, svdOpts);
+  Eigen::BDCSVD<MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, svdOpts);
   Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls);
 
   double r = ics(0);

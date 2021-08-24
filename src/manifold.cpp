@@ -138,12 +138,14 @@ std::vector<int> ManifoldGenerator::get_lagged_indices(int startIndex, int E, in
 }
 
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
-                                            bool skipMissing) const
+                                            double dtWeight, bool skipMissing) const
 {
+  bool takeEveryPoint = filter.size() == 0;
+
   int nobs = 0;
   std::vector<int> pointNumToStartIndex;
-  for (int i = 0; i < filter.size(); i++) {
-    if (filter[i]) {
+  for (int i = 0; i < _t.size(); i++) {
+    if (takeEveryPoint || filter[i]) {
       pointNumToStartIndex.push_back(i);
       nobs += 1;
     }
@@ -160,7 +162,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
   for (int i = 0; i < nobs; i++) {
     double* point = &(flat[M_i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, point, target);
+    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, dtWeight, point, target);
 
     // Erase this point if we don't want missing values in the resulting manifold
     if (skipMissing) {
@@ -190,7 +192,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
 }
 
-void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double* point,
+void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double dtWeight, double* point,
                                       double& target) const
 {
   int panel = _panel_mode ? _panel_ids[i] : -1;
@@ -242,7 +244,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
   // TODO: Need to add back in the _cumulative_dt option
 
   // Put the lagged embedding of dt in the next columns
-  if (E_dt(E) > 0) {
+  if (_use_dt) {
     // The first dt value is a bit special as it is relative to the
     // time of the corresponding y prediction.
     if (_p == 0) {
@@ -251,7 +253,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
       double tNow = lookup_vec(_t, 0);
       if (tNow != MISSING && targetIndex >= 0) {
         double tPred = _t[targetIndex];
-        point[E + 0] = _dtWeight * (tPred - tNow);
+        point[E + 0] = dtWeight * (tPred - tNow);
       } else {
         point[E + 0] = MISSING;
       }
@@ -261,7 +263,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
       double tNext = lookup_vec(_t, j - 1);
       double tNow = lookup_vec(_t, j);
       if (tNext != MISSING && tNow != MISSING) {
-        point[E + j] = _dtWeight * (tNext - tNow);
+        point[E + j] = dtWeight * (tNext - tNow);
       } else {
         point[E + j] = MISSING;
       }
@@ -308,6 +310,8 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
 
 std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
 {
+  const double USABLE_DTWEIGHT = 1.0;
+
   // TODO: Need to handle coprediction's usable
   bool copredict = false;
   bool prediction = false;
@@ -321,7 +325,7 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
   double target;
 
   for (int i = 0; i < _t.size(); i++) {
-    fill_in_point(i, maxE, copredict, prediction, point.get(), target);
+    fill_in_point(i, maxE, copredict, prediction, USABLE_DTWEIGHT, point.get(), target);
     usable[i] = is_usable(point.get(), target, E, _allow_missing, targetRequired);
   }
 
@@ -339,7 +343,6 @@ void to_json(json& j, const ManifoldGenerator& g)
             { "_p", g._p },
             { "_num_extras", g._num_extras },
             { "_num_extras_lagged", g._num_extras_lagged },
-            { "_dtWeight", g._dtWeight },
             { "_x", g._x },
             { "_xmap", g._xmap },
             { "_co_x", g._co_x },
@@ -360,7 +363,6 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_p").get_to(g._p);
   j.at("_num_extras").get_to(g._num_extras);
   j.at("_num_extras_lagged").get_to(g._num_extras_lagged);
-  j.at("_dtWeight").get_to(g._dtWeight);
   j.at("_x").get_to(g._x);
   j.at("_xmap").get_to(g._xmap);
   j.at("_co_x").get_to(g._co_x);

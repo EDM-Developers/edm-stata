@@ -112,6 +112,7 @@ public:
   double y(int i) const { return _y[i]; }
   int ySize() const { return (int)_y.size(); }
 
+  double* data() const { return _flat.get(); };
   int nobs() const { return _nobs; }
   int E() const { return _E_x; }
   int E_dt() const { return _E_dt; }
@@ -132,7 +133,6 @@ private:
   int _tau;
   int _p;
   int _num_extras, _num_extras_lagged;
-  double _dtWeight = 0.0;
   std::vector<double> _x, _xmap, _co_x, _t;
   std::vector<std::vector<double>> _extras;
   std::vector<int> _panel_ids;
@@ -140,7 +140,8 @@ private:
   std::vector<int> _observation_number;
 
   void setup_observation_numbers();
-  void fill_in_point(int i, int E, bool copredict, bool prediction, double* point, double& target) const;
+  void fill_in_point(int i, int E, bool copredict, bool prediction, double dtWeight, double* point,
+                     double& target) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
   std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
@@ -157,7 +158,7 @@ public:
   ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, int tau, int p,
                     const std::vector<double>& xmap = {}, const std::vector<double>& co_x = {},
                     const std::vector<int>& panelIDs = {}, const std::vector<std::vector<double>>& extras = {},
-                    int numExtrasLagged = 0, double dtWeight = 0.0, bool dt0 = false, bool cumulativeDT = false,
+                    int numExtrasLagged = 0, bool dtMode = false, bool dt0 = false, bool cumulativeDT = false,
                     bool allowMissing = false)
     : _t(t)
     , _x(x)
@@ -169,22 +170,18 @@ public:
     , _extras(extras)
     , _num_extras((int)extras.size())
     , _num_extras_lagged(numExtrasLagged)
-    , _dtWeight(dtWeight)
+    , _use_dt(dtMode)
     , _add_dt0(dt0)
     , _cumulative_dt(cumulativeDT)
     , _allow_missing(allowMissing)
   {
     _panel_mode = (panelIDs.size() > 0);
     _xmap_mode = (xmap.size() > 0);
-
-    // TODO: Bring in dtMode here.
-    _use_dt = (dtWeight > 0.0);
-
     setup_observation_numbers();
   }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
-                           bool skipMissing = false) const;
+                           double dtWeight = 0.0, bool skipMissing = false) const;
 
   std::vector<bool> generate_usable(int maxE) const;
 

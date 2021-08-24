@@ -115,7 +115,13 @@ replace x = . if u<0.2
 replace t=. if mod(t,19) ==1
 
 edm explore x
-edm explore x, dt
+set seed 1
+edm explore x, dt savemanifold(plugin) dtweight(1)
+
+set seed 1
+edm explore x, dt savemanifold(mata) mata dtweight(1)
+
+ereturn list
 
 edm explore x, allowmissing
 edm explore x, missingdistance(1)

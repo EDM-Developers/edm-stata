@@ -92,25 +92,13 @@ double default_missing_distance(const std::vector<double>& x)
   return 2 / sqrt(PI) * xSD;
 }
 
-double default_dt_weight(const std::vector<double>& t, const std::vector<double>& x, const std::vector<int>& panelIDs)
+double default_dt_weight(const std::vector<double>& dts, const std::vector<double>& x, const std::vector<int>& panelIDs)
 {
   auto xObserved = remove_value(x, MISSING);
   double xSD = standard_deviation(xObserved);
 
-  bool panelMode = (panelIDs.size() > 0);
-
-  std::vector<double> dts;
-  for (int i = 1; i < t.size(); i++) {
-    if (panelMode && panelIDs[i - 1] != panelIDs[i]) {
-      continue;
-    }
-
-    if (t[i - 1] != MISSING && t[i] != MISSING) {
-      dts.push_back(t[i] - t[i - 1]);
-    }
-  }
-
-  double dtSD = standard_deviation(dts);
+  auto dtObserved = remove_value(dts, MISSING);
+  double dtSD = standard_deviation(dtObserved);
 
   if (dtSD == 0.0) {
     return -1;

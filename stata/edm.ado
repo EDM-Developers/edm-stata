@@ -282,7 +282,7 @@ program define edmManifoldSize, rclass
 end
 
 program define edmConstructManifolds, rclass
-	syntax anything , x(name) t(name) touse(name) [dt_value(name)] ///
+	syntax anything , x(name) t(name) touse(name) [dt0_value(name)] [dt_value(name)] ///
 			[z_vars(string)] [z_e_varying_count(real 0)] ///
 			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)] [Predictionhorizon(int 0)]
 
@@ -298,8 +298,7 @@ program define edmConstructManifolds, rclass
 		forvalues i=`=(1 - `dt0')'/`=`max_e'-1' {
 			local t_`i' = "``++manifold_index''"
 			if (`i' == 0) {
-				tsunab prediction_time : f(`predictionhorizon').`t'
-				qui gen double `t_0' = `dtw' * (`prediction_time' - `t') if `touse'
+				qui gen double `t_0' = `dtw' * `dt0_value' if `touse'
 			}
 			else {
 				qui gen double `t_`i'' = `dtw' * l`=`i'-1'.`dt_value' if `touse'
@@ -475,7 +474,7 @@ program define edmExplore, eclass
 			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
-			[saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
+			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
 			[distance(string)] [metrics(string)] [idw(real 0)] [cumdt(integer 0)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
@@ -606,7 +605,7 @@ program define edmExplore, eclass
 	local parsed_dt0 = ("`olddt'" != "olddt")
 	local parsed_dtw = "`dtweight'"
 
-	if "`dtsave'" != ""{
+	if "`dtsave'" != "" {
 		confirm new variable `dtsave'
 	}
 	local parsed_dtsave = "`dtsave'"
@@ -631,6 +630,12 @@ program define edmExplore, eclass
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
 	if `mata_mode' & `parsed_dt' {
+		tempvar dt0_value dt_value_new
+		qui gen `dt0_value' = .
+		qui gen `dt_value_new' = .
+		mata: calculate_dt("`timevar'", "`x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
+				"`dt0_value'", "`dt_value_new'")
+
 		/* general algorithm for generating t patterns
 		1. keep only touse
 		2. drop all missings
@@ -742,6 +747,7 @@ program define edmExplore, eclass
 				local parsed_dtw = 0
 				local parsed_dt = 0
 				local parsed_dt0 = 0
+				local parsed_dtsave = ""
 			}
 		}
 	}
@@ -792,7 +798,8 @@ program define edmExplore, eclass
 			tempvar manifold_var
 			local manifold_vars = "`manifold_vars' `manifold_var'"
 		}
-		edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') dt_value(`dt_value') ///
+		edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') ///
+			dt0_value(`dt0_value') dt_value(`dt_value') ///
 			z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
 			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
 
@@ -914,17 +921,46 @@ program define edmExplore, eclass
 		local full_mode = ("`full'" == "full")
 		local copredict_mode = ("`copredictvar'" != "")
 
+		if `copredict_mode' {
+			local co_xvar = "`co_x'"
+
+			tempvar co_train_set co_predict_set
+			// TODO: Needs fixing here
+			qui gen byte `co_train_set' = `touse'
+			qui gen byte `co_predict_set' = `touse'
+
+		}
+		else {
+			local co_xvar = ""
+			local co_train_set = ""
+			local co_predict_set = ""
+		}
+
 		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 		// Instead, just save it as a local and have the plugin read it using the Stata C API.
 		local rngstate = c(rngstate)
 
+		if "`parsed_dtsave'" != "" {
+			qui gen double `parsed_dtsave' = .
+		}
 
-		// TODO: Needs fixing here
-		tempvar co_train_set co_predict_set
-		gen byte `co_train_set' = `touse'
-		gen byte `co_predict_set' = `touse'
+		local manifold_vars = ""
 
-		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
+		if "`savemanifold'" != "" {
+			forvalues ii=1/`manifold_size' {
+				cap gen double `savemanifold'_`ii' = .
+				if _rc!=0 {
+					di as error "Cannot save the manifold using variable `savemanifold'_`ii' - is the prefix used already?"
+					exit(100)
+				}
+				local manifold_vars = "`manifold_vars' `savemanifold'_`ii'"
+			}
+		}
+
+		* di "about to call `timevar' `x' `x' `z_vars' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars'"
+		* pause
+
+		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -1145,6 +1181,19 @@ program define edmExplore, eclass
 	if `mata_mode' & `round' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
+		}
+	}
+
+	// Save the manifold back to Stata if requested.
+	if `mata_mode' & "`savemanifold'" !="" {
+		local counter = 1
+		foreach v of varlist ``manifold'' {
+			cap gen double `savemanifold'`direction_num'_`counter' = `v'
+			if _rc!=0 {
+				di as error "Cannot save the manifold using variable `savemanifold'`direction_num'_`counter' - is the prefix used already?"
+				exit(100)
+			}
+			local ++counter
 		}
 	}
 
@@ -1522,6 +1571,13 @@ program define edmXmap, eclass
 		local parsed_dtw = "`dtweight'"
 
 		if `mata_mode' & `parsed_dt' {
+			tempvar dt0_value dt_value_new
+			qui gen `dt0_value' = .
+			qui gen `dt_value_new' = .
+			mata: calculate_dt("`timevar'", "`x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
+					"`dt0_value'", "`dt_value_new'")
+
+
 			/* general algorithm for generating t patterns
 			1. keep only touse
 			2. drop all missings
@@ -1650,6 +1706,7 @@ program define edmXmap, eclass
 					local parsed_dtw = 0
 					local parsed_dt = 0
 					local parsed_dt0 = 0
+					local parsed_dtsave = ""
 				}
 			}
 			local parsed_dtw`direction_num' = `parsed_dtw'
@@ -1666,7 +1723,8 @@ program define edmXmap, eclass
 				tempvar manifold_var
 				local manifold_vars = "`manifold_vars' `manifold_var'"
 			}
-			edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') dt_value(`dt_value') ///
+			edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') ///
+				dt0_value(`dt0_value') dt_value(`dt_value') ///
 				z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
 				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
 
@@ -1794,24 +1852,44 @@ program define edmXmap, eclass
 
 			local copredict_mode = ("`copredictvar'" != "") & (`direction_num' == `num_directions')
 
+			if `copredict_mode' {
+				local co_xvar = "`co_x'"
+
+				tempvar co_train_set co_predict_set
+				// TODO: Needs fixing here
+				qui gen byte `co_train_set' = `touse'
+				qui gen byte `co_predict_set' = `touse'
+
+			}
+			else {
+				local co_xvar = ""
+				local co_train_set = ""
+				local co_predict_set = ""
+			}
+
 			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 			// Instead, just save it as a local and have the plugin read it using the Stata C API.
 			local rngstate = c(rngstate)
 
-			if `copredict_mode' {
-				local co_xvar = "`co_x'"
-			}
-			else {
-				local co_xvar = ""
+			if "`parsed_dtsave'" != "" {
+				qui gen double `parsed_dtsave' = .
 			}
 
-			// TODO: Needs fixing here
-			tempvar co_train_set co_predict_set
-			
-			gen byte `co_train_set' = `touse'
-			gen byte `co_predict_set' = `touse'
+			local manifold_vars = ""
+			if "`savemanifold'" != "" {
+				forvalues ii=1/`manifold_size' {
+					cap gen double `savemanifold'_`ii' = .
+					if _rc!=0 {
+						di as error "Cannot save the manifold using variable `savemanifold'_`ii' - is the prefix used already?"
+						exit(100)
+					}
+					local manifold_vars = "`manifold_vars' `savemanifold'_`ii'"
+				}
+			}
+			* di "about to call `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars'"
+			* pause
 
-			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
+			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1983,7 +2061,6 @@ program define edmXmap, eclass
 						local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'" 
 					}
 
-					// PJL: currently `savemanifold' does nothing in the plugin. 
 					if `mata_mode' & "`savemanifold'" !="" {
 						local counter = 1
 						foreach v of varlist ``manifold'' {
@@ -2532,6 +2609,126 @@ void burn_rvs(real scalar num)
 	}
 }
 end
+
+
+capture mata mata drop observation_numbers()
+mata:
+mata set matastrict on
+real matrix observation_numbers(real matrix t, real matrix x, real scalar allow_missing_mode)
+{
+	real matrix obsNum
+
+	real scalar obs, n, i
+	obs = 0
+	n = rows(t)
+
+	obsNum = J(n, 1, .)
+
+	for(i=1;i<=n;i++) {
+		if (t[i] != . && (allow_missing_mode || x[i] != .)) {
+			obsNum[i] = obs
+			obs = obs + 1
+		}
+		else {
+			obsNum[i] = .
+		}
+	}
+
+	return(obsNum)
+}
+end
+
+
+capture mata mata drop find_obs_num()
+mata:
+mata set matastrict on
+real scalar find_obs_num(real matrix obsNum, real scalar target, real scalar start, real scalar direction, real scalar panelMode, real matrix panel)
+{
+	real scalar i, nobs
+
+	i = start
+	nobs = rows(obsNum)
+
+	while (i >= 1 && i <= nobs) {
+		if (panelMode) {
+			if (panel[i] != panel[start]) {
+				return(.)
+			}
+		}
+
+		if (obsNum[i] == target) {
+			return(i)
+		}
+
+		i = i + direction;
+	}
+
+	return(.)
+}
+end
+
+capture mata mata drop calculate_dt()
+mata:
+mata set matastrict on
+void calculate_dt(
+		string scalar timeVar, string scalar xVar, string scalar panelVar,
+		real scalar allow_missing_mode, real scalar tau, real scalar p,
+		string scalar dt0Var, string scalar dtValueVar)
+{
+	real matrix t, x, obsNum, panel, dt, dt0
+	real scalar panelMode
+
+	st_view(t, ., timeVar, .)
+	st_view(x, ., xVar, .)
+
+	obsNum = observation_numbers(t, x, allow_missing_mode)
+
+	if (panelVar != "") {
+		panelMode = 1
+		st_view(panel, ., panelVar, .)
+	}
+	else {
+		panelMode = 0
+		panel = .
+	}
+
+	st_view(dt0, ., dt0Var, .)
+	st_view(dt, ., dtValueVar, .)
+
+	real scalar n, i, ii
+	n = rows(t)
+
+	for(i=1;i<=n;i++) {
+		if (obsNum[i] == .) {
+			dt0[i] = .
+			dt[i] = .
+			continue
+		}
+
+		// Go forward by 'p' to find the time of the corresponding target.
+		ii = find_obs_num(obsNum, obsNum[i] + p, i, p / abs(p), panelMode, panel)
+
+		if (ii != .) {
+			dt0[i] = t[ii] - t[i]
+		}
+		else {
+			dt0[i] = .
+		}
+
+		// For all other 'dt', we go backward to find the distance between
+		// this observation and the tau-previous one.
+		ii = find_obs_num(obsNum, obsNum[i] - tau, i, -tau / abs(tau), panelMode, panel)
+
+		if (ii != .) {
+			dt[i] = t[i] - t[ii]
+		}
+		else {
+			dt[i] = .
+		}
+	}
+}
+end
+
 
 capture mata mata drop smap_block()
 mata:
