@@ -630,7 +630,7 @@ program define edmExplore, eclass
 	tempvar x
 	edmPreprocessVariable "`1'", touse(`touse') out(`x')
 
-	if `parsed_dt' {
+	if `mata_mode' & `parsed_dt' {
 		/* general algorithm for generating t patterns
 		1. keep only touse
 		2. drop all missings
@@ -730,7 +730,7 @@ program define edmExplore, eclass
 	}
 
 	// Calculate the default value for 'dtweight'
-	if `parsed_dt' {
+	if `mata_mode' & `parsed_dt' {
 		if `parsed_dtw' == 0 {
 			qui sum `x' if `touse'
 			local xsd = r(sd)
@@ -828,7 +828,7 @@ program define edmExplore, eclass
 
 	// Default value for 'missingdistance'
 	if `mata_mode' & `allow_missing_mode' & `missingdistance' <= 0 {
-		qui sum `x' if `usable'
+		qui sum `x' if `touse'
 		local missingdistance = 2/sqrt(c(pi))*r(sd)
 	}
 
@@ -855,45 +855,48 @@ program define edmExplore, eclass
 		local co_z_vars = "`z_vars'"
 		local co_z_e_varying_count = `z_e_varying_count'
 
-		// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
-		local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
-
-		local co_manifold_vars = ""
-		forvalues i = 1/`manifold_size' {
-			tempvar co_manifold_var
-			local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
-		}
-		edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
-			z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
-
-		local co_mapping = "`r(max_e_manifold)'"
-
-		// Generate the same way as `usable', though don't insist on `x_f' being accessible.
-		tempvar co_usable
-		if `allow_missing_mode' {
-			qui gen byte `co_usable' = 0
-			foreach v of local co_mapping {
-				qui replace `co_usable' = 1 if `v' !=. & `touse'
+		if `mata_mode' {
+			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
+			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
+			local co_manifold_vars = ""
+			forvalues i = 1/`manifold_size' {
+				tempvar co_manifold_var
+				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 			}
-		}
-		else {
-			tempvar any_missing_in_co_manifold
-			hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
-			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
-		}
+			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
+				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
+				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
-		gen byte `co_train_set' = `co_usable'
-		gen byte `co_predict_set' = `co_usable'
+			local co_mapping = "`r(max_e_manifold)'"
 
-		//restore t
-		if `parsed_dt' {
-			if "`original_id'" != ""{
-				qui xtset `original_id' `newt'
+			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+			tempvar co_usable
+			if `allow_missing_mode' {
+				qui gen byte `co_usable' = 0
+				foreach v of local co_mapping {
+					qui replace `co_usable' = 1 if `v' !=. & `touse'
+				}
 			}
 			else {
-				qui tsset `newt'
+				tempvar any_missing_in_co_manifold
+				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
 			}
+
+			gen byte `co_train_set' = `co_usable'
+			gen byte `co_predict_set' = `co_usable'
+		
+
+			//restore t
+			if `parsed_dt' {
+				if "`original_id'" != ""{
+					qui xtset `original_id' `newt'
+				}
+				else {
+					qui tsset `newt'
+				}
+			}
+
 		}
 	}
 
@@ -902,6 +905,7 @@ program define edmExplore, eclass
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
 		local missing_dist_used = .
+		local dtw_used = .
 
 		// The plugin will save the 'usable' it generates to to here
 		qui gen double `usable' = .
@@ -914,13 +918,27 @@ program define edmExplore, eclass
 		// Instead, just save it as a local and have the plugin read it using the Stata C API.
 		local rngstate = c(rngstate)
 
+
+		// TODO: Needs fixing here
+		tempvar co_train_set co_predict_set
+		gen byte `co_train_set' = `touse'
+		gen byte `co_predict_set' = `touse'
+
 		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
-				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
 				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 		local missingdistance = `missing_dist_used'
+		
+		if `parsed_dt' {
+			local parsed_dtw = `dtw_used'
+			if `dtw_used' < 0 {
+				local parsed_dt = 0
+			}
+		}
+
 		qui compress `usable'
 	}
 
@@ -1214,13 +1232,15 @@ program define edmExplore, eclass
 		ereturn local extraembed = "`z_names'"
 	}
 	if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
-		sort `original_id' `original_t'
-		qui xtset `original_id' `original_t'
-		if "`original_id'" != ""{
+		if `mata_mode' { // TODO: Do we actually need this?
+			sort `original_id' `original_t'
 			qui xtset `original_id' `original_t'
-		}
-		else {
-			qui tsset `original_t'
+			if "`original_id'" != ""{
+				qui xtset `original_id' `original_t'
+			}
+			else {
+				qui tsset `original_t'
+			}
 		}
 		if `parsed_dt' ==0 {
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
@@ -1501,7 +1521,7 @@ program define edmXmap, eclass
 
 		local parsed_dtw = "`dtweight'"
 
-		if `parsed_dt' {
+		if `mata_mode' & `parsed_dt' {
 			/* general algorithm for generating t patterns
 			1. keep only touse
 			2. drop all missings
@@ -1618,7 +1638,7 @@ program define edmXmap, eclass
 
 
 		// Calculate the default value for `dtweight'
-		if `parsed_dt' {
+		if `mata_mode' & `parsed_dt' {
 			if `parsed_dtw' == 0 {
 				qui sum `x' if `touse'
 				local xsd = r(sd)
@@ -1677,7 +1697,7 @@ program define edmXmap, eclass
 				qui replace `usable' = 0 if `x_f' == .
 
 				if `missingdistance' <= 0 {
-					qui sum `x' if `usable'
+					qui sum `x' if `touse'
 					local defaultmissingdist = 2/sqrt(c(pi))*r(sd)
 					local missingdistance`direction_num' = `defaultmissingdist'
 				}
@@ -1691,7 +1711,7 @@ program define edmXmap, eclass
 
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
 			// temporary move to newt_co
-			if `parsed_dt' {
+			if `mata_mode' & `parsed_dt' {
 				qui {
 					if "`original_id'" != ""{
 						qui xtset `original_id' `newt_co'
@@ -1712,47 +1732,48 @@ program define edmXmap, eclass
 			local co_z_vars = "`z_vars'"
 			local co_z_e_varying_count = `z_e_varying_count'
 
-			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
-			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
-
-			local co_manifold_vars = ""
-			forvalues i = 1/`manifold_size' {
-				tempvar co_manifold_var
-				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
-			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
-				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
-
-			local co_mapping = "`r(max_e_manifold)'"
-
-			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
-			tempvar co_usable
-			if `allow_missing_mode' {
-				qui gen byte `co_usable' = 0
-				foreach v of local co_mapping {
-					qui replace `co_usable' = 1 if `v' !=. & `touse'
+			if `mata_mode' {
+				// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
+				local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
+				local co_manifold_vars = ""
+				forvalues i = 1/`manifold_size' {
+					tempvar co_manifold_var
+					local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
 				}
-			}
-			else {
-				tempvar any_missing_in_co_manifold
-				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
-				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
-			}
+				edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') dt_value(`dt_value_co') ///
+					z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
+					max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
-			gen byte `co_train_set' = `co_usable'
-			gen byte `co_predict_set' = `co_usable'
+				local co_mapping = "`r(max_e_manifold)'"
 
-			local comap_constructed = 1
-
-			//restore t
-			if `parsed_dt' {
-				qui {
-					if "`original_id'" != ""{
-						xtset `original_id' `newt'
+				// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+				tempvar co_usable
+				if `allow_missing_mode' {
+					qui gen byte `co_usable' = 0
+					foreach v of local co_mapping {
+						qui replace `co_usable' = 1 if `v' !=. & `touse'
 					}
-					else {
-						tsset `newt'
+				}
+				else {
+					tempvar any_missing_in_co_manifold
+					hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+					gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+				}
+
+				gen byte `co_train_set' = `co_usable'
+				gen byte `co_predict_set' = `co_usable'
+
+				local comap_constructed = 1
+
+				//restore t
+				if `parsed_dt' {
+					qui {
+						if "`original_id'" != ""{
+							xtset `original_id' `newt'
+						}
+						else {
+							tsset `newt'
+						}
 					}
 				}
 			}
@@ -1762,6 +1783,7 @@ program define edmXmap, eclass
 			// Setup variables which the plugin will modify
 			scalar plugin_finished = 0
 			local missing_dist_used = .
+			local dtw_used = .
 
 			// The plugin will save the 'usable' it generates to to here
 			qui gen double `usable' = .
@@ -1783,13 +1805,27 @@ program define edmXmap, eclass
 				local co_xvar = ""
 			}
 
+			// TODO: Needs fixing here
+			tempvar co_train_set co_predict_set
+			
+			gen byte `co_train_set' = `touse'
+			gen byte `co_predict_set' = `touse'
+
 			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' if `touse', "launch_edm_tasks" ///
-					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`parsed_dtw'" "`algorithm'" "`force'" "`missingdistance'" ///
+					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
 					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
+
+			if `parsed_dt' {
+				local parsed_dtw`direction_num' = `dtw_used'
+				if `dtw_used' < 0 {
+					local parsed_dt = 0
+				}
+			}
+
 			// Collect a list of all the variables created to store the SMAP coefficients
 			// across all the 'replicate's for this xmap direction.
 			local all_savesmap_vars = ""
@@ -2026,14 +2062,17 @@ program define edmXmap, eclass
 
 		* reset the panel structure
 		if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
-			sort `original_id' `original_t'
-			qui xtset `original_id' `original_t'
-			if "`original_id'" != ""{
+			if `mata_mode' { // TODO: Do we actually need this?
+				sort `original_id' `original_t'
 				qui xtset `original_id' `original_t'
+				if "`original_id'" != ""{
+					qui xtset `original_id' `original_t'
+				}
+				else {
+					qui tsset `original_t'
+				}
 			}
-			else {
-				qui tsset `original_t'
-			}
+			
 			if `parsed_dt' == 0 {
 				if "`direction'" == "oneway" {
 					local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"

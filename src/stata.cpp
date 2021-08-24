@@ -24,6 +24,7 @@
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
 char* FINISHED_SCALAR = (char*)"plugin_finished";
 char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
+char* DTW_USED = (char*)"_dtw_used";
 char* RNG_STATE = (char*)"_rngstate";
 
 char* NUM_NEIGHBOURS = (char*)"_k";
@@ -436,6 +437,19 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
+  if (allowMissing && opts.missingdistance == 0) {
+    opts.missingdistance = default_missing_distance(x);
+  }
+  SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
+
+  if (dtMode && dtWeight == 0.0) {
+    dtWeight = default_dt_weight(t, x, panelIDs);
+    if (dtWeight < 0) {
+      dtMode = false;
+    }
+  }
+  SF_macro_save(DTW_USED, (char*)fmt::format("{}", dtWeight).c_str());
+
   const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtWeight, dt0,
                                     cumulativeDT, allowMissing);
 
@@ -452,11 +466,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     SF_scal_save(FINISHED_SCALAR, 1.0);
     return SUCCESS; // Let Stata give the error here.
   }
-
-  if (allowMissing && opts.missingdistance == 0) {
-    opts.missingdistance = default_missing_distance(x, usable);
-  }
-  SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
 
   // If we need to create a randomised train/predict split, then sync the state of the
   // Mersenne Twister in Stata to that in the splitter instance.

@@ -77,23 +77,46 @@ double mean_absolute_error(const std::vector<double>& y1, const std::vector<doub
   }
 }
 
-double default_missing_distance(std::vector<double> x, std::vector<bool> usable)
+double standard_deviation(const std::vector<double>& vec)
+{
+  Eigen::Map<const Eigen::ArrayXd> map(vec.data(), vec.size());
+  const Eigen::ArrayXd centered = map - map.mean();
+  return std::sqrt((centered * centered).sum() / (centered.size() - 1));
+}
+
+double default_missing_distance(const std::vector<double>& x)
 {
   const double PI = 3.141592653589793238463;
+  auto xObserved = remove_value(x, MISSING);
+  double xSD = standard_deviation(xObserved);
+  return 2 / sqrt(PI) * xSD;
+}
 
-  std::vector<double> x_usable;
-  for (int i = 0; i < x.size(); i++) {
-    if (usable[i] && x[i] != MISSING) {
-      x_usable.push_back(x[i]);
+double default_dt_weight(const std::vector<double>& t, const std::vector<double>& x, const std::vector<int>& panelIDs)
+{
+  auto xObserved = remove_value(x, MISSING);
+  double xSD = standard_deviation(xObserved);
+
+  bool panelMode = (panelIDs.size() > 0);
+
+  std::vector<double> dts;
+  for (int i = 1; i < t.size(); i++) {
+    if (panelMode && panelIDs[i - 1] != panelIDs[i]) {
+      continue;
+    }
+
+    if (t[i - 1] != MISSING && t[i] != MISSING) {
+      dts.push_back(t[i] - t[i - 1]);
     }
   }
 
-  Eigen::Map<const Eigen::ArrayXd> xMap(x_usable.data(), x_usable.size());
-  const Eigen::ArrayXd xCent = xMap - xMap.mean();
-  double xSD = std::sqrt((xCent * xCent).sum() / (xCent.size() - 1));
-  double defaultMissingDist = 2 / sqrt(PI) * xSD;
+  double dtSD = standard_deviation(dts);
 
-  return defaultMissingDist;
+  if (dtSD == 0.0) {
+    return -1;
+  } else {
+    return xSD / dtSD;
+  }
 }
 
 Metric guess_appropriate_metric(std::vector<double> data, int targetSample = 100)
