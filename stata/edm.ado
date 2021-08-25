@@ -1664,12 +1664,12 @@ program define edmXmap, eclass
 			local manifold_vars = ""
 			if "`savemanifold'" != "" {
 				forvalues ii=1/`manifold_size' {
-					cap gen double `savemanifold'_`ii' = .
+					cap gen double `savemanifold'`direction_num'_`ii' = .
 					if _rc!=0 {
-						di as error "Cannot save the manifold using variable `savemanifold'_`ii' - is the prefix used already?"
+						di as error "Cannot save the manifold using variable `savemanifold'`direction_num'_`ii' - is the prefix used already?"
 						exit(100)
 					}
-					local manifold_vars = "`manifold_vars' `savemanifold'_`ii'"
+					local manifold_vars = "`manifold_vars' `savemanifold'`direction_num'_`ii'"
 				}
 			}
 			* di "about to call `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars'"
