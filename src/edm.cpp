@@ -906,8 +906,8 @@ void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const 
   }
 }
 
-// Returns an s32 array of shape [panelSize npreds 1 1] when either of skip flags are true
-//            otherwise of shape [panelSize 1 1 1]
+// Returns b8 array of shape [mnobs npreds 1 1] when either of skip flags are true
+//        otherwise of shape [mnobs 1 1 1]
 af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPanels, const bool& skipMissingData,
                                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp)
 {
@@ -936,9 +936,9 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
 
       return !(panelM != panelMp);
   } else if (skipMissingData) {
-      return where(!(anyTrue(M.mdata == M.missing, 0)));
+      return !(anyTrue(M.mdata == M.missing, 0).T());
   } else {
-      return iota(dim4(mnobs), dim4(1), s32);
+      return af::constant(1.0, M.nobs, b8);
   }
 }
 
@@ -1085,22 +1085,31 @@ void af_make_prediction(const int numPredictions, const Options& opts,
     othetas = array(1, opts.thetas.size(), opts.thetas.data()); //f64 array
   }
 
-  auto npredsValidInds =
+  auto potIdx =
       afPotentialNeighbourIndices(numPredictions, skipOtherPanels, skipMissingData, M, Mp);
+
+  auto validDistPair =
+      afLPDistances(numPredictions, opts, M, Mp, metricOpts);
 
   for (int Mp_i = 0; Mp_i < numPredictions; Mp_i++)
   {
-    array tryInds = (skipOtherPanels
-                     ? where(npredsValidInds(span, Mp_i))
-                     : npredsValidInds // For this route, perhaps downstream methods can be further vectorized
-                    );
+    array idxv = (skipOtherPanels ? potIdx(span, Mp_i) : potIdx);
+
+    array tryInds, lpDists;
+    if (opts.distance == Distance::Wasserstein) {
+      tryInds = where(idxv);
+    } else {
+      array lpd  = validDistPair.inds(span, Mp_i);
+      tryInds    = where(idxv && lpd);
+      array temp = validDistPair.dists(span, Mp_i);
+      lpDists    = temp(tryInds);
+    }
     DistanceIndexPairsOnGPU potentialNN =
         (
          opts.distance == Distance::Wasserstein ?
          afWassersteinDistances(Mp_i, opts, hostM, hostMp, M, Mp, tryInds, metricOpts) :
-         afLPDistances(Mp_i, opts, hostM, hostMp, M, Mp, tryInds, metricOpts)
+         DistanceIndexPairsOnGPU{tryInds, lpDists}
         );
-
     if (keep_going != nullptr && keep_going() == false) {
       return;
     }
