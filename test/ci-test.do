@@ -114,6 +114,8 @@ drop if u<0.1
 replace x = . if u<0.2
 replace t=. if mod(t,19) ==1
 
+
+set seed 1
 edm explore x
 set seed 1
 edm explore x, dt savemanifold(plugin) dtweight(1)
@@ -123,13 +125,19 @@ edm explore x, dt savemanifold(mata) mata dtweight(1)
 
 ereturn list
 
+di c(rngstate)
+
 edm explore x, allowmissing
+
+di c(rngstate)
+
 edm explore x, missingdistance(1)
 edm xmap x l.x, allowmissing
 edm xmap x l.x, missingdistance(2)
 
 edm xmap x l.x, extraembed(u) allowmissing dt alg(smap) savesmap(newb) e(5)
 
+set seed 1
 edm xmap x l3.x, extraembed(u) allowmissing dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
 
 edm explore x, extraembed(u) allowmissing dt crossfold(5)

@@ -2780,7 +2780,7 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	/* sprintf("begin") */
 	real colvector d, w, a
 	real colvector ind, v
-	real scalar i,j,n,r,n_ls
+	real scalar i, j, k, n, r, n_ls
 	n = rows(M)
 	d = J(n, 1, .)
 
@@ -2819,7 +2819,12 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		}
 	}
 
-	minindex(d, l, ind, v)
+	// This is important to copy 'l' into 'k', otherwise
+	// we may accidently 'force' l to be too small for future
+	// predictions.
+	k = l
+
+	minindex(d, k, ind, v)
 
 	// create weights for each point in the library
 
@@ -2827,12 +2832,11 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	real scalar d_base
 	d_base = d[ind[1]]
 
-	w = J(l, 1, .)
-	if (rows(ind)<l) {
-		if (force_compute==1) {
-			l=rows(ind) // change l to match neighbor size
+	if (rows(ind) < k) {
+		if (force_compute == 1) {
+			k = rows(ind) // Force k to use fewer neighbours
 			/* sprintf("library size has been reduced for some observations")	 */
-			if (l<=0) {
+			if (k<=0) {
 				sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
 				exit(error(503))
 			}
@@ -2843,15 +2847,17 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		}
 	}
 
+	w = J(k, 1, .)
+
 	r = 0
 
 	if (algorithm == "" | algorithm == "simplex") {
-		for(j=1;j<=l;j++) {
+		for(j=1;j<=k;j++) {
 			w[j] = exp(-theta*(d[ind[j]] / d_base))
 		}
 		w = w/sum(w)
 
-		for(j=1;j<=l;j++) {
+		for(j=1;j<=k;j++) {
 			r = r +  y[ind[j]] * w[j]
 		}
 
@@ -2864,24 +2870,24 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 		real rowvector x_pred
 		real scalar mean_d
 
-		for(j=1;j<=l;j++) {
+		for(j=1;j<=k;j++) {
 			w[j] = d[ind[j]]
 		}
 
 		mean_d = mean(w)
 
-		for(j=1;j<=l;j++) {
+		for(j=1;j<=k;j++) {
 			w[j] = exp(-theta*(w[j] / mean_d))
 		}
 
-		y_ls = J(l, 1, .)
-		X_ls = J(l, cols(M), .)
-		w_ls = J(l, 1, .)
+		y_ls = J(k, 1, .)
+		X_ls = J(k, cols(M), .)
+		w_ls = J(k, 1, .)
 
 		real scalar rowc
 		rowc = 0
 
-		for(j=1;j<=l;j++) {
+		for(j=1;j<=k;j++) {
 			rowc++
 			if (algorithm == "llr") {
 				y_ls[rowc]    = y[ind[j]]
@@ -2894,7 +2900,7 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 				w_ls[rowc] = w[j]
 			}
 		}
-		if (rowc ==0) {
+		if (rowc == 0) {
 			return(.)
 		}
 
