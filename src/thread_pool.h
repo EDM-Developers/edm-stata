@@ -22,6 +22,7 @@
 #include <functional>
 #include <future>
 #include <queue>
+#include <thread>
 
 class ThreadPool
 {
@@ -31,6 +32,11 @@ public:
   auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
   ~ThreadPool();
   void set_num_workers(int threads);
+  void sync() {
+    while(tasks.empty() == false) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+  }
 
 private:
   // need to keep track of threads so we can join them
