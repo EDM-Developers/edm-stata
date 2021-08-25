@@ -281,69 +281,6 @@ program define edmManifoldSize, rclass
 	return local manifold_size = `num_xs' + `num_dts' + `total_num_extras'
 end
 
-program define edmConstructManifolds, rclass
-	syntax anything , x(name) t(name) touse(name) [dt0_value(name)] [dt_value(name)] ///
-			[z_vars(string)] [z_e_varying_count(real 0)] ///
-			max_e(int) tau(int) dt(int) dt0(int) [dtw(real 0)] [Predictionhorizon(int 0)]
-
-	// Generate lags for 'x' data
-	local manifold_index = 0
-	forvalues i=0/`=`max_e'-1' {
-		local x_`i' = "``++manifold_index''"
-		if !`dt' {
-			qui gen double `x_`i'' = l`=`i'*`tau''.`x' if `touse'
-		}
-		else {
-			qui gen double `x_`i'' = `x'[_n-`tau'*`i'] if `touse'
-		}
-	}
-
-	// Generate lags for the 'dt' if requested
-	if `dt' {
-		forvalues i=`=(1 - `dt0')'/`=`max_e'-1' {
-			local t_`i' = "``++manifold_index''"
-			if (`i' == 0) {
-				qui gen double `t_0' = `dtw' * `dt0_value' if `touse'
-			}
-			else {
-				qui gen double `t_`i'' = `dtw' * l`=`i'-1'.`dt_value' if `touse'
-			}
-		}
-	}
-
-	// Generate the lagged extra variables and then the unlagged extras
-	local z_count = wordcount("`z_vars'")
-	forvalues k=1/`z_count' {
-
-		local z_k : word `k' of `z_vars'
-		local z_k_varying = (`k' <= `z_e_varying_count')
-
-		forvalues i=0/`=`z_k_varying'*(`max_e'-1)' {
-			local z_`k'_`i' = "``++manifold_index''"
-			qui gen double `z_`k'_`i'' = l`=`i'*`tau''.`z_k' if `touse'
-		}
-	}
-
-	// Put the manifolds together
-	forvalues i=1/`=`max_e'-1' {
-		forvalues j=0/`i' {
-			local mapping_`i' = "`mapping_`i'' `x_`j''"
-		}
-		forvalues j=0/`i' {
-			local mapping_`i' = "`mapping_`i'' `t_`j''"
-		}
-
-		forvalues k=1/`z_count' {
-			forvalues j=0/`i' {
-				local mapping_`i' = "`mapping_`i'' `z_`k'_`j''"
-			}
-		}
-		return local mapping_`i' = "`mapping_`i''"
-	}
-
-	local max_e_manifold = strtrim("`mapping_`=`max_e'-1''")
-	return local max_e_manifold = "`max_e_manifold'"
-end
 
 program define edmCountExtras, rclass
 	syntax [anything]

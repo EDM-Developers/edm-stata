@@ -508,7 +508,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
       dts[i] = manifold.dt(i, 1);
     }
 
-    opts.dtWeight = default_dt_weight(dts, x, panelIDs);
+    opts.dtWeight = default_dt_weight(dts, x);
     if (opts.dtWeight < 0) {
       dtMode = false;
     }

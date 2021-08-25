@@ -150,13 +150,6 @@ public:
     init(seed);
   }
 
-  MtRng64(UINTTYPE initkeys[], size_t keylen)
-  {
-    left_ = 1;
-    next_ = NULL;
-    init(initkeys, keylen);
-  }
-
   MtRng64(std::string rngState, double nextRV)
   {
     left_ = 1;
@@ -173,49 +166,6 @@ public:
       state_[j] =
         (Mt64Traits::INITVAL * (state_[j - 1] ^ (state_[j - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) + (UINTTYPE)j);
     }
-    left_ = 1;
-  }
-
-  void init(UINTTYPE initkeys[], size_t keylen)
-  {
-    init(Mt64Traits::ARRAYINITVAL_0);
-
-    size_t i = 1;
-    size_t j = 0;
-    size_t k = (Mt64Traits::NN > keylen ? Mt64Traits::NN : keylen);
-
-    for (; k; k--) {
-      state_[i] = (state_[i] ^
-                   ((state_[i - 1] ^ (state_[i - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) * Mt64Traits::ARRAYINITVAL_1)) +
-                  initkeys[j] + (UINTTYPE)j; /* non linear */
-
-      i++;
-      j++;
-
-      if (i >= Mt64Traits::NN) {
-        state_[0] = state_[Mt64Traits::NN - 1];
-        i = 1;
-      }
-      if (j >= keylen) {
-        j = 0;
-      }
-    }
-
-    for (k = Mt64Traits::NN - 1; k; k--) {
-      state_[i] = (state_[i] ^
-                   ((state_[i - 1] ^ (state_[i - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) * Mt64Traits::ARRAYINITVAL_2)) -
-                  (UINTTYPE)i; /* non linear */
-
-      i++;
-
-      if (i >= Mt64Traits::NN) {
-        state_[0] = state_[Mt64Traits::NN - 1];
-        i = 1;
-      }
-    }
-
-    /* MSB is 1; assuring non-zero initial array */
-    state_[0] = (UINTTYPE)1 << (Mt64Traits::INTTYPE_BITS - 1);
     left_ = 1;
   }
 
@@ -259,34 +209,6 @@ public:
     }
   }
 
-  /* generates a random number on [0,2^bits-1]-interval */
-  UINTTYPE getUint()
-  {
-    if (--left_ == 0)
-      nextState();
-    return Mt64Traits::temper(*next_++);
-  }
-
-  /* generates a random number on [0,2^(bits-1)-1]-interval */
-  INTTYPE getInt()
-  {
-    if (--left_ == 0)
-      nextState();
-    return (INTTYPE)(Mt64Traits::temper(*next_++) >> 1);
-  }
-
-  /* generates a random number on [0,1]-real-interval */
-  double getReal1()
-  {
-    if (--left_ == 0)
-      nextState();
-    if (Mt64Traits::INTTYPE_BITS > 53) {
-      return ((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740991.0));
-    } else {
-      return ((double)Mt64Traits::temper(*next_++) * (1.0 / (double)Mt64Traits::MAXDOUBLEVAL));
-    }
-  }
-
   /* generates a random number on [0,1)-real-interval */
   double getReal2()
   {
@@ -297,43 +219,6 @@ public:
     } else {
       return ((double)Mt64Traits::temper(*next_++) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
     }
-  }
-
-  /* generates a random number on (0,1)-real-interval */
-  double getReal3()
-  {
-    if (--left_ == 0)
-      nextState();
-    if (Mt64Traits::INTTYPE_BITS > 52) {
-      return (((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 52)) + 0.5) *
-              (1.0 / 4503599627370496.0));
-    } else {
-      return (((double)Mt64Traits::temper(*next_++) + 0.5) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
-    }
-  }
-
-  double peek()
-  {
-    // Save the current state
-    unsigned long long state[312];
-    size_t left = left_;
-    UINTTYPE* next = next_;
-
-    for (int i = 0; i < 312; i++) {
-      state[i] = state_[i];
-    }
-
-    double rv = getReal2();
-
-    // Reset the state to the beginning on original values
-    for (int i = 0; i < 312; i++) {
-      state_[i] = state[i];
-    }
-
-    left_ = left;
-    next_ = next;
-
-    return rv;
   }
 };
 

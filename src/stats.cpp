@@ -92,7 +92,7 @@ double default_missing_distance(const std::vector<double>& x)
   return 2 / sqrt(PI) * xSD;
 }
 
-double default_dt_weight(const std::vector<double>& dts, const std::vector<double>& x, const std::vector<int>& panelIDs)
+double default_dt_weight(const std::vector<double>& dts, const std::vector<double>& x)
 {
   auto xObserved = remove_value(x, MISSING);
   double xSD = standard_deviation(xObserved);

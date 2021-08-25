@@ -262,7 +262,7 @@ double wasserstein(double* C, int len_i, int len_j)
 
   int maxIter = 10000;
   double cost;
-  EMD_wrap(len_i, len_j, w_1.get(), w_2.get(), C, nullptr, nullptr, nullptr, &cost, maxIter);
+  EMD_wrap(len_i, len_j, w_1.get(), w_2.get(), C, &cost, maxIter);
   return cost;
 }
 

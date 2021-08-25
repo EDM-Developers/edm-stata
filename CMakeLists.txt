@@ -51,11 +51,11 @@ set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 
 if(WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI /fsanitize=address")
-  set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ox")
+  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI /fsanitize=address /bigobj")
+  set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ox /fp:fast")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fsanitize=address")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
 endif()
 
 # Tell MSVC to compile in parallel
