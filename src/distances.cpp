@@ -572,62 +572,61 @@ DistanceIndexPairs af_wasserstein_distances(int Mp_i, const Options& opts, const
   return { inds, dists };
 }
 
-DistanceIndexPairsOnGPU afLPDistances(int Mp_i, const Options& opts,
-                                      const Manifold& hostM, const Manifold& hostMp,
+DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
                                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
-                                      const af::array& inIndices, const af::array& metricOpts)
+                                      const af::array& metricOpts)
 {
-  auto range = nvtxRangeStartA(__FUNCTION__);
-
-  const dim_t idxSz = inIndices.elements();
-
-  if(idxSz <= 0) {
-      return {};
-  }
-  using af::constant;
+  using af::array;
+  using af::moddims;
   using af::select;
+  using af::seq;
   using af::span;
   using af::tile;
 
-  array zero  = constant(0.0, 1, idxSz, f64);
-  array mssng = constant(MISSING, 1, idxSz, f64);
-  array Ma    = M.mdata(span, inIndices);
+  // Mp_i goes from 0 to npreds - 1
+  // All coloumns of Manifold M are considered valid for batch operation
 
-  array disti = constant(0.0, 1, idxSz, f64);
-  // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
-  // then add the user-supplied penalty/distance for the mismatch.
+  auto range = nvtxRangeStartA(__FUNCTION__);
+
+  const bool imdoZero = opts.missingdistance == 0;
+  const int mnobs     = M.nobs;
+  const int eacts     = M.E_actual;
+
+  array predsM  = tile(M.mdata, 1, 1, npreds); //[ eacts mnobs npreds 1 ]
+  array predsMp = tile(moddims(Mp.mdata(span, seq(npreds)), eacts, 1, npreds), 1, mnobs);
+  array missing = predsM == MISSING || predsMp == MISSING;
+  array diffMMp = predsM - predsMp;
+  array compMMp = (predsM != predsMp).as(f64);
+  array distMMp = select(tile(metricOpts, 1, mnobs, npreds), diffMMp, compMMp);
+
+  array distsMat = (imdoZero ? distMMp : select(missing, opts.missingdistance, distMMp) );
+  array distsMat2;
+  if (opts.distance == Distance::MeanAbsoluteError) {
+    distsMat2 = af::abs(distsMat) / double(eacts);
+  } else {
+    distsMat2 = distsMat * distsMat;
+  }
   if (opts.panelMode && opts.idw > 0) {
-      // If give dist_i[] is not same as MISSING marker, add penality
-      disti += (opts.idw * (M.panel(inIndices) != hostMp.panel(Mp_i)));
+    array npPanelMp = tile(Mp.panel(seq(npreds)).T(), mnobs);
+    array npPanelM  = tile(M.panel, 1, npreds);
+    array penalty   = (opts.idw * (npPanelM != npPanelMp));
+    array penalties = tile(moddims(penalty, 1, mnobs, npreds), eacts);
+
+    distsMat2 += penalties;
   }
 
-  const bool isMissingDistOptZero = opts.missingdistance == 0;
+  array anyMCols  = anyTrue(missing, 0); //[1 mnobs npreds 1]
+  array accDists  = sum(distsMat2, 0);   //[1 mnobs npreds 1]
+  array distances = select(anyMCols * imdoZero, double(MISSING), accDists);
+  array valids    = (distances != 0.0 && distances != double(MISSING));
+  array dists     = (opts.distance == Distance::MeanAbsoluteError
+                     ? distances
+                     : af::sqrt(distances));
+  array rvalids   = moddims(valids, mnobs, npreds);
+  array rdists    = moddims(dists, mnobs, npreds);
 
-  array Mpa_Mp_i = tile(Mp.mdata(span, Mp_i), 1, idxSz);
-
-  array dMssng2d = (Ma == MISSING || Mpa_Mp_i == MISSING);
-  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
-  array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
-  array distIJ   = (opts.distance == Distance::MeanAbsoluteError ?
-                    (af::abs(distVals) / M.E_actual) : (distVals * distVals));
-  array dist_ij  = af::sum(distIJ, 0);
-
-  // exclude criteria sets dist_i to MISSING and doesn't accumulate E_actual contributions
-  array exclude  = af::anyTrue(dMssng2d, 0) * isMissingDistOptZero;
-
-  disti = (exclude * mssng + (1 - exclude) * (disti + dist_ij));
-
-  array valids = (disti != zero && disti != mssng);
-  array indexs = where(valids);
-
-  array outIndices, outDists;
-  if (indexs.elements() > 0) { // Extract only valid values
-      array validDists = disti(indexs);
-      outDists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
-      outIndices  = inIndices(indexs);
-  }
   nvtxRangeEnd(range);
-  return { outIndices, outDists.T() }; // T will moddims to distance vector along axis 0
+  return { rvalids, rdists };
 }
 
 array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
