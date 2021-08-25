@@ -27,6 +27,7 @@
 #include <algorithm> // std::partial_sort
 #include <cmath>
 #include <fstream> // just to create low-level input dumps
+#include <chrono>
 
 #include <arrayfire.h>
 
@@ -46,7 +47,8 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
 {
 
   workerPool.set_num_workers(opts.nthreads);
-  taskRunnerPool.set_num_workers(num_physical_cores());
+  //taskRunnerPool.set_num_workers(num_physical_cores());
+  taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
 
   // Construct the instance which will (repeatedly) split the data
   // into either the training manifold or the prediction manifold.
@@ -237,15 +239,10 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       mopts.push_back(opts.metrics[j] == Metric::Diff);
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  af::sync(0);
   af::array metricOpts(M.E_actual(), mopts.data());
 
   const ManifoldOnGPU gpuM  = M;
   const ManifoldOnGPU gpuMp = Mp;
-
-  af::sync(0);
-  /////////////////////////////////////////////////////////////////////////////
 
   constexpr bool useAF = true;  //Being on trump mutli-threaded codepath
   bool multiThreaded = opts.nthreads > 1;
@@ -277,12 +274,14 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
   if (multiThreaded && !useAF) {
     std::vector<std::future<void>> results(numPredictions);
+    workerPool.sync();
+    printf("Starting: %d\n", opts.taskNum);
+    auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
         [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going); }
         );
     }
-
     if (opts.numTasks == 1) {
       io->progress_bar(0.0);
     }
@@ -292,10 +291,21 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
     }
+    workerPool.sync();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    printf("CPU(t=%d): Task(%lu) took %lf seconds for %d predictions \n",
+           opts.nthreads, opts.taskNum, diff.count(), numPredictions);
   } else {
     if (useAF) {
+      af::sync(0);
+      auto start = std::chrono::high_resolution_clock::now();
       af_make_prediction(numPredictions, opts, M, Mp,
               gpuM, gpuMp, metricOpts, ystarView, rcView, coeffsView, kUsed, keep_going);
+      af::sync(0);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> diff = end - start;
+      printf("GPU: Task(%lu) took %lf seconds for %d predictions \n", opts.taskNum, diff.count(), numPredictions);
     } else {
       if (opts.numTasks == 1) {
         io->progress_bar(0.0);
@@ -1075,7 +1085,6 @@ void af_make_prediction(const int numPredictions, const Options& opts,
     othetas = array(1, opts.thetas.size(), opts.thetas.data()); //f64 array
   }
 
-  af::sync();
   auto npredsValidInds =
       afPotentialNeighbourIndices(numPredictions, skipOtherPanels, skipMissingData, M, Mp);
 

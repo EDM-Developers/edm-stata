@@ -128,9 +128,17 @@ target_include_directories(edm_plugin PRIVATE include)
 target_include_directories(edm_plugin PRIVATE include/eigen3)
 
 # ↓↓↓ Third-party code ↓↓↓
+find_package(CUDA)
 find_package(ArrayFire CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+
+
+find_library(NVTOOLS
+  NAME nvToolsExt
+  PATHS ${CUDA_TOOLKIT_ROOT_DIR}
+  PATH_SUFFIXES lib lib64)
+
 
 if(NOT WIN32)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -140,7 +148,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(edm_plugin PRIVATE Threads::Threads)
-target_link_libraries(edm_plugin PRIVATE ArrayFire::af)
+target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda)
 
 # Formatting with clang-format
 include(ClangFormat)
@@ -151,12 +159,16 @@ clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/test
 add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
 set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
 set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
-target_include_directories(edm_cli PRIVATE include)
-target_include_directories(edm_cli PRIVATE include/eigen3)
-target_link_libraries(edm_cli PRIVATE fmt::fmt-header-only)
-target_link_libraries(edm_cli PRIVATE Threads::Threads)
-target_link_libraries(edm_cli PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(edm_cli PRIVATE ArrayFire::af)
+target_include_directories(edm_cli PRIVATE include
+  ${CUDA_INCLUDE_DIRS}
+  include/eigen3)
+target_link_libraries(edm_cli PRIVATE
+  fmt::fmt-header-only
+  Threads::Threads
+  nlohmann_json::nlohmann_json
+  ArrayFire::afcuda
+  ${NVTOOLS}
+  )
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
@@ -173,7 +185,7 @@ target_include_directories(gbench PRIVATE include/eigen3)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(gbench PRIVATE ArrayFire::af)
+target_link_libraries(gbench PRIVATE ArrayFire::afcuda)
 install(TARGETS gbench DESTINATION test OPTIONAL)
 
 find_package(Catch2 REQUIRED)

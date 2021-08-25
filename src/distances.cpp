@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <arrayfire.h>
+#include <nvToolsExt.h>
 
 using af::array;
 
@@ -582,7 +583,8 @@ DistanceIndexPairsOnGPU afLPDistances(int Mp_i, const Options& opts,
                                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                                       const af::array& inIndices, const af::array& metricOpts)
 {
-  // This function runs on small matrices of shape [M_Eactual inIndices.elements() 1 1]
+  auto range = nvtxRangeStartA(__FUNCTION__);
+
   const dim_t idxSz = inIndices.elements();
 
   if(idxSz <= 0) {
@@ -630,6 +632,7 @@ DistanceIndexPairsOnGPU afLPDistances(int Mp_i, const Options& opts,
       outDists = (opts.distance == Distance::MeanAbsoluteError ? validDists : af::sqrt(validDists));
       outIndices  = inIndices(indexs);
   }
+  nvtxRangeEnd(range);
   return { outIndices, outDists.T() }; // T will moddims to distance vector along axis 0
 }
 
