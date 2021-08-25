@@ -950,7 +950,9 @@ program define edmExplore, eclass
 				if `mata_mode' {
 					local savesmap_vars ""
 					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
-						`j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'")
+						`j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', ///
+						`idw', "`panel_id'", `i', ///
+						`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 					qui corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -1009,7 +1011,8 @@ program define edmExplore, eclass
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
 			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
-				`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
+				`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
+				`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 		}
 	}
 
@@ -1724,7 +1727,9 @@ program define edmXmap, eclass
 
 						if `mata_mode' {
 							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
-								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', `idw', "`panel_id'")
+								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', ///
+								`idw', "`panel_id'", `max_e', ///
+								`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 							// Ignore super tiny S-map coefficients (the plugin seems to do this)
 							foreach smapvar of local savesmap_vars {
@@ -1802,7 +1807,8 @@ program define edmXmap, eclass
 		if `mata_mode' {
 			qui replace `co_train_set' = 0 if `usable' == 0
 			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
-				`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'")
+				`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `max_e', ///
+				`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 		}
 	}
 
@@ -2538,7 +2544,12 @@ end
 capture mata mata drop smap_block()
 mata:
 mata set matastrict on
-void smap_block(string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result, string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar algorithm, string scalar savesmap_vars, string scalar force, real scalar missingdistance, real scalar idw, string scalar panel_id)
+void smap_block(
+		string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result,
+		string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar algorithm,
+		string scalar savesmap_vars, string scalar force, real scalar missingdistance,
+		real scalar idw, string scalar panel_id,
+		real scalar E, real scalar total_num_extras, real scalar z_e_varying_count, string scalar z_factor_var)
 {
 	real scalar force_compute, k, i
 	force_compute = force == "force" /* check whether we need to force the computation if k is too high */
@@ -2565,6 +2576,39 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 		l = k + 1 /* local library size (E+1) + itself */
 	}
 
+	string matrix zFactors
+	real scalar zFactorsSize
+	if (z_factor_var != "") {
+		zFactors = tokens(z_factor_var)
+		zFactorsSize = cols(zFactors)
+	}
+	else {
+		zFactorsSize = 0
+	}
+
+	real scalar num_x_and_dt
+	num_x_and_dt = cols(M) - total_num_extras
+
+	real matrix factorVars
+	factorVars = J(1, cols(M), 0)
+
+	real scalar ind, numLags
+	ind = num_x_and_dt + 1
+
+	for (i = 1; i <= zFactorsSize; i++) {
+		if (i <= z_e_varying_count) {
+			numLags = E
+		}
+		else {
+			numLags = 1
+		}
+		
+		for (j = 1; j <= numLags; j++) {
+			factorVars[ind] = (zFactors[i] == "1")
+			ind = ind + 1
+		}
+	}
+
 	real matrix B
 	real scalar save_mode
 	if (savesmap_vars != "") {
@@ -2580,15 +2624,17 @@ void smap_block(string scalar manifold, string scalar p_manifold, string scalar 
 	real rowvector b
 	real scalar targetPanel
 
-	for(i=1;i<=n;i++) {
-		b= Mp[i,.]
+	for(i = 1; i <= n; i++) {
+		b = Mp[i,.]
 		if (idw != 0) {
 			targetPanel = predict_panel_ids[i]
 		}
 		else {
 			targetPanel = .
 		}
-		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B, force_compute, missingdistance, idw, train_panel_ids, targetPanel)
+		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B,
+				force_compute, missingdistance, idw, train_panel_ids,
+				targetPanel, factorVars)
 	}
 }
 end
@@ -2597,7 +2643,12 @@ end
 capture mata mata drop mf_smap_single()
 mata:
 mata set matastrict on
-real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, real scalar l, real scalar theta, string scalar algorithm, real scalar save_index, real matrix Beta_smap, real scalar force_compute, real scalar missingdistance, real scalar idw, real matrix panel_ids, real scalar targetPanel)
+real scalar mf_smap_single(
+		real matrix M, real rowvector b, real colvector y, real scalar l,
+		real scalar theta, string scalar algorithm, real scalar save_index,
+		real matrix Beta_smap, real scalar force_compute, real scalar missingdistance,
+		real scalar idw, real matrix panel_ids, real scalar targetPanel,
+		real matrix factorVars)
 {
 	/* M : manifold matrix
 	 * b : the vector used for prediction
@@ -2608,18 +2659,25 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 
 	real colvector d, w, a
 	real colvector ind, v
-	real scalar i, j, k, n, r, n_ls
+	real scalar i, j, k, n, r
 	n = rows(M)
 	d = J(n, 1, .)
 
-	for(i=1;i<=n;i++) {
+	for(i = 1; i <= n; i++) {
 		if (algorithm =="smap" && (hasmissing(y[i]) | hasmissing(M[i,.]))) {
 			d[i] = .
 		} else {
-			a= M[i,.] - b
 
-			if (missingdistance !=0) {
-				a=editvalue(a,., missingdistance)
+			a = M[i,.] - b
+
+			for (j = 1; j <= cols(a); j++) {
+				if (factorVars[j]) {
+					a[j] = M[i,j] != b[j]
+				}
+			}
+			
+			if (missingdistance != 0) {
+				a = editvalue(a,. , missingdistance)
 			}
 
 			/* d is (temporarily) the squared Euclidean distance */
