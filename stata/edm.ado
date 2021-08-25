@@ -1608,7 +1608,7 @@ program define edmXmap, eclass
 
 		if !`mata_mode' {
 			// Count how many random numbers that the plugin will have used
-			local numRVs = `num_usable' * `round'
+			local numRVs = `num_usable' * `round' * `l_size'
 
 			// Burn through them in the Stata RNG so that both streams are synchronised
 			mata: burn_rvs(`numRVs')
@@ -1618,18 +1618,14 @@ program define edmXmap, eclass
 
 		forvalues rep = 1/`round' {
 
-			if `mata_mode' {
-				qui replace `u' = runiform() if `usable'
-				cap drop `urank'
-				qui egen double `urank' =rank(`u') if `usable', unique
-			}
-
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
 
 				foreach lib_size of numlist `library' {
-
 					if `mata_mode' {
+						qui replace `u' = runiform() if `usable'
+						cap drop `urank'
+						qui egen double `urank' = rank(`u') if `usable', unique
 						qui replace `train_set' = `urank' <= `lib_size' & `usable'
 					}
 
