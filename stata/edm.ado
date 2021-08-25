@@ -647,7 +647,8 @@ program define edmExplore, eclass
 		qui gen `dt_value' = .
 		mata: calculate_dt("`timevar'", "`x'", "`panel_id'", `allow_missing_mode', `tau', `predictionhorizon', ///
 				"`dt0_value'", "`dt_value'")
-		pause
+
+
 		if "`copredictvar'" != "" {
 			tempvar co_dt0_value co_dt_value
 			qui gen `co_dt0_value' = .
@@ -665,9 +666,9 @@ program define edmExplore, eclass
 
 	if `mata_mode' {
 		// Get the vector of values which we'll try to predict
-		tempvar x_f
-		tsunab future_x : f(`predictionhorizon').`x'
-		qui gen double `x_f' = `future_x' if `touse'
+		//tempvar x_f
+		//tsunab future_x : f(`predictionhorizon').`x'
+		//qui gen double `x_f' = `future_x' if `touse'
 	}
 
 	// Calculate the default value for 'dtweight'
@@ -729,20 +730,9 @@ program define edmExplore, eclass
 	local total_num_extras = `r(total_num_extras)'
 
 	if `mata_mode' {
-		local manifold_vars = ""
-		forvalues i = 1/`manifold_size' {
-			tempvar manifold_var
-			local manifold_vars = "`manifold_vars' `manifold_var'"
-		}
-		edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') ///
-			dt0_value(`dt0_value') dt_value(`dt_value') ///
-			z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
-			max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
-
-		forvalues i=1/`=`max_e'-1' {
-			local mapping_`i' = "`r(mapping_`i')'"
-		}
-		local max_e_manifold = "`r(max_e_manifold)'"
+		mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`x'", ///
+			`z_count', `z_e_varying_count', `parsed_dt', `parsed_dtw', ///
+			`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
 	}
 
 	// Choose which rows of the manifold we will use for the analysis
@@ -797,17 +787,10 @@ program define edmExplore, eclass
 		if `mata_mode' {
 			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
-			local co_manifold_vars = ""
-			forvalues i = 1/`manifold_size' {
-				tempvar co_manifold_var
-				local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
-			}
-			edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') ///
-				dt0_value(`co_dt0_value') dt_value(`co_dt_value') ///
-				z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
-			local co_mapping = "`r(max_e_manifold)'"
+			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`co_x'", ///
+				`z_count', `z_e_varying_count', `parsed_dt', `codtweight', ///
+				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
 			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
 			tempvar co_usable
@@ -917,8 +900,8 @@ program define edmExplore, eclass
 		qui gen double `x_p' = .
 	}
 
-	qui count if `usable'
-	local num_usable = r(N)
+	sum `usable', meanonly
+	local num_usable = r(sum)
 
 	if `crossfold' > 0 {
 		if `crossfold' > `num_usable' / `max_e' {
@@ -1548,27 +1531,9 @@ program define edmXmap, eclass
 		local total_num_extras = `r(total_num_extras)'
 
 		if `mata_mode' {
-			local manifold_vars = ""
-			forvalues i = 1/`manifold_size' {
-				tempvar manifold_var
-				local manifold_vars = "`manifold_vars' `manifold_var'"
-			}
-			edmConstructManifolds `manifold_vars' , x(`x') t(`timevar') touse(`touse') ///
-				dt0_value(`dt0_value') dt_value(`dt_value') ///
-				z_vars("`z_vars'") z_e_varying_count(`z_e_varying_count') ///
-				max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`parsed_dtw') p(`predictionhorizon')
-
-			forvalues i=1/`=`max_e'-1' {
-				local mapping_`i' = "`r(mapping_`i')'"
-			}
-			local max_e_manifold = "`r(max_e_manifold)'"
-		}
-
-		if `mata_mode' {
-			// Get the vector of values which we'll try to predict
-			tempvar x_f
-			tsunab future_y : f(`predictionhorizon').`y'
-			qui gen double `x_f' = `future_y' if `touse'
+			mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`y'", ///
+				`z_count', `z_e_varying_count', `parsed_dt', `parsed_dtw', ///
+				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
 		}
 
 		// Select the rows which we'll use in the analysis
@@ -1620,17 +1585,10 @@ program define edmXmap, eclass
 			if `mata_mode' {
 				// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
 				local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
-				local co_manifold_vars = ""
-				forvalues i = 1/`manifold_size' {
-					tempvar co_manifold_var
-					local co_manifold_vars = "`co_manifold_vars' `co_manifold_var'"
-				}
-				edmConstructManifolds `co_manifold_vars' , x(`co_x') t(`timevar') touse(`touse') ///
-					dt0_value(`co_dt0_value') dt_value(`co_dt_value') ///
-					z_vars("`co_z_vars'") z_e_varying_count(`co_z_e_varying_count') ///
-					max_e(`max_e') tau(`tau') dt(`parsed_dt') dt0(`parsed_dt0') dtw(`codtweight') p(`predictionhorizon')
 
-				local co_mapping = "`r(max_e_manifold)'"
+				mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`y'", ///
+					`z_count', `z_e_varying_count', `parsed_dt', `codtweight', ///
+					`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
 				// Generate the same way as `usable', though don't insist on `x_f' being accessible.
 				tempvar co_usable
@@ -1761,8 +1719,8 @@ program define edmXmap, eclass
 		}
 
 		// Set the default library size to be the number of usable observations.
-		qui count if `usable'
-		local num_usable = r(N)
+		sum `usable', meanonly
+		local num_usable = r(sum)
 
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
 			local library = `num_usable'
@@ -2430,7 +2388,8 @@ end
 capture mata mata drop observation_numbers()
 mata:
 mata set matastrict on
-real matrix observation_numbers(real matrix t, real matrix x, real scalar allow_missing_mode)
+real matrix observation_numbers(real matrix t, real matrix x,
+		real scalar allow_missing_mode, real scalar dtMode)
 {
 	real matrix obsNum
 
@@ -2440,16 +2399,35 @@ real matrix observation_numbers(real matrix t, real matrix x, real scalar allow_
 
 	obsNum = J(n, 1, .)
 
-	for(i=1;i<=n;i++) {
-		if (t[i] != . && (allow_missing_mode || x[i] != .)) {
-			obsNum[i] = obs
-			obs = obs + 1
-		}
-		else {
-			obsNum[i] = .
+	if (dtMode) {
+		for(i=1; i<=n; i++) {
+			if (t[i] != . && (allow_missing_mode || x[i] != .)) {
+				obsNum[i] = obs
+				obs = obs + 1
+			}
+			else {
+				obsNum[i] = .
+			}
 		}
 	}
+	else {
+		real matrix dt
+		real scalar minDT
 
+		dt = t[2..rows(t)] :- t[1..rows(t)-1]
+		minDT = min(dt)
+
+		tScaled = (t :- min(t)) :/ minDT
+
+		for(i = 1; i <= n; i++) {
+			if (t[i] != .) {
+				obsNum[i] = round(tScaled[i])
+			}
+			else {
+				obsNum[i] = .
+			}
+		}
+	}
 	return(obsNum)
 }
 end
@@ -2458,7 +2436,8 @@ end
 capture mata mata drop find_obs_num()
 mata:
 mata set matastrict on
-real scalar find_obs_num(real matrix obsNum, real scalar target, real scalar start, real scalar direction, real scalar panelMode, real matrix panel)
+real scalar find_obs_num(real matrix obsNum, real scalar target, real scalar start,
+		real scalar direction, real scalar panelMode, real matrix panel)
 {
 	real scalar i, nobs
 
@@ -2497,7 +2476,7 @@ void calculate_dt(
 	st_view(t, ., timeVar, .)
 	st_view(x, ., xVar, .)
 
-	obsNum = observation_numbers(t, x, allow_missing_mode)
+	obsNum = observation_numbers(t, x, allow_missing_mode, 1)
 
 	if (panelVar != "") {
 		panelMode = 1
@@ -2545,6 +2524,186 @@ void calculate_dt(
 }
 end
 
+
+capture mata mata drop construct_manifold()
+mata:
+mata set matastrict on
+void construct_manifold(
+		string scalar touse, string scalar panelVar,
+		string scalar xVar, string scalar timeVar, string scalar zStr, string scalar target,
+		real scalar numExtras, numEExtras, real scalar dtMode, real scalar dtw,
+		real scalar E, real scalar tau, real scalar p,
+		real scalar allow_missing_mode, real scalar copredict_mode)
+{
+
+	string rowvector zVarsSplit
+	real scalar numUnlaggedExtras
+
+	zStr = strtrim(zStr)
+	zVarsSplit = tokens(zStr)
+
+	numUnlaggedExtras = numExtras - numEExtras
+
+	real scalar k
+
+	// for (k = 1; k <= numEExtras; k++) {
+	//   zVarsSplit[k] = substr(zVarsSplit[k], 1, strpos(zVarsSplit[k], "(e)")-1)
+	//}
+
+	real matrix t, x, obsNum, panel, zVars, yTS
+	real scalar panelMode
+
+	st_view(t, ., timeVar, touse)
+	st_view(x, ., xVar, touse)
+	st_view(zVars, ., zVarsSplit, touse)
+	st_view(yTS, ., target, touse)
+
+	obsNum = observation_numbers(t, x, allow_missing_mode, dtMode)
+
+	if (panelVar != "") {
+		panelMode = 1
+		st_view(panel, ., panelVar, touse)
+	}
+	else {
+		panelMode = 0
+		panel = .
+	}
+
+	// Create temporary variables to hold the manifold, and
+	// create matrix views to be able to populate the variables.
+	string rowvector xLagNames, dtLagNames, eextraLagNames, extraNames
+	real matrix xLags, dtLags, eextraLags, extras
+
+	xLagNames = st_tempname(E)
+	st_view(xLags, ., st_addvar("double", xLagNames), touse)
+
+	dtLagNames = st_tempname(dtMode * E)
+	st_view(dtLags, ., st_addvar("double", dtLagNames), touse)
+
+	eextraLagNames = st_tempname(numEExtras * E)
+	st_view(eextraLags, ., st_addvar("double", eextraLagNames), touse)
+
+	extraNames = st_tempname(numUnlaggedExtras)
+	st_view(extras, ., st_addvar("double", extraNames), touse)
+
+	// Start generating the manifold point-by-point.
+	real scalar n, i, ii, targetInd, j, col
+	n = rows(t)
+
+	real matrix y
+	yName = st_tempname()
+	st_view(y, ., st_addvar("double", yName), touse)
+	y[.] = J(n, 1, .)
+
+	real rowvector laggedIndices
+	real scalar tNowInd, tNextInd
+
+	for(i = 1; i <= n; i++) {
+		if (obsNum[i] == .) {
+			continue
+		}
+
+		// Go forward by 'p' to find the time of the corresponding target.
+		targetInd = find_obs_num(obsNum, obsNum[i] + p, i, p / abs(p), panelMode, panel)
+		if (targetInd != .) {
+			y[i] = yTS[targetInd]
+		}
+
+		laggedIndices = J(1, E, .)
+
+		for(j = 1; j <= E; j++) {
+			laggedIndices[j] = find_obs_num(obsNum, obsNum[i] - (j-1)*tau, i, -1, panelMode, panel)
+		}
+
+		for(j = 1; j <= E; j++) {
+			if (laggedIndices[j] != .) {
+				xLags[i, j] = x[laggedIndices[j]]
+			}
+		}
+
+		for(j = 1; j <= dtMode * E; j++) {
+			if (j == 1) {
+				if (targetInd != .) {
+					dtLags[i, 1] = dtw * (t[targetInd] - t[i])
+				}
+				else {
+					dtLags[i, 1] = .
+				}
+			}
+			else {
+				// For all other 'dt', we go backward to find the distance between
+				// this observation and the tau-previous one.
+				tNextInd = laggedIndices[j - 1];
+			    tNowInd = laggedIndices[j];
+
+				if (tNextInd != . && tNowInd != .) {
+					dtLags[i, j] = dtw * (t[tNextInd] - t[tNowInd])
+				}
+				else {
+					dtLags[i, j] = .
+				}
+			}
+		}
+
+		col = 0
+		for (k = 1; k <= numEExtras; k++) {
+			for(j = 1; j <= E; j++) {
+				if (laggedIndices[j] != .) {
+					eextraLags[i, col + j] = zVars[laggedIndices[j], k]
+				}
+			}
+			col = col + E
+		}
+
+		for (k = 1; k <= numUnlaggedExtras; k++) {
+			extras[i, k] = zVars[i, numEExtras + k]
+		}
+	}
+
+	// Put the manifolds together
+	string scalar mani, maniName
+	real scalar sE
+
+	for(i = 1; i <= E-1; i++) {
+		if (i < E-1 && copredict_mode) {
+			continue;
+		}
+
+		sE = i + 1
+
+		mani = invtokens(xLagNames[1..sE])
+
+		if (dtMode) {
+			mani = mani + " " + invtokens(dtLagNames[1..sE])
+		}
+
+		col = 0
+		for (k = 0; k < numEExtras; k++) {
+			mani = mani + " " + invtokens(eextraLagNames[col+1..col+sE])
+			col = col + E
+		}
+
+		if (numUnlaggedExtras > 0) {
+			mani = mani + " " + invtokens(extraNames)
+		}
+
+		if (!copredict_mode) {
+			maniName = sprintf("mapping_%f", i)
+			st_local(maniName, mani)
+		}
+	}
+
+
+	if (!copredict_mode) {
+		st_local("max_e_manifold", mani)
+		st_local("x_f", yName)
+	}
+	else {
+		st_local("co_mapping", mani)
+		st_local("co_x_f", yName)
+	}
+}
+end
 
 capture mata mata drop smap_block()
 mata:
@@ -2661,6 +2820,7 @@ real scalar mf_smap_single(real matrix M, real rowvector b, real colvector y, re
 	}
 
 	minindex(d, l, ind, v)
+
 	// create weights for each point in the library
 
 	// find the smallest non-zero distance
