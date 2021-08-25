@@ -71,9 +71,10 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
   {
     // TODO: This test is a bit fake; edm.ado would not allow dt to be
     // applied when there's no gaps in the time variable.
-    bool dtWeight = 1.0;
+    bool dtMode = true;
+    double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
 
@@ -84,7 +85,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     REQUIRE(usable[3] ==
             false); // Not letting the last point be usable because y(end) is missing & because dt0 is missing
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
 
     REQUIRE(M.nobs() == 2);
     REQUIRE(M.ySize() == 2);
@@ -136,9 +137,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
   SECTION("dt")
   {
-    bool dtWeight = 1.0;
+    bool dtMode = true;
+    double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
 
     std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
@@ -155,7 +157,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     REQUIRE(usable[4] == true);
     REQUIRE(usable[5] == false); // dt0 and y is missing
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
 
     REQUIRE(M.nobs() == 3);
     REQUIRE(M.ySize() == 3);
@@ -170,9 +172,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
   SECTION("dt and allowingmissing")
   {
-    bool dtWeight = 1.0;
+    bool dtMode = true;
+    double dtWeight = 1.0;
     bool allowMissing = true;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
 
     std::vector<int> obsNums = { 0, 1, 2, 3, 4, 5 };
     for (int i = 0; i < obsNums.size(); i++) {
@@ -189,7 +192,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     REQUIRE(usable[4] == true);
     REQUIRE(usable[5] == false); // y is missing
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
 
     REQUIRE(M.nobs() == 4);
     REQUIRE(M.ySize() == 4);
@@ -215,9 +218,10 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 
   SECTION("Allowing missing values")
   {
-    bool dtWeight = 1.0;
+    bool dtMode = true;
+    double dtWeight = 1.0;
     bool allowMissing = true;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
@@ -228,7 +232,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     REQUIRE(usable[4] == true);
     REQUIRE(usable[5] == false); // y is missing
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
 
     REQUIRE(M.nobs() == 4);
     REQUIRE(M.ySize() == 4);
@@ -248,9 +252,10 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 
   SECTION("Not allowing missing values")
   {
-    bool dtWeight = 1.0;
+    bool dtMode = true;
+    double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtWeight, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
     REQUIRE(usable.size() == 6);
@@ -261,7 +266,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     REQUIRE(usable[4] == true);
     REQUIRE(usable[5] == false); // dt0 and y is missing
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
 
     REQUIRE(M.nobs() == 2);
     REQUIRE(M.ySize() == 2);

@@ -658,7 +658,7 @@ program define edmExplore, eclass
 		}
 
 		if !inlist("`parsed_dtsave'","",".") {
-			clonevar `parsed_dtsave' = `dt_value'
+			qui clonevar `parsed_dtsave' = `dt_value'
 			qui label variable `parsed_dtsave' "Time delta (`timevar')"
 		}
 
@@ -872,9 +872,6 @@ program define edmExplore, eclass
 				local manifold_vars = "`manifold_vars' `savemanifold'_`ii'"
 			}
 		}
-
-		* di "about to call `timevar' `x' `x' `z_vars' `usable' `co_x' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars'"
-		* pause
 
 		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
@@ -1497,7 +1494,7 @@ program define edmXmap, eclass
 			}
 
 			if !inlist("`parsed_dtsave'","",".") {
-				clonevar `parsed_dtsave' = `dt_value'
+				qui clonevar `parsed_dtsave' = `dt_value'
 				qui label variable `parsed_dtsave' "Time delta (`timevar')"
 			}
 		}
@@ -1672,8 +1669,6 @@ program define edmXmap, eclass
 					local manifold_vars = "`manifold_vars' `savemanifold'`direction_num'_`ii'"
 				}
 			}
-			* di "about to call `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars'"
-			* pause
 
 			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///

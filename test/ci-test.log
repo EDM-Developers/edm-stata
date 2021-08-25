@@ -4192,7 +4192,6 @@ Note: The embedding dimension E is 7 (including 4 extras)
 Note: Embedding includes the delta of the time variable with a weight of .65
 
 . edm xmap x y, e(3) extra(u1) allowmissing dt alg(smap) oneway dtsave(mata) mata
-(6 missing values generated)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -4245,7 +4244,6 @@ Note: Embedding includes the delta of the time variable with a weight of 1
 . set seed 1
 
 . edm explore x, e(3) extra(u1) dt alg(smap) dtsave(matanomissing) mata dtweight(1) predict(predmata)
-(20 missing values generated)
 
 Empirical Dynamic Modelling
 Multivariate mapping with x and its lag values
@@ -4314,7 +4312,6 @@ Note: Random 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .65
 
 . edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(mata) mata
-(6 missing values generated)
 
 Empirical Dynamic Modelling
 Multivariate mapping with x and its lag values
