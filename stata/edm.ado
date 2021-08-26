@@ -763,6 +763,11 @@ program define edmExplore, eclass
 
 		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 		// Instead, just save it as a local and have the plugin read it using the Stata C API.
+		local originalRNG = "`c(rng)'"
+		if ("`originalRNG'" != "default") | ("`originalRNG'" != "mt64") {
+			set rng mt64
+		}
+
 		local rngstate = c(rngstate)
 
 		if "`parsed_dtsave'" != "" {
@@ -861,6 +866,8 @@ program define edmExplore, eclass
 
 		// Burn through them in the Stata RNG so that both streams are synchronised
 		mata: burn_rvs(`numRVs')
+
+		set rng `originalRNG'
 	}
 
 	forvalues t=1/`round' {
@@ -1523,6 +1530,11 @@ program define edmXmap, eclass
 
 			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
 			// Instead, just save it as a local and have the plugin read it using the Stata C API.
+			local originalRNG = "`c(rng)'"
+			if ("`originalRNG'" != "default") | ("`originalRNG'" != "mt64") {
+				set rng mt64
+			}
+
 			local rngstate = c(rngstate)
 
 			if "`parsed_dtsave'" != "" {
@@ -1617,6 +1629,8 @@ program define edmXmap, eclass
 
 			// Burn through them in the Stata RNG so that both streams are synchronised
 			mata: burn_rvs(`numRVs')
+
+			set rng `originalRNG'
 		}
 
 		qui gen double `u' = .

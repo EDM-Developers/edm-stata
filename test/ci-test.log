@@ -5333,15 +5333,153 @@ Note: Embedding includes the delta of the time variable with a weight of .58
 
 . 
 . 
-. // How to handle when the user has a different random number generator selected
+. // Make sure the plugin doesn't crash if the user has a different random number generator selected.
+. set rng mt64
+
+. set seed 1
+
+. 
 . set rng kiss32
 
 . 
 . set seed 1
 
 . edm explore x, e(5)
-invalid string position
-r(8000);
 
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .87492          .10616 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set rng mt64
+
+. set seed 1
+
+. 
+. set rng default
+
+. 
+. set seed 1
+
+. edm explore x, e(5)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set rng mt64
+
+. set seed 1
+
+. 
+. set rng mt64
+
+. 
+. set seed 1
+
+. edm explore x, e(5)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
+. set rng mt64
+
+. set seed 1
+
+. 
+. set rng mt64s
+
+. 
+. set seed 1
+
+. edm explore x, e(5)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. set seed 1
+
+. edm explore x, e(5) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1          .81441         .098325 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. 
 end of do-file
-r(8000);

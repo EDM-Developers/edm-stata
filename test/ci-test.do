@@ -576,7 +576,10 @@ set seed 2
 edm explore x, e(5) idw(-1) reldt allowmissing mata
 
 
-// How to handle when the user has a different random number generator selected
+// Make sure the plugin doesn't crash if the user has a different random number generator selected.
+set rng mt64
+set seed 1
+
 set rng kiss32
 
 set seed 1
@@ -584,6 +587,8 @@ edm explore x, e(5)
 set seed 1
 edm explore x, e(5) mata
 
+set rng mt64
+set seed 1
 
 set rng default
 
@@ -593,11 +598,17 @@ set seed 1
 edm explore x, e(5) mata
 
 set rng mt64
+set seed 1
+
+set rng mt64
 
 set seed 1
 edm explore x, e(5)
 set seed 1
 edm explore x, e(5) mata
+
+set rng mt64
+set seed 1
 
 set rng mt64s
 
