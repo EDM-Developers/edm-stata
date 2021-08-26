@@ -414,10 +414,10 @@ program define edmExplore, eclass
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
 			[PRedict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
 			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
-			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
+			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
 			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
-			[distance(string)] [metrics(string)] [idw(real 0)] [cumdt(integer 0)] [wassdt(integer 1)]
+			[distance(string)] [metrics(string)] [idw(real 0)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -543,7 +543,8 @@ program define edmExplore, eclass
 		}
 	}
 
-	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt") | ("`reldt'" == "reldt")
+	local parsed_reldt = ("`reldt'" == "reldt")
 	local parsed_dt0 = ("`olddt'" != "olddt")
 	local parsed_dtw = "`dtweight'"
 
@@ -661,7 +662,7 @@ program define edmExplore, eclass
 
 	if `mata_mode' {
 		mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`x'", ///
-			`z_count', `z_e_varying_count', `parsed_dt', `parsed_dtw', ///
+			`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
 			`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
 	}
 
@@ -709,7 +710,7 @@ program define edmExplore, eclass
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`co_x'", ///
-				`z_count', `z_e_varying_count', `parsed_dt', `codtweight', ///
+				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `codtweight', ///
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
 			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
@@ -785,7 +786,7 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
 
 		local missingdistance = `missing_dist_used'
 
@@ -1100,10 +1101,10 @@ program define edmXmap, eclass
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
 			[SAVEsmap(string)] [DETails] [DIrection(string)] [PRedict(name)] [CI(integer 0)] ///
 			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
-			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [DTWeight(real 0)] [DTSave(name)] ///
+			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
-			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)] [cumdt(integer 0)]
+			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -1283,7 +1284,8 @@ program define edmXmap, eclass
 		}
 	}
 
-	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt")
+	local parsed_dt = ("`dt'" == "dt") | ("`olddt'" == "olddt") | ("`reldt'" == "reldt")
+	local parsed_reldt = ("`reldt'" == "reldt")
 	local parsed_dt0 = ("`olddt'" != "olddt")
 
 	if "`dtsave'" != ""{
@@ -1421,7 +1423,7 @@ program define edmXmap, eclass
 
 		if `mata_mode' {
 			mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`y'", ///
-				`z_count', `z_e_varying_count', `parsed_dt', `parsed_dtw', ///
+				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
 		}
 
@@ -1465,7 +1467,7 @@ program define edmXmap, eclass
 				local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 				mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`y'", ///
-					`z_count', `z_e_varying_count', `parsed_dt', `codtweight', ///
+					`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `codtweight', ///
 					`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
 				// Generate the same way as `usable', though don't insist on `x_f' being accessible.
@@ -1543,7 +1545,7 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`cumdt'" "`wassdt'" "`predictionhorizon'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 
@@ -2370,7 +2372,7 @@ mata set matastrict on
 void construct_manifold(
 		string scalar touse, string scalar panelVar,
 		string scalar xVar, string scalar timeVar, string scalar zStr, string scalar target,
-		real scalar numExtras, numEExtras, real scalar dtMode, real scalar dtw,
+		real scalar numExtras, numEExtras, real scalar dtMode, real scalar reldt, real scalar dtw,
 		real scalar E, real scalar tau, real scalar p,
 		real scalar allow_missing_mode, real scalar copredict_mode)
 {
@@ -2458,12 +2460,14 @@ void construct_manifold(
 		}
 
 		for(j = 1; j <= dtMode * E; j++) {
-			if (j == 1) {
-				if (targetInd != .) {
-					dtLags[i, 1] = dtw * (t[targetInd] - t[i])
+			if (j == 1 || reldt) {
+				tNowInd = laggedIndices[j];
+
+				if (targetInd != . && tNowInd != .) {
+					dtLags[i, j] = dtw * (t[targetInd] - t[tNowInd])
 				}
 				else {
-					dtLags[i, 1] = .
+					dtLags[i, j] = .
 				}
 			}
 			else {

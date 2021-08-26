@@ -350,7 +350,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int numExtrasLagged = atoi(argv[22]);
   opts.idw = atof(argv[23]);
   opts.panelMode = atoi(argv[24]);
-  bool cumulativeDT = atoi(argv[25]);
+  bool reldt = atoi(argv[25]);
   bool wassDT = atoi(argv[26]);
   int p = atoi(argv[27]);
 
@@ -487,7 +487,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     if (wassDT && !dtMode) {
       opts.dtWeight = 1.0;
       dt0 = true;
-      cumulativeDT = true;
+      reldt = true;
     }
   }
 
@@ -499,8 +499,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (dtMode && opts.dtWeight == 0.0) {
     // If we have to set the default 'dt' weight, then make a manifold with dtweight of 1 then
     // we can rescale this by the appropriate variances in the future.
-    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0,
-                                        cumulativeDT, allowMissing);
+    // TODO: How would we change this for 'reldt'?
+    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0, false,
+                                        allowMissing);
     double DT_WEIGHT = 1.0;
     Manifold manifold = dtgenerator.create_manifold(maxE, {}, false, false, DT_WEIGHT);
     std::vector<double> dts(manifold.nobs());
@@ -515,8 +516,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   SF_macro_save(DTW_USED, (char*)fmt::format("{}", opts.dtWeight).c_str());
 
-  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0,
-                                    cumulativeDT, allowMissing);
+  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0, reldt,
+                                    allowMissing);
 
   // Save some variables back to Stata, like usable, and the manifold (if savemanifold) or the dt (if dtsave).
   // Start by generating the 'usable' variable.

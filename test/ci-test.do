@@ -583,3 +583,25 @@ set seed 1
 edm explore x, e(5)
 set seed 1
 edm explore x, e(5) mata
+
+
+set rng default
+
+set seed 1
+edm explore x, e(5)
+set seed 1
+edm explore x, e(5) mata
+
+set rng mt64
+
+set seed 1
+edm explore x, e(5)
+set seed 1
+edm explore x, e(5) mata
+
+set rng mt64s
+
+set seed 1
+edm explore x, e(5)
+set seed 1
+edm explore x, e(5) mata

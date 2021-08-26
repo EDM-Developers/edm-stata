@@ -49,7 +49,7 @@ double ManifoldGenerator::calculate_time_increment() const
 
 void ManifoldGenerator::setup_observation_numbers()
 {
-  if (!_use_dt) {
+  if (!_dt) {
     // In normal situations (non-dt)
     double unit = calculate_time_increment();
     double minT = *std::min_element(_t.begin(), _t.end());
@@ -241,31 +241,25 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
     }
   }
 
-  // TODO: Need to add back in the _cumulative_dt option
-
   // Put the lagged embedding of dt in the next columns
-  if (_use_dt) {
-    // The first dt value is a bit special as it is relative to the
-    // time of the corresponding y prediction.
-    if (_p == 0) {
-      point[E + 0] = 0; // Special case for contemporaneous predictions.
-    } else {
-      double tNow = lookup_vec(_t, 0);
-      if (tNow != MISSING && targetIndex >= 0) {
-        double tPred = _t[targetIndex];
-        point[E + 0] = dtWeight * (tPred - tNow);
-      } else {
-        point[E + 0] = MISSING;
-      }
-    }
+  if (_dt) {
+    double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING;
 
-    for (int j = 1; j < E_dt(E); j++) {
-      double tNext = lookup_vec(_t, j - 1);
+    for (int j = 0; j < E_dt(E); j++) {
       double tNow = lookup_vec(_t, j);
-      if (tNext != MISSING && tNow != MISSING) {
-        point[E + j] = dtWeight * (tNext - tNow);
+      if (j == 0 || _reldt) {
+        if (tNow != MISSING && tPred != MISSING) {
+          point[E + j] = dtWeight * (tPred - tNow);
+        } else {
+          point[E + j] = MISSING;
+        }
       } else {
-        point[E + j] = MISSING;
+        double tNext = lookup_vec(_t, j - 1);
+        if (tNext != MISSING && tNow != MISSING) {
+          point[E + j] = dtWeight * (tNext - tNow);
+        } else {
+          point[E + j] = MISSING;
+        }
       }
     }
   }
@@ -334,9 +328,9 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
 
 void to_json(json& j, const ManifoldGenerator& g)
 {
-  j = json{ { "_use_dt", g._use_dt },
-            { "_add_dt0", g._add_dt0 },
-            { "_cumulative_dt", g._cumulative_dt },
+  j = json{ { "_dt", g._dt },
+            { "_dt0", g._dt0 },
+            { "_reldt", g._reldt },
             { "_panel_mode", g._panel_mode },
             { "_xmap_mode", g._xmap_mode },
             { "_tau", g._tau },
@@ -354,9 +348,9 @@ void to_json(json& j, const ManifoldGenerator& g)
 
 void from_json(const json& j, ManifoldGenerator& g)
 {
-  j.at("_use_dt").get_to(g._use_dt);
-  j.at("_add_dt0").get_to(g._add_dt0);
-  j.at("_cumulative_dt").get_to(g._cumulative_dt);
+  j.at("_dt").get_to(g._dt);
+  j.at("_dt0").get_to(g._dt0);
+  j.at("_reldt").get_to(g._reldt);
   j.at("_panel_mode").get_to(g._panel_mode);
   j.at("_xmap_mode").get_to(g._xmap_mode);
   j.at("_tau").get_to(g._tau);

@@ -205,6 +205,41 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
   }
+
+  SECTION("reldt")
+  {
+    bool dtMode = true, reldtMode = true;
+    double dtWeight = 1.0;
+    bool allowMissing = false;
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, reldtMode, allowMissing);
+
+    std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
+    for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
+      REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+    }
+
+    std::vector<bool> usable = generator.generate_usable(E);
+    REQUIRE(usable.size() == 6);
+    REQUIRE(usable[0] == false); // x.at(-1) missing and nothing before it to bring forward
+    REQUIRE(usable[1] == true);
+    REQUIRE(usable[2] == false); // x is missing (can be skipped over in next point)
+    REQUIRE(usable[3] == true);
+    REQUIRE(usable[4] == true);
+    REQUIRE(usable[5] == false); // dt0 and y is missing
+
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+
+    REQUIRE(M.nobs() == 3);
+    REQUIRE(M.ySize() == 3);
+    REQUIRE(M.E_actual() == 4);
+
+    std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 2.0, 3.5 },
+                                                { 14.0, 12.0, 0.5, 2.5 },
+                                                { 15.0, 14.0, 1.0, 1.5 } };
+    std::vector<double> y_true = { 14.0, 15.0, 16.0 };
+    require_manifolds_match(M, M_true, y_true);
+  }
 }
 
 TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]")

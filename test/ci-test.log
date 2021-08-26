@@ -5193,8 +5193,155 @@ Note: Random 50/50 split for training and validation data
 . set seed 1
 
 . edm explore x, e(5) reldt
-option reldt not allowed
-r(198);
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .84753         .086909 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 1
+
+. edm explore x, e(5) reldt mata
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .84753         .086909 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 1
+
+. edm explore x, e(5) reldt allowmissing
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+Missing values are assumed to have a distance of .24 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .72988          .10056 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 1
+
+. edm explore x, e(5) reldt allowmissing mata
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+Missing values are assumed to have a distance of .24 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .72988          .10056 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. 
+. set seed 2
+
+. edm explore x, e(5) idw(-1) reldt
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .71404          .11786 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) reldt mata
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .71404          .11786 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) reldt allowmissing
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+Missing values are assumed to have a distance of .24 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .69365          .12747 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. set seed 2
+
+. edm explore x, e(5) idw(-1) reldt allowmissing mata
+
+Empirical Dynamic Modelling
+Multivariate mapping with x and its lag values
+Additional variables in the embedding: (time delta)
+Missing values are assumed to have a distance of .24 with all values.
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                10               1          .69365          .12747 
+--------------------------------------------------------------------
+Note: Actual E is higher than the specified E due to extras
+Note: Number of neighbours (k) is set to E+6
+Note: Random 50/50 split for training and validation data
+Note: Embedding includes the delta of the time variable with a weight of .58
+
+. 
+. 
+. // How to handle when the user has a different random number generator selected
+. set rng kiss32
+
+. 
+. set seed 1
+
+. edm explore x, e(5)
+invalid string position
+r(8000);
 
 end of do-file
-r(198);
+r(8000);
