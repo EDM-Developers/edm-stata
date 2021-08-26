@@ -474,7 +474,7 @@ qui {
     }
 }
 
-gen id = _n > _N / 2
+gen id = _n > _N / 3
 xtset id t
 
 
@@ -550,3 +550,36 @@ set seed 2
 edm explore x, e(5) idw(-1) allowmissing
 set seed 2
 edm explore x, e(5) idw(-1) allowmissing mata
+
+set seed 3
+edm explore x, e(5) idw(-1) k(-1)
+set seed 3
+edm explore x, e(5) idw(-1) k(-1) mata
+
+// See if the relative dt flags work
+set seed 1
+edm explore x, e(5) reldt
+set seed 1
+edm explore x, e(5) reldt mata
+set seed 1
+edm explore x, e(5) reldt allowmissing
+set seed 1
+edm explore x, e(5) reldt allowmissing mata
+
+set seed 2
+edm explore x, e(5) idw(-1) reldt
+set seed 2
+edm explore x, e(5) idw(-1) reldt mata
+set seed 2
+edm explore x, e(5) idw(-1) reldt allowmissing
+set seed 2
+edm explore x, e(5) idw(-1) reldt allowmissing mata
+
+
+// How to handle when the user has a different random number generator selected
+set rng kiss32
+
+set seed 1
+edm explore x, e(5)
+set seed 1
+edm explore x, e(5) mata

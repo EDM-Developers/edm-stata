@@ -4771,11 +4771,11 @@ Time variable: t, 1 to 100
 . qui {
 
 . 
-. gen id = _n > _N / 2
+. gen id = _n > _N / 3
 
 . xtset id t
 
-Panel variable: id (weakly balanced)
+Panel variable: id (unbalanced)
  Time variable: t, 1 to 100
          Delta: 1 unit
 
@@ -4805,9 +4805,9 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .97379          .12403 
+                40               1          .94798          .11217 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+-30
+Note: Number of neighbours (k) is set to E+-27
 Note: Random 50/50 split for training and validation data
 
 . set seed 1
@@ -4819,9 +4819,9 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .97379          .12403 
+                40               1          .94798          .11217 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+-30
+Note: Number of neighbours (k) is set to E+-27
 Note: Random 50/50 split for training and validation data
 
 . set seed 1
@@ -4834,7 +4834,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .82997          .11779 
+                40               1          .84825             .12 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4849,7 +4849,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .82997          .11779 
+                40               1          .84825             .12 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4864,9 +4864,9 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .89117          .10737 
+                40               1          .89047         .081137 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+-30
+Note: Number of neighbours (k) is set to E+-27
 Note: Random 50/50 split for training and validation data
 
 . set seed 2
@@ -4878,9 +4878,9 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .89117          .10737 
+                40               1          .89047         .081137 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+-30
+Note: Number of neighbours (k) is set to E+-27
 Note: Random 50/50 split for training and validation data
 
 . set seed 2
@@ -4893,7 +4893,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .72467          .12731 
+                40               1           .6653          .13894 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4908,7 +4908,7 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .72467          .12731 
+                40               1           .6653          .13894 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -4924,8 +4924,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              22          .58293           .1436 
-   x ~ x|M(y)              22          .82724          .14766 
+   y ~ y|M(x)              28          .76444          .11569 
+   x ~ x|M(y)              28          .83836          .16008 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -4939,8 +4939,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              22          .58293           .1436 
-   x ~ x|M(y)              22          .82724          .14766 
+   y ~ y|M(x)              28          .76444          .11569 
+   x ~ x|M(y)              28          .83836          .16008 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -4954,8 +4954,8 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             100          .64241          .13023 
-   x ~ x|M(y)             100          .82638          .10415 
+   y ~ y|M(x)             100          .63174          .13155 
+   x ~ x|M(y)             100          .81394          .11201 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -4969,8 +4969,8 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             100          .64241          .13023 
-   x ~ x|M(y)             100          .82638          .10415 
+   y ~ y|M(x)             100          .63174          .13155 
+   x ~ x|M(y)             100          .81394          .11201 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -4985,8 +4985,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              22           .5282          .15148 
-   x ~ x|M(y)              22           .4989          .16938 
+   y ~ y|M(x)              28          .76444          .11569 
+   x ~ x|M(y)              28          .83836          .16008 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -5000,8 +5000,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              22           .5282          .15148 
-   x ~ x|M(y)              22           .4989          .16938 
+   y ~ y|M(x)              28          .76444          .11569 
+   x ~ x|M(y)              28          .83836          .16008 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -5015,8 +5015,8 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             100          .59469          .13713 
-   x ~ x|M(y)             100          .77555          .15126 
+   y ~ y|M(x)             100          .55937          .13962 
+   x ~ x|M(y)             100          .75815          .13196 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -5030,8 +5030,8 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)             100          .59469          .13713 
-   x ~ x|M(y)             100          .77555          .15126 
+   y ~ y|M(x)             100          .55937          .13962 
+   x ~ x|M(y)             100          .75815          .13196 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 40
 
@@ -5051,7 +5051,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1           .8789          .10988 
+                 5               1          .81441         .098325 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5065,7 +5065,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1           .8789          .10988 
+                 5               1          .81441         .098325 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5080,7 +5080,7 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .91075         .071763 
+                 5               1          .92504         .064149 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5095,7 +5095,7 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .91075         .071763 
+                 5               1          .92504         .064149 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5110,7 +5110,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .74406          .11602 
+                 5               1          .92599          .12301 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5124,7 +5124,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .74406          .11602 
+                 5               1          .92599          .12301 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5139,7 +5139,7 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .87037         .076075 
+                 5               1          .89011         .068362 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
@@ -5154,10 +5154,47 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .87037         .076075 
+                 5               1          .89011         .068362 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
 . 
+. set seed 3
+
+. edm explore x, e(5) idw(-1) k(-1)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1         -.20844          .20224 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is adjusted to 6
+Note: Random 50/50 split for training and validation data
+
+. set seed 3
+
+. edm explore x, e(5) idw(-1) k(-1) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 5               1         -.20844          .20224 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is adjusted to 6
+Note: Random 50/50 split for training and validation data
+
+. 
+. // See if the relative dt flags work
+. set seed 1
+
+. edm explore x, e(5) reldt
+option reldt not allowed
+r(198);
+
 end of do-file
+r(198);

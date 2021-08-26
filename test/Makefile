@@ -15,3 +15,6 @@ format:
 
 test:
 	cd .. && make test && make install
+
+install:
+	cd .. && make install

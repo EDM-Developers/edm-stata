@@ -236,6 +236,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   Eigen::Map<MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
+  std::fill_n(rc.get(), numThetas * numPredictions, UNKNOWN_ERROR);
   Eigen::Map<MatrixXi> rcView(rc.get(), numThetas, numPredictions);
 
   std::vector<int> kUsed;
@@ -386,6 +387,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
   // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
   if (keep_going != nullptr && keep_going() == false) {
+    rc(0, Mp_i) = BREAK_HIT;
     return;
   }
 
@@ -400,6 +402,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (keep_going != nullptr && keep_going() == false) {
+    rc(0, Mp_i) = BREAK_HIT;
     return;
   }
 
@@ -410,9 +413,6 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (k > numValidDistances) {
     if (opts.forceCompute) {
       k = numValidDistances;
-      if (k == 0) {
-        return;
-      }
     } else {
       rc(0, Mp_i) = INSUFFICIENT_UNIQUE;
       return;
@@ -420,7 +420,9 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (k == 0) {
-    rc(0, Mp_i) = SUCCESS;
+    // Whether we throw an error or just silently ignore this prediction
+    // depends on whether we are in 'strict' mode or not.
+    rc(0, Mp_i) = opts.forceCompute ? SUCCESS : INSUFFICIENT_UNIQUE;
     return;
   }
 
@@ -433,6 +435,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (keep_going != nullptr && keep_going() == false) {
+    rc(0, Mp_i) = BREAK_HIT;
     return;
   }
 

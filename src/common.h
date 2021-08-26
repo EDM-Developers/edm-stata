@@ -1,6 +1,7 @@
 #pragma once
 
 #define SUCCESS 0
+#define BREAK_HIT 1
 #define TOO_FEW_VARIABLES 102
 #define TOO_MANY_VARIABLES 103
 #define INVALID_ALGORITHM 400

@@ -954,7 +954,7 @@ program define edmExplore, eclass
 						`idw', "`panel_id'", `i', ///
 						`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
-					qui corr `x_f' `x_p' if `predict_set'
+					cap corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
 
 					tempvar mae
@@ -1736,7 +1736,7 @@ program define edmXmap, eclass
 								qui replace `smapvar' = . if abs(`smapvar') < 1e-8
 							}
 
-							qui corr `x_f' `x_p' if `predict_set'
+							cap corr `x_f' `x_p' if `predict_set'
 							mat r`direction_num'[`task_num',3] = r(rho)
 
 							tempvar mae
@@ -2618,6 +2618,7 @@ void smap_block(
 	else {
 		save_mode = 0
 	}
+
 	real scalar n
 	n = rows(Mp)
 
@@ -2661,7 +2662,7 @@ real scalar mf_smap_single(
 	real colvector ind, v
 	real scalar i, j, k, n, r
 	n = rows(M)
-	d = J(n, 1, .)
+	d = J(1, n, .)
 
 	for(i = 1; i <= n; i++) {
 		if (algorithm =="smap" && (hasmissing(y[i]) | hasmissing(M[i,.]))) {
@@ -2711,23 +2712,33 @@ real scalar mf_smap_single(
 
 	minindex(d, k, ind, v)
 
-	/* Find the smallest non-zero distance */
-	real scalar d_base
-	d_base = d[ind[1]]
-
 	if (rows(ind) < k) {
-		if (force_compute == 1) {
+		if (force_compute) {
 			k = rows(ind) /* Force k to use fewer neighbours */
-			if (k<=0) {
-				sprintf("Insufficient number of unique observations in the dataset even with -force- option.")
-				exit(error(503))
-			}
 		}
 		else {
 			sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
 			exit(error(503))
 		}
 	}
+
+	/* We need at least k=1 to continue. 
+	 * For example, 'force' may reduce k to 0. */
+	if (k < 1) {
+		/* Normally we just let the prediction be '.' and silently keep going. */
+		if (force_compute) {
+			return(.)
+		}
+		else {
+			/* We should never be able to end up here, but just in case.. */
+			sprintf("Cannot make predictions using k=0 neighbours.")
+			exit(error(503))
+		}
+	}
+
+	/* Find the smallest non-zero distance */
+	real scalar d_base
+	d_base = d[ind[1]]
 
 	w = J(k, 1, .)
 
