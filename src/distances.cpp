@@ -34,9 +34,9 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
       // M[i,j] to Mp[Mp_i, j] is opts.missingdistance.
       // However, if the user doesn't specify this, then the entire
       // M[i] to Mp[Mp_i] distance is set as missing.
-      if ((M(i, j) == MISSING) || (Mp(Mp_i, j) == MISSING)) {
+      if ((M(i, j) == MISSING_D) || (Mp(Mp_i, j) == MISSING_D)) {
         if (opts.missingdistance == 0) {
-          dist_i = MISSING;
+          dist_i = MISSING_D;
           break;
         } else {
           dist_ij = opts.missingdistance;
@@ -58,7 +58,7 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
       }
     }
 
-    if (dist_i != 0 && dist_i != MISSING) {
+    if (dist_i != 0 && dist_i != MISSING_D) {
       if (opts.distance == Distance::MeanAbsoluteError) {
         dists.push_back(dist_i);
       } else { // Distance::Euclidean
@@ -134,7 +134,7 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
     double maxData = std::numeric_limits<double>::min();
     double maxTime = 0.0;
     for (int t = 0; t < M_i.cols(); t++) {
-      if (M_i(0, t) != MISSING) {
+      if (M_i(0, t) != MISSING_D) {
         if (M_i(0, t) < minData) {
           minData = M_i(0, t);
         }
@@ -142,7 +142,7 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
           maxData = M_i(0, t);
         }
       }
-      if (M_i(1, t) != MISSING && M_i(1, t) > maxTime) {
+      if (M_i(1, t) != MISSING_D && M_i(1, t) > maxTime) {
         maxTime = M_i(1, t);
       }
     }

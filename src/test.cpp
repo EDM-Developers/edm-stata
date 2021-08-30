@@ -11,7 +11,7 @@
 
 void print_manifold(const Manifold& M)
 {
-  auto stringVersion = [](double v) { return (v == MISSING) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+  auto stringVersion = [](double v) { return (v == MISSING_D) ? std::string(" . ") : fmt::format("{:.1f}", v); };
 
   std::cout << "\n";
   for (int i = 0; i < M.nobs(); i++) {
@@ -105,7 +105,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
   int p = 1;
 
   std::vector<double> t = { 1.0, 2.5, 3.0, 4.5, 5.0, 6.0 };
-  std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
+  std::vector<double> x = { 11, 12, MISSING_D, 14, 15, 16 };
 
   SECTION("Default")
   {
@@ -198,9 +198,9 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     REQUIRE(M.ySize() == 4);
     REQUIRE(M.E_actual() == 4);
 
-    std::vector<std::vector<double>> M_true = { { 11.0, MISSING, 1.5, MISSING },
-                                                { MISSING, 12.0, 1.5, 0.5 },
-                                                { 14.0, MISSING, 0.5, 1.5 },
+    std::vector<std::vector<double>> M_true = { { 11.0, MISSING_D, 1.5, MISSING_D },
+                                                { MISSING_D, 12.0, 1.5, 0.5 },
+                                                { 14.0, MISSING_D, 0.5, 1.5 },
                                                 { 15.0, 14.0, 1.0, 0.5 } };
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
@@ -249,7 +249,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
   int p = 1;
 
   std::vector<double> t = { 1.0, 2.5, 3.0, 4.5, 5.0, 6.0 };
-  std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
+  std::vector<double> x = { 11, 12, MISSING_D, 14, 15, 16 };
 
   SECTION("Allowing missing values")
   {
@@ -274,12 +274,12 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     REQUIRE(M.E_actual() == 4);
 
     std::vector<std::vector<double>> M_true = {
-      { 11.0, MISSING, 1.5, MISSING },
-      //  { 12.0, MISSING, 0.5, MISSING},
-      { MISSING, 11.0, 1.5, 2.0 },
+      { 11.0, MISSING_D, 1.5, MISSING_D },
+      //  { 12.0, MISSING_D, 0.5, MISSING_D},
+      { MISSING_D, 11.0, 1.5, 2.0 },
       { 14.0, 12.0, 0.5, 2.0 },
-      { 15.0, MISSING, 1.0, 2.0 },
-      //  { 16.0, 14.0, MISSING, 1.5},
+      { 15.0, MISSING_D, 1.0, 2.0 },
+      //  { 16.0, 14.0, MISSING_D, 1.5},
     };
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
@@ -316,7 +316,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
 TEST_CASE("Check negative times work", "[negativeTimes]")
 {
   std::vector<double> t = { -9.0, -7.5, -7.0, -6.5, -5.0, -4.0 };
-  std::vector<double> x = { 11, 12, MISSING, 14, 15, 16 };
+  std::vector<double> x = { 11, 12, MISSING_D, 14, 15, 16 };
 
   int tau = 1;
   int p = 1;

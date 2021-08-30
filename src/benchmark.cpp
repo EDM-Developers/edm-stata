@@ -244,7 +244,7 @@ static void bm_smap(benchmark::State& state)
 
       double r = ics(0);
       for (int j = 0; j < M.E_actual(); j++) {
-        if (Mp(Mp_i, j) != MISSING) {
+        if (Mp(Mp_i, j) != MISSING_D) {
           r += Mp(Mp_i, j) * ics(j + 1);
         }
       }

@@ -1,12 +1,16 @@
 #pragma once
 
 /* global variable placeholder for missing values */
-const double MISSING = 1.0e+100;
+
+const double MISSING_D = 1.0e+100;
 
 #include <memory>
 #include <vector>
 
-#include <Eigen/Core>
+#define EIGEN_NO_DEBUG
+#define EIGEN_DONT_PARALLELIZE
+#include <Eigen/Dense>
+
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -64,7 +68,7 @@ public:
     double max = std::numeric_limits<double>::min();
 
     for (int i = 0; i < _nobs * _E_actual; i++) {
-      if (_flat[i] != MISSING) {
+      if (_flat[i] != MISSING_D) {
         if (_flat[i] < min) {
           min = _flat[i];
         }
@@ -76,12 +80,12 @@ public:
     return max - min;
   }
 
-  double missing() const { return MISSING; }
+  double missing() const { return MISSING_D; }
 
   bool any_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) == MISSING) {
+      if (operator()(obsNum, j) == MISSING_D) {
         return true;
       }
     }
@@ -91,7 +95,7 @@ public:
   bool any_not_missing(int obsNum) const
   {
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != MISSING) {
+      if (operator()(obsNum, j) != MISSING_D) {
         return true;
       }
     }
@@ -102,7 +106,7 @@ public:
   {
     int count = 0;
     for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != MISSING) {
+      if (operator()(obsNum, j) != MISSING_D) {
         count += 1;
       }
     }

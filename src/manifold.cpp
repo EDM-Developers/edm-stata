@@ -31,7 +31,7 @@ double ManifoldGenerator::calculate_time_increment() const
     double timeDiff = _t[i] - _t[i - 1];
 
     // In the panel data case, we may get consecutive times which are negative at the boundary of panels.
-    if (timeDiff <= 0 || _t[i] == MISSING || _t[i - 1] == MISSING) {
+    if (timeDiff <= 0 || _t[i] == MISSING_D || _t[i - 1] == MISSING_D) {
       continue;
     }
 
@@ -56,7 +56,7 @@ void ManifoldGenerator::setup_observation_numbers()
 
     // Create a time index which is a discrete count of the number of 'unit' time units.
     for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != MISSING) {
+      if (_t[i] != MISSING_D) {
         _observation_number.push_back(std::round((_t[i] - minT) / unit));
       } else {
         _observation_number.push_back(-1);
@@ -66,7 +66,8 @@ void ManifoldGenerator::setup_observation_numbers()
     // In 'dt' mode
     int countUp = 0;
     for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != MISSING && (_allow_missing || (_x[i] != MISSING))) { // TODO: What about co_x missing here?
+      if (_t[i] != MISSING_D &&
+          (_allow_missing || (_x[i] != MISSING_D))) { // TODO: What about co_x missing here?
         _observation_number.push_back(countUp);
         countUp += 1;
       } else {
@@ -168,7 +169,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     if (skipMissing) {
       bool foundMissing = false;
       for (int j = 0; j < E_actual(E); j++) {
-        if (point[j] == MISSING) {
+        if (point[j] == MISSING_D) {
           foundMissing = true;
           break;
         }
@@ -202,7 +203,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
 
   auto lookup_vec = [&laggedIndices](const std::vector<double>& vec, int j) {
     if (laggedIndices[j] < 0) {
-      return MISSING;
+      return MISSING_D;
     } else {
       return vec[laggedIndices[j]];
     }
@@ -229,7 +230,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
       target = _x[targetIndex];
     }
   } else {
-    target = MISSING;
+    target = MISSING_D;
   }
 
   // Fill in the lagged embedding of x (or co_x) in the first columns
@@ -243,22 +244,22 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
 
   // Put the lagged embedding of dt in the next columns
   if (_dt) {
-    double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING;
+    double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
 
     for (int j = 0; j < E_dt(E); j++) {
       double tNow = lookup_vec(_t, j);
       if (j == 0 || _reldt) {
-        if (tNow != MISSING && tPred != MISSING) {
+        if (tNow != MISSING_D && tPred != MISSING_D) {
           point[E + j] = dtWeight * (tPred - tNow);
         } else {
-          point[E + j] = MISSING;
+          point[E + j] = MISSING_D;
         }
       } else {
         double tNext = lookup_vec(_t, j - 1);
-        if (tNext != MISSING && tNow != MISSING) {
+        if (tNext != MISSING_D && tNow != MISSING_D) {
           point[E + j] = dtWeight * (tNext - tNow);
         } else {
-          point[E + j] = MISSING;
+          point[E + j] = MISSING_D;
         }
       }
     }
@@ -277,7 +278,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
 
 bool is_usable(double* point, double target, int E_actual, bool allowMissing, bool targetRequired)
 {
-  if (targetRequired && target == MISSING) {
+  if (targetRequired && target == MISSING_D) {
     return false;
   }
 
@@ -285,7 +286,7 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
     // If we are allowed to have missing values in the points, just
     // need to ensure that we don't allow a 100% missing point.
     for (int j = 0; j < E_actual; j++) {
-      if (point[j] != MISSING) {
+      if (point[j] != MISSING_D) {
         return true;
       }
     }
@@ -294,7 +295,7 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
   } else {
     // Check that there are no missing values in the points.
     for (int j = 0; j < E_actual; j++) {
-      if (point[j] == MISSING) {
+      if (point[j] == MISSING_D) {
         return false;
       }
     }

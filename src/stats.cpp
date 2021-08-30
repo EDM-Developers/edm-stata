@@ -87,17 +87,17 @@ double standard_deviation(const std::vector<double>& vec)
 double default_missing_distance(const std::vector<double>& x)
 {
   const double PI = 3.141592653589793238463;
-  auto xObserved = remove_value(x, MISSING);
+  auto xObserved = remove_value(x, MISSING_D);
   double xSD = standard_deviation(xObserved);
   return 2 / sqrt(PI) * xSD;
 }
 
 double default_dt_weight(const std::vector<double>& dts, const std::vector<double>& x)
 {
-  auto xObserved = remove_value(x, MISSING);
+  auto xObserved = remove_value(x, MISSING_D);
   double xSD = standard_deviation(xObserved);
 
-  auto dtObserved = remove_value(dts, MISSING);
+  auto dtObserved = remove_value(dts, MISSING_D);
   double dtSD = standard_deviation(dtObserved);
 
   if (dtSD == 0.0) {
@@ -113,7 +113,7 @@ Metric guess_appropriate_metric(std::vector<double> data, int targetSample = 100
 
   int sampleSize = 0;
   for (int i = 0; i < data.size() && sampleSize < targetSample; i++) {
-    if (data[i] != MISSING) {
+    if (data[i] != MISSING_D) {
       sampleSize += 1;
       uniqueValues.insert(data[i]);
     }

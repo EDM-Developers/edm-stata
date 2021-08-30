@@ -130,7 +130,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
         }
         if (SF_is_missing(value)) {
           if (std::is_floating_point<T>::value) {
-            value = MISSING;
+            value = MISSING_D;
           } else {
             value = 0;
           }
@@ -157,8 +157,8 @@ void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bo
   for (ST_int i = SF_in1(); i <= SF_in2(); i++) {
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
       if (useEveryRow || filter[r]) {
-        // Convert MISSING back to Stata's missing value
-        ST_double value = (data[obs] == MISSING) ? SV_missval : data[obs];
+        // Convert MISSING_D back to Stata's missing value
+        ST_double value = (data[obs] == MISSING_D) ? SV_missval : data[obs];
         ST_retcode rc = SF_vstore(j, i, value);
         if (rc) {
           throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
@@ -187,9 +187,9 @@ void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, S
     if (SF_ifobs(i)) { // Skip rows according to Stata's 'if'
       if (useEveryRow || filter[r]) {
         for (ST_int j = j0; j < j0 + matrixNumCols; j++) {
-          // Convert MISSING back to Stata's missing value
+          // Convert MISSING_D back to Stata's missing value
           ST_double value = matrix[obs * matrixNumCols + (j - j0)];
-          if (value == MISSING) {
+          if (value == MISSING_D) {
             value = SV_missval;
           }
           ST_retcode rc = SF_vstore(j, i, value);
@@ -654,7 +654,7 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       // Save the rho/MAE results if requested (i.e. not for coprediction)
       for (auto& stats : pred.stats) {
         ST_double rho = stats.rho;
-        if (rho == MISSING) {
+        if (rho == MISSING_D) {
           rho = SV_missval;
         }
 
@@ -666,7 +666,7 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
         }
 
         ST_double mae = stats.mae;
-        if (mae == MISSING) {
+        if (mae == MISSING_D) {
           mae = SV_missval;
         }
 

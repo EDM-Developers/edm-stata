@@ -227,12 +227,12 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   int numCoeffCols = M.E_actual() + 1;
 
   auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
-  std::fill_n(ystar.get(), numThetas * numPredictions, MISSING);
+  std::fill_n(ystar.get(), numThetas * numPredictions, MISSING_D);
   Eigen::Map<MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
 
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
-  std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING);
+  std::fill_n(coeffs.get(), numPredictions * numCoeffCols, MISSING_D);
   Eigen::Map<MatrixXd> coeffsView(coeffs.get(), numPredictions, numCoeffCols);
 
   auto rc = std::make_unique<retcode[]>(numThetas * numPredictions);
@@ -289,7 +289,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
       std::vector<double> y1, y2;
       for (int i = 0; i < Mp.ySize(); i++) {
-        if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
+        if (Mp.y(i) != MISSING_D && ystar[i] != MISSING_D) {
           y1.push_back(Mp.y(i));
           y2.push_back(ystarView(t, i));
         }
@@ -299,8 +299,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         stats.mae = mean_absolute_error(y1, y2);
         stats.rho = correlation(y1, y2);
       } else {
-        stats.mae = MISSING;
-        stats.rho = MISSING;
+        stats.mae = MISSING_D;
+        stats.rho = MISSING_D;
       }
 
       stats.taskNum = opts.taskNum + t;
@@ -614,7 +614,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   double r = ics(0);
   for (int j = 0; j < M.E_actual(); j++) {
-    if (Mp(Mp_i, j) != MISSING) {
+    if (Mp(Mp_i, j) != MISSING_D) {
       r += Mp(Mp_i, j) * ics(j + 1);
     }
   }
@@ -624,7 +624,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
     for (int j = 0; j < M.E_actual() + 1; j++) {
       if (ics(j) == 0.) {
-        coeffs(Mp_i, j) = MISSING;
+        coeffs(Mp_i, j) = MISSING_D;
       } else {
         coeffs(Mp_i, j) = ics(j);
       }
