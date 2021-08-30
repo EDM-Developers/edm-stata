@@ -2234,10 +2234,7 @@ mata:
 mata set matastrict on
 void burn_rvs(real scalar num)
 {
-	real scalar i
-	for(i = 1; i <= num; i++) {
-		(void) runiform(1, 1)
-	}
+	(void) runiform(1, num)
 }
 end
 
