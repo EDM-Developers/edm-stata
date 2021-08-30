@@ -14,11 +14,11 @@
  *
  */
 
-#include "EMD.h"
+#include "EMD_wrapper.h"
 
 int EMD_wrap(int n1, int n2, double* X, double* Y, double* D, double* cost, int maxIter)
 {
-  // beware M and C anre strored in row major C style!!!
+  // beware M and C are stored in row major C style!!!
   int n, m, cur;
 
   typedef FullBipartiteDigraph Digraph;

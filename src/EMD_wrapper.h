@@ -1,3 +1,4 @@
+// Adapted from https://github.com/PythonOT/POT
 /* This file is a c++ wrapper function for computing the transportation cost
  * between two vectors given a cost matrix.
  *
