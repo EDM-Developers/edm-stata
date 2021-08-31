@@ -31,7 +31,7 @@
 
 #include <arrayfire.h>
 
-constexpr bool useAFArm = false; //Flag to execute make_prediction using AF ports - debugging purposes
+constexpr bool useAFArm = true; //Flag to execute make_prediction using AF ports - debugging purposes
 
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
@@ -931,67 +931,53 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
 
       return !(panelM != panelMp);
   } else if (skipMissingData) {
-      return !(anyTrue(M.mdata == M.missing, 0).T());
+      return tile(!(anyTrue(M.mdata == M.missing, 0).T()), 1, npreds);
   } else {
-      return af::constant(1.0, M.nobs, b8);
+      return af::constant(1.0, M.nobs, npreds, b8);
   }
 }
 
-DistanceIndexPairsOnGPU afkNearestNeighbours(const DistanceIndexPairsOnGPU& potentialNeighbours, int k)
-{
-  af::array dists = potentialNeighbours.dists(af::seq(potentialNeighbours.inds.elements()));
-
-  af::array odists, oidx;
-  af::sort(odists, oidx, dists, potentialNeighbours.inds);
-
-  const af::seq ks(k);
-  return { oidx(ks), odists(ks) }; // Assuming Indices in potentialNeighbours are not sorted
-}
-
-void afSimplexPrediction(int Mp_i, const Options& opts, const ManifoldOnGPU& M,
-                         const af::array& dists, const af::array& indices, const af::array& othetas,
-                         Eigen::Map<Eigen::MatrixXd> ystar,
-                         Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused,
+                         const int npreds, const Options& opts,
+                         const af::array& yvecs,
+                         const DistanceIndexPairsOnGPU& pair,
+                         const af::array& thetas)
 {
   using af::array;
   using af::sum;
   using af::tile;
 
-  const dim_t indsCount   = indices.elements();
-  const dim_t thetasCount = opts.thetas.size();
+  const array& valids = pair.inds;
+  const array& dists  = pair.dists;
+  const int mnobs     = valids.dims(0);
+  const int tcount    = opts.thetas.size();
 
-  double minDist = af::min<double>(dists);
+  array weights;
+  {
+    array minDist = tile(dists(0, af::span), mnobs, 1, tcount);
+    array tadist  = tile(dists, 1, 1, tcount);
 
-  array thetas  = tile(othetas, indsCount, 1);            // reshape to [indsCount thetasCount 1 1]
-  array tadist  = tile(dists, 1, thetasCount);            // reshape to [indsCount thetasCount 1 1]
-  array weights = af::exp( -thetas * ( tadist / minDist ) );
-  array sumw    = sum(weights, 0);                        // Reduce for each theta
-  array y       = M.yvec(indices);
-  array ty      = tile(y, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
-  array tsumw   = tile(sumw, indsCount, 1);               // reshape to [indsCount thetasCount 1 1]
-  array rt      = ty * (weights / tsumw);
-  array r       = sum(rt, 0);
-
-  // This is final stage, hence just copy r(s) to respective Eigen objects
-  std::vector<double> hostr(r.elements());
-  if (r.elements() > 0) {
-    r.host(hostr.data());
-    for (int t = 0; t < thetasCount; ++t) {
-      ystar(t, Mp_i) = hostr[t];
-      rc(t, Mp_i) = SUCCESS;
-    }
+    weights = tile(valids, 1, 1, tcount) * af::exp(-thetas * (tadist / minDist));
   }
+  array r4thetas = tile(yvecs, 1, 1, tcount) * (weights / tile(sum(weights, 0), mnobs));
+
+  ystar = moddims(sum(r4thetas, 0), npreds, tcount);
+  retcodes = af::constant(SUCCESS, npreds, tcount);
+
   if (opts.saveKUsed) {
-    *kUsed = af::count<int>(weights);
+    kused = moddims(af::count(weights, 0), npreds, tcount);
   }
 }
 
-void afSMapPrediction(int Mp_i, const Options& opts, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
-                      const af::array& dists, const af::array& indices, const af::array& othetas,
-                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
-                      Eigen::Map<Eigen::MatrixXi> rc, int* kUsed)
+void afSMapPrediction(af::array& retcodes, af::array& kused,
+                      af::array& ystar, af::array& coeffs,
+                      const int npreds, const Options& opts,
+                      const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                      const DistanceIndexPairsOnGPU& pair, const af::array& mdata,
+                      const af::array& yvecs, const af::array& thetas)
 {
   using af::array;
+  using af::constant;
   using af::dim4;
   using af::end;
   using af::matmulTN;
@@ -1003,151 +989,155 @@ void afSMapPrediction(int Mp_i, const Options& opts, const ManifoldOnGPU& M, con
   using af::span;
   using af::tile;
 
-  const dim_t indsCount   = indices.elements();
-  const dim_t thetasCount = opts.thetas.size();
+  const array& valids  = pair.inds;
+  const array& dists   = pair.dists;
+  const int mnobs      = M.nobs;
+  const int tcount     = opts.thetas.size();
+  const int MEactualp1 = M.E_actual + 1;
 
-  double meanDist = mean<double>(dists);
-  array thetas    = tile(othetas, indsCount, 1);                // reshape to [indsCount thetasCount 1 1]
-  array tadist    = tile(dists, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
-  array weights   = af::exp( -thetas * ( tadist / meanDist ) );
-  array y         = M.yvec(indices);
-  array ty        = tile(y, 1, thetasCount);                    // reshape to [indsCount thetasCount 1 1]
-  array y_ls      = ty * weights;                               // [indsCount thetasCount 1 1] shape
+  array weights, y_ls;
+  {
+    array meanDists  = (mnobs * mean(valids * dists, 0) / count(valids, 0));
+    array meanDistsT = tile(meanDists, mnobs, 1, tcount);
+    array ptDists    = tile(dists, 1, 1, tcount);
+    array validsT    = tile(valids, 1, 1, tcount);
 
-  const dim_t MEactualp1 = M.E_actual + 1;
-  array X_ls_cj          = af::constant(1.0, dim4(MEactualp1, indsCount), f64);
-  X_ls_cj(seq(1, end), span) = M.mdata(span, indices);
-
-  array weightsR  = moddims(weights, 1, indsCount, thetasCount);// [         1 indsCount thetasCount 1]
-  array weightsT  = tile(weightsR, MEactualp1);                 // [MEactualp1 indsCount thetasCount 1]
-  array X_ls_cj_T = tile(X_ls_cj, 1, 1, thetasCount);           // [MEactualp1 indsCount thetasCount 1]
-
-  X_ls_cj_T *= weightsT;
-
-  array y_ls_R  = moddims(y_ls, indsCount, 1, thetasCount);     // [ indsCount  1 thetasCount 1]
-  array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), y_ls_R);  // [ MEactualp1 1 thetasCount 1]
-  icsOuts       = moddims(icsOuts, MEactualp1, thetasCount);    // Just a meta-data change
-  array Mp_i_j  = tile(Mp.mdata(span, Mp_i), 1, thetasCount);
-
-  array r2d = icsOuts(seq(1, end), span) * ((Mp_i_j != double(MISSING)) * Mp_i_j);
-  array r   = icsOuts(0, span) + sum(r2d, 0);
-
-  std::vector<double> hostr(r.elements());
-  if (r.elements() > 0) {
-    r.host(hostr.data());
-    for (int t = 0; t < thetasCount; ++t) {
-      ystar(t, Mp_i) = hostr[t];
-      rc(t, Mp_i) = SUCCESS;
-    }
+    weights = validsT * af::exp(-thetas * (ptDists / meanDistsT));
+    y_ls    = weights * tile(yvecs, 1, 1, tcount);
   }
-  // If the 'savesmap' option is given, save the 'ics' coefficients for the largest value of theta.
+
+  array mdValids = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
+  array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
+
+  X_ls_cj(seq(1, end), span) = mdValids * mdata;
+
+  array X_ls_cj_T = tile(X_ls_cj, 1, 1, 1, tcount);
+
+  X_ls_cj_T *= tile(moddims(weights, 1, mnobs, npreds, tcount), MEactualp1);
+
+  array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), moddims(y_ls, mnobs, 1, npreds, tcount));
+
+  icsOuts      = moddims(icsOuts, MEactualp1, npreds, tcount);
+  array Mp_i_j = tile(Mp.mdata(span, seq(npreds)), 1, 1, tcount);
+  array r2d    = icsOuts(seq(1, end), span, span) * ((Mp_i_j != double(MISSING)) * Mp_i_j);
+  array r      = icsOuts(0, span, span) + sum(r2d, 0);
+
+  ystar    = moddims(r, npreds, tcount).T();
+  retcodes = constant(SUCCESS, npreds, tcount);
   if (opts.saveSMAPCoeffs) {
-    array lastTheta  = icsOuts(span, thetasCount - 1);
-    array icsl       = select(lastTheta == 0.0, double(MISSING), lastTheta);
-    std::vector<double> host_ics(MEactualp1);
-    icsl.host(host_ics.data());
-    for (int j = 0; j < MEactualp1; j++) {
-      coeffs(Mp_i, j) = host_ics[j];
-    }
+    array lastTheta  = icsOuts(span, span, tcount - 1);
+
+    coeffs = select(lastTheta == 0.0, double(MISSING), lastTheta).T();
   }
-  // For the sake of debugging, count how many neighbours we end up with.
   if (opts.saveKUsed) {
-    *kUsed = af::count<int>(weights);
+    kused = moddims(af::count(weights, 0), npreds, tcount);
   }
 }
 
-void af_make_prediction(const int numPredictions, const Options& opts,
+void af_make_prediction(const int npreds, const Options& opts,
                         const Manifold& hostM, const Manifold& hostMp,
-                        const ManifoldOnGPU& M, const ManifoldOnGPU& Mp, const af::array& metricOpts,
+                        const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                        const af::array& metricOpts,
                         Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
                         Eigen::Map<Eigen::MatrixXd> coeffs,
                         std::vector<int>& kUseds, bool keep_going())
 {
+  using af::array;
+  using af::constant;
+
+  const int numThetas = opts.thetas.size();
+
+  if (opts.algorithm != Algorithm::Simplex && opts.algorithm != Algorithm::SMap) {
+      array retcodes = constant(INVALID_ALGORITHM, npreds, numThetas, s32);
+      retcodes.host(rc.data());
+      return;
+  }
   // Cross-paltform way to pre-empt threads to interrupt EDM command amid stages
   if (keep_going != nullptr && keep_going() == false) {
     return;
   }
-  using af::array;
   using af::span;
+  using af::tile;
   using af::where;
 
   const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
   const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
 
-  array othetas;
-  if (opts.algorithm == Algorithm::Simplex || opts.algorithm == Algorithm::SMap) {
-    // Thetas array is only used in either simplex or smap and not used anywhere else.
-    othetas = array(1, opts.thetas.size(), opts.thetas.data()); //f64 array
-  }
+  array thetas = tile(array(1, 1, numThetas, opts.thetas.data()), M.nobs, npreds);
 
-  auto potIdx =
-      afPotentialNeighbourIndices(numPredictions, skipOtherPanels, skipMissingData, M, Mp);
+  auto pValids =
+      afPotentialNeighbourIndices(npreds, skipOtherPanels, skipMissingData, M, Mp);
 
   auto validDistPair =
-      afLPDistances(numPredictions, opts, M, Mp, metricOpts);
+      afLPDistances(npreds, opts, M, Mp, metricOpts);
 
-  for (int Mp_i = 0; Mp_i < numPredictions; Mp_i++)
+  // TODO add code path for wasserstein later
+  pValids = pValids && validDistPair.inds;
+
+  array retcodes;
+  array kValids = constant(0, M.nobs, npreds, b8);
   {
-    array idxv = (skipOtherPanels ? potIdx(span, Mp_i) : potIdx);
+    const bool isfoco = opts.forceCompute;
 
-    array tryInds, lpDists;
-    if (opts.distance == Distance::Wasserstein) {
-      tryInds = where(idxv);
-    } else {
-      array lpd  = validDistPair.inds(span, Mp_i);
-      tryInds    = where(idxv && lpd);
-      array temp = validDistPair.dists(span, Mp_i);
-      lpDists    = temp(tryInds);
-    }
-    DistanceIndexPairsOnGPU potentialNN =
-        (
-         opts.distance == Distance::Wasserstein ?
-         afWassersteinDistances(Mp_i, opts, hostM, hostMp, M, Mp, tryInds, metricOpts) :
-         DistanceIndexPairsOnGPU{tryInds, lpDists}
-        );
-    if (keep_going != nullptr && keep_going() == false) {
-      return;
-    }
+    array kused = af::count(pValids, 0);
+    kused.host(kUseds.data());
 
-    // Do we have enough distances to find k neighbours?
-    const int numValidDistances = static_cast<int>(potentialNN.inds.elements());
-    int k = opts.k;
-    kUseds[Mp_i] = numValidDistances;
-    if (k > numValidDistances) {
-      if (opts.forceCompute) {
-        k = numValidDistances;
-        if (k == 0) {
-          return;
-        }
-      } else {
-        rc(0, Mp_i) = INSUFFICIENT_UNIQUE;
-        return;
+    array kchck = opts.k > kused;
+    array kvals = kchck * (isfoco * kused) + (1 - kchck) * opts.k;
+    array findk = select(kvals < 0 || kvals == kused, kused, kvals);
+
+    std::vector<int> ks(findk.elements());
+    findk.host(ks.data());
+
+    for (int p = 0; p < npreds; ++p) {
+      const int k = ks[p];
+      if (k > 0) { // Mark valid set in current prediction to 1
+        kValids(af::seq(k), p) = 1;
       }
     }
+    //TODO
+    //retcodes = kchck * !isfoco * int(INSUFFICIENT_UNIQUE) +
+    //           kchck * isfoco * int(SUCCESS) +
+    //           (kvals == 0) * int(SUCCESS);
+  }
+  array sDists, yvecs, smData;
+  {
+    array maxs = af::max(pValids * validDistPair.dists, 0);
+    array pDists = pValids * validDistPair.dists + (1 - pValids) * tile(maxs + 100, M.nobs);
 
-    if (k == 0) {
-      rc(0, Mp_i) = SUCCESS;
-      return;
-    }
+    array sValids;
+    sort(sDists, sValids, pDists, pValids, 0);
+    pValids = sValids && kValids;
 
-    // Use directly if all neighbours are to be considered
-    DistanceIndexPairsOnGPU kNNs;
-    if (k < 0 || k == static_cast<int>(potentialNN.inds.elements())) {
-      kNNs = potentialNN;
-    } else {
-      kNNs = afkNearestNeighbours(potentialNN, k);
-    }
+    //Yvector also needs to be reordered as per distances order
+    sort(sDists, yvecs, pDists, tile(M.yvec, 1, npreds), 0);
 
-    if (keep_going != nullptr && keep_going() == false) {
-      return;
+    // Manifold data also needs to be reorder(as per distances order) with SMap prediction
+    if (opts.algorithm == Algorithm::SMap) {
+      // Sort Manifold data to match validities order
+      array temp;
+      sort(temp, smData,
+           tile(moddims(pDists, 1, M.nobs, npreds), M.E_actual),
+           tile(M.mdata, 1, 1, npreds), 1);
     }
+    // TODO Ideally, it would be better to reorder yvecs, mdata, validities in one sort call
+  }
 
-    if (opts.algorithm == Algorithm::Simplex) {
-        afSimplexPrediction(Mp_i, opts, M, kNNs.dists, kNNs.inds, othetas, ystar, rc, &(kUseds[Mp_i]));
-    } else if (opts.algorithm == Algorithm::SMap) {
-        afSMapPrediction(Mp_i, opts, M, Mp, kNNs.dists, kNNs.inds, othetas, ystar, coeffs, rc, &(kUseds[Mp_i]));
-    } else {
-      rc(0, Mp_i) = INVALID_ALGORITHM;
+  array ystars, kused;
+  if (opts.algorithm == Algorithm::Simplex) {
+    afSimplexPrediction(retcodes, ystars, kused, npreds, opts,
+                        yvecs, {pValids, sDists}, thetas);
+  } else if (opts.algorithm == Algorithm::SMap) {
+    array dcoeffs;
+    afSMapPrediction(retcodes, kused, ystars, dcoeffs, npreds,
+                     opts, M, Mp, {pValids, sDists}, smData, yvecs, thetas);
+    if (opts.saveSMAPCoeffs) {
+      dcoeffs.host(coeffs.data());
     }
+  }
+  ystars.host(ystar.data());
+  retcodes.host(rc.data());
+  if (opts.saveKUsed) {
+    kused.host(kUseds.data());
   }
 }
