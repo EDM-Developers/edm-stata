@@ -631,6 +631,7 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
   array dists     = (opts.distance == Distance::MeanAbsoluteError
                      ? distances
                      : af::sqrt(distances));
+
   valids = moddims(valids, mnobs, npreds);
   dists  = moddims(dists, mnobs, npreds);
 
