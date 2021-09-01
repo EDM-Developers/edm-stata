@@ -9,6 +9,43 @@
 #include "edm.h"
 #include "manifold.h"
 
+// Add in some function declarations for 'private' functions not listed
+// in the relevant header files.
+
+std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
+                                                  const Options& opts, int& len_i, int& len_j);
+
+void print_raw_matrix(const double* M, int rows, int cols)
+{
+
+  auto stringVersion = [](double v) { return (v == MISSING_D) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+
+  std::cout << "\n";
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      std::cout << stringVersion(M[i * cols + j]) << " (" << i * cols + j << ") "
+                << "\t";
+    }
+    std::cout << "\n";
+  }
+  std::cout << "\n";
+}
+
+void print_eig_matrix(const Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>& M)
+{
+
+  auto stringVersion = [](double v) { return (v == MISSING_D) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+
+  std::cout << "\n";
+  for (int i = 0; i < M.rows(); i++) {
+    for (int j = 0; j < M.cols(); j++) {
+      std::cout << stringVersion(M(i, j)) << "\t";
+    }
+    std::cout << "\n";
+  }
+  std::cout << "\n";
+}
+
 void print_manifold(const Manifold& M)
 {
   auto stringVersion = [](double v) { return (v == MISSING_D) ? std::string(" . ") : fmt::format("{:.1f}", v); };
@@ -333,5 +370,106 @@ TEST_CASE("Check negative times work", "[negativeTimes]")
   for (int i = 0; i < obsNums.size(); i++) {
     CAPTURE(i);
     REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+  }
+}
+
+TEST_CASE("Wasserstein distance", "[wasserstein]")
+{
+  int E = 5;
+  int tau = 1;
+  int p = 0;
+
+  const double NA = MISSING_D;
+
+  std::vector<double> t = { 0, 1, 2, 3, 4 };
+  std::vector<double> x1 = { 1, 2, NA, NA, 5 };
+  std::vector<double> x2 = { 1, NA, NA, 4, 5 };
+
+  bool dt = true, dt0 = true, reldt = true, allowMissing = true;
+  ManifoldGenerator generator(t, x1, tau, p, x2, x2, {}, {}, 0, dt, dt0, reldt, allowMissing);
+
+  std::vector<bool> usable = generator.generate_usable(E);
+  REQUIRE(usable.size() == 5);
+  REQUIRE(usable[0] == true);
+  REQUIRE(usable[1] == false);
+  REQUIRE(usable[2] == false);
+  REQUIRE(usable[3] == true);
+  REQUIRE(usable[4] == true);
+
+  double dtWeight = 1.0;
+  bool copredict = true;
+  Manifold M = generator.create_manifold(E, usable, copredict, false, dtWeight);
+  Manifold Mp = generator.create_manifold(E, usable, copredict, true, dtWeight);
+
+  REQUIRE(M.nobs() == 3);
+  REQUIRE(M.ySize() == 3);
+  REQUIRE(M.E_actual() == 10);
+
+  std::vector<std::vector<double>> M_true = {
+    { 1, NA, NA, NA, NA, 0, NA, NA, NA, NA },
+    { NA, NA, 2, 1, NA, 0, 1, 2, 3, NA },
+    { 5, NA, NA, 2, 1, 0, 1, 2, 3, 4 },
+  };
+  std::vector<double> y_true = { 1, 4, 5 };
+  require_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = {
+    { 1, NA, NA, NA, NA, 0, NA, NA, NA, NA },
+    { 4, NA, NA, 1, NA, 0, 1, 2, 3, NA },
+    { 5, 4, NA, NA, 1, 0, 1, 2, 3, 4 },
+  };
+  std::vector<double> yp_true = y_true;
+  require_manifolds_match(Mp, Mp_true, y_true);
+
+  SECTION("Cost matrix")
+  {
+    int i = 2, j = 2;
+
+    auto M_i = M.laggedObsMap(i);
+    auto Mp_j = Mp.laggedObsMap(j);
+
+    REQUIRE(M_i.rows() == 2);
+    REQUIRE(Mp_j.rows() == 2);
+
+    REQUIRE(M_i.cols() == 5);
+    REQUIRE(Mp_j.cols() == 5);
+
+    // print_eig_matrix(M_i);
+    // print_eig_matrix(Mp_j);
+
+    Options opts;
+
+    opts.missingdistance = 0;
+    opts.aspectRatio = 1.0;
+    opts.panelMode = false;
+
+    opts.metrics = {};
+    for (int i = 0; i < M.E_actual(); i++) {
+      opts.metrics.push_back(Metric::Diff);
+    }
+
+    int len_i, len_j;
+
+    std::unique_ptr<double[]> C = wasserstein_cost_matrix(M, Mp, i, j, opts, len_i, len_j);
+
+    // print_raw_matrix(C.get(), len_i, len_j);
+
+    REQUIRE(len_i == 3);
+    REQUIRE(len_j == 3);
+
+    // N.B. When I wrote this down in OneNote, I was imagining time as left-to-right,
+    // whereas in the manifold it's usually the other direction. So my notebook's
+    // cost matrix is the mirror image of the true one.
+    // std::vector<double> C_true = {
+    //   0, 6, 8,
+    //   2, 4, 6,
+    //   8, 2, 0
+    // };
+
+    std::vector<double> C_true = { 0, 2, 8, 6, 4, 2, 8, 6, 0 };
+
+    for (int i = 0; i < C_true.size(); i++) {
+      REQUIRE(C[i] == C_true[i]);
+    }
   }
 }

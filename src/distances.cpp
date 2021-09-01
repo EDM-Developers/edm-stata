@@ -118,8 +118,9 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   auto Mp_j_missing = (Mp_j.array() == Mp.missing()).colwise().any();
 
   if (skipMissing) {
-    len_i = M.E() - M_i_missing.sum();
-    len_j = Mp.E() - Mp_j_missing.sum();
+    // N.B. Can't .sum() a vector of bools to count them in Eigen.
+    len_i = M.E() - M_i_missing.count();
+    len_j = Mp.E() - Mp_j_missing.count();
   } else {
     len_i = M.E();
     len_j = Mp.E();
@@ -183,9 +184,14 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   for (int k = 0; k < timeSeriesDim; k++) {
     int n = 0;
     for (int nn = 0; nn < M_i.cols(); nn++) {
+      if (skipMissing && M_i_missing[nn]) {
+        continue;
+      }
+
       int m = 0;
+
       for (int mm = 0; mm < Mp_j.cols(); mm++) {
-        if (skipMissing && (M_i_missing[nn] || Mp_j_missing[mm])) {
+        if (skipMissing && Mp_j_missing[mm]) {
           continue;
         }
         double dist;
