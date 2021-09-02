@@ -1012,6 +1012,9 @@ begin
 	P_valid = vec(.! any(isnan.(M_x_miss), dims=2) )
 	L_valid = P_valid .& (.! isnan.(y_miss))
 	
+	# Override my best wishes and just exclude missing values from prediction set.
+	P_valid = L_valid
+	
 	L_miss = M_x_miss[L_valid,:]
 	y_L_miss = y_miss[L_valid]
 	
@@ -1028,26 +1031,9 @@ end
 
 # ╔═╡ 92049e5d-9a54-4b99-93d6-2971b77a99fc
 md"""
-Here we see that the resulting library set is totally empty, and the prediction set contains just one point!
+Here we see that the resulting sets are totally empty!
 
-This is because for a point to be in the library set (with default options) it must be fully observed and the corresponding $y$ projection must also be observed.
-
-For a point to be in the prediction set (with default options) it needs to be fully observed but it is ok for the corresponding $y$ target to be missing.
-
-"""
-
-# ╔═╡ 16f1ec0c-085a-474f-885c-94e8123eaeba
-md"""
-The $\mathscr{P}$ is less restrictive than $\mathscr{L}$ because it is fine for the targets in $y^{\mathscr{P}}$ to be missing values.
-We can make predictions even though we don't observe the true values.
-However those predictions without a corresponding true value cannot be used in the $\rho$/MAE calculations.
-"""
-
-# ╔═╡ c41f553f-a656-482e-9b60-bbe25941da39
-md"""
-For the case when some targets are missing, we might generate predictions anyway.
-This is the case if you set the `predict` option which saves the predictions to a Stata variables.
-However, if `predict` is not set, then the $\mathscr{P}$ prediction set will not include targets which have missing values as they do not contribute to the $\rho$/MAE which is the only thing requested by the user.
+This is because for a point to be in the library or prediction set (with default options) it must be fully observed and the corresponding $y$ projection must also be observed.
 """
 
 # ╔═╡ 1134c18a-76c7-4b9c-bff6-f795954f5db4
@@ -1067,6 +1053,9 @@ begin
 	P_am_valid = vec(any(.! isnan.(M_x_miss), dims=2) )
 	
 	L_am_valid = P_am_valid .& (.! isnan.(y_miss))
+	
+	# Sad face
+	P_am_valid = L_am_valid
 	
 	L_am_miss = M_x_miss[L_am_valid,:]
 	y_L_am_miss = y_miss[L_am_valid]
@@ -1186,6 +1175,9 @@ md"and the largest possible library and prediction sets would be"
 begin
 	P_am_dt_valid = vec(any(.!  isnan.(M_x_miss_am_dt), dims=2) )
 	L_am_dt_valid = P_am_dt_valid .& (.! isnan.(y_miss_am_dt))
+
+	# Sad face
+	P_am_dt_valid = L_am_dt_valid
 	
 	L_miss_am_dt = M_x_miss_am_dt[L_am_dt_valid,:]
 	y_L_miss_am_dt = y_miss_am_dt[L_am_dt_valid]
@@ -1728,8 +1720,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─042db7fe-2936-4663-8893-a43142b6ffc1
 # ╟─25eb0830-0ce1-47dc-8856-eda9a91a3473
 # ╟─92049e5d-9a54-4b99-93d6-2971b77a99fc
-# ╟─16f1ec0c-085a-474f-885c-94e8123eaeba
-# ╟─c41f553f-a656-482e-9b60-bbe25941da39
 # ╟─1134c18a-76c7-4b9c-bff6-f795954f5db4
 # ╟─cc25480d-aae7-4462-9c45-0c4ba6838a06
 # ╟─420dae80-0f3b-445a-afa0-6492b4de9579
