@@ -974,7 +974,7 @@ program define edmExplore, eclass
 						mat r[`task_num', 4] = 0
 					}
 
-					if ("`predict'" != "") & ((`crossfold' > 0)  | (`task_num' == `num_tasks')) {
+					if ("`predict'" != "") & ((`crossfold' > 0) | (`task_num' == `num_tasks')) {
 						cap replace `predict' = `x_p' if `x_p' !=.
 					}
 				}
