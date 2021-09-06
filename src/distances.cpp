@@ -10,8 +10,13 @@
 #include <limits>
 #include <vector>
 
-#include <arrayfire.h>
+#include <cuda_runtime.h>
 #include <nvToolsExt.h>
+#define AF_DEFINE_CUDA_TYPES
+#include <arrayfire.h>
+#include <af/cuda.h>
+
+#include "lp_distance.cuh"
 
 using af::array;
 
@@ -582,61 +587,86 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
                                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                                       const af::array& metricOpts)
 {
-  using af::array;
-  using af::moddims;
-  using af::select;
-  using af::seq;
-  using af::span;
-  using af::sum;
-  using af::tile;
-
-  // Mp_i goes from 0 to npreds - 1
-  // All coloumns of Manifold M are considered valid for batch operation
+  constexpr bool useCustomKernel = true;
 
   auto range = nvtxRangeStartA(__FUNCTION__);
 
-  const bool imdoZero = opts.missingdistance == 0;
-  const int mnobs     = M.nobs;
-  const int eacts     = M.E_actual;
+  if (useCustomKernel) {
+    af::array valids(M.nobs, npreds, b8);
+    af::array dists(M.nobs, npreds, f64);
 
-  array anyMCols, distsMat;
-  {
-    array predsM  = tile(M.mdata, 1, 1, npreds);
-    array predsMp = tile(moddims(Mp.mdata(span, seq(npreds)), eacts, 1, npreds), 1, mnobs);
-    array diffMMp = predsM - predsMp;
-    array compMMp = (predsM != predsMp).as(f64);
-    array distMMp = select(tile(metricOpts, 1, mnobs, npreds), diffMMp, compMMp);
-    array missing = predsM == MISSING_D || predsMp == MISSING_D;
+    cuLPDistances(valids.device<char>(), dists.device<double>(),
+            npreds, opts.distance == Distance::MeanAbsoluteError, opts.panelMode,
+            opts.idw, opts.missingdistance, M.E_actual, M.nobs,
+            M.mdata.device<double>(), M.panel.device<int>(),
+            Mp.mdata.device<double>(), Mp.panel.device<int>(),
+            metricOpts.device<char>(), afcu::getStream(0));
 
-    distsMat = (imdoZero ? distMMp : select(missing, opts.missingdistance, distMMp));
-    anyMCols = anyTrue(missing, 0);
+    valids.unlock();
+    dists.unlock();
+    M.mdata.unlock();
+    M.panel.unlock();
+    Mp.mdata.unlock();
+    Mp.panel.unlock();
+    metricOpts.unlock();
 
-    if (opts.distance == Distance::MeanAbsoluteError) {
-      distsMat = af::abs(distsMat) / double(eacts);
-    } else {
-      distsMat = distsMat * distsMat;
+    nvtxRangeEnd(range);
+    return {valids, dists};
+  } else {
+    using af::array;
+    using af::moddims;
+    using af::select;
+    using af::seq;
+    using af::span;
+    using af::sum;
+    using af::tile;
+
+    // Mp_i goes from 0 to npreds - 1
+    // All coloumns of Manifold M are considered valid for batch operation
+
+    const bool imdoZero = opts.missingdistance == 0;
+    const int mnobs     = M.nobs;
+    const int eacts     = M.E_actual;
+
+    array anyMCols, distsMat;
+    {
+      array predsM  = tile(M.mdata, 1, 1, npreds);
+      array predsMp = tile(moddims(Mp.mdata(span, seq(npreds)), eacts, 1, npreds), 1, mnobs);
+      array diffMMp = predsM - predsMp;
+      array compMMp = (predsM != predsMp).as(f64);
+      array distMMp = select(tile(metricOpts, 1, mnobs, npreds), diffMMp, compMMp);
+      array missing = predsM == MISSING_D || predsMp == MISSING_D;
+
+      distsMat = (imdoZero ? distMMp : select(missing, opts.missingdistance, distMMp));
+      anyMCols = anyTrue(missing, 0);
+
+      if (opts.distance == Distance::MeanAbsoluteError) {
+        distsMat = af::abs(distsMat) / double(eacts);
+      } else {
+        distsMat = distsMat * distsMat;
+      }
     }
+    if (opts.panelMode && opts.idw > 0) {
+      array npPanelMp = tile(Mp.panel(seq(npreds)).T(), mnobs);
+      array npPanelM  = tile(M.panel, 1, npreds);
+      array penalty   = (opts.idw * (npPanelM != npPanelMp));
+      array penalties = tile(moddims(penalty, 1, mnobs, npreds), eacts);
+
+      distsMat += penalties;
+    }
+    array accDists  = sum(distsMat, 0);
+    array distances = select(anyMCols * imdoZero, double(MISSING_D), accDists);
+    array valids    = (distances != 0.0 && distances != double(MISSING_D));
+    array dists     = (opts.distance == Distance::MeanAbsoluteError
+                       ? distances
+                       : af::sqrt(distances));
+
+    valids = moddims(valids, mnobs, npreds);
+    dists  = moddims(dists, mnobs, npreds);
+
+    nvtxRangeEnd(range);
+    return { valids, dists };
   }
-  if (opts.panelMode && opts.idw > 0) {
-    array npPanelMp = tile(Mp.panel(seq(npreds)).T(), mnobs);
-    array npPanelM  = tile(M.panel, 1, npreds);
-    array penalty   = (opts.idw * (npPanelM != npPanelMp));
-    array penalties = tile(moddims(penalty, 1, mnobs, npreds), eacts);
-
-    distsMat += penalties;
-  }
-  array accDists  = sum(distsMat, 0);
-  array distances = select(anyMCols * imdoZero, double(MISSING_D), accDists);
-  array valids    = (distances != 0.0 && distances != double(MISSING_D));
-  array dists     = (opts.distance == Distance::MeanAbsoluteError
-                     ? distances
-                     : af::sqrt(distances));
-
-  valids = moddims(valids, mnobs, npreds);
-  dists  = moddims(dists, mnobs, npreds);
-
-  nvtxRangeEnd(range);
-  return { valids, dists };
 }
 
 array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, const array& metricOpts,
