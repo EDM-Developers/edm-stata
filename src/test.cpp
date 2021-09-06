@@ -391,7 +391,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   }
 }
 
-TEST_CASE("Getting usable/training set/prediction sets right", "[sets]")
+TEST_CASE("Coprediction and usable/training set/prediction sets", "[copredSets]")
 {
   int E = 2;
   int tau = 1;
@@ -403,12 +403,16 @@ TEST_CASE("Getting usable/training set/prediction sets right", "[sets]")
 
   ManifoldGenerator generator(t, x, tau, p, {}, co_x);
 
-  SECTION("Not matching the predictions & copredictions (default)")
-  {
-    std::vector<bool> usable = generator.generate_usable(E);
-    std::vector<bool> usableTrue = { false, false, false, true, true, false };
-    require_vectors_match<bool>(usable, usableTrue);
+  std::vector<bool> usable = generator.generate_usable(E);
+  std::vector<bool> usableTrue = { false, false, false, true, true, false };
+  require_vectors_match<bool>(usable, usableTrue);
 
+  std::vector<bool> cousable = generator.generate_usable(E, true);
+  std::vector<bool> cousableTrue = { false, true, false, false, false, false };
+  require_vectors_match<bool>(cousable, cousableTrue);
+
+  SECTION("Standard predictions")
+  {
     bool copredict = false;
     Manifold M = generator.create_manifold(E, usable, copredict, false);
     Manifold Mp = generator.create_manifold(E, usable, copredict, true);
@@ -420,5 +424,20 @@ TEST_CASE("Getting usable/training set/prediction sets right", "[sets]")
     std::vector<std::vector<double>> Mp_true = { { 4, 3 }, { 5, 4 } };
     std::vector<double> yp_true = { 5, 6 };
     require_manifolds_match(Mp, Mp_true, yp_true);
+  }
+
+  SECTION("Copredictions")
+  {
+    bool copredict = true;
+    Manifold M_co = generator.create_manifold(E, usable, copredict, false);
+    Manifold Mp_co = generator.create_manifold(E, cousable, copredict, true);
+
+    std::vector<std::vector<double>> M_co_true = { { 4, 3 }, { 5, 4 } };
+    std::vector<double> y_co_true = { 5, 6 };
+    require_manifolds_match(M_co, M_co_true, y_co_true);
+
+    std::vector<std::vector<double>> Mp_co_true = { { 12, 11 } };
+    std::vector<double> yp_co_true = { 13 };
+    require_manifolds_match(Mp_co, Mp_co_true, yp_co_true);
   }
 }

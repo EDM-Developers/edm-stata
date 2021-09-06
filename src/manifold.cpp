@@ -303,16 +303,12 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
   }
 }
 
-std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
+std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction) const
 {
   const double USABLE_DTWEIGHT = 1.0;
 
-  // TODO: Need to handle coprediction's usable
-  bool copredict = false;
-  bool prediction = false;
   bool targetRequired = true;
 
-  // Generate the 'usable' variable
   std::vector<bool> usable(_t.size());
 
   int E = E_actual(maxE);
@@ -320,7 +316,7 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE) const
   double target;
 
   for (int i = 0; i < _t.size(); i++) {
-    fill_in_point(i, maxE, copredict, prediction, USABLE_DTWEIGHT, point.get(), target);
+    fill_in_point(i, maxE, coprediction, coprediction, USABLE_DTWEIGHT, point.get(), target);
     usable[i] = is_usable(point.get(), target, E, _allow_missing, targetRequired);
   }
 

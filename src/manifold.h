@@ -187,7 +187,7 @@ public:
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
                            double dtWeight = 0.0, bool skipMissing = false) const;
 
-  std::vector<bool> generate_usable(int maxE) const;
+  std::vector<bool> generate_usable(int maxE, bool coprediction = false) const;
 
   int E_dt(int E) const { return (_dt) * (E - 1 + _dt0); }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }

@@ -624,7 +624,7 @@ program define edmExplore, eclass
 		local co_z_e_varying_count = `z_e_varying_count'
 
 		if `mata_mode' {
-			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as cousable
+			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`co_x'", ///
