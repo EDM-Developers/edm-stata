@@ -51,88 +51,6 @@ program define edm, eclass sortpreserve
 	else edmParser `0'
 end
 
-program define edmDisplayCI, rclass
-	syntax ,  mat(name) ci(integer) [maxr(integer 2)]
-	quietly {
-		noi di as result %18s "Est. mean `ci'% CI" _c
-
-		if `maxr' == 1 {
-			noi di as result %17s " " _c
-		}
-		local datasize = r(N)
-		tempname varbuffer
-		/* noi mat list `mat' */
-		svmat `mat',names(`varbuffer'_ci`ci'_)
-
-		local type1 "rho"
-		local type2 "mae"
-
-		forvalues j=1/`maxr' {
-			cap ci `varbuffer'_ci`ci'_`j', level(`ci')
-			if _rc !=0 {
-				cap ci means `varbuffer'_ci`ci'_`j', level(`ci')
-			}
-			return scalar lb_mean_`type`j'' = `=r(lb)'
-			return scalar ub_mean_`type`j'' = `=r(ub)'
-
-			noi di as result "   [" _c
-
-			/* noi di as result  %9.5g  `=`matmean'[1,`j']-invnormal(1-(100-`ci')/200)*`matsd'[1,`j']/sqrt(`rep')' _c */
-			noi di as result  %9.5g  `=r(lb)' _c
-			noi di as result ", " _c
-
-			/* noi di as result  %9.5g  `=`matmean'[1,`j']+invnormal(1-(100-`ci')/200)*`matsd'[1,`j']/sqrt(`rep')' _c */
-			noi di as result  %9.5g  `=r(ub)' _c
-
-			noi di as result " ]" _c
-
-
-		}
-		noi qui count
-		local datasize = r(N)
-		/* mat list `buffer' */
-		/* set trace on */
-		noi di ""
-		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Est.)" _c
-		forvalues j=1/`maxr' {
-			if `maxr' == 1 {
-				noi di as result %17s " " _c
-			}
-			qui sum `varbuffer'_ci`ci'_`j'
-			noi di as result "   [" _c
-			noi di as result %9.5g `=r(mean)-invnormal(1-(100-`ci')/200)*r(sd)' _c
-			return scalar lb_pce_`type`j'' = `=r(mean)-invnormal(1-(100-`ci')/200)*r(sd)'
-			noi di as result ", " _c
-			noi di as result %9.5g `=r(mean)+invnormal(1-(100-`ci')/200)*r(sd)' _c
-			return scalar ub_pce_`type`j'' = `=r(mean)+invnormal(1-(100-`ci')/200)*r(sd)'
-			noi di as result " ]" _c
-		}
-
-		noi di ""
-		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Obs.)" _c
-		forvalues j=1/`maxr' {
-
-			if `maxr' == 1 {
-				noi di as result %17s " " _c
-			}
-			_pctile `varbuffer'_ci`ci'_`j', percentile(`=(100-`ci')/2' `=100 - (100-`ci')/2' )
-			noi di as result "   [" _c
-			noi di as result %9.5g `=r(r1)' _c
-			return scalar lb_pco_`type`j'' = `=r(r1)'
-			noi di as result ", " _c
-			noi di as result %9.5g `=r(r2)' _c
-			return scalar ub_pco_`type`j'' = `=r(r2)'
-			noi di as result " ]" _c
-			drop `varbuffer'_ci`ci'_`j'
-		}
-
-		cap drop `varbuffer'_ci`ci'_*
-		qui keep if _n<=`datasize'
-		noi di ""
-	}
-
-end
-
 program define edmParser, eclass
 
 	/* syntax anything(id="subcommand or variables" min=2 max=3)  [if], [e(numlist ascending)] [theta(numlist ascending)] [manifold(string)] [converge] */
@@ -2013,10 +1931,90 @@ program define edmDisplayFooter, eclass
 			di `:di %8.2g `=e(dtw)''
 		}
 	}
-
 end
 
+program define edmDisplayCI, rclass
+	syntax ,  mat(name) ci(integer) [maxr(integer 2)]
+	quietly {
+		noi di as result %18s "Est. mean `ci'% CI" _c
+
+		if `maxr' == 1 {
+			noi di as result %17s " " _c
+		}
+		local datasize = r(N)
+		tempname varbuffer
+		/* noi mat list `mat' */
+		svmat `mat',names(`varbuffer'_ci`ci'_)
+
+		local type1 "rho"
+		local type2 "mae"
+
+		forvalues j=1/`maxr' {
+			cap ci `varbuffer'_ci`ci'_`j', level(`ci')
+			if _rc !=0 {
+				cap ci means `varbuffer'_ci`ci'_`j', level(`ci')
+			}
+			return scalar lb_mean_`type`j'' = `=r(lb)'
+			return scalar ub_mean_`type`j'' = `=r(ub)'
+
+			noi di as result "   [" _c
+
+			/* noi di as result  %9.5g  `=`matmean'[1,`j']-invnormal(1-(100-`ci')/200)*`matsd'[1,`j']/sqrt(`rep')' _c */
+			noi di as result  %9.5g  `=r(lb)' _c
+			noi di as result ", " _c
+
+			/* noi di as result  %9.5g  `=`matmean'[1,`j']+invnormal(1-(100-`ci')/200)*`matsd'[1,`j']/sqrt(`rep')' _c */
+			noi di as result  %9.5g  `=r(ub)' _c
+			noi di as result " ]" _c
+		}
+		noi qui count
+		local datasize = r(N)
+		/* mat list `buffer' */
+		/* set trace on */
+		noi di ""
+		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Est.)" _c
+		forvalues j=1/`maxr' {
+			if `maxr' == 1 {
+				noi di as result %17s " " _c
+			}
+			qui sum `varbuffer'_ci`ci'_`j'
+			noi di as result "   [" _c
+			noi di as result %9.5g `=r(mean)-invnormal(1-(100-`ci')/200)*r(sd)' _c
+			return scalar lb_pce_`type`j'' = `=r(mean)-invnormal(1-(100-`ci')/200)*r(sd)'
+			noi di as result ", " _c
+			noi di as result %9.5g `=r(mean)+invnormal(1-(100-`ci')/200)*r(sd)' _c
+			return scalar ub_pce_`type`j'' = `=r(mean)+invnormal(1-(100-`ci')/200)*r(sd)'
+			noi di as result " ]" _c
+		}
+
+		noi di ""
+		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Obs.)" _c
+		forvalues j=1/`maxr' {
+
+			if `maxr' == 1 {
+				noi di as result %17s " " _c
+			}
+			_pctile `varbuffer'_ci`ci'_`j', percentile(`=(100-`ci')/2' `=100 - (100-`ci')/2' )
+			noi di as result "   [" _c
+			noi di as result %9.5g `=r(r1)' _c
+			return scalar lb_pco_`type`j'' = `=r(r1)'
+			noi di as result ", " _c
+			noi di as result %9.5g `=r(r2)' _c
+			return scalar ub_pco_`type`j'' = `=r(r2)'
+			noi di as result " ]" _c
+			drop `varbuffer'_ci`ci'_`j'
+		}
+
+		cap drop `varbuffer'_ci`ci'_*
+		qui keep if _n<=`datasize'
+		noi di ""
+	}
+end
+
+
 program define edmDisplayTable, eclass
+	syntax ,  result_matrix(name)
+
 	local diopts "`options'"
 	local fmt "%12.5g"
 	local fmtprop "%8.3f"
@@ -2030,7 +2028,7 @@ program define edmDisplayTable, eclass
 			display as text %16s "MAE"
 			di as txt "{hline 68}"
 
-			mat r = e(explore_result)
+			mat r = e(`result_matrix')
 			local nr = rowsof(r)
 			local kr = colsof(r)
 			forvalues i = 1/ `nr' {
@@ -2064,7 +2062,7 @@ program define edmDisplayTable, eclass
 
 			// process the return matrix
 			tempname reported_r r buffer summary_r
-			mat `r' = e(explore_result)
+			mat `r' = e(`result_matrix')
 			local nr = rowsof(`r')
 			local kr = colsof(`r')
 			mat `reported_r' = J(`nr',1,0)
@@ -2142,10 +2140,10 @@ program define edmDisplayTable, eclass
 			local num_directions = 1 + (e(direction) == "both")
 			forvalues direction_num = 1/`num_directions' {
 				if `direction_num' == 1 {
-					mat r = e(xmap_1)
+					mat r = e(`result_matrix'_1)
 				}
 				else {
-					mat r = e(xmap_2)
+					mat r = e(`result_matrix'_2)
 				}
 
 				local nr = rowsof(r)
@@ -2182,10 +2180,10 @@ program define edmDisplayTable, eclass
 
 			forvalues direction_num = 1/2 {
 				if `direction_num' == 1 {
-					mat `r' = e(xmap_1)
+					mat `r' = e(`result_matrix'_1)
 				}
 				else {
-					mat `r' = e(xmap_2)
+					mat `r' = e(`result_matrix'_2)
 					if e(direction) =="oneway" {
 						continue, break
 					}
@@ -2249,7 +2247,24 @@ end
 
 program define edmDisplay, eclass
 	edmDisplayHeader
-	edmDisplayTable
+	if e(subcommand) == "explore" {
+		edmDisplayTable , result_matrix(explore_result)
+
+		if("`e(copredictvar)'" != "") {
+			// TODO:
+			// display _n "Copredictions"
+			// edmDisplayTable , result_matrix(explore_result)
+		}
+	}
+	if e(subcommand) == "xmap" {
+		edmDisplayTable , result_matrix(xmap)
+
+		if("`e(copredictvar)'" != "") {
+			// TODO:
+			// display _n "Copredictions"
+			// edmDisplayTable , result_matrix(xmap)
+		}
+	}
 	edmDisplayFooter
 end
 
