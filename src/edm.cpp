@@ -1056,6 +1056,8 @@ void af_make_prediction(const int npreds, const Options& opts,
 {
   using af::array;
   using af::constant;
+  using af::dim4;
+  using af::iota;
 
   auto mpRange = nvtxRangeStartA(__FUNCTION__);
   const int numThetas = opts.thetas.size();
@@ -1089,26 +1091,18 @@ void af_make_prediction(const int npreds, const Options& opts,
   pValids = pValids && validDistPair.inds;
 
   array retcodes;
-  array kValids = constant(0, M.nobs, npreds, b8);
+  array kValids = iota(dim4(M.nobs), dim4(1, npreds));
   {
     const bool isfoco = opts.forceCompute;
 
     array kused = af::count(pValids, 0);
-    kused.host(kUseds.data());
+    // TODO check if saving at this point is necessary // kused.host(kUseds.data());
 
     array kchck = opts.k > kused;
     array kvals = kchck * (isfoco * kused) + (1 - kchck) * opts.k;
     array findk = select(kvals < 0 || kvals == kused, kused, kvals);
 
-    std::vector<int> ks(findk.elements());
-    findk.host(ks.data());
-
-    for (int p = 0; p < npreds; ++p) {
-      const int k = ks[p];
-      if (k > 0) { // Mark valid set in current prediction to 1
-        kValids(af::seq(k), p) = 1;
-      }
-    }
+    kValids = kValids < tile(findk, M.nobs);
     //TODO
     //retcodes = kchck * !isfoco * int(INSUFFICIENT_UNIQUE) +
     //           kchck * isfoco * int(SUCCESS) +
@@ -1121,22 +1115,26 @@ void af_make_prediction(const int npreds, const Options& opts,
     array maxs = af::max(pValids * validDistPair.dists, 0);
     array pDists = pValids * validDistPair.dists + (1 - pValids) * tile(maxs + 100, M.nobs);
 
-    array sValids;
-    sort(sDists, sValids, pDists, pValids, 0);
-    pValids = sValids && kValids;
+    array indices;
+    sort(sDists, indices, pDists);
 
-    //Yvector also needs to be reordered as per distances order
-    sort(sDists, yvecs, pDists, tile(M.yvec, 1, npreds), 0);
+    yvecs = moddims(M.yvec(indices), M.nobs, npreds);
 
-    // Manifold data also needs to be reorder(as per distances order) with SMap prediction
+    array vIdx = indices + iota(dim4(1, npreds), dim4(M.nobs)) * M.nobs;
+
+    pValids = moddims(pValids(vIdx), M.nobs, npreds) && kValids;
+
+    // Manifold data also needs to be reorder for SMap prediction
     if (opts.algorithm == Algorithm::SMap) {
-      // Sort Manifold data to match validities order
-      array temp;
-      sort(temp, smData,
-           tile(moddims(pDists, 1, M.nobs, npreds), M.E_actual),
-           tile(M.mdata, 1, 1, npreds), 1);
+      array tmdata = tile(M.mdata, 1, 1, npreds);
+      array soffs  = iota(dim4(1, 1, npreds), dim4(M.E_actual, M.nobs)) * (M.E_actual * M.nobs);
+      array d0offs = iota(dim4(M.E_actual), dim4(1, M.nobs, npreds));
+
+      indices = tile(moddims(indices, 1, M.nobs, npreds), M.E_actual) * M.E_actual;
+      indices += (soffs + d0offs);
+
+      smData = moddims(tmdata(indices), M.E_actual, M.nobs, npreds);
     }
-    // TODO Ideally, it would be better to reorder yvecs, mdata, validities in one sort call
   }
   nvtxRangeEnd(searchRange);
 
