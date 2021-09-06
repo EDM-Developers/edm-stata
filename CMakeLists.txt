@@ -32,6 +32,7 @@ endif()
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
 project(edm-stata-package CXX)
+enable_language(CUDA)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -72,7 +73,9 @@ set(COMMON_SRC src/common.cpp src/common.h
                src/train_predict_split.h
                src/core.h src/EMD_wrapper.cpp src/EMD.h
                src/network_simplex_simple.h src/full_bipartitegraph.h
-               src/thread_pool.cpp src/thread_pool.h)
+               src/thread_pool.cpp src/thread_pool.h
+               src/lp_distance.cu src/lp_distance.cuh
+               )
 
 # The main EDM plugin for Stata
 add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
