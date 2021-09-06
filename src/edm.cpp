@@ -30,6 +30,7 @@
 #include <chrono>
 
 #include <arrayfire.h>
+#include <nvToolsExt.h>
 
 constexpr bool useAFArm = true; //Flag to execute make_prediction using AF ports - debugging purposes
 
@@ -918,8 +919,11 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
   using af::seq;
   using af::tile;
 
+  auto range = nvtxRangeStartA(__FUNCTION__);
+
   const dim_t mnobs = M.nobs;
 
+  array result;
   if (skipOtherPanels && skipMissingData) {
       array npredsMp  = Mp.panel(seq(npreds));
       array panelM    = tile(M.panel, 1, npreds);
@@ -928,18 +932,20 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
       array msngCols  = anyTrue(mssngM, 0);
       array msngFlags = tile(msngCols.T(), 1, npreds);
 
-      return !(msngFlags || (panelM != panelMp));
+      result = !(msngFlags || (panelM != panelMp));
   } else if (skipOtherPanels) {
       array npredsMp = Mp.panel(seq(npreds));
       array panelM   = tile(M.panel, 1, npreds);
       array panelMp  = tile(npredsMp.T(), mnobs);
 
-      return !(panelM != panelMp);
+      result = !(panelM != panelMp);
   } else if (skipMissingData) {
-      return tile(!(anyTrue(M.mdata == M.missing, 0).T()), 1, npreds);
+      result = tile(!(anyTrue(M.mdata == M.missing, 0).T()), 1, npreds);
   } else {
-      return af::constant(1.0, M.nobs, npreds, b8);
+      result = af::constant(1.0, M.nobs, npreds, b8);
   }
+  nvtxRangeEnd(range);
+  return result;
 }
 
 void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused,
@@ -951,6 +957,8 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   using af::array;
   using af::sum;
   using af::tile;
+
+  auto range = nvtxRangeStartA(__FUNCTION__);
 
   const array& valids = pair.inds;
   const array& dists  = pair.dists;
@@ -972,6 +980,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   if (opts.saveKUsed) {
     kused = moddims(af::count(weights, 0), npreds, tcount);
   }
+  nvtxRangeEnd(range);
 }
 
 void afSMapPrediction(af::array& retcodes, af::array& kused,
@@ -993,6 +1002,8 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   using af::seq;
   using af::span;
   using af::tile;
+
+  auto range = nvtxRangeStartA(__FUNCTION__);
 
   const array& valids  = pair.inds;
   const array& dists   = pair.dists;
@@ -1037,6 +1048,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   if (opts.saveKUsed) {
     kused = moddims(af::count(weights, 0), npreds, tcount);
   }
+  nvtxRangeEnd(range);
 }
 
 void af_make_prediction(const int npreds, const Options& opts,
@@ -1049,6 +1061,7 @@ void af_make_prediction(const int npreds, const Options& opts,
   using af::array;
   using af::constant;
 
+  auto mpRange = nvtxRangeStartA(__FUNCTION__);
   const int numThetas = opts.thetas.size();
 
   if (opts.algorithm != Algorithm::Simplex && opts.algorithm != Algorithm::SMap) {
@@ -1075,6 +1088,7 @@ void af_make_prediction(const int npreds, const Options& opts,
   auto validDistPair =
       afLPDistances(npreds, opts, M, Mp, metricOpts);
 
+  auto kisRange = nvtxRangeStartA("kItemsSelection");
   // TODO add code path for wasserstein later
   pValids = pValids && validDistPair.inds;
 
@@ -1104,6 +1118,8 @@ void af_make_prediction(const int npreds, const Options& opts,
     //           kchck * isfoco * int(SUCCESS) +
     //           (kvals == 0) * int(SUCCESS);
   }
+  nvtxRangeEnd(kisRange);
+  auto searchRange = nvtxRangeStartA("sortInfo");
   array sDists, yvecs, smData;
   {
     array maxs = af::max(pValids * validDistPair.dists, 0);
@@ -1126,6 +1142,7 @@ void af_make_prediction(const int npreds, const Options& opts,
     }
     // TODO Ideally, it would be better to reorder yvecs, mdata, validities in one sort call
   }
+  nvtxRangeEnd(searchRange);
 
   array ystars, kused;
   if (opts.algorithm == Algorithm::Simplex) {
@@ -1139,9 +1156,13 @@ void af_make_prediction(const int npreds, const Options& opts,
       dcoeffs.T().host(coeffs.data());
     }
   }
+
+  auto returnRange = nvtxRangeStartA("ReturnValues");
   ystars.T().host(ystar.data());
   retcodes.T().host(rc.data());
   if (opts.saveKUsed) {
     kused.host(kUseds.data());
   }
+  nvtxRangeEnd(returnRange);
+  nvtxRangeEnd(mpRange);
 }
