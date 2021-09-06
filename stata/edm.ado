@@ -1918,21 +1918,9 @@ program define edmXmap, eclass
 	edmDisplay
 end
 
-
-program define edmDisplay, eclass
-/*
-Empirical Dynamic Modelling
-Univariate simplex projection with manifold construct x and its lag values
-------------------------------------
-| E | theta | rho |
-| 2 | 0.1 | 0.993 |
-------------------------------------
-*/
+program define edmDisplayHeader, eclass
 	display _n "Empirical Dynamic Modelling"
-	local diopts "`options'"
-	local fmt "%12.5g"
-	local fmtprop "%8.3f"
-	local ci_counter = 1
+
 	if e(subcommand) =="explore" {
 		if !inlist("`=e(extraembed)'","",".") {
 			di as text "Multivariate mapping with `=e(x)' and its lag values"
@@ -1951,6 +1939,89 @@ Univariate simplex projection with manifold construct x and its lag values
 			di `:di %8.2g `=e(missingdistance)'' _c
 			di " with all values."
 		}
+	}
+	else if e(subcommand) == "xmap" {
+		di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
+		if !inlist("`=e(extraembed)'","",".") {
+			di as text "Additional variable" _c
+			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
+			di " in the embedding: `=e(extraembed)'"
+		}
+		if e(missingdistance)>0 & e(missingdistance)!= . {
+			di as text "Missing values are assumed to have a distance of " _c
+
+			if `=e(missingdistance1)' != `=e(missingdistance2)' & `=e(missingdistance1)' !=. & e(direction) != "oneway" {
+				di `:di %8.2g `=e(missingdistance1)'' _c
+				di " and " _c
+				di `:di %8.2g `=e(missingdistance2)''
+			}
+			else {
+				di `:di %8.2g `=e(missingdistance)'' _c
+				di " with all values."
+			}
+		}
+	}
+
+end
+
+program define edmDisplayFooter, eclass
+
+	if e(subcommand) =="explore" {
+		if ((e(replicate) == 1 & e(crossfold) <=0) | e(rep_details) == 1) {
+		}
+		else {
+			di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
+		}
+		if e(e_offset) != 0 {
+			di as text "Note: Actual E is higher than the specified E due to extras"
+		}
+		di as text ustrtrim(e(cmdfootnote))
+	}
+	else if e(subcommand) == "xmap" {
+		if (e(replicate) == 1 | e(rep_details) == 1) {
+			* the case of no replication
+		}
+		else {
+			* the case of replication
+			di as text "Note: Results from `=e(replicate)' replications"
+		}
+
+		if "`=e(cmdfootnote)'" != "." {
+			di as text ustrtrim(e(cmdfootnote))
+		}
+		di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
+
+		if e(e_main) != e(e_actual) {
+			di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
+		}
+		else {
+			di ""
+		}
+	}
+
+	if `=e(force_compute)' == 1 {
+		//di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
+	}
+	if `=e(dt)' == 1 {
+		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
+		if `=e(dtw1)' != `=e(dtw2)' & `=e(dtw2)' !=. & e(direction) !="oneway" {
+			di `:di %8.2g `=e(dtw1)'' _c
+			di " and " _c
+			di `:di %8.2g `=e(dtw2)''
+		}
+		else {
+			di `:di %8.2g `=e(dtw)''
+		}
+	}
+
+end
+
+program define edmDisplayTable, eclass
+	local diopts "`options'"
+	local fmt "%12.5g"
+	local fmtprop "%8.3f"
+	local ci_counter = 1
+	if e(subcommand) =="explore" {
 		if ((e(replicate) == 1 & e(crossfold) <=0) | e(rep_details) == 1) {
 			di as txt "{hline 68}"
 			display as text %18s cond(e(report_actuale)==1,"Actual E","E")  _c
@@ -2048,34 +2119,9 @@ Univariate simplex projection with manifold construct x and its lag values
 			mat `summary_r'=`summary_r'[2...,.]
 			ereturn matrix summary = `summary_r'
 			di as txt "{hline 70}"
-			di as text "Note: Results from `=max(`=e(replicate)',`=e(crossfold)')' runs"
 		}
-
-		if e(e_offset) != 0 {
-			di as text "Note: Actual E is higher than the specified E due to extras"
-		}
-		di as text ustrtrim(e(cmdfootnote))
 	}
 	else if e(subcommand) == "xmap" {
-		di as txt "Convergent Cross-mapping result for variables {bf:`=e(x)'} and {bf:`=e(y)'}"
-		if !inlist("`=e(extraembed)'","",".") {
-			di as text "Additional variable" _c
-			di cond(wordcount("`=e(extraembed)'")>1,"s","") _c
-			di " in the embedding: `=e(extraembed)'"
-		}
-		if e(missingdistance)>0 & e(missingdistance)!= . {
-			di as text "Missing values are assumed to have a distance of " _c
-
-			if `=e(missingdistance1)' != `=e(missingdistance2)' & `=e(missingdistance1)' !=. & e(direction) != "oneway" {
-				di `:di %8.2g `=e(missingdistance1)'' _c
-				di " and " _c
-				di `:di %8.2g `=e(missingdistance2)''
-			}
-			else {
-				di `:di %8.2g `=e(missingdistance)'' _c
-				di " with all values."
-			}
-		}
 		local direction1 = "`=e(y)' ~ `=e(y)'|M(`=e(x)')"
 		local direction2 = "`=e(x)' ~ `=e(x)'|M(`=e(y)')"
 		forvalues i=1/2{
@@ -2093,7 +2139,7 @@ Univariate simplex projection with manifold construct x and its lag values
 			display as text %16s "rho"  _c
 			display as text %16s "MAE"
 			di as txt "{hline `line_length'}"
-			local num_directions = 1 + (e(direction) =="both")
+			local num_directions = 1 + (e(direction) == "both")
 			forvalues direction_num = 1/`num_directions' {
 				if `direction_num' == 1 {
 					mat r = e(xmap_1)
@@ -2197,37 +2243,16 @@ Univariate simplex projection with manifold construct x and its lag values
 			mat `summary_r'=`summary_r'[2...,.]
 			ereturn matrix summary = `summary_r'
 			di as txt "{hline `line_length'}"
-			di as text "Note: Results from `=e(replicate)' replications"
-		}
-
-		if "`=e(cmdfootnote)'" != "." {
-			di as text ustrtrim(e(cmdfootnote))
-		}
-		di as txt "Note: The embedding dimension E is `=e(e_actual)'" _c
-		/* set trace on */
-		if e(e_main) != e(e_actual) {
-			di " (including `=e(e_offset)' extra`=cond(e(e_offset)>1,"s","")')"
-		}
-		else {
-			di ""
-		}
-	}
-
-	if `=e(force_compute)' == 1 {
-		//di as txt "Note: -force- option is specified. The estimate may not be derived from the specified k."
-	}
-	if `=e(dt)' == 1 {
-		di as txt "Note: Embedding includes the delta of the time variable with a weight of " _c
-		if `=e(dtw1)' != `=e(dtw2)' & `=e(dtw2)' !=. & e(direction) !="oneway" {
-			di `:di %8.2g `=e(dtw1)'' _c
-			di " and " _c
-			di `:di %8.2g `=e(dtw2)''
-		}
-		else {
-			di `:di %8.2g `=e(dtw)''
 		}
 	}
 end
+
+program define edmDisplay, eclass
+	edmDisplayHeader
+	edmDisplayTable
+	edmDisplayFooter
+end
+
 
 capture mata mata drop burn_rvs()
 mata:
