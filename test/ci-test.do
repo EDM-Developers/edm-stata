@@ -104,6 +104,28 @@ edm xmap y x
 * assert e(b)[1,1] == xmap1[1,2]
 * assert e(b)[1,2] == xmap1[1,1]
 
+* Make sure multiple e's and multiple theta's work together
+
+set seed 1
+edm explore x, e(2 3) theta(0 1) mata
+ereturn list
+
+forvalues i = 1/`=rowsof(e(explore_result))' {
+    forvalues j = 1/`=colsof(e(explore_result))' {
+        assert missing(e(explore_result)[`i', `j']) == 0
+    }
+}
+
+set seed 1
+edm explore x, e(2 3) theta(0 1)
+ereturn list
+
+forvalues i = 1/`=rowsof(e(explore_result))' {
+    forvalues j = 1/`=colsof(e(explore_result))' {
+        assert missing(e(explore_result)[`i', `j']) == 0
+    }
+}
+
 tempfile basedata
 qui compress
 qui save `basedata', replace

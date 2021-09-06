@@ -303,7 +303,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         stats.rho = MISSING_D;
       }
 
-      stats.taskNum = opts.taskNum + t;
+      stats.taskNum = opts.taskNum * numThetas + t;
       stats.calcRhoMAE = opts.calcRhoMAE;
 
       pred.stats.push_back(stats);

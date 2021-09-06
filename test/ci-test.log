@@ -425,6 +425,126 @@ Note: The embedding dimension E is 2
 . * assert e(b)[1,1] == xmap1[1,2]
 . * assert e(b)[1,2] == xmap1[1,1]
 . 
+. * Make sure multiple e's and multiple theta's work together
+. 
+. set seed 1
+
+. edm explore x, e(2 3) theta(0 1) mata
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               0          .99835         .008931 
+                 2               1          .99898        .0068283 
+                 3               0          .99771         .010797 
+                 3               1          .99887        .0074365 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. ereturn list
+
+scalars:
+                  e(N) =  201
+           e(e_offset) =  0
+     e(report_actuale) =  1
+                e(tau) =  1
+          e(replicate) =  1
+          e(crossfold) =  0
+        e(rep_details) =  0
+                 e(ci) =  0
+      e(force_compute) =  1
+              e(panel) =  0
+                 e(dt) =  0
+
+macros:
+            e(cmdline) : "edm explore x, e(2 3) theta(0 1) mata"
+                e(cmd) : "edm"
+               e(mode) : "mata"
+          e(algorithm) : "simplex"
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data"
+                  e(x) : "x"
+          e(direction) : "oneway"
+         e(subcommand) : "explore"
+         e(properties) : "b"
+
+matrices:
+                  e(b) :  1 x 1
+     e(explore_result) :  4 x 4
+
+functions:
+             e(sample)   
+
+. 
+. forvalues i = 1/`=rowsof(e(explore_result))' {
+  2.     forvalues j = 1/`=colsof(e(explore_result))' {
+  3.         assert missing(e(explore_result)[`i', `j']) == 0
+  4.     }
+  5. }
+
+. 
+. set seed 1
+
+. edm explore x, e(2 3) theta(0 1)
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               0          .99835         .008931 
+                 2               1          .99898        .0068283 
+                 3               0          .99771         .010797 
+                 3               1          .99887        .0074365 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data
+
+. ereturn list
+
+scalars:
+                  e(N) =  201
+           e(e_offset) =  0
+     e(report_actuale) =  1
+                e(tau) =  1
+          e(replicate) =  1
+          e(crossfold) =  0
+        e(rep_details) =  0
+                 e(ci) =  0
+      e(force_compute) =  1
+              e(panel) =  0
+                 e(dt) =  0
+
+macros:
+            e(cmdline) : "edm explore x, e(2 3) theta(0 1)"
+                e(cmd) : "edm"
+               e(mode) : "plugin"
+          e(algorithm) : "simplex"
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
+Note: Random 50/50 split for training and validation data"
+                  e(x) : "x"
+          e(direction) : "oneway"
+         e(subcommand) : "explore"
+         e(properties) : "b"
+
+matrices:
+                  e(b) :  1 x 1
+     e(explore_result) :  4 x 4
+
+functions:
+             e(sample)   
+
+. 
+. forvalues i = 1/`=rowsof(e(explore_result))' {
+  2.     forvalues j = 1/`=colsof(e(explore_result))' {
+  3.         assert missing(e(explore_result)[`i', `j']) == 0
+  4.     }
+  5. }
+
+. 
 . tempfile basedata
 
 . qui compress
