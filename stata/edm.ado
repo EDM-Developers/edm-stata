@@ -1,7 +1,7 @@
-*! version 1.6.2, 26Aug2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
+*! version 1.7.0, 07Sep2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
 *! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@unimelb.edu.au>
 
-global EDM_VERSION = "1.6.2"
+global EDM_VERSION = "1.7.0"
 /* Empirical dynamic modelling
 
 Version history:
@@ -859,10 +859,9 @@ program define edmExplore, eclass
 
 				if `mata_mode' {
 					local savesmap_vars ""
-					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
-						`j', `lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', ///
-						`idw', "`panel_id'", `i', ///
-						`total_num_extras', `z_e_varying_count', "`z_factor_var'")
+					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', ///
+						`lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'", ///
+						`i', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 					cap corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -881,8 +880,9 @@ program define edmExplore, eclass
 					}
 
 					if "`copredictvar'" != "" {
-						break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
-							`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
+						break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", ///
+							"`train_set'", "`co_predict_set'", `j', `lib_size', "`algorithm'", "", ///
+							"`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
 							`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 						cap corr `co_x_f' `co_x_p' if `co_predict_set'
@@ -1404,7 +1404,7 @@ program define edmXmap, eclass
 			local full_mode = 0
 			local crossfold = 0
 
-			local copredict_mode = ("`copredictvar'" != "") & (`direction_num' == `num_directions')
+			local copredict_mode = ("`copredictvar'" != "")
 
 			if `copredict_mode' {
 				local co_xvar = "`co_x'"
@@ -1621,8 +1621,6 @@ program define edmXmap, eclass
 
 					foreach j of numlist `theta' {
 
-						local last_theta =  `j'
-
 						mat r`direction_num'[`task_num',1] = `direction_num'
 						mat r`direction_num'[`task_num',2] = `lib_size'
 
@@ -1658,8 +1656,8 @@ program define edmXmap, eclass
 							}
 
 							if "`copredictvar'" != "" {
-								break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
-									`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
+								break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", ///
+									"`co_predict_set'", `j', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
 									`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 								cap corr `co_x_f' `co_x_p' if `co_predict_set'
@@ -1718,7 +1716,6 @@ program define edmXmap, eclass
 				else {
 					local cmdfootnote "Note: dt option is ignored in at least one direction"
 				}
-
 			}
 		}
 	}

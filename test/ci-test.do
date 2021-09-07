@@ -472,6 +472,27 @@ set seed 1
 edm explore x, p(-1) mata
 edm xmap x y, p(-1) mata
 
+// Try out copredict and copredictvar combinations with multiple reps etc.
+set seed 1
+
+edm explore x, copredictvar(y)
+
+edm explore x, copredictvar(y) full
+
+edm xmap x y, copredictvar(u1)
+
+edm explore x, e(2/5) theta(0 1) copredictvar(y)
+
+edm xmap x y, library(5 10 20 40) copredictvar(u1)
+
+edm explore x, copredictvar(y) rep(20)
+
+edm xmap x y, library(5 10 20 40) copredictvar(u1) rep(20)
+
+edm explore x, copredictvar(y) rep(100) ci(10)
+
+edm xmap x y, library(5 10 20 40) copredictvar(u1) rep(4) detail
+
 // Set up some panel data structure without missing data
 clear
 set obs 100
