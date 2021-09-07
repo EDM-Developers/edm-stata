@@ -15,6 +15,8 @@ Number of observations (_N) was 0, now 500.
 . }
 
 . 
+. global EDM_MATA = 1
+
 . global EDM_VERBOSITY = 0
 
 . global EDM_NTHREADS = 4
@@ -121,7 +123,7 @@ scalars:
 macros:
             e(cmdline) : "edm explore x, e(2/10)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "mata"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data"
@@ -171,7 +173,7 @@ scalars:
 macros:
             e(cmdline) : "edm xmap x y, k(5)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "mata"
           e(direction) : "both"
         e(cmdfootnote) : "Note: Number of neighbours (k) is adjusted to 5
 "
@@ -205,6 +207,7 @@ Note: The embedding dimension E is 6
 . 
 . edm explore x, k(5) crossfold(10)
 10-fold cross-validation progress (10 in total)
+..........
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -288,6 +291,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  2               1          .99902        .0065958 
 --------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .78197          .12054
+--------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
@@ -328,6 +338,13 @@ Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
    x ~ x|M(y)             190          .89554         .068441 
 ---------------------------------------------------------------
+
+Copredictions
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .63776          .12048
+---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
 . assert testx != . if _n >= 3 & _n <= _N - 10
@@ -341,6 +358,13 @@ Convergent Cross-mapping result for variables y and x
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
    x ~ x|M(y)             190          .89554         .068441 
+---------------------------------------------------------------
+
+Copredictions
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .90619          .07233
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -356,6 +380,13 @@ Additional variable in the embedding: u1
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
    x ~ x|M(y)             190          .37011          .16613 
+---------------------------------------------------------------
+
+Copredictions
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   x ~ x|M(y)             190          .90412         .072046
 ---------------------------------------------------------------
 Note: The embedding dimension E is 3 (including 1 extra)
 
@@ -521,7 +552,7 @@ scalars:
 macros:
             e(cmdline) : "edm explore x, e(2 3) theta(0 1)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "mata"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data"
@@ -789,6 +820,7 @@ Note: Embedding includes the delta of the time variable with a weight of .55
 . 
 . edm explore x, extraembed(u) allowmissing dt crossfold(5)
 5-fold cross-validation progress (5 in total)
+.....
 
 Empirical Dynamic Modelling
 Multivariate mapping with x and its lag values
@@ -825,6 +857,7 @@ Note: Embedding includes the delta of the time variable with a weight of .27
 . 
 . edm explore x, rep(20) ci(95)
 Replication progress (20 in total)
+....................
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -844,6 +877,7 @@ Note: Random 50/50 split for training and validation data
 . 
 . edm xmap x y, lib(50) rep(20) ci(95)
 Replication progress (40 in total)
+........................................
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -881,6 +915,13 @@ Univariate mapping with x and its lag values
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
                  2               1          .99939        .0049147 
+--------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99939        .0049147
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
@@ -925,6 +966,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  2               1          .99877        .0078776 
 --------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99877        .0078776
+--------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
@@ -949,6 +997,13 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
    y ~ y|M(x)             190          .30665          .15441 
 ---------------------------------------------------------------
+
+Copredictions
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             190          .30665          .15441
+---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
 . assert xmap_y_p != . if _n >= 2 & _n <= _N - 10
@@ -972,6 +1027,13 @@ Additional variables in the embedding: (time delta)
 ---------------------------------------------------------------
    y ~ y|M(x)             188          .52396          .13241 
 ---------------------------------------------------------------
+
+Copredictions
+---------------------------------------------------------------
+      Mapping    Library size             rho             MAE
+---------------------------------------------------------------
+   y ~ y|M(x)             188          .52396          .13241
+---------------------------------------------------------------
 Note: The embedding dimension E is 4 (including 2 extras)
 Note: Embedding includes the delta of the time variable with a weight of .88
 
@@ -987,6 +1049,13 @@ Univariate mapping with x and its lag values
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
                  2               1          .99928        .0054303 
+--------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99928        .0054303
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
@@ -1007,6 +1076,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  2               1            .999        .0074196 
 --------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .95758          .70131
+--------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
 
@@ -1019,6 +1095,13 @@ Univariate mapping with x and its lag values
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
                  2               1          .99939        .0049147 
+--------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .78311          .12249
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
@@ -1201,6 +1284,7 @@ Time variable: t, 1 to 100
 . 
 . edm explore x, e(2) crossfold(2) k(-1) allowmissing force
 2-fold cross-validation progress (2 in total)
+..
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -1218,6 +1302,7 @@ Note: 2-fold cross validation results reported
 . 
 . edm explore x, e(2) crossfold(10) k(-1) allowmissing force
 10-fold cross-validation progress (10 in total)
+..........
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -1743,6 +1828,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  2               1          .99416         .015551 
 --------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .77599          .12124
+--------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
 
@@ -1754,6 +1846,13 @@ Univariate mapping with x and its lag values
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
                  2               1          .99416         .015551 
+--------------------------------------------------------------------
+
+Copredictions
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .77599          .12124
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Full sample used for the computation
@@ -5471,7 +5570,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .87492          .10616 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
