@@ -32,13 +32,13 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
-std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, const Options& opts,
+std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, Options opts,
                                                        const std::vector<int>& Es, const std::vector<int>& libraries,
                                                        int k, int numReps, int crossfold, bool explore, bool full,
-                                                       bool saveFinalPredictions, bool saveSMAPCoeffs,
-                                                       bool copredictMode, const std::vector<bool>& usable,
-                                                       const std::string& rngState, IO* io, bool keep_going(),
-                                                       void all_tasks_finished())
+                                                       bool saveFinalPredictions, bool saveFinalCoPredictions,
+                                                       bool saveSMAPCoeffs, bool copredictMode,
+                                                       const std::vector<bool>& usable, const std::string& rngState,
+                                                       IO* io, bool keep_going(), void all_tasks_finished())
 {
 
   workerPool.set_num_workers(opts.nthreads);
@@ -55,19 +55,31 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
     splitter = TrainPredictSplitter(explore, full, crossfold, usable);
   }
 
-  bool newTrainPredictSplit = true;
-  int taskNum = 0;
+  int numLibraries = (explore ? 1 : libraries.size());
 
-  int numStandardTasks = numReps * Es.size() * (explore ? 1 : libraries.size());
-  int numTasks = numStandardTasks + copredictMode;
+  opts.numTasks = numReps * Es.size() * numLibraries;
+  opts.configNum = 0;
+  opts.taskNum = 0;
+
+  int maxE = Es[Es.size() - 1];
+
+  std::vector<bool> cousable;
+
+  if (copredictMode) {
+    opts.numTasks *= 2;
+    cousable = generator.generate_usable(maxE, true);
+  }
+
   int E, kAdj, library, trainSize;
-
-  Options sharedOpts = opts;
-  sharedOpts.copredict = false;
-  sharedOpts.numTasks = numTasks;
 
   std::vector<std::future<Prediction>> futures;
 
+  bool newTrainPredictSplit = true;
+
+  // Note: the 'numReps' either refers to the 'replicate' option
+  // used for bootstrap resampling, or the 'crossfold' number of
+  // cross-validation folds. Both options can't be used together,
+  // so numReps = max(replicate, crossfold).
   for (int iter = 1; iter <= numReps; iter++) {
     if (explore) {
       newTrainPredictSplit = true;
@@ -101,59 +113,54 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
           kAdj = defaultK < library ? defaultK : library;
         }
 
-        taskNum += 1;
+        bool lastConfig = (E == maxE) && (l + 1 == numLibraries);
 
-        bool savePrediction;
         if (explore) {
-          savePrediction = saveFinalPredictions && ((crossfold > 0) || (taskNum == numStandardTasks));
+          opts.savePrediction = saveFinalPredictions && ((iter == numReps) || (crossfold > 0)) && lastConfig;
         } else {
-          savePrediction = saveFinalPredictions && (taskNum == numStandardTasks);
+          opts.savePrediction = saveFinalPredictions && (iter == numReps) && lastConfig;
         }
+        opts.saveSMAPCoeffs = saveSMAPCoeffs;
 
         if (newTrainPredictSplit) {
           splitter.update_train_predict_split(library, iter);
           newTrainPredictSplit = false;
         }
 
-        futures.emplace_back(launch_edm_task(generator, opts, taskNum - 1, E, kAdj, savePrediction, saveSMAPCoeffs,
-                                             splitter.trainingRows(), splitter.predictionRows(), io, keep_going,
-                                             all_tasks_finished));
+        opts.copredict = false;
+        opts.k = kAdj;
+
+        futures.emplace_back(launch_edm_task(generator, opts, E, splitter.trainingRows(), splitter.predictionRows(), io,
+                                             keep_going, all_tasks_finished));
+
+        opts.taskNum += 1;
+
+        if (copredictMode) {
+          opts.copredict = true;
+          if (explore) {
+            opts.savePrediction = saveFinalCoPredictions && ((iter == numReps) || (crossfold > 0)) && lastConfig;
+          } else {
+            opts.savePrediction = saveFinalCoPredictions && ((iter == numReps)) && lastConfig;
+          }
+          opts.saveSMAPCoeffs = false;
+          futures.emplace_back(
+            launch_edm_task(generator, opts, E, splitter.trainingRows(), cousable, io, keep_going, all_tasks_finished));
+
+          opts.taskNum += 1;
+        }
+
+        opts.configNum += opts.thetas.size();
       }
     }
-  }
-
-  if (copredictMode) {
-    // Always saving prediction vector in coprediction mode.
-    // Never calculating rho & MAE statistics in this mode.
-    // Never saving SMAP coefficients in coprediction mode.
-    Options copredOpts = opts;
-    copredOpts.copredict = true;
-    bool savePrediction = true;
-    copredOpts.calcRhoMAE = false;
-    saveSMAPCoeffs = false;
-
-    int maxE = Es[Es.size() - 1];
-    std::vector<bool> cousable = generator.generate_usable(maxE, true);
-
-    taskNum += 1;
-
-    futures.emplace_back(launch_edm_task(generator, copredOpts, taskNum - 1, E, kAdj, savePrediction, saveSMAPCoeffs,
-                                         usable, cousable, io, keep_going, all_tasks_finished));
   }
 
   return futures;
 }
 
-std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int taskNum, int E, int k,
-                                        bool savePrediction, bool saveSMAPCoeffs, const std::vector<bool>& trainingRows,
-                                        const std::vector<bool>& predictionRows, IO* io, bool keep_going(),
-                                        void all_tasks_finished())
+std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int E,
+                                        const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows,
+                                        IO* io, bool keep_going(), void all_tasks_finished())
 {
-  opts.taskNum = taskNum;
-  opts.k = k;
-  opts.savePrediction = savePrediction;
-  opts.saveSMAPCoeffs = saveSMAPCoeffs;
-
   // Expand the 'metrics' vector now that we know the value of E.
   std::vector<Metric> metrics;
 
@@ -307,11 +314,10 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         stats.rho = MISSING_D;
       }
 
-      stats.taskNum = opts.taskNum * numThetas + t;
-      stats.calcRhoMAE = opts.calcRhoMAE;
-
       pred.stats.push_back(stats);
     }
+
+    pred.configNum = opts.configNum;
 
     // Check if any make_prediction call failed, and if so find the most serious error
     pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
@@ -358,7 +364,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     }
   }
 
-  numTasksFinished += numThetas;
+  numTasksFinished += 1;
 
   if (numTasksFinished == opts.numTasks) {
     if (all_tasks_finished != nullptr) {

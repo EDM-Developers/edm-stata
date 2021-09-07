@@ -2,23 +2,22 @@
 
 #include "common.h"
 
-std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, const Options& opts,
+std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, Options opts,
                                                        const std::vector<int>& Es, const std::vector<int>& libraries,
                                                        int k, int numReps, int crossfold, bool explore, bool full,
-                                                       bool saveFinalPredictions, bool saveSMAPCoeffs,
-                                                       bool copredictMode, const std::vector<bool>& usable,
-                                                       const std::string& rngState, IO* io, bool keep_going(),
-                                                       void all_tasks_finished());
+                                                       bool saveFinalPredictions, bool saveFinalCoPredictions,
+                                                       bool saveSMAPCoeffs, bool copredictMode,
+                                                       const std::vector<bool>& usable, const std::string& rngState,
+                                                       IO* io, bool keep_going(), void all_tasks_finished());
 
 // Below are the 'private' members of edm.cpp; they are added here just so they can be accessed for testing.
 
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
-std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int taskNum, int E, int k,
-                                        bool savePrediction, bool saveSMAPCoeffs, const std::vector<bool>& trainingRows,
-                                        const std::vector<bool>& predictionRows, IO* io, bool keep_going(),
-                                        void all_tasks_finished());
+std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int E,
+                                        const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows,
+                                        IO* io, bool keep_going(), void all_tasks_finished());
 
 Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,
                     IO* io, bool keep_going(), void all_tasks_finished());

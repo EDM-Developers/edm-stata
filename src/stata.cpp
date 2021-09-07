@@ -31,6 +31,7 @@ char* NUM_NEIGHBOURS = (char*)"_k";
 char* SAVE_DT = (char*)"_dtsave";
 char* SAVE_MANIFOLD = (char*)"_savemanifold";
 char* SAVE_PREDICTION = (char*)"_predict";
+char* SAVE_COPREDICTION = (char*)"_copredict";
 char* SAVE_SMAP = (char*)"_savesmap";
 char* SAVE_INPUTS = (char*)"_saveinputs";
 char* NUM_REPS = (char*)"_round";
@@ -406,6 +407,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   bool saveFinalPredictions = !(std::string(buffer).empty());
 
+  // Are we saving the copredictions?
+  if (SF_macro_use(SAVE_COPREDICTION, buffer, 200)) {
+    io.print("Got an error rc from macro_use!\n");
+  }
+  bool saveFinalCoPredictions = !(std::string(buffer).empty());
+
   // Are we saving the S-map coefficients (only in xmap mode)?
   bool saveSMAPCoeffs;
   if (explore) {
@@ -599,6 +606,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["explore"] = explore;
     taskGroup["full"] = full;
     taskGroup["saveFinalPredictions"] = saveFinalPredictions;
+    taskGroup["saveFinalCoPredictions"] = saveFinalCoPredictions;
     taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
     taskGroup["copredictMode"] = copredictMode;
     taskGroup["usable"] = bool_to_int(usable);
@@ -612,9 +620,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // return SUCCESS; // Let Stata give the error here.
   }
 
-  futures =
-    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                      saveSMAPCoeffs, copredictMode, usable, rngState, &io, keep_going, all_tasks_finished);
+  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
+                              saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable,
+                              rngState, &io, keep_going, all_tasks_finished);
 
   return SUCCESS;
 }
@@ -628,7 +636,7 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     return TOO_MANY_VARIABLES;
   }
 
-  char* resultMatrix = argv[0];
+  std::string resultMatrix = argv[0];
   bool savePredictMode = atoi(argv[1]);
   bool saveCoPredictMode = atoi(argv[2]);
 
@@ -643,36 +651,38 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results if requested (i.e. not for coprediction)
-      for (auto& stats : pred.stats) {
-        ST_double rho = stats.rho;
+      for (int t = 0; t < pred.stats.size(); t++) {
+        ST_double rho = pred.stats[t].rho;
         if (rho == MISSING_D) {
           rho = SV_missval;
         }
 
-        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 3, rho)) {
-          io.error(fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", stats.rho, resultMatrix,
-                               stats.taskNum + 1, 3)
-                     .c_str());
+        std::string matName = pred.copredict ? "co_" + resultMatrix : resultMatrix;
+        ST_int matRow = pred.configNum + t + 1;
+
+        if (SF_mat_store((char*)matName.c_str(), matRow, 3, rho)) {
+          io.error(
+            fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", rho, matName, matRow, 3).c_str());
           rc = CANNOT_SAVE_RESULTS;
         }
 
-        ST_double mae = stats.mae;
+        ST_double mae = pred.stats[t].mae;
         if (mae == MISSING_D) {
           mae = SV_missval;
         }
 
-        if (SF_mat_store(resultMatrix, stats.taskNum + 1, 4, mae)) {
-          io.error(fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", stats.mae, resultMatrix,
-                               stats.taskNum + 1, 4)
-                     .c_str());
+        if (SF_mat_store((char*)matName.c_str(), matRow, 4, mae)) {
+          io.error(
+            fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", mae, matName, matRow, 4).c_str());
           rc = CANNOT_SAVE_RESULTS;
         }
       }
 
       if (pred.ystar != nullptr) {
-        if (!pred.copredict) {
+        if (savePredictMode && !pred.copredict) {
           write_stata_column(pred.ystar.get(), pred.numPredictions, 1, pred.predictionRows);
-        } else {
+        }
+        if (saveCoPredictMode && pred.copredict) {
           write_stata_column(pred.ystar.get(), pred.numPredictions, savePredictMode + 1, pred.predictionRows);
         }
       }

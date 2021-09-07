@@ -609,14 +609,14 @@ program define edmExplore, eclass
 		tempvar co_usable
 		if `allow_missing_mode' {
 			qui gen byte `co_usable' = 0
-			foreach v of local co_mapping {
+			foreach v of local max_e_co_manifold {
 				qui replace `co_usable' = 1 if `v' !=. & `touse'
 			}
-			qui replace `usable' = 0 if `co_x_f' == .
+			qui replace `co_usable' = 0 if `co_x_f' == .
 		}
 		else {
 			tempvar any_missing_in_co_manifold
-			hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+			hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
 			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
 		}
 
@@ -760,7 +760,7 @@ program define edmExplore, eclass
 		qui label variable `predict' "edm prediction result"
 	}
 
-	if ("`copredictvar'" != "") {
+	if ("`copredict'" != "") {
 		qui gen double `copredict' = .
 		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x'"
 	}
@@ -823,7 +823,9 @@ program define edmExplore, eclass
 		foreach i of numlist `e' {
 			if `mata_mode' {
 				local manifold "mapping_`=`i'-1'"
+				local co_manifold "co_mapping_`=`i'-1'"
 			}
+
 			edmManifoldSize, e(`i') dt(`parsed_dt') dt0(`parsed_dt0') ///
 				num_extras(`z_count') num_eextras(`z_e_varying_count')
 			local total_num_extras = `r(total_num_extras)'
@@ -879,7 +881,7 @@ program define edmExplore, eclass
 					}
 
 					if "`copredictvar'" != "" {
-						break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
+						break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
 							`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
 							`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
@@ -940,7 +942,7 @@ program define edmExplore, eclass
 		local result_matrix = "r"
 		local save_predict_mode = ("`predict'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call edm_plugin `predict' `co_x_p' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call edm_plugin `predict' `copredict' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	mat cfull = r[1,3]
@@ -1264,11 +1266,18 @@ program define edmXmap, eclass
 		error 121
 	}
 
-	local comap_constructed = 0
-
 	mat r2 = J(1, 4, .)
 	if "`copredictvar'" != "" {
 		mat co_r2 = J(1, 4, .)
+	}
+
+	if "`predict'" != "" {
+		cap gen double `predict' = .
+		qui label variable `predict' "edm prediction result"
+	}
+	if "`copredict'" != "" {
+		qui gen double `copredict' = .
+		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 	}
 
 	local num_directions = 1 + ("`direction'" == "both")
@@ -1289,7 +1298,6 @@ program define edmXmap, eclass
 		local round = `replicate'
 
 		local parsed_dtw = "`dtweight'"
-
 
 		if `mata_mode' & `parsed_dt' {
 			// Get the column of dt values if needed for dtsave or the dtweight default
@@ -1360,7 +1368,7 @@ program define edmXmap, eclass
 		}
 
 		if `mata_mode' & ("`copredictvar'" != "") {
-			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`y'", ///
+			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`co_x'", ///
 				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
@@ -1368,14 +1376,14 @@ program define edmXmap, eclass
 			tempvar co_usable
 			if `allow_missing_mode' {
 				qui gen byte `co_usable' = 0
-				foreach v of local co_mapping {
+				foreach v of local max_e_co_manifold {
 					qui replace `co_usable' = 1 if `v' !=. & `touse'
 				}
-				qui replace `usable' = 0 if `co_x_f' == .
+				qui replace `co_usable' = 0 if `co_x_f' == .
 			}
 			else {
 				tempvar any_missing_in_co_manifold
-				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
+				hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
 				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
 			}
 
@@ -1452,11 +1460,6 @@ program define edmXmap, eclass
 
 		tempvar train_set predict_set
 
-		if "`predict'" != "" {
-			cap gen double `predict' = .
-			qui label variable `predict' "edm prediction result"
-		}
-
 		if `mata_mode' {
 			tempvar x_p
 			qui gen double `x_p' = .
@@ -1520,6 +1523,7 @@ program define edmXmap, eclass
 
 			foreach i of numlist `e' {
 				local manifold "mapping_`=`i'-1'"
+				local co_manifold "co_mapping_`=`i'-1'"
 
 				foreach lib_size of numlist `library' {
 					if `mata_mode' {
@@ -1654,7 +1658,7 @@ program define edmXmap, eclass
 							}
 
 							if "`copredictvar'" != "" {
-								break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
+								break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", "`co_predict_set'", ///
 									`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
 									`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
@@ -1671,7 +1675,7 @@ program define edmXmap, eclass
 								}
 
 								if (`task_num' == `num_tasks' & "`copredict'" != "") {
-									cap replace `co_predict' = `co_x_p' if `co_x_p' != .
+									cap replace `copredict' = `co_x_p' if `co_x_p' != .
 								}
 							}
 
@@ -1697,12 +1701,13 @@ program define edmXmap, eclass
 		}
 
 		// Collect all the asynchronous predictions from the plugin
-		if !`mata_mode'  & (`direction_num' == 1) & (`num_directions' == 2) {
+		if !`mata_mode' {
 			edmPrintPluginProgress
-			local result_matrix = "r1"
-			local save_predict_mode = "`predict'" != ""
-			local save_copredict_mode = 0 // Only possible for the final direction
-			plugin call edm_plugin `predict' `all_savesmap_vars`direction_num'' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+			local result_matrix = "r`direction_num'"
+			local save_predict_mode = ("`predict'" != "")
+			local save_copredict_mode = ("`copredictvar'" != "")
+			plugin call edm_plugin `predict' `copredict' `all_savesmap_vars`direction_num'' if `touse', ///
+					"collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
 		if ("`dt'" == "dt") | ("`olddt'" == "olddt") {
@@ -1716,26 +1721,12 @@ program define edmXmap, eclass
 
 			}
 		}
-
 	}
+
 	if `mata_mode' & `replicate' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
 		}
-	}
-
-	// Collect all the asynchronous predictions from the plugin
-	if !`mata_mode' {
-		edmPrintPluginProgress
-		local result_matrix = "r`num_directions'"
-		local save_predict_mode = ("`predict'" != "")
-		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call edm_plugin `predict' `co_x_p' `all_savesmap_vars`num_directions'' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
-	}
-
-	if ("`copredictvar'" != "") {
-		qui gen double `copredict' = `co_x_p'
-		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 	}
 
 	mat cfull = (r1[1,3],r2[1,3])
@@ -2545,10 +2536,6 @@ void construct_manifold(
 	real scalar sE
 
 	for(i = 1; i <= E-1; i++) {
-		if (i < E-1 && copredict_mode) {
-			continue;
-		}
-
 		sE = i + 1
 
 		mani = invtokens(xLagNames[1..sE])
@@ -2571,6 +2558,10 @@ void construct_manifold(
 			maniName = sprintf("mapping_%f", i)
 			st_local(maniName, mani)
 		}
+		else {
+			maniName = sprintf("co_mapping_%f", i)
+			st_local(maniName, mani)
+		}
 	}
 
 
@@ -2579,7 +2570,7 @@ void construct_manifold(
 		st_local("x_f", yName)
 	}
 	else {
-		st_local("co_mapping", mani)
+		st_local("max_e_co_manifold", mani)
 		st_local("co_x_f", yName)
 	}
 }

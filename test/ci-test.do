@@ -7,7 +7,6 @@ if c(MP) {
     qui set processor 1
 }
 
-global EDM_MATA = 1
 global EDM_VERBOSITY = 0
 global EDM_NTHREADS = 4
 global EDM_SAVE_INPUTS = "ci-test"

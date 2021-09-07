@@ -105,6 +105,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
     bool explore = taskGroup["explore"];
     bool full = taskGroup["full"];
     bool saveFinalPredictions = taskGroup["saveFinalPredictions"];
+    bool saveFinalCoPredictions = taskGroup["saveFinalCoPredictions"];
     bool saveSMAPCoeffs = taskGroup["saveSMAPCoeffs"];
     bool copredictMode = taskGroup["copredictMode"];
     std::vector<bool> usable = int_to_bool(taskGroup["usable"]);
@@ -112,7 +113,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
 
     std::vector<std::future<Prediction>> futures =
       launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                        saveSMAPCoeffs, copredictMode, usable, rngState, io, nullptr, nullptr);
+                        saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     for (int f = 0; f < futures.size(); f++) {

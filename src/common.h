@@ -61,21 +61,24 @@ struct DistanceIndexPairs
 
 struct Options
 {
-  bool copredict, forceCompute, savePrediction, saveSMAPCoeffs;
-  int k = 0, nthreads;
+  bool copredict;
+  bool forceCompute;
+  bool savePrediction;
+  bool saveSMAPCoeffs;
+  int k, nthreads;
   double missingdistance;
   double dtWeight;
   bool panelMode;
   double idw;
   std::vector<double> thetas;
   Algorithm algorithm;
-  size_t taskNum = 1, numTasks = 1;
-  bool calcRhoMAE = false;
+  int taskNum, numTasks, configNum;
+  bool calcRhoMAE;
   double aspectRatio;
   Distance distance;
   std::vector<Metric> metrics;
   std::string cmdLine;
-  bool saveKUsed = false;
+  bool saveKUsed;
 };
 
 void to_json(json& j, const Options& o);
@@ -84,8 +87,6 @@ void from_json(const json& j, Options& o);
 struct PredictionStats
 {
   double mae, rho;
-  int taskNum;
-  bool calcRhoMAE;
 };
 
 void to_json(json& j, const PredictionStats& s);
@@ -102,6 +103,7 @@ struct Prediction
   std::vector<int> kUsed;
   std::string cmdLine;
   bool copredict;
+  int configNum;
 };
 
 void to_json(json& j, const Prediction& p);

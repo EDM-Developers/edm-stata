@@ -16,6 +16,7 @@ void to_json(json& j, const Options& o)
             { "algorithm", o.algorithm },
             { "taskNum", o.taskNum },
             { "numTasks", o.numTasks },
+            { "configNum", o.configNum },
             { "calcRhoMAE", o.calcRhoMAE },
             { "aspectRatio", o.aspectRatio },
             { "distance", o.distance },
@@ -39,6 +40,7 @@ void from_json(const json& j, Options& o)
   j.at("algorithm").get_to(o.algorithm);
   j.at("taskNum").get_to(o.taskNum);
   j.at("numTasks").get_to(o.numTasks);
+  j.at("configNum").get_to(o.configNum);
   j.at("calcRhoMAE").get_to(o.calcRhoMAE);
   j.at("aspectRatio").get_to(o.aspectRatio);
   j.at("distance").get_to(o.distance);
@@ -48,15 +50,13 @@ void from_json(const json& j, Options& o)
 
 void to_json(json& j, const PredictionStats& s)
 {
-  j = json{ { "mae", s.mae }, { "rho", s.rho }, { "taskNum", s.taskNum }, { "calcRhoMAE", s.calcRhoMAE } };
+  j = json{ { "mae", s.mae }, { "rho", s.rho } };
 }
 
 void from_json(const json& j, PredictionStats& s)
 {
   j.at("mae").get_to(s.mae);
   j.at("rho").get_to(s.rho);
-  j.at("taskNum").get_to(s.taskNum);
-  j.at("calcRhoMAE").get_to(s.calcRhoMAE);
 }
 
 void to_json(json& j, const Prediction& p)
@@ -78,7 +78,8 @@ void to_json(json& j, const Prediction& p)
             { "stats", p.stats },
             { "predictionRows", p.predictionRows },
             { "kUsed", p.kUsed },
-            { "cmdLine", p.cmdLine } };
+            { "cmdLine", p.cmdLine },
+            { "configNum", p.configNum } };
 }
 
 void from_json(const json& j, Prediction& p)
@@ -91,6 +92,7 @@ void from_json(const json& j, Prediction& p)
   j.at("stats").get_to(p.stats);
   j.at("kUsed").get_to(p.kUsed);
   j.at("cmdLine").get_to(p.cmdLine);
+  j.at("configNum").get_to(p.configNum);
 
   // TODO: Test this coeffs/ystar loading works as expected
   std::vector<double> ystar = j.at("ystar");
