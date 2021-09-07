@@ -79,13 +79,13 @@ edm explore z.x, p(10)
 edm xmap y x, p(10) direction(oneway)
 
 edm xmap y x, p(10) copredict(testx) copredictvar(x2) direction(oneway)
-assert testx!=. if _n>2
+assert testx != . if _n >= 3 & _n <= _N - 10
 
 edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
-assert testx2 !=. if _n>2
+assert testx2 != . if _n >= 3 & _n <= _N - 10
 
 edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
-assert testx3 !=. if _n>2
+assert testx3 != . if _n >= 3 & _n <= _N - 10
 
 * check explore / xmap consistency
 
@@ -189,7 +189,7 @@ assert xc_p!=. if x_p!=.
 
 gen y_copy = y
 edm xmap x y, p(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
-assert xmap_y_p !=. if _n>1
+assert xmap_y_p != . if _n >= 2 & _n <= _N - 10
 assert xmap_y_p == xmap_y if xmap_y !=.
 
 preserve

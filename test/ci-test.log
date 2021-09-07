@@ -330,7 +330,7 @@ Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
-. assert testx!=. if _n>2
+. assert testx != . if _n >= 3 & _n <= _N - 10
 
 . 
 . edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
@@ -344,7 +344,7 @@ Convergent Cross-mapping result for variables y and x
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
-. assert testx2 !=. if _n>2
+. assert testx2 != . if _n >= 3 & _n <= _N - 10
 
 . 
 . edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
@@ -359,7 +359,7 @@ Additional variable in the embedding: u1
 ---------------------------------------------------------------
 Note: The embedding dimension E is 3 (including 1 extra)
 
-. assert testx3 !=. if _n>2
+. assert testx3 != . if _n >= 3 & _n <= _N - 10
 
 . 
 . * check explore / xmap consistency
@@ -933,7 +933,7 @@ Note: Full sample used for the computation
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
          x_p |        198    .6434232    .2159587   .3039276   .8967989
-        xc_p |        200    .6436226    .2154685   .3039276   .8967989
+        xc_p |        198    .6434232    .2159587   .3039276   .8967989
 
 . assert xc_p!=. if x_p!=.
 
@@ -951,7 +951,7 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
-. assert xmap_y_p !=. if _n>1
+. assert xmap_y_p != . if _n >= 2 & _n <= _N - 10
 
 . assert xmap_y_p == xmap_y if xmap_y !=.
 
@@ -1760,7 +1760,7 @@ Note: Full sample used for the computation
 
 . 
 . gen err = abs(predicted_y_from_mx - predicted_y_from_mx_mata)
-(18 missing values generated)
+(29 missing values generated)
 
 . qui replace err = 0 if err < 1e-6
 
@@ -1768,7 +1768,7 @@ Note: Full sample used for the computation
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-         err |         74           0           0          0          0
+         err |         63           0           0          0          0
 
 . drop err
 
@@ -1801,7 +1801,7 @@ Note: Full sample used for the computation
  16. |   .40614 |
  17. |   .84852 |
  18. |  .856518 |
- 19. |  .409777 |
+ 19. |        . |
  20. |        . |
      |----------|
  21. |        . |
@@ -1811,16 +1811,16 @@ Note: Full sample used for the computation
  25. |  .405474 |
      |----------|
  26. |  .789265 |
- 27. |  .613134 |
+ 27. |        . |
  28. |        . |
- 29. |  .778233 |
+ 29. |        . |
  30. |        . |
      |----------|
  31. |        . |
  32. |    .5915 |
  33. |  .404813 |
  34. |  .842309 |
- 35. |  .855188 |
+ 35. |        . |
      |----------|
  36. |        . |
  37. |        . |
@@ -1837,12 +1837,12 @@ Note: Full sample used for the computation
  46. |  .741209 |
  47. |  .858479 |
  48. |  .411022 |
- 49. |  .789283 |
+ 49. |        . |
  50. |        . |
      |----------|
  51. |  .332985 |
  52. |  .777616 |
- 53. |  .592568 |
+ 53. |        . |
  54. |        . |
  55. |  .856339 |
      |----------|
@@ -1855,13 +1855,13 @@ Note: Full sample used for the computation
  61. |  .404896 |
  62. |   .88282 |
  63. |  .404685 |
- 64. |  .857619 |
+ 64. |        . |
  65. |        . |
      |----------|
  66. |        . |
  67. |  .859253 |
  68. |   .47667 |
- 69. |   .80512 |
+ 69. |        . |
  70. |        . |
      |----------|
  71. |        . |
@@ -1872,7 +1872,7 @@ Note: Full sample used for the computation
      |----------|
  76. |  .753224 |
  77. |  .858627 |
- 78. |  .410604 |
+ 78. |        . |
  79. |        . |
  80. |  .858991 |
      |----------|
@@ -1883,20 +1883,20 @@ Note: Full sample used for the computation
  85. |  .409838 |
      |----------|
  86. |  .885518 |
- 87. |  .470223 |
+ 87. |        . |
  88. |        . |
  89. |        . |
  90. |  .890046 |
      |----------|
  91. |   .33462 |
- 92. |  .774861 |
+ 92. |        . |
      +----------+
 
 . sum predicted_y_from_mx
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-predicted_~x |         74    .6503799    .1927021   .3329855   .8900459
+predicted_~x |         63    .6471667    .1966492   .3329855   .8900459
 
 . drop predicted_y_from_mx
 

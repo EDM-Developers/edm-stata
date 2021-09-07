@@ -480,7 +480,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   std::vector<int> panelIDs;
   if (opts.panelMode) {
-    panelIDs = stata_columns<int>(3 + numExtras + 1 + 3 * copredictMode + 1);
+    panelIDs = stata_columns<int>(3 + numExtras + 1 + copredictMode + 1);
   }
 
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
@@ -538,7 +538,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
     }
-    ST_int startCol = 3 + numExtras + 1 + 3 * copredictMode + opts.panelMode + 1;
+    ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + 1;
     write_stata_column(dts.data(), (int)dts.size(), startCol);
   }
 
@@ -546,7 +546,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (saveManifold) {
     Manifold manifold = generator.create_manifold(maxE, {}, false, false, opts.dtWeight);
 
-    ST_int startCol = 3 + numExtras + 1 + 3 * copredictMode + opts.panelMode + saveDT + 1;
+    ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + saveDT + 1;
     write_stata_columns(manifold.data(), manifold.nobs(), manifold.E_actual(), startCol);
   }
 
@@ -570,18 +570,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
     if (rngState.empty()) {
       io.print("Error: couldn't read the c(rngstate).\n");
-    }
-  }
-
-  std::vector<bool> coTrainingRows, coPredictionRows;
-  if (copredictMode) {
-    coTrainingRows = stata_columns<bool>(3 + numExtras + 2 + 1);
-    coPredictionRows = stata_columns<bool>(3 + numExtras + 3 + 1);
-
-    for (int i = 0; i < usable.size(); i++) {
-      if (!usable[i]) {
-        coTrainingRows[i] = false;
-      }
     }
   }
 
@@ -614,16 +602,19 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
     taskGroup["copredictMode"] = copredictMode;
     taskGroup["usable"] = bool_to_int(usable);
-    taskGroup["coTrainingRows"] = bool_to_int(coTrainingRows);
-    taskGroup["coPredictionRows"] = bool_to_int(coPredictionRows);
     taskGroup["rngState"] = rngState;
 
     append_to_dumpfile(saveInputsFilename + ".json", taskGroup);
+
+    // If we just want to save the input file and not actually run the command,
+    // then uncomment the following two lines to end early.
+    // SF_scal_save(FINISHED_SCALAR, 1.0);
+    // return SUCCESS; // Let Stata give the error here.
   }
 
-  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
-                              saveFinalPredictions, saveSMAPCoeffs, copredictMode, usable, coTrainingRows,
-                              coPredictionRows, rngState, &io, keep_going, all_tasks_finished);
+  futures =
+    launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
+                      saveSMAPCoeffs, copredictMode, usable, rngState, &io, keep_going, all_tasks_finished);
 
   return SUCCESS;
 }

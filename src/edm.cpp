@@ -32,12 +32,13 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
-std::vector<std::future<Prediction>> launch_task_group(
-  const ManifoldGenerator& generator, const Options& opts, const std::vector<int>& Es,
-  const std::vector<int>& libraries, int k, int numReps, int crossfold, bool explore, bool full,
-  bool saveFinalPredictions, bool saveSMAPCoeffs, bool copredictMode, const std::vector<bool>& usable,
-  const std::vector<bool>& coTrainingRows, const std::vector<bool>& coPredictionRows, const std::string& rngState,
-  IO* io, bool keep_going(), void all_tasks_finished())
+std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, const Options& opts,
+                                                       const std::vector<int>& Es, const std::vector<int>& libraries,
+                                                       int k, int numReps, int crossfold, bool explore, bool full,
+                                                       bool saveFinalPredictions, bool saveSMAPCoeffs,
+                                                       bool copredictMode, const std::vector<bool>& usable,
+                                                       const std::string& rngState, IO* io, bool keep_going(),
+                                                       void all_tasks_finished())
 {
 
   workerPool.set_num_workers(opts.nthreads);
@@ -131,10 +132,13 @@ std::vector<std::future<Prediction>> launch_task_group(
     copredOpts.calcRhoMAE = false;
     saveSMAPCoeffs = false;
 
+    int maxE = Es[Es.size() - 1];
+    std::vector<bool> cousable = generator.generate_usable(maxE, true);
+
     taskNum += 1;
 
     futures.emplace_back(launch_edm_task(generator, copredOpts, taskNum - 1, E, kAdj, savePrediction, saveSMAPCoeffs,
-                                         coTrainingRows, coPredictionRows, io, keep_going, all_tasks_finished));
+                                         usable, cousable, io, keep_going, all_tasks_finished));
   }
 
   return futures;

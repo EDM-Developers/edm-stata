@@ -597,7 +597,7 @@ program define edmExplore, eclass
 				foreach v of local max_e_manifold {
 					replace `usable' = 1 if `v' != . & `touse'
 				}
-				qui replace `usable' = 0 if `x_f' ==.
+				qui replace `usable' = 0 if `x_f' == .
 			}
 		}
 		else {
@@ -616,7 +616,6 @@ program define edmExplore, eclass
 
 	if "`copredictvar'" != "" {
 		confirm new variable `copredict'
-		tempvar co_train_set co_predict_set
 
 		* build prediction manifold
 		* z list
@@ -624,28 +623,31 @@ program define edmExplore, eclass
 		local co_z_e_varying_count = `z_e_varying_count'
 
 		if `mata_mode' {
-			// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
+			tempvar co_train_set co_predict_set
+
+			// Note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
 			local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`co_x'", ///
 				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `codtweight', ///
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
-			// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+			// Generate the same way as `usable'.
 			tempvar co_usable
 			if `allow_missing_mode' {
 				qui gen byte `co_usable' = 0
 				foreach v of local co_mapping {
 					qui replace `co_usable' = 1 if `v' !=. & `touse'
 				}
+				qui replace `usable' = 0 if `co_x_f' == .
 			}
 			else {
 				tempvar any_missing_in_co_manifold
 				hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
-				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
 			}
 
-			gen byte `co_train_set' = `co_usable'
+			gen byte `co_train_set' = `usable'
 			gen byte `co_predict_set' = `co_usable'
 		}
 	}
@@ -666,17 +668,9 @@ program define edmExplore, eclass
 
 		if `copredict_mode' {
 			local co_xvar = "`co_x'"
-
-			tempvar co_train_set co_predict_set
-			// TODO: Needs fixing here
-			qui gen byte `co_train_set' = `touse'
-			qui gen byte `co_predict_set' = `touse'
-
 		}
 		else {
 			local co_xvar = ""
-			local co_train_set = ""
-			local co_predict_set = ""
 		}
 
 		// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
@@ -705,7 +699,7 @@ program define edmExplore, eclass
 			}
 		}
 
-		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -935,7 +929,6 @@ program define edmExplore, eclass
 		qui gen double `co_x_p' = .
 
 		if `mata_mode' {
-			qui replace `co_train_set' = 0 if `usable' == 0
 			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
 				`theta', `lib_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
 				`total_num_extras', `z_e_varying_count', "`z_factor_var'")
@@ -1352,7 +1345,7 @@ program define edmXmap, eclass
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
 		}
 
-		// Select the rows which we'll use in the analysis
+		// Select the points which we'll use in the analysis.
 		tempvar usable
 
 		local missingdistance`direction_num' = `missingdistance'
@@ -1362,7 +1355,6 @@ program define edmXmap, eclass
 				foreach v of local max_e_manifold {
 					qui replace `usable' = 1 if `v' !=. & `touse'
 				}
-
 				qui replace `usable' = 0 if `x_f' == .
 
 				if `missingdistance' <= 0 {
@@ -1380,7 +1372,6 @@ program define edmXmap, eclass
 
 		if ("`copredictvar'" != "") & (`comap_constructed' == 0) {
 			confirm new variable `copredict'
-			tempvar co_train_set co_predict_set
 
 			* build prediction manifold
 			* z list
@@ -1388,28 +1379,31 @@ program define edmXmap, eclass
 			local co_z_e_varying_count = `z_e_varying_count'
 
 			if `mata_mode' {
-				// note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
+				tempvar co_train_set co_predict_set
+
+				// Note: there are issues in recalculating the codtweight as the variable usable are not generated in the same way as co_usable
 				local codtweight = cond(`parsed_dt' & `codtweight' == 0, `parsed_dtw', 0)
 
 				mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`co_z_vars'", "`y'", ///
 					`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `codtweight', ///
 					`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
-				// Generate the same way as `usable', though don't insist on `x_f' being accessible.
+				// Generate the same way as `usable'.
 				tempvar co_usable
 				if `allow_missing_mode' {
 					qui gen byte `co_usable' = 0
 					foreach v of local co_mapping {
 						qui replace `co_usable' = 1 if `v' !=. & `touse'
 					}
+					qui replace `usable' = 0 if `co_x_f' == .
 				}
 				else {
 					tempvar any_missing_in_co_manifold
 					hasMissingValues `co_mapping', out(`any_missing_in_co_manifold')
-					gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+					gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
 				}
 
-				gen byte `co_train_set' = `co_usable'
+				gen byte `co_train_set' = `usable'
 				gen byte `co_predict_set' = `co_usable'
 
 				local comap_constructed = 1
@@ -1433,17 +1427,9 @@ program define edmXmap, eclass
 
 			if `copredict_mode' {
 				local co_xvar = "`co_x'"
-
-				tempvar co_train_set co_predict_set
-				// TODO: Needs fixing here
-				qui gen byte `co_train_set' = `touse'
-				qui gen byte `co_predict_set' = `touse'
-
 			}
 			else {
 				local co_xvar = ""
-				local co_train_set = ""
-				local co_predict_set = ""
 			}
 
 			// Can't pass the c(rngstate) directly to the plugin as a function argument as it is too long.
@@ -1471,7 +1457,7 @@ program define edmXmap, eclass
 				}
 			}
 
-			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `co_train_set' `co_predict_set' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1739,7 +1725,6 @@ program define edmXmap, eclass
 		qui gen double `co_x_p' = .
 
 		if `mata_mode' {
-			qui replace `co_train_set' = 0 if `usable' == 0
 			break mata: smap_block("``manifold''", "`co_mapping'", "`x_f'", "`co_x_p'", "`co_train_set'", "`co_predict_set'", ///
 				`last_theta', `k_size', "`algorithm'", "", "`force'", `missingdistance', `idw', "`panel_id'", `max_e', ///
 				`total_num_extras', `z_e_varying_count', "`z_factor_var'")

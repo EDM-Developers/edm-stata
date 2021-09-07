@@ -2,12 +2,13 @@
 
 #include "common.h"
 
-std::vector<std::future<Prediction>> launch_task_group(
-  const ManifoldGenerator& generator, const Options& opts, const std::vector<int>& Es,
-  const std::vector<int>& libraries, int k, int numReps, int crossfold, bool explore, bool full,
-  bool saveFinalPredictions, bool saveSMAPCoeffs, bool copredictMode, const std::vector<bool>& usable,
-  const std::vector<bool>& coTrainingRows, const std::vector<bool>& coPredictionRows, const std::string& rngState,
-  IO* io, bool keep_going(), void all_tasks_finished());
+std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, const Options& opts,
+                                                       const std::vector<int>& Es, const std::vector<int>& libraries,
+                                                       int k, int numReps, int crossfold, bool explore, bool full,
+                                                       bool saveFinalPredictions, bool saveSMAPCoeffs,
+                                                       bool copredictMode, const std::vector<bool>& usable,
+                                                       const std::string& rngState, IO* io, bool keep_going(),
+                                                       void all_tasks_finished());
 
 // Below are the 'private' members of edm.cpp; they are added here just so they can be accessed for testing.
 

@@ -28,12 +28,12 @@ timer list
 
 
 timer on 3
-edm explore z.pa, e(2/30) seed(1234567) dt idw(0) cumdt(1)
+edm explore z.pa, e(2/30) seed(1234567) dt idw(0) reldt
 timer off 3
 timer list
 
 timer on 4
-edm explore z.pa, e(2/30) seed(1234567) dt idw(-1) cumdt(1)
+edm explore z.pa, e(2/30) seed(1234567) dt idw(-1) reldt
 timer off 4
 timer list
 
