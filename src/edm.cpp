@@ -1045,43 +1045,101 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   const int tcount     = opts.thetas.size();
   const int MEactualp1 = M.E_actual + 1;
 
-  array weights, y_ls;
-  {
-    array meanDists  = (mnobs * mean(valids * dists, 0) / count(valids, 0));
-    array meanDistsT = tile(meanDists, mnobs, 1, tcount);
-    array ptDists    = tile(dists, 1, 1, tcount);
-    array validsT    = tile(valids, 1, 1, tcount);
+  if (true) {
+    array meanDists = tile((mnobs * mean(valids * dists, 0) / count(valids, 0)), mnobs, 1);
+    array mdValids  = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
+    array Mp_i_j    = Mp.mdata(span, seq(npreds));
+    array scaleval  = ((Mp_i_j != double(MISSING)) * Mp_i_j);
 
-    weights = validsT * af::exp(-thetas * (ptDists / meanDistsT));
-    y_ls    = weights * tile(yvecs, 1, 1, tcount);
+    // Allocate Output arrays
+    ystar = array(tcount, npreds, f64);
+
+    for (int t = 0; t < tcount; ++t)
+    {
+      double theta = opts.thetas[t];
+
+      array weights = valids * af::exp(-theta * (dists / meanDists));
+      array y_ls    = weights * yvecs;
+
+      array icsOuts;
+      if (true) {
+        icsOuts = array(MEactualp1, npreds, f64);
+        for (int p = 0; p < npreds; ++p)
+        {
+          array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs), f64);
+
+          X_ls_cj(seq(1, end), span) = mdValids(span, span, p) * mdata(span, span, p);
+
+          X_ls_cj *= tile(moddims(weights(span, p), 1, mnobs), MEactualp1);
+
+          icsOuts(span, p) = matmulTN(pinverse(X_ls_cj, 1e-9), y_ls(span, p));
+        }
+      } else {
+        array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
+
+        X_ls_cj(seq(1, end), span) = mdValids * mdata;
+
+        X_ls_cj *= tile(moddims(weights, 1, mnobs, npreds), MEactualp1);
+
+        icsOuts = matmulTN(pinverse(X_ls_cj, 1e-9), moddims(y_ls, mnobs, 1, npreds));
+        icsOuts = moddims(icsOuts, MEactualp1, npreds);
+      }
+
+      array r2d = icsOuts(seq(1, end), span) * scaleval;
+      array r   = icsOuts(0, span) + sum(r2d, 0);
+
+      ystar(t, span) = r;
+
+      if (t == tcount - 1) {
+        if (opts.saveSMAPCoeffs) {
+          coeffs = select(icsOuts == 0.0, double(MISSING), icsOuts).T();
+        }
+        if (opts.saveKUsed) {
+          kused = af::count(weights, 0);
+        }
+      }
+    }
+  } else {
+    array weights, y_ls;
+    {
+      array meanDists  = (mnobs * mean(valids * dists, 0) / count(valids, 0));
+      array meanDistsT = tile(meanDists, mnobs, 1, tcount);
+      array ptDists    = tile(dists, 1, 1, tcount);
+      array validsT    = tile(valids, 1, 1, tcount);
+
+      weights = validsT * af::exp(-thetas * (ptDists / meanDistsT));
+      y_ls    = weights * tile(yvecs, 1, 1, tcount);
+    }
+
+    array mdValids = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
+    array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
+
+    X_ls_cj(seq(1, end), span) = mdValids * mdata;
+
+    array X_ls_cj_T = tile(X_ls_cj, 1, 1, 1, tcount);
+
+    X_ls_cj_T *= tile(moddims(weights, 1, mnobs, npreds, tcount), MEactualp1);
+
+    array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), moddims(y_ls, mnobs, 1, npreds, tcount));
+
+    icsOuts      = moddims(icsOuts, MEactualp1, npreds, tcount);
+    array Mp_i_j = tile(Mp.mdata(span, seq(npreds)), 1, 1, tcount);
+    array r2d    = icsOuts(seq(1, end), span, span) * ((Mp_i_j != double(MISSING)) * Mp_i_j);
+    array r      = icsOuts(0, span, span) + sum(r2d, 0);
+
+    ystar    = moddims(r, npreds, tcount).T();
+    retcodes = constant(SUCCESS, npreds, tcount);
+    if (opts.saveSMAPCoeffs) {
+      array lastTheta  = icsOuts(span, span, tcount - 1);
+
+      coeffs = select(lastTheta == 0.0, double(MISSING), lastTheta).T();
+    }
+    if (opts.saveKUsed) {
+      kused = af::count(weights, 0)(span, end);
+    }
   }
 
-  array mdValids = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
-  array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
-
-  X_ls_cj(seq(1, end), span) = mdValids * mdata;
-
-  array X_ls_cj_T = tile(X_ls_cj, 1, 1, 1, tcount);
-
-  X_ls_cj_T *= tile(moddims(weights, 1, mnobs, npreds, tcount), MEactualp1);
-
-  array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), moddims(y_ls, mnobs, 1, npreds, tcount));
-
-  icsOuts      = moddims(icsOuts, MEactualp1, npreds, tcount);
-  array Mp_i_j = tile(Mp.mdata(span, seq(npreds)), 1, 1, tcount);
-  array r2d    = icsOuts(seq(1, end), span, span) * ((Mp_i_j != double(MISSING)) * Mp_i_j);
-  array r      = icsOuts(0, span, span) + sum(r2d, 0);
-
-  ystar    = moddims(r, npreds, tcount).T();
   retcodes = constant(SUCCESS, npreds, tcount);
-  if (opts.saveSMAPCoeffs) {
-    array lastTheta  = icsOuts(span, span, tcount - 1);
-
-    coeffs = select(lastTheta == 0.0, double(MISSING), lastTheta).T();
-  }
-  if (opts.saveKUsed) {
-    kused = moddims(af::count(weights, 0), npreds, tcount);
-  }
   nvtxRangeEnd(range);
 }
 
