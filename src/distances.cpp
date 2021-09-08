@@ -326,6 +326,8 @@ DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold
   array mData1(M.E_actual(), M.nobs(), M.flatf64().get());    // Matrix
   array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get()); // Matrix
 
+  const af_dtype cType = mData1.type();
+
   // Char is the internal representation of bool in ArrayFire
   // af::array template constructor also only works for char
   std::vector<char> mopts;
@@ -343,9 +345,9 @@ DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold
   array i(idxSz, inpInds.data());
 
   //////////////// BEGIN LP-DISTANCES COMPUTATION
-  array zero  = constant(0.0, 1, idxSz, f64);
-  array mssng = constant(MISSING, 1, idxSz, f64);
-  array disti = constant(0.0, 1, idxSz, f64);
+  array zero  = constant(0.0, 1, idxSz, cType);
+  array mssng = constant(MISSING, 1, idxSz, cType);
+  array disti = constant(0.0, 1, idxSz, cType);
   array Ma    = mData1(af::span, i); //Fetch columns corresponding to indices
 
   // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
@@ -365,7 +367,7 @@ DistanceIndexPairs af_lp_distances(int Mp_i, const Options& opts, const Manifold
 
   array dMssng2d = (Ma == MISSING || Mpa_Mp_i == MISSING);
 
-  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(f64));
+  array distIJ2d = select(tile(metricOpts, 1, Ma.dims(1)), Ma - Mpa_Mp_i, (Ma != Mpa_Mp_i).as(cType));
 
   array distVals = dMssng2d * (1 - isMissingDistOptZero) * opts.missingdistance + (1 - dMssng2d) * distIJ2d;
 
@@ -415,6 +417,8 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
   using af::tile;
   using af::where;
 
+  const af_dtype cType = Mp_j.type();
+
   double gamma = 1.0;
   if (M.E_dt() > 0) {
     array firstColumn = M_i(span, 0);
@@ -439,7 +443,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array eitherMissing = (x == M.missing() || y == M.missing());
 
     array cond    = metricOpts(seq(timeSeriesDim, timeSeriesDim + numUnlaggedExtras - 1));
-    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(f64));
+    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(cType));
     array dists   = (eitherMissing * opts.missingdistance + (1 - eitherMissing) * ulDists);
     unlaggedDist  = sum<double>(dists);
   }
@@ -449,7 +453,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
   }
 
   const seq timeSeries(timeSeriesDim);
-  array costMatrix = af::constant(unlaggedDist, len_j, len_i, f64);
+  array costMatrix = af::constant(unlaggedDist, len_j, len_i, cType);
 
   array cmIsMetricDiff = metricOpts(timeSeries);
   cmIsMetricDiff = tile(moddims(cmIsMetricDiff, 1, 1, timeSeriesDim), len_j, len_i);
@@ -463,7 +467,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array M_i_k  = moddims( M_i( idxM_i_missing, timeSeries), 1, len_i, timeSeriesDim);
     array cmMp_j = tile(Mp_j_k, 1, len_i);
     array cmM_i  = tile( M_i_k, len_j);
-    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(cType));
 
     if (M.E_dt() > 0) {
         // For time series k = 1, scale by gamma
@@ -480,7 +484,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array M_i_k  = moddims( M_i(span, timeSeries), 1, len_i, timeSeriesDim);
     array cmMp_j = tile(Mp_j_k, 1, len_i);
     array cmM_i  = tile( M_i_k, len_j);
-    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(cType));
     array cmDist = select(eitherMissingT, opts.missingdistance, cmDiff);
 
     if (M.E_dt() > 0) {
@@ -585,9 +589,11 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
 
   auto range = nvtxRangeStartA(__FUNCTION__);
 
+  const af_dtype cType = M.mdata.type();
+
   if (useCustomKernel) {
     af::array valids(M.nobs, npreds, b8);
-    af::array dists(M.nobs, npreds, f64);
+    af::array dists(M.nobs, npreds, cType);
 
     cuLPDistances(valids.device<char>(), dists.device<double>(),
             npreds, opts.distance == Distance::MeanAbsoluteError, opts.panelMode,
@@ -627,7 +633,7 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
       array predsM  = tile(M.mdata, 1, 1, npreds);
       array predsMp = tile(moddims(Mp.mdata(span, seq(npreds)), eacts, 1, npreds), 1, mnobs);
       array diffMMp = predsM - predsMp;
-      array compMMp = (predsM != predsMp).as(f64);
+      array compMMp = (predsM != predsMp).as(cType);
       array distMMp = select(tile(metricOpts, 1, mnobs, npreds), diffMMp, compMMp);
       array missing = predsM == MISSING || predsMp == MISSING;
 
@@ -678,6 +684,8 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
   using af::tile;
   using af::where;
 
+  const af_dtype cType = M.mdata.type();
+
   double gamma = 1.0;
   if (M.E_dt > 0) {
     array firstColumn = M_i(span, 0);
@@ -702,7 +710,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array eitherMissing = (x == M.missing || y == M.missing);
 
     array cond    = metricOpts(seq(timeSeriesDim, numUnlaggedExtras + timeSeriesDim - 1));
-    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(f64));
+    array ulDists = (cond * af::abs(x - y) + (1 - cond) * (x != y).as(cType));
     array dists   = (eitherMissing * opts.missingdistance + (1 - eitherMissing) * ulDists);
     unlaggedDist  = sum<double>(dists);
   }
@@ -712,7 +720,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
   }
 
   const seq timeSeries(timeSeriesDim);
-  array costMatrix = af::constant(unlaggedDist, len_j, len_i, f64);
+  array costMatrix = af::constant(unlaggedDist, len_j, len_i, cType);
 
   array cmIsMetricDiff = metricOpts(timeSeries);
   cmIsMetricDiff = tile(moddims(cmIsMetricDiff, 1, 1, timeSeriesDim), len_j, len_i);
@@ -726,7 +734,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array M_i_k  = moddims( M_i( idxM_i_missing, timeSeries), 1, len_i, timeSeriesDim);
     array cmMp_j = tile(Mp_j_k, 1, len_i);
     array cmM_i  = tile( M_i_k, len_j);
-    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(cType));
 
     if (M.E_dt > 0) {
         // For time series k = 1, scale by gamma
@@ -743,7 +751,7 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
     array M_i_k  = moddims( M_i(span, timeSeries), 1, len_i, timeSeriesDim);
     array cmMp_j = tile(Mp_j_k, 1, len_i);
     array cmM_i  = tile( M_i_k, len_j);
-    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(f64));
+    array cmDiff = select(cmIsMetricDiff, af::abs(cmMp_j - cmM_i), (cmM_i != cmMp_j).as(cType));
     array cmDist = select(eitherMissingT, opts.missingdistance, cmDiff);
 
     if (M.E_dt > 0) {

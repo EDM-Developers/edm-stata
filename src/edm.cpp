@@ -846,6 +846,8 @@ void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const 
   array mData1( M.E_actual(),  M.nobs(), M.flatf64().get());
   array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get());
 
+  const af_dtype cType =  mData1.type();
+
   // kNNInds and dists are always of same size
   array  ainds(indsCount, kNNInds.data());
   array adists(indsCount, dists.data());
@@ -863,7 +865,7 @@ void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const 
   array y_ls      = ty * weights;                               // [indsCount thetasCount 1 1] shape
 
   const dim_t MEactualp1 = M.E_actual() + 1;
-  array X_ls_cj          = af::constant(1.0, dim4(MEactualp1, indsCount), f64);
+  array X_ls_cj          = af::constant(1.0, dim4(MEactualp1, indsCount), cType);
   X_ls_cj(seq(1, end), span) = mData1(span, ainds);
 
   array weightsR  = moddims(weights, 1, indsCount, thetasCount);// [         1 indsCount thetasCount 1]
@@ -1047,6 +1049,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   const int mnobs      = M.nobs;
   const int tcount     = opts.thetas.size();
   const int MEactualp1 = M.E_actual + 1;
+  const af_dtype cType = M.mdata.type();
 
   if (true) {
     array meanDists = tile((mnobs * mean(valids * dists, 0) / count(valids, 0)), mnobs, 1);
@@ -1055,7 +1058,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
     array scaleval  = ((Mp_i_j != double(MISSING)) * Mp_i_j);
 
     // Allocate Output arrays
-    ystar = array(tcount, npreds, f64);
+    ystar = array(tcount, npreds, cType);
 
     for (int t = 0; t < tcount; ++t)
     {
@@ -1066,10 +1069,10 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
 
       array icsOuts;
       if (true) {
-        icsOuts = array(MEactualp1, npreds, f64);
+        icsOuts = array(MEactualp1, npreds, cType);
         for (int p = 0; p < npreds; ++p)
         {
-          array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs), f64);
+          array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs), cType);
 
           X_ls_cj(seq(1, end), span) = mdValids(span, span, p) * mdata(span, span, p);
 
@@ -1078,7 +1081,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
           icsOuts(span, p) = matmulTN(pinverse(X_ls_cj, 1e-9), y_ls(span, p));
         }
       } else {
-        array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
+        array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs, npreds), cType);
 
         X_ls_cj(seq(1, end), span) = mdValids * mdata;
 
@@ -1115,7 +1118,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
     }
 
     array mdValids = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
-    array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), f64);
+    array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), cType);
 
     X_ls_cj(seq(1, end), span) = mdValids * mdata;
 
