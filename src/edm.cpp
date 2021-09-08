@@ -943,6 +943,45 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
   return result;
 }
 
+void afSortSearchSpace(af::array& pValids, af::array& sDists, af::array& yvecs, af::array& smData,
+        const af::array& vDists, const af::array& yvec, const af::array& mdata,
+        const Algorithm algo, const int eacts, const int mnobs, const int npreds)
+{
+  using af::array;
+  using af::dim4;
+  using af::iota;
+  using af::moddims;
+  using af::sort;
+  using af::tile;
+
+  auto searchRange = nvtxRangeStartA("sortInfo");
+  array maxs = af::max(pValids * vDists, 0);
+  array pDists = pValids * vDists + (1 - pValids) * tile(maxs + 100, mnobs);
+
+  array indices;
+  sort(sDists, indices, pDists);
+
+  yvecs = moddims(yvec(indices), mnobs, npreds);
+
+  array vIdx = indices + iota(dim4(1, npreds), dim4(mnobs)) * mnobs;
+
+  pValids = moddims(pValids(vIdx), mnobs, npreds);
+
+  // Manifold data also needs to be reorder for SMap prediction
+  if (algo == Algorithm::SMap) {
+    array tmdata = tile(mdata, 1, 1, npreds);
+    array soffs  = iota(dim4(1, 1, npreds), dim4(eacts, mnobs)) * (eacts * mnobs);
+    array d0offs = iota(dim4(eacts), dim4(1, mnobs, npreds));
+
+    indices = tile(moddims(indices, 1, mnobs, npreds), eacts) * eacts;
+    indices += (soffs + d0offs);
+
+    smData = moddims(tmdata(indices), eacts, mnobs, npreds);
+  }
+
+  nvtxRangeEnd(searchRange);
+}
+
 void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused,
                          const int npreds, const Options& opts,
                          const af::array& yvecs,
@@ -1109,34 +1148,15 @@ void af_make_prediction(const int npreds, const Options& opts,
     //           (kvals == 0) * int(SUCCESS);
   }
   nvtxRangeEnd(kisRange);
-  auto searchRange = nvtxRangeStartA("sortInfo");
+
+  //smData is set only if algo is SMap
   array sDists, yvecs, smData;
-  {
-    array maxs = af::max(pValids * validDistPair.dists, 0);
-    array pDists = pValids * validDistPair.dists + (1 - pValids) * tile(maxs + 100, M.nobs);
 
-    array indices;
-    sort(sDists, indices, pDists);
+  afSortSearchSpace(pValids, sDists, yvecs, smData,
+          validDistPair.dists, M.yvec, M.mdata,
+          opts.algorithm, M.E_actual, M.nobs, npreds);
 
-    yvecs = moddims(M.yvec(indices), M.nobs, npreds);
-
-    array vIdx = indices + iota(dim4(1, npreds), dim4(M.nobs)) * M.nobs;
-
-    pValids = moddims(pValids(vIdx), M.nobs, npreds) && kValids;
-
-    // Manifold data also needs to be reorder for SMap prediction
-    if (opts.algorithm == Algorithm::SMap) {
-      array tmdata = tile(M.mdata, 1, 1, npreds);
-      array soffs  = iota(dim4(1, 1, npreds), dim4(M.E_actual, M.nobs)) * (M.E_actual * M.nobs);
-      array d0offs = iota(dim4(M.E_actual), dim4(1, M.nobs, npreds));
-
-      indices = tile(moddims(indices, 1, M.nobs, npreds), M.E_actual) * M.E_actual;
-      indices += (soffs + d0offs);
-
-      smData = moddims(tmdata(indices), M.E_actual, M.nobs, npreds);
-    }
-  }
-  nvtxRangeEnd(searchRange);
+  pValids = pValids && kValids;
 
   array ystars, kused;
   if (opts.algorithm == Algorithm::Simplex) {
