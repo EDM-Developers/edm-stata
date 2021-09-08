@@ -45,10 +45,13 @@ std::vector<std::future<Prediction>> launch_task_group(
   const std::vector<bool>& coTrainingRows, const std::vector<bool>& coPredictionRows, const std::string& rngState,
   double nextRV, IO* io, bool keep_going(), void all_tasks_finished())
 {
-
-  workerPool.set_num_workers(opts.nthreads);
-  //taskRunnerPool.set_num_workers(num_physical_cores());
-  taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
+  static bool initOnce = [&]() {
+    af::setMemStepSize(1024 * 1024 * 5);
+    workerPool.set_num_workers(opts.nthreads);
+    // taskRunnerPool.set_num_workers(num_physical_cores());
+    taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
+    return true;
+  }();
 
   // Construct the instance which will (repeatedly) split the data into either the training manifold
   // or the prediction manifold; sometimes this is randomised so the RNG state may need to be set.
