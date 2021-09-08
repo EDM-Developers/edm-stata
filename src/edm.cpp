@@ -32,8 +32,6 @@
 #include <arrayfire.h>
 #include <nvToolsExt.h>
 
-constexpr bool useAFArm = true; //Flag to execute make_prediction using AF ports - debugging purposes
-
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
@@ -443,19 +441,13 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   // Create a list of indices which may potentially be the neighbours of Mp(Mp_i,.)
-  std::vector<int> tryInds =
-          useAFArm ? af_potential_neighbour_indices(Mp_i, opts, M, Mp)
-                   : potential_neighbour_indices(Mp_i, opts, M, Mp);
+  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, opts, M, Mp);
 
   DistanceIndexPairs potentialNN;
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN =
-       useAFArm ? af_wasserstein_distances(Mp_i, opts, M, Mp, tryInds)
-                : wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
+    potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
   } else {
-    potentialNN =
-       useAFArm ? af_lp_distances(Mp_i, opts, M, Mp, tryInds)
-                : lp_distances(Mp_i, opts, M, Mp, tryInds);
+    potentialNN = lp_distances(Mp_i, opts, M, Mp, tryInds);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -488,9 +480,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (k < 0 || k == potentialNN.inds.size()) {
     kNNs = potentialNN;
   } else {
-    kNNs =
-       useAFArm ? af_kNearestNeighbours(potentialNN, k)
-                : kNearestNeighbours(potentialNN, k);
+    kNNs = kNearestNeighbours(potentialNN, k);
   }
 
   if (keep_going != nullptr && keep_going() == false) {
@@ -499,20 +489,12 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (opts.algorithm == Algorithm::Simplex) {
-    if (useAFArm) {
-      af_simplex_prediction(Mp_i, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
-    } else {
-      for (int t = 0; t < opts.thetas.size(); t++) {
-        simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
-      }
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
-    if (useAFArm) {
-      af_smap_prediction(Mp_i, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
-    } else {
-      for (int t = 0; t < opts.thetas.size(); t++) {
-        smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
-      }
+    for (int t = 0; t < opts.thetas.size(); t++) {
+      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
     }
   } else {
     rc(0, Mp_i) = INVALID_ALGORITHM;
@@ -704,213 +686,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
 
 /////////////////////////////////////////////////////////////// ArrayFire PORTED versions BEGIN HERE
-
-
-std::vector<int> af_potential_neighbour_indices(int Mp_i, const Options& opts,
-                                                const Manifold& M, const Manifold& Mp)
-{
-  using af::array;
-  using af::anyTrue;
-  using af::iota;
-
-  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
-  const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
-
-  array result;
-
-  if (skipOtherPanels && skipMissingData) {
-      array m2dData(M.E_actual(), M.nobs(), M.flatf64().get()); // Matrix
-      array mP1Ids(M.nobs(), M.panelIds().data());              // Vector
-
-      array anyMsng2D   = (m2dData == M.missing());
-      array anyMsngDta  = anyTrue(anyMsng2D, 0);                // Vector
-      array valids      = !(anyMsngDta || (mP1Ids != Mp.panel(Mp_i)));
-
-      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
-  } else if (skipOtherPanels) {
-      array mP1Ids(M.nobs(), M.panelIds().data());              // Vector
-
-      array valids = !(mP1Ids != Mp.panel(Mp_i));
-
-      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
-  } else if (skipMissingData) {
-      array m2dData(M.E_actual(), M.nobs(), M.flatf64().get()); // Matrix
-
-      array anyMsng2D   = (m2dData == M.missing());
-      array anyMsngDta  = anyTrue(anyMsng2D, 0);                // Vector
-      array valids      = !(anyMsngDta);                        // Vector
-
-      result = where(valids).as(s32); // Valid inds.push_back(i) from non-af code
-  } else {
-      using af::dim4;
-
-      result = iota(dim4(M.nobs()), dim4(1), s32);
-  }
-  //return result;
-
-  std::vector<int> inds(result.elements());
-  if (inds.size()) {
-      result.host(inds.data());
-  }
-  return inds;
-}
-
-DistanceIndexPairs af_kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k)
-{
-  using af::array;
-  using af::iota;
-  using af::sort;
-
-  const size_t pnIndSize = potentialNeighbours.inds.size();
-
-  array inIndices(pnIndSize, potentialNeighbours.inds.data());
-  array inDists(pnIndSize, potentialNeighbours.dists.data());
-
-  array odists, oidx;
-  sort(odists, oidx, inDists, inIndices);
-
-  const af::seq ks(k);
-  array aKNNInds  = oidx(ks); // Assuming Indices in potentialNeighbours are not sorted
-  array aKNNDists = odists(ks);
-
-  // return { aKNNInds, aKNNDists };
-  std::vector<int> kNNInds(k);
-  std::vector<double> kNNDists(k);
-
-  aKNNInds.host(kNNInds.data());
-  aKNNDists.host(kNNDists.data());
-
-  return { kNNInds, kNNDists };
-}
-
-void af_simplex_prediction(int Mp_i, const Options& opts, const Manifold& M,
-                           const std::vector<double>& dists,
-                           const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
-                           Eigen::Map<MatrixXi> rc, int* kUsed)
-{
-  using af::array;
-
-  const dim_t indsCount   = kNNInds.size();
-  const dim_t thetasCount = opts.thetas.size();
-
-  // kNNInds and dists are always of same size
-  array  ainds(indsCount, kNNInds.data());
-  array adists(indsCount, dists.data());
-  array    aMy( M.nobs(), M.yvec().data());
-
-  // Create [1 thetasCount 1 1] shape so that
-  // we can reduce along dimension 0 later
-  array othetas(1, thetasCount, opts.thetas.data());
-
-  double minDist = af::min<double>(adists);
-
-  array thetas  = af::tile(othetas, indsCount, 1);            // reshape to [indsCount thetasCount 1 1]
-  array tadist  = af::tile(adists, 1, thetasCount);           // reshape to [indsCount thetasCount 1 1]
-  array weights = af::exp( -thetas * ( tadist / minDist ) );
-  array sumw    = af::sum(weights, 0);                        // Reduce for each theta
-  array y       = aMy(ainds);
-  array ty      = af::tile(y, 1, thetasCount);                // reshape to [indsCount thetasCount 1 1]
-  array tsumw   = af::tile(sumw, indsCount, 1);               // reshape to [indsCount thetasCount 1 1]
-  array rt      = ty * (weights / tsumw);
-  array r       = af::sum(rt, 0);
-
-  std::vector<double> rs(r.elements());
-  if (r.elements() > 0) {
-    r.host(rs.data());
-    for (int t = 0; t < thetasCount; ++t) {
-      ystar(t, Mp_i) = rs[t];
-      rc(t, Mp_i) = SUCCESS;
-    }
-  }
-  if (opts.saveKUsed) {
-    *kUsed = af::count<int>(weights);
-  }
-}
-
-void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                        Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXd> coeffs,
-                        Eigen::Map<MatrixXi> rc, int* kUsed)
-{
-  using af::array;
-  using af::dim4;
-  using af::end;
-  using af::matmulTN;
-  using af::mean;
-  using af::moddims;
-  using af::pinverse;
-  using af::select;
-  using af::seq;
-  using af::span;
-  using af::tile;
-
-  const dim_t indsCount   = kNNInds.size();
-  const dim_t thetasCount = opts.thetas.size();
-
-  // E_actual is the axis with shortest stride i.e unit stride, M.nobs() being 2nd axies length
-  array mData1( M.E_actual(),  M.nobs(), M.flatf64().get());
-  array mData2(Mp.E_actual(), Mp.nobs(), Mp.flatf64().get());
-
-  const af_dtype cType =  mData1.type();
-
-  // kNNInds and dists are always of same size
-  array  ainds(indsCount, kNNInds.data());
-  array adists(indsCount, dists.data());
-  array    aMy( M.nobs(), M.yvec().data());
-
-  // Create [1 thetasCount 1 1] shape so that we can reduce along dimension 0 later
-  array othetas(1, thetasCount, opts.thetas.data());
-
-  double meanDist = mean<double>(adists);
-  array thetas    = tile(othetas, indsCount, 1);                // reshape to [indsCount thetasCount 1 1]
-  array tadist    = tile(adists, 1, thetasCount);               // reshape to [indsCount thetasCount 1 1]
-  array weights   = af::exp( -thetas * ( tadist / meanDist ) );
-  array y         = aMy(ainds);
-  array ty        = tile(y, 1, thetasCount);                    // reshape to [indsCount thetasCount 1 1]
-  array y_ls      = ty * weights;                               // [indsCount thetasCount 1 1] shape
-
-  const dim_t MEactualp1 = M.E_actual() + 1;
-  array X_ls_cj          = af::constant(1.0, dim4(MEactualp1, indsCount), cType);
-  X_ls_cj(seq(1, end), span) = mData1(span, ainds);
-
-  array weightsR  = moddims(weights, 1, indsCount, thetasCount);// [         1 indsCount thetasCount 1]
-  array weightsT  = tile(weightsR, MEactualp1);                 // [MEactualp1 indsCount thetasCount 1]
-  array X_ls_cj_T = tile(X_ls_cj, 1, 1, thetasCount);           // [MEactualp1 indsCount thetasCount 1]
-  array y_ls_R    = moddims(y_ls, indsCount, 1, thetasCount);   // [ indsCount         1 thetasCount 1]
-
-  X_ls_cj_T *= weightsT;
-
-  array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), y_ls_R);
-  icsOuts       = moddims(icsOuts, MEactualp1, thetasCount);    // This should be just meta-data change
-  array Mp_i_j  = tile(mData2(span, Mp_i), 1, thetasCount);
-
-  array r2d = icsOuts(seq(1, end), span) * ((Mp_i_j != double(MISSING_D)) * Mp_i_j);
-  array r   = icsOuts(0, span) + sum(r2d, 0);
-
-  std::vector<double> rs(r.elements());
-  if (r.elements() > 0) {
-    r.host(rs.data());
-    for (int t = 0; t < thetasCount; ++t) {
-      ystar(t, Mp_i) = rs[t];
-      rc(t, Mp_i) = SUCCESS;
-    }
-  }
-  // If the 'savesmap' option is given, save the 'ics' coefficients
-  // for the largest value of theta.
-  if (opts.saveSMAPCoeffs) {
-    array lastTheta  = icsOuts(span, thetasCount - 1);
-    array icsl       = select(lastTheta == 0.0, double(MISSING_D), lastTheta);
-    std::vector<double> host_ics(MEactualp1);
-    icsl.host(host_ics.data());
-    for (int j = 0; j < MEactualp1; j++) {
-      coeffs(Mp_i, j) = host_ics[j];
-    }
-  }
-  // For the sake of debugging, count how many neighbours we end up with.
-  if (opts.saveKUsed) {
-    *kUsed = af::count<int>(weights);
-  }
-}
 
 // Returns b8 array of shape [mnobs npreds 1 1] when either of skip flags are true
 //        otherwise of shape [mnobs 1 1 1]

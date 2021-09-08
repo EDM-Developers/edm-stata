@@ -37,20 +37,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                      const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
                      Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed);
 
-std::vector<int> af_potential_neighbour_indices(int Mp_i, const Options& opts,
-                                                const Manifold& M, const Manifold& Mp);
-
-DistanceIndexPairs af_kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
-
-void af_simplex_prediction(int Mp_i, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                           const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
-                           Eigen::Map<MatrixXi> rc, int* kUsed);
-
-void af_smap_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                        const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                        Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXd> coeffs,
-                        Eigen::Map<MatrixXi> rc, int* kUsed);
-
 void af_make_prediction(const int numPredictions, const Options& opts,
                         const Manifold& hostM, const Manifold& hostMp,
                         const ManifoldOnGPU& M, const ManifoldOnGPU& Mp, const af::array& metricOpts,
