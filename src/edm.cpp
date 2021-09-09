@@ -277,7 +277,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   if (multiThreaded && !useAF) {
     std::vector<std::future<void>> results(numPredictions);
     workerPool.sync();
-    printf("Starting: %d\n", opts.taskNum);
+    printf("Starting: %lu\n", opts.taskNum);
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(

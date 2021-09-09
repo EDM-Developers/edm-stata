@@ -1,14 +1,36 @@
-#include <cstdio>
-
 #include "lp_distance.cuh"
 
 #include <algorithm>
 #include <cub/cub.cuh>
 
+#define BLOCK_DIM_X 32
 #define MISSING 1.0e+100
 #define divup(a, b) (((a) + (b)-1) / (b))
 
-template<typename T, bool isDMAE, int BLOCK_DIM_X>
+// reduceAlongDimY requires a maximum blockDim.y value of BLOCK_DIM_X to function correctly
+// Currently, that is max number of E_actuals in a given manifold expected as of now
+template<typename T>
+__device__ T reduceAlongDimY(T value, T* workspace) {
+  __syncthreads(); // Sync to ensure unfinished accesses don't effect downstream ops
+
+  int loc = threadIdx.x * blockDim.y + threadIdx.y;
+
+  workspace[ loc ] = value;
+  __syncthreads();
+
+  for (int rsize = blockDim.y / 2; rsize > 0; rsize /= 2) {
+    if (threadIdx.y < rsize) {
+      workspace[ loc ] += workspace[ loc + rsize ];
+    }
+    __syncthreads();
+  }
+  value = workspace[threadIdx.x * blockDim.y];
+  __syncthreads();
+
+  return value; // each nob's reduction result
+}
+
+template<typename T, bool isDMAE, int BLOCK_DIM_Y>
 __global__
 void lpDistances(char * const valids, T * const distances,
                  const int npreds, const bool isPanelMode,
@@ -18,63 +40,61 @@ void lpDistances(char * const valids, T * const distances,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts)
 {
-  using DistReduce = cub::BlockReduce<T, BLOCK_DIM_X>;
-  using MsngReduce = cub::BlockReduce<bool, BLOCK_DIM_X>;
-
-  //TODO const int p = blockIdx.y + blockIdx.z * gridDim.y; //nth prediction
   const int p = blockIdx.y; //nth prediction
 
-  if (p < npreds) {
-    __shared__ typename DistReduce::TempStorage dtemp;
-    __shared__ typename MsngReduce::TempStorage mtemp;
+  if (p < npreds)
+  {
+    __shared__ T dists[BLOCK_DIM_X * BLOCK_DIM_Y];
+    __shared__ bool markers[BLOCK_DIM_X * BLOCK_DIM_Y];
 
-    const bool imdoZero = missingDistance == 0;
+    const bool isZero = (missingDistance == 0);
+    const T* predsMp  = mpData + p * eacts;
+    const int nob     = blockDim.x * blockIdx.x + threadIdx.x;
 
-    const int nob = blockIdx.x;
-
-    const T* predsM  = mData + nob * eacts;
-    const T* predsMp = mpData + p * eacts;
-
-    bool anyEAmissing = false;
-    T dist_i = T(0);
-
-    if (threadIdx.x == 0 && isPanelMode && idw > 0) {
-      dist_i += (idw * (mPanelIds[nob] != mpPanelIds[p]));
-    }
-    for (int x = threadIdx.x; x < eacts; x += blockDim.x)
+    if (nob < mnobs)
     {
-      T M_ij    = predsM[x];
-      T Mp_ij   = predsMp[x];
-      bool mopt = mopts[x];
-      bool msng = (M_ij == MISSING || Mp_ij == MISSING);
-      T diffM   = M_ij - Mp_ij;
-      T compM   = M_ij != Mp_ij;
-      T distM   = mopt * diffM + (1 - mopt) * compM;
-      T dist_ij = msng * (1 - imdoZero) * missingDistance + (1 - msng) * distM;
+      const T* predsM   = mData + nob * eacts;
+      bool anyEAmissing = false;
+      T dist_i          = T(0);
 
-      if (isDMAE) {
-        dist_i += abs(dist_ij) / eacts;
-      } else {
-        dist_i += dist_ij * dist_ij;
+      if ( threadIdx.y == 0 && isPanelMode && idw > 0 ) {
+        dist_i += (idw * (mPanelIds[nob] != mpPanelIds[p]));
       }
-      anyEAmissing = (anyEAmissing || msng);
-    }
-    __syncthreads();
+      for (int e = threadIdx.y; e < eacts; e += blockDim.y)
+      {
+        T M_ij    = predsM[e];
+        T Mp_ij   = predsMp[e];
+        bool mopt = mopts[e];
+        bool msng = (M_ij == MISSING || Mp_ij == MISSING);
+        T diffM   = M_ij - Mp_ij;
+        T compM   = M_ij != Mp_ij;
+        T distM   = mopt * diffM + (1 - mopt) * compM;
+        T dist_ij = msng * (1 - isZero) * missingDistance + (1 - msng) * distM;
 
-    dist_i = DistReduce(dtemp).Sum(dist_i);
-    anyEAmissing = MsngReduce(mtemp).Sum(int(anyEAmissing)) > 0;
+        if (isDMAE) {
+          dist_i += abs(dist_ij) / eacts;
+        } else {
+          dist_i += dist_ij * dist_ij;
+        }
+        anyEAmissing = (anyEAmissing || msng);
+      }
+      __syncthreads();
 
-    if (threadIdx.x == 0) {
-      anyEAmissing = anyEAmissing && imdoZero;
+      dist_i = reduceAlongDimY(dist_i, dists);
+      anyEAmissing = reduceAlongDimY(anyEAmissing, markers);
 
-      dist_i = anyEAmissing * MISSING + (1 - anyEAmissing) * dist_i;
+      if (threadIdx.y == 0) {
+        anyEAmissing = anyEAmissing && isZero;
 
-      bool isValid = dist_i != 0 && dist_i != MISSING;
+        dist_i = anyEAmissing * MISSING + (1 - anyEAmissing) * dist_i;
 
-      dist_i = (isDMAE * dist_i + (1 - isDMAE) * sqrt(dist_i));
+        bool isValid = dist_i != 0 && dist_i != MISSING;
 
-      valids[nob + p * mnobs] = (char)isValid;
-      distances[nob + p * mnobs] = dist_i;
+        dist_i = (isDMAE * dist_i + (1 - isDMAE) * sqrt(dist_i));
+
+        valids[nob + p * mnobs] = (char)isValid;
+        distances[nob + p * mnobs] = dist_i;
+      }
     }
   }
 }
@@ -100,38 +120,16 @@ void lpDistances(char * const valids, T * const distances,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts, const cudaStream_t stream)
 {
-  dim3 threads( powerOf2LE(eacts) );
+  dim3 threads(BLOCK_DIM_X, powerOf2LE(eacts));
 
-  threads.x = threads.x > 1024 ? 1024 : threads.x;
+  threads.y = threads.y > 32 ? 32 : threads.y;
 
-  dim3 blocks(mnobs, npreds);
+  dim3 blocks(divup(mnobs, threads.x), npreds);
 
-  switch(threads.x) {
-    case 1024:
-      lpDistances<T, isDMAE, 1024> <<<blocks, threads, 0, stream>>>(
-              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
-              mData, mPanelIds, mpData, mpPanelIds, mopts);
-      break;
-    case 512:
-      lpDistances<T, isDMAE, 512> <<<blocks, threads, 0, stream>>>(
-              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
-              mData, mPanelIds, mpData, mpPanelIds, mopts);
-      break;
-    case 256:
-      lpDistances<T, isDMAE, 256> <<<blocks, threads, 0, stream>>>(
-              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
-              mData, mPanelIds, mpData, mpPanelIds, mopts);
-      break;
-    case 128:
-      lpDistances<T, isDMAE, 128> <<<blocks, threads, 0, stream>>>(
-              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
-              mData, mPanelIds, mpData, mpPanelIds, mopts);
-      break;
-    case 64:
-      lpDistances<T, isDMAE, 64> <<<blocks, threads, 0, stream>>>(
-              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
-              mData, mPanelIds, mpData, mpPanelIds, mopts);
-      break;
+  //printf("eacts %d mnobs %d npreds %d \n", eacts, mnobs, npreds);
+  //printf("grid %d, %d block %d, %d \n", blocks.x, blocks.y, threads.x, threads.y);
+
+  switch(threads.y) {
     case 32:
       lpDistances<T, isDMAE, 32> <<<blocks, threads, 0, stream>>>(
               valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
@@ -142,8 +140,18 @@ void lpDistances(char * const valids, T * const distances,
               valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
               mData, mPanelIds, mpData, mpPanelIds, mopts);
       break;
-    default:
+    case 8:
       lpDistances<T, isDMAE, 8> <<<blocks, threads, 0, stream>>>(
+              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
+              mData, mPanelIds, mpData, mpPanelIds, mopts);
+      break;
+    case 4:
+      lpDistances<T, isDMAE, 4> <<<blocks, threads, 0, stream>>>(
+              valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
+              mData, mPanelIds, mpData, mpPanelIds, mopts);
+      break;
+    default:
+      lpDistances<T, isDMAE, 2> <<<blocks, threads, 0, stream>>>(
               valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
               mData, mPanelIds, mpData, mpPanelIds, mopts);
       break;
