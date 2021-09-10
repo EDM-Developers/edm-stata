@@ -11,7 +11,9 @@
 #include <vector>
 
 #include <cuda_runtime.h>
+#if WITH_GPU_PROFILING
 #include <nvToolsExt.h>
+#endif
 #define AF_DEFINE_CUDA_TYPES
 #include <arrayfire.h>
 #include <af/cuda.h>
@@ -317,7 +319,9 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
 {
   constexpr bool useCustomKernel = true;
 
+#if WITH_GPU_PROFILING
   auto range = nvtxRangeStartA(__FUNCTION__);
+#endif
 
   const af_dtype cType = M.mdata.type();
 
@@ -340,7 +344,9 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
     Mp.panel.unlock();
     metricOpts.unlock();
 
+#if WITH_GPU_PROFILING
     nvtxRangeEnd(range);
+#endif
     return {valids, dists};
   } else {
     using af::array;
@@ -394,7 +400,9 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
     valids = moddims(valids, mnobs, npreds);
     dists  = moddims(dists, mnobs, npreds);
 
+#if WITH_GPU_PROFILING
     nvtxRangeEnd(range);
+#endif
     return { valids, dists };
   }
 }
