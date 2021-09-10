@@ -30,7 +30,9 @@
 #include <chrono>
 
 #include <arrayfire.h>
+#if WITH_GPU_PROFILING
 #include <nvToolsExt.h>
+#endif
 
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
@@ -699,7 +701,9 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
   using af::seq;
   using af::tile;
 
+#if WITH_GPU_PROFILING
   auto range = nvtxRangeStartA(__FUNCTION__);
+#endif
 
   const dim_t mnobs = M.nobs;
 
@@ -724,7 +728,9 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
   } else {
       result = af::constant(1.0, M.nobs, npreds, b8);
   }
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
+#endif
   return result;
 }
 
@@ -739,7 +745,9 @@ void afSortSearchSpace(af::array& pValids, af::array& sDists, af::array& yvecs, 
   using af::sort;
   using af::tile;
 
+#if WITH_GPU_PROFILING
   auto searchRange = nvtxRangeStartA("sortInfo");
+#endif
   array maxs = af::max(pValids * vDists, 0);
   array pDists = pValids * vDists + (1 - pValids) * tile(maxs + 100, mnobs);
 
@@ -764,7 +772,9 @@ void afSortSearchSpace(af::array& pValids, af::array& sDists, af::array& yvecs, 
     smData = moddims(tmdata(indices), eacts, mnobs, npreds);
   }
 
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(searchRange);
+#endif
 }
 
 void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused,
@@ -777,7 +787,9 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   using af::sum;
   using af::tile;
 
+#if WITH_GPU_PROFILING
   auto range = nvtxRangeStartA(__FUNCTION__);
+#endif
 
   const array& valids = pair.inds;
   const array& dists  = pair.dists;
@@ -799,7 +811,9 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   if (opts.saveKUsed) {
     kused = moddims(af::count(weights, 0), npreds, tcount);
   }
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
+#endif
 }
 
 void afSMapPrediction(af::array& retcodes, af::array& kused,
@@ -822,7 +836,9 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   using af::span;
   using af::tile;
 
+#if WITH_GPU_PROFILING
   auto range = nvtxRangeStartA(__FUNCTION__);
+#endif
 
   const array& valids  = pair.inds;
   const array& dists   = pair.dists;
@@ -926,7 +942,9 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   }
 
   retcodes = constant(SUCCESS, npreds, tcount);
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
+#endif
 }
 
 void af_make_prediction(const int npreds, const Options& opts,
@@ -941,7 +959,9 @@ void af_make_prediction(const int npreds, const Options& opts,
   using af::dim4;
   using af::iota;
 
+#if WITH_GPU_PROFILING
   auto mpRange = nvtxRangeStartA(__FUNCTION__);
+#endif
   const int numThetas = opts.thetas.size();
 
   if (opts.algorithm != Algorithm::Simplex && opts.algorithm != Algorithm::SMap) {
@@ -968,7 +988,9 @@ void af_make_prediction(const int npreds, const Options& opts,
   auto validDistPair =
       afLPDistances(npreds, opts, M, Mp, metricOpts);
 
+#if WITH_GPU_PROFILING
   auto kisRange = nvtxRangeStartA("kItemsSelection");
+#endif
   // TODO add code path for wasserstein later
   pValids = pValids && validDistPair.inds;
 
@@ -990,7 +1012,9 @@ void af_make_prediction(const int npreds, const Options& opts,
     //           kchck * isfoco * int(SUCCESS) +
     //           (kvals == 0) * int(SUCCESS);
   }
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(kisRange);
+#endif
 
   //smData is set only if algo is SMap
   array sDists, yvecs, smData;
@@ -1014,12 +1038,16 @@ void af_make_prediction(const int npreds, const Options& opts,
     }
   }
 
+#if WITH_GPU_PROFILING
   auto returnRange = nvtxRangeStartA("ReturnValues");
+#endif
   ystars.T().host(ystar.data());
   retcodes.T().host(rc.data());
   if (opts.saveKUsed) {
     kused.host(kUseds.data());
   }
+#if WITH_GPU_PROFILING
   nvtxRangeEnd(returnRange);
   nvtxRangeEnd(mpRange);
+#endif
 }

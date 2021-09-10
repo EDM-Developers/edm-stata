@@ -12,6 +12,8 @@
 #define CANNOT_SAVE_RESULTS 1000
 #define UNKNOWN_ERROR 8000
 
+#define WITH_GPU_PROFILING 1
+
 typedef int retcode;
 
 #include <future>
