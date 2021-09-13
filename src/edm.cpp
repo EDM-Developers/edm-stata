@@ -821,7 +821,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
                       const int npreds, const Options& opts,
                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                       const DistanceIndexPairsOnGPU& pair, const af::array& mdata,
-                      const af::array& yvecs, const af::array& thetas)
+                      const af::array& yvecs, const af::array& thetas, const bool fullBatch)
 {
   using af::array;
   using af::constant;
@@ -847,7 +847,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   const int MEactualp1 = M.E_actual + 1;
   const af_dtype cType = M.mdata.type();
 
-  if (true) {
+  if (fullBatch) {
     array meanDists = tile((k * mean(valids * dists, 0) / count(valids, 0)), k, 1);
     array mdValids  = tile(moddims(valids, 1, k, npreds), M.E_actual);
     array Mp_i_j    = Mp.mdata(span, seq(npreds));
@@ -864,7 +864,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       array y_ls    = weights * yvecs;
 
       array icsOuts;
-      if (true) {
+      if (fullBatch) {
         icsOuts = array(MEactualp1, npreds, cType);
         for (int p = 0; p < npreds; ++p)
         {
@@ -1017,7 +1017,7 @@ void af_make_prediction(const int npreds, const Options& opts,
                         yvecs, {pValids, sDists}, thetas);
   } else if (opts.algorithm == Algorithm::SMap) {
     afSMapPrediction(retcodes, kused, ystars, dcoeffs, npreds,
-                     opts, M, Mp, {pValids, sDists}, smData, yvecs, thetas);
+                     opts, M, Mp, {pValids, sDists}, smData, yvecs, thetas, opts.k <= 0);
   }
 
 #if WITH_GPU_PROFILING
