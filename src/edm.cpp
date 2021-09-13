@@ -734,9 +734,9 @@ af::array afPotentialNeighbourIndices(const int& npreds, const bool& skipOtherPa
   return result;
 }
 
-void afSortSearchSpace(af::array& pValids, af::array& sDists, af::array& yvecs, af::array& smData,
+void afNearestNeighbours(af::array& pValids, af::array& sDists, af::array& yvecs, af::array& smData,
         const af::array& vDists, const af::array& yvec, const af::array& mdata,
-        const Algorithm algo, const int eacts, const int mnobs, const int npreds)
+        const Algorithm algo, const int eacts, const int mnobs, const int npreds, const int k)
 {
   using af::array;
   using af::dim4;
@@ -746,30 +746,30 @@ void afSortSearchSpace(af::array& pValids, af::array& sDists, af::array& yvecs, 
   using af::tile;
 
 #if WITH_GPU_PROFILING
-  auto searchRange = nvtxRangeStartA("sortInfo");
+  auto searchRange = nvtxRangeStartA("sortData");
 #endif
   array maxs = af::max(pValids * vDists, 0);
   array pDists = pValids * vDists + (1 - pValids) * tile(maxs + 100, mnobs);
 
   array indices;
-  sort(sDists, indices, pDists);
+  topk(sDists, indices, pDists, k, 0, AF_TOPK_MIN);
 
-  yvecs = moddims(yvec(indices), mnobs, npreds);
+  yvecs = moddims(yvec(indices), k, npreds);
 
-  array vIdx = indices + iota(dim4(1, npreds), dim4(mnobs)) * mnobs;
+  array vIdx = indices + iota(dim4(1, npreds), dim4(k)) * mnobs;
 
-  pValids = moddims(pValids(vIdx), mnobs, npreds);
+  pValids = moddims(pValids(vIdx), k, npreds);
 
   // Manifold data also needs to be reorder for SMap prediction
   if (algo == Algorithm::SMap) {
     array tmdata = tile(mdata, 1, 1, npreds);
-    array soffs  = iota(dim4(1, 1, npreds), dim4(eacts, mnobs)) * (eacts * mnobs);
-    array d0offs = iota(dim4(eacts), dim4(1, mnobs, npreds));
+    array soffs  = iota(dim4(1, 1, npreds), dim4(eacts, k)) * (eacts * mnobs);
+    array d0offs = iota(dim4(eacts), dim4(1, k, npreds));
 
-    indices = tile(moddims(indices, 1, mnobs, npreds), eacts) * eacts;
+    indices = tile(moddims(indices, 1, k, npreds), eacts) * eacts;
     indices += (soffs + d0offs);
 
-    smData = moddims(tmdata(indices), eacts, mnobs, npreds);
+    smData = moddims(tmdata(indices), eacts, k, npreds);
   }
 
 #if WITH_GPU_PROFILING
@@ -793,17 +793,17 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
 
   const array& valids = pair.inds;
   const array& dists  = pair.dists;
-  const int mnobs     = valids.dims(0);
+  const int k         = valids.dims(0);
   const int tcount    = opts.thetas.size();
 
   array weights;
   {
-    array minDist = tile(dists(0, af::span), mnobs, 1, tcount);
+    array minDist = tile(dists(0, af::span), k, 1, tcount);
     array tadist  = tile(dists, 1, 1, tcount);
 
     weights = tile(valids, 1, 1, tcount) * af::exp(-thetas * (tadist / minDist));
   }
-  array r4thetas = tile(yvecs, 1, 1, tcount) * (weights / tile(sum(weights, 0), mnobs));
+  array r4thetas = tile(yvecs, 1, 1, tcount) * (weights / tile(sum(weights, 0), k));
 
   ystar = moddims(sum(r4thetas, 0), npreds, tcount);
   retcodes = af::constant(SUCCESS, npreds, tcount);
@@ -842,14 +842,14 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
 
   const array& valids  = pair.inds;
   const array& dists   = pair.dists;
-  const int mnobs      = M.nobs;
+  const int k          = valids.dims(0);
   const int tcount     = opts.thetas.size();
   const int MEactualp1 = M.E_actual + 1;
   const af_dtype cType = M.mdata.type();
 
   if (true) {
-    array meanDists = tile((mnobs * mean(valids * dists, 0) / count(valids, 0)), mnobs, 1);
-    array mdValids  = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
+    array meanDists = tile((k * mean(valids * dists, 0) / count(valids, 0)), k, 1);
+    array mdValids  = tile(moddims(valids, 1, k, npreds), M.E_actual);
     array Mp_i_j    = Mp.mdata(span, seq(npreds));
     array scaleval  = ((Mp_i_j != double(MISSING_D)) * Mp_i_j);
 
@@ -868,22 +868,22 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
         icsOuts = array(MEactualp1, npreds, cType);
         for (int p = 0; p < npreds; ++p)
         {
-          array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs), cType);
+          array X_ls_cj = constant(1.0, dim4(MEactualp1, k), cType);
 
           X_ls_cj(seq(1, end), span) = mdValids(span, span, p) * mdata(span, span, p);
 
-          X_ls_cj *= tile(moddims(weights(span, p), 1, mnobs), MEactualp1);
+          X_ls_cj *= tile(moddims(weights(span, p), 1, k), MEactualp1);
 
           icsOuts(span, p) = matmulTN(pinverse(X_ls_cj, 1e-9), y_ls(span, p));
         }
       } else {
-        array X_ls_cj = constant(1.0, dim4(MEactualp1, mnobs, npreds), cType);
+        array X_ls_cj = constant(1.0, dim4(MEactualp1, k, npreds), cType);
 
         X_ls_cj(seq(1, end), span) = mdValids * mdata;
 
-        X_ls_cj *= tile(moddims(weights, 1, mnobs, npreds), MEactualp1);
+        X_ls_cj *= tile(moddims(weights, 1, k, npreds), MEactualp1);
 
-        icsOuts = matmulTN(pinverse(X_ls_cj, 1e-9), moddims(y_ls, mnobs, 1, npreds));
+        icsOuts = matmulTN(pinverse(X_ls_cj, 1e-9), moddims(y_ls, k, 1, npreds));
         icsOuts = moddims(icsOuts, MEactualp1, npreds);
       }
 
@@ -904,8 +904,8 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   } else {
     array weights, y_ls;
     {
-      array meanDists  = (mnobs * mean(valids * dists, 0) / count(valids, 0));
-      array meanDistsT = tile(meanDists, mnobs, 1, tcount);
+      array meanDists  = (k * mean(valids * dists, 0) / count(valids, 0));
+      array meanDistsT = tile(meanDists, k, 1, tcount);
       array ptDists    = tile(dists, 1, 1, tcount);
       array validsT    = tile(valids, 1, 1, tcount);
 
@@ -913,16 +913,16 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       y_ls    = weights * tile(yvecs, 1, 1, tcount);
     }
 
-    array mdValids = tile(moddims(valids, 1, mnobs, npreds), M.E_actual);
-    array X_ls_cj  = constant(1.0, dim4(MEactualp1, mnobs, npreds), cType);
+    array mdValids = tile(moddims(valids, 1, k, npreds), M.E_actual);
+    array X_ls_cj  = constant(1.0, dim4(MEactualp1, k, npreds), cType);
 
     X_ls_cj(seq(1, end), span) = mdValids * mdata;
 
     array X_ls_cj_T = tile(X_ls_cj, 1, 1, 1, tcount);
 
-    X_ls_cj_T *= tile(moddims(weights, 1, mnobs, npreds, tcount), MEactualp1);
+    X_ls_cj_T *= tile(moddims(weights, 1, k, npreds, tcount), MEactualp1);
 
-    array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), moddims(y_ls, mnobs, 1, npreds, tcount));
+    array icsOuts = matmulTN(pinverse(X_ls_cj_T, 1e-9), moddims(y_ls, k, 1, npreds, tcount));
 
     icsOuts      = moddims(icsOuts, MEactualp1, npreds, tcount);
     array Mp_i_j = tile(Mp.mdata(span, seq(npreds)), 1, 1, tcount);
@@ -980,7 +980,8 @@ void af_make_prediction(const int npreds, const Options& opts,
   const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
   const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
 
-  array thetas = tile(array(1, 1, numThetas, opts.thetas.data()), M.nobs, npreds);
+  array thetas = tile(array(1, 1, numThetas, opts.thetas.data()),
+                      (opts.k > 0 ? opts.k : M.nobs), npreds);
 
   auto pValids =
       afPotentialNeighbourIndices(npreds, skipOtherPanels, skipMissingData, M, Mp);
@@ -989,53 +990,34 @@ void af_make_prediction(const int npreds, const Options& opts,
       afLPDistances(npreds, opts, M, Mp, metricOpts);
 
 #if WITH_GPU_PROFILING
-  auto kisRange = nvtxRangeStartA("kItemsSelection");
+  auto kisRange = nvtxRangeStartA("kNearestSelection");
 #endif
   // TODO add code path for wasserstein later
   pValids = pValids && validDistPair.inds;
 
-  array retcodes;
-  array kValids = iota(dim4(M.nobs), dim4(1, npreds));
-  {
-    const bool isfoco = opts.forceCompute;
+  //smData is set only if algo is SMap
+  array retcodes, kused, sDists, yvecs, smData;
 
-    array kused = af::count(pValids, 0);
-    // TODO check if saving at this point is necessary // kused.host(kUseds.data());
-
-    array kchck = opts.k > kused;
-    array kvals = kchck * (isfoco * kused) + (1 - kchck) * opts.k;
-    array findk = select(kvals < 0 || kvals == kused, kused, kvals);
-
-    kValids = kValids < tile(findk, M.nobs);
-    //TODO
-    //retcodes = kchck * !isfoco * int(INSUFFICIENT_UNIQUE) +
-    //           kchck * isfoco * int(SUCCESS) +
-    //           (kvals == 0) * int(SUCCESS);
+  if (opts.k > 0) {
+    afNearestNeighbours(pValids, sDists, yvecs, smData,
+            validDistPair.dists, M.yvec, M.mdata,
+            opts.algorithm, M.E_actual, M.nobs, npreds, opts.k);
+  } else {
+    sDists = validDistPair.dists;
+    yvecs = tile(M.yvec, 1, npreds);
+    smData = tile(M.mdata, 1, 1, npreds);
   }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(kisRange);
 #endif
 
-  //smData is set only if algo is SMap
-  array sDists, yvecs, smData;
-
-  afSortSearchSpace(pValids, sDists, yvecs, smData,
-          validDistPair.dists, M.yvec, M.mdata,
-          opts.algorithm, M.E_actual, M.nobs, npreds);
-
-  pValids = pValids && kValids;
-
-  array ystars, kused;
+  array ystars, dcoeffs;
   if (opts.algorithm == Algorithm::Simplex) {
     afSimplexPrediction(retcodes, ystars, kused, npreds, opts,
                         yvecs, {pValids, sDists}, thetas);
   } else if (opts.algorithm == Algorithm::SMap) {
-    array dcoeffs;
     afSMapPrediction(retcodes, kused, ystars, dcoeffs, npreds,
                      opts, M, Mp, {pValids, sDists}, smData, yvecs, thetas);
-    if (opts.saveSMAPCoeffs) {
-      dcoeffs.T().host(coeffs.data());
-    }
   }
 
 #if WITH_GPU_PROFILING
@@ -1045,6 +1027,9 @@ void af_make_prediction(const int npreds, const Options& opts,
   retcodes.T().host(rc.data());
   if (opts.saveKUsed) {
     kused.host(kUseds.data());
+  }
+  if (opts.saveSMAPCoeffs) {
+    dcoeffs.T().host(coeffs.data());
   }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(returnRange);
