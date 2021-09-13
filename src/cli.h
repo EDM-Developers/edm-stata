@@ -86,6 +86,7 @@ json run_tests(json testInputs, int nthreads, IO* io, bool verb)
   }
 
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
+  //for (int taskGroupNum = 0; taskGroupNum < 1; taskGroupNum++) {
     if (verb) {
       std::cout << "Starting task group number " << taskGroupNum << "\n";
     }
