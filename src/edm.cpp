@@ -28,6 +28,7 @@
 #include <cmath>
 #include <fstream> // just to create low-level input dumps
 #include <chrono>
+#include <iostream>
 
 #include <arrayfire.h>
 #if WITH_GPU_PROFILING
@@ -236,8 +237,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
   af::array metricOpts(M.E_actual(), mopts.data());
 
-  const ManifoldOnGPU gpuM  = M;
-  const ManifoldOnGPU gpuMp = Mp;
+  const ManifoldOnGPU gpuM  = M.toGPU(false);
+  const ManifoldOnGPU gpuMp = Mp.toGPU(false);
 
   constexpr bool useAF = true;  //Being on trump mutli-threaded codepath
   bool multiThreaded = opts.nthreads > 1;
@@ -268,9 +269,10 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
   if (multiThreaded && !useAF) {
     std::vector<std::future<void>> results(numPredictions);
+#if WITH_GPU_PROFILING
     workerPool.sync();
-    printf("Starting: %lu\n", opts.taskNum);
     auto start = std::chrono::high_resolution_clock::now();
+#endif
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
         [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going); }
@@ -285,21 +287,27 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         io->progress_bar((i + 1) / ((double)numPredictions));
       }
     }
+#if WITH_GPU_PROFILING
     workerPool.sync();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
     printf("CPU(t=%d): Task(%lu) took %lf seconds for %d predictions \n",
            opts.nthreads, opts.taskNum, diff.count(), numPredictions);
+#endif
   } else {
     if (useAF) {
+#if WITH_GPU_PROFILING
       af::sync(0);
       auto start = std::chrono::high_resolution_clock::now();
+#endif
       af_make_prediction(numPredictions, opts, M, Mp,
               gpuM, gpuMp, metricOpts, ystarView, rcView, coeffsView, kUsed, keep_going);
+#if WITH_GPU_PROFILING
       af::sync(0);
       auto end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> diff = end - start;
       printf("GPU: Task(%lu) took %lf seconds for %d predictions \n", opts.taskNum, diff.count(), numPredictions);
+#endif
     } else {
       if (opts.numTasks == 1) {
         io->progress_bar(0.0);
@@ -776,7 +784,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
                          const int npreds, const Options& opts,
                          const af::array& yvecs,
                          const DistanceIndexPairsOnGPU& pair,
-                         const af::array& thetas)
+                         const af::array& thetas, const bool isKNeg)
 {
   using af::array;
   using af::sum;
@@ -790,18 +798,24 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   const array& dists  = pair.dists;
   const int k         = valids.dims(0);
   const int tcount    = opts.thetas.size();
+  const array thetasT = tile(thetas, k, npreds);
 
   array weights;
   {
-    array minDist = tile(dists(0, af::span), k, 1, tcount);
+    array minDist;
+    if (isKNeg) {
+      minDist = tile(min(dists, 0), k, 1, tcount);
+    } else {
+      minDist = tile(dists(0, af::span), k, 1, tcount);
+    }
     array tadist  = tile(dists, 1, 1, tcount);
 
-    weights = tile(valids, 1, 1, tcount) * af::exp(-thetas * (tadist / minDist));
+    weights = tile(valids, 1, 1, tcount) * af::exp(-thetasT * (tadist / minDist));
   }
-  array r4thetas = tile(yvecs, 1, 1, tcount) * (weights / tile(sum(weights, 0), k));
+  array r4thetas = tile(yvecs, 1, (isKNeg ? npreds : 1) , tcount) * (weights / tile(sum(weights, 0), k));
 
   ystar = moddims(sum(r4thetas, 0), npreds, tcount);
-  retcodes = af::constant(SUCCESS, npreds, tcount);
+  retcodes = af::constant(SUCCESS, npreds, tcount, s32);
 
   if (opts.saveKUsed) {
     kused = moddims(af::count(weights, 0), npreds, tcount);
@@ -811,12 +825,13 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
 #endif
 }
 
+template<typename T>
 void afSMapPrediction(af::array& retcodes, af::array& kused,
                       af::array& ystar, af::array& coeffs,
                       const int npreds, const Options& opts,
                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                       const DistanceIndexPairsOnGPU& pair, const af::array& mdata,
-                      const af::array& yvecs, const af::array& thetas, const bool fullBatch)
+                      const af::array& yvecs, const af::array& thetas, const bool useLoops)
 {
   using af::array;
   using af::constant;
@@ -842,8 +857,8 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
   const int MEactualp1 = M.E_actual + 1;
   const af_dtype cType = M.mdata.type();
 
-  if (fullBatch) {
-    array meanDists = tile((k * mean(valids * dists, 0) / count(valids, 0)), k, 1);
+  if (useLoops) {
+    array meanDists = tile((k * mean(valids * dists, 0) / count(valids, 0)), k);
     array mdValids  = tile(moddims(valids, 1, k, npreds), M.E_actual);
     array Mp_i_j    = Mp.mdata(span, seq(npreds));
     array scaleval  = ((Mp_i_j != double(MISSING)) * Mp_i_j);
@@ -856,32 +871,19 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       double theta = opts.thetas[t];
 
       array weights = valids * af::exp(-theta * (dists / meanDists));
-      array y_ls    = weights * yvecs;
+      array y_ls    = weights * tile(yvecs, 1, npreds);
 
-      array icsOuts;
-      if (fullBatch) {
-        icsOuts = array(MEactualp1, npreds, cType);
-        for (int p = 0; p < npreds; ++p)
-        {
-          array X_ls_cj = constant(1.0, dim4(MEactualp1, k), cType);
+      array icsOuts = array(MEactualp1, npreds, cType);
+      for (int p = 0; p < npreds; ++p)
+      {
+        array X_ls_cj = constant(1.0, dim4(MEactualp1, k), cType);
 
-          X_ls_cj(seq(1, end), span) = mdValids(span, span, p) * mdata(span, span, p);
+        X_ls_cj(seq(1, end), span) = mdValids(span, span, p) * mdata;
 
-          X_ls_cj *= tile(moddims(weights(span, p), 1, k), MEactualp1);
+        X_ls_cj *= tile(moddims(weights(span, p), 1, k), MEactualp1);
 
-          icsOuts(span, p) = matmulTN(pinverse(X_ls_cj, 1e-9), y_ls(span, p));
-        }
-      } else {
-        array X_ls_cj = constant(1.0, dim4(MEactualp1, k, npreds), cType);
-
-        X_ls_cj(seq(1, end), span) = mdValids * mdata;
-
-        X_ls_cj *= tile(moddims(weights, 1, k, npreds), MEactualp1);
-
-        icsOuts = matmulTN(pinverse(X_ls_cj, 1e-9), moddims(y_ls, k, 1, npreds));
-        icsOuts = moddims(icsOuts, MEactualp1, npreds);
+        icsOuts(span, p) = matmulTN(pinverse(X_ls_cj, 1e-9), y_ls(span, p));
       }
-
       array r2d = icsOuts(seq(1, end), span) * scaleval;
       array r   = icsOuts(0, span) + sum(r2d, 0);
 
@@ -897,6 +899,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       }
     }
   } else {
+    array thetasT = tile(thetas, k, npreds);
     array weights, y_ls;
     {
       array meanDists  = (k * mean(valids * dists, 0) / count(valids, 0));
@@ -904,7 +907,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       array ptDists    = tile(dists, 1, 1, tcount);
       array validsT    = tile(valids, 1, 1, tcount);
 
-      weights = validsT * af::exp(-thetas * (ptDists / meanDistsT));
+      weights = validsT * af::exp(-thetasT * (ptDists / meanDistsT));
       y_ls    = weights * tile(yvecs, 1, 1, tcount);
     }
 
@@ -950,85 +953,106 @@ void af_make_prediction(const int npreds, const Options& opts,
                         Eigen::Map<Eigen::MatrixXd> coeffs,
                         std::vector<int>& kUseds, bool keep_going())
 {
-  using af::array;
-  using af::constant;
-  using af::dim4;
-  using af::iota;
+  try {
+    using af::array;
+    using af::constant;
+    using af::dim4;
+    using af::iota;
 
 #if WITH_GPU_PROFILING
-  auto mpRange = nvtxRangeStartA(__FUNCTION__);
+    auto mpRange = nvtxRangeStartA(__FUNCTION__);
 #endif
+
   const int numThetas = opts.thetas.size();
+  const af_dtype cType = M.mdata.type();
 
   if (opts.algorithm != Algorithm::Simplex && opts.algorithm != Algorithm::SMap) {
       array retcodes = constant(INVALID_ALGORITHM, npreds, numThetas, s32);
       retcodes.host(rc.data());
       return;
-  }
-  // Cross-paltform way to pre-empt threads to interrupt EDM command amid stages
-  if (keep_going != nullptr && keep_going() == false) {
-    return;
-  }
-  using af::span;
-  using af::tile;
-  using af::where;
+    }
+    using af::span;
+    using af::tile;
+    using af::where;
 
-  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
-  const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
+    const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
+    const bool skipMissingData = (opts.algorithm == Algorithm::SMap);
 
-  array thetas = tile(array(1, 1, numThetas, opts.thetas.data()),
-                      (opts.k > 0 ? opts.k : M.nobs), npreds);
+    array thetas = array(1, 1, opts.thetas.size(), opts.thetas.data()).as(cType);
 
-  auto pValids =
-      afPotentialNeighbourIndices(npreds, skipOtherPanels, skipMissingData, M, Mp);
+    auto pValids =
+        afPotentialNeighbourIndices(npreds, skipOtherPanels, skipMissingData, M, Mp);
 
-  auto validDistPair =
-      afLPDistances(npreds, opts, M, Mp, metricOpts);
+    auto validDistPair =
+        afLPDistances(npreds, opts, M, Mp, metricOpts);
 
 #if WITH_GPU_PROFILING
-  auto kisRange = nvtxRangeStartA("kNearestSelection");
+    auto kisRange = nvtxRangeStartA("kNearestSelection");
 #endif
   // TODO add code path for wasserstein later
-  pValids = pValids && validDistPair.inds;
+    pValids = pValids && validDistPair.inds;
 
-  //smData is set only if algo is SMap
-  array retcodes, kused, sDists, yvecs, smData;
+    //smData is set only if algo is SMap
+    array retcodes, kused, sDists, yvecs, smData;
 
-  if (opts.k > 0) {
-    afNearestNeighbours(pValids, sDists, yvecs, smData,
-            validDistPair.dists, M.yvec, M.mdata,
-            opts.algorithm, M.E_actual, M.nobs, npreds, opts.k);
-  } else {
-    sDists = validDistPair.dists;
-    yvecs = tile(M.yvec, 1, npreds);
-    smData = tile(M.mdata, 1, 1, npreds);
-  }
+    const int k = opts.k;
+    const bool isKNeg = k < 0;
+
+    if (k == 0) {
+      af::array retcodes = af::constant(SUCCESS, npreds, opts.thetas.size(), s32);
+      retcodes.host(rc.data());
+      return;
+    }
+
+    if (!isKNeg) {
+      afNearestNeighbours(pValids, sDists, yvecs, smData,
+              validDistPair.dists, M.yvec, M.mdata,
+              opts.algorithm, M.E_actual, M.nobs, npreds, k);
+    } else {
+      sDists = validDistPair.dists;
+      yvecs = M.yvec;
+      smData = M.mdata;
+    }
 #if WITH_GPU_PROFILING
-  nvtxRangeEnd(kisRange);
+    nvtxRangeEnd(kisRange);
 #endif
 
-  array ystars, dcoeffs;
-  if (opts.algorithm == Algorithm::Simplex) {
-    afSimplexPrediction(retcodes, ystars, kused, npreds, opts,
-                        yvecs, {pValids, sDists}, thetas);
-  } else if (opts.algorithm == Algorithm::SMap) {
-    afSMapPrediction(retcodes, kused, ystars, dcoeffs, npreds,
-                     opts, M, Mp, {pValids, sDists}, smData, yvecs, thetas, opts.k <= 0);
-  }
+    array ystars, dcoeffs;
+    if (opts.algorithm == Algorithm::Simplex) {
+      afSimplexPrediction(retcodes, ystars, kused, npreds, opts,
+                          yvecs, {pValids, sDists}, thetas, isKNeg);
+    } else if (opts.algorithm == Algorithm::SMap) {
+      if (cType == f32) {
+        afSMapPrediction<float>(retcodes, kused, ystars, dcoeffs,
+                                npreds, opts, M, Mp,
+                                {pValids, sDists}, smData, yvecs, thetas, isKNeg);
+      } else {
+        afSMapPrediction<double>(retcodes, kused, ystars, dcoeffs,
+                                 npreds, opts, M, Mp,
+                                 {pValids, sDists}, smData, yvecs, thetas, isKNeg);
+      }
+    }
 
 #if WITH_GPU_PROFILING
-  auto returnRange = nvtxRangeStartA("ReturnValues");
+    auto returnRange = nvtxRangeStartA("ReturnValues");
 #endif
-  ystars.host(ystar.data());
-  retcodes.host(rc.data());
-  if (opts.saveKUsed) {
-    kused.host(kUseds.data());
-  }
-  if (opts.saveSMAPCoeffs) {
-    dcoeffs.host(coeffs.data());
-  }
+    ystars.as(f64).host(ystar.data());
+    retcodes.host(rc.data());
+    if (opts.saveKUsed) {
+      kused.host(kUseds.data());
+    }
+    if (opts.saveSMAPCoeffs) {
+      dcoeffs.as(f64).host(coeffs.data());
+    }
 #if WITH_GPU_PROFILING
-  nvtxRangeEnd(returnRange);
-  nvtxRangeEnd(mpRange);
+    nvtxRangeEnd(returnRange);
+    nvtxRangeEnd(mpRange);
 #endif
+  } catch (af::exception &e) {
+    std::cerr << "ArrayFire threw an exception with message: \n" << std::endl;
+    std::cerr << e << std::endl;
+
+    af::array retcodes = af::constant(UNKNOWN_ERROR, npreds, opts.thetas.size(), s32);
+    retcodes.host(rc.data());
+  }
 }

@@ -135,7 +135,7 @@ public:
       return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
   }
 
-  operator ManifoldOnGPU() const;
+  ManifoldOnGPU toGPU(const bool useFloat=false) const;
 };
 
 class ManifoldGenerator

@@ -36,6 +36,22 @@ enable_language(CUDA)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# ↓↓↓ Third-party code ↓↓↓
+find_package(CUDA)
+find_package(ArrayFire CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(nlohmann_json 3.2.0 REQUIRED)
+
+find_library(NVTOOLS
+  NAME nvToolsExt
+  PATHS ${CUDA_TOOLKIT_ROOT_DIR}
+  PATH_SUFFIXES lib lib64)
+
+if(NOT WIN32)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
+find_package(Threads REQUIRED)
+
 # Output paths
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -126,27 +142,12 @@ endif()
 
 # Grab vendored files (e.g. the Stata/C interface files)
 include(vendor/CMakeLists.txt)
-target_include_directories(edm_plugin PRIVATE vendor)
-target_include_directories(edm_plugin PRIVATE include)
-target_include_directories(edm_plugin PRIVATE include/eigen3)
-
-# ↓↓↓ Third-party code ↓↓↓
-find_package(CUDA)
-find_package(ArrayFire CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
-find_package(nlohmann_json 3.2.0 REQUIRED)
-
-
-find_library(NVTOOLS
-  NAME nvToolsExt
-  PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-  PATH_SUFFIXES lib lib64)
-
-
-if(NOT WIN32)
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
-endif()
-find_package(Threads REQUIRED)
+target_include_directories(edm_plugin
+  PRIVATE
+  ${CUDA_INCLUDE_DIRS}
+  include
+  vendor
+  include/eigen3)
 
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
@@ -181,10 +182,12 @@ set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
 if(WIN32)
   target_compile_options(gbench PRIVATE "/MD")
 endif()
+
 find_package(benchmark CONFIG REQUIRED)
 target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-target_include_directories(gbench PRIVATE include)
-target_include_directories(gbench PRIVATE include/eigen3)
+target_include_directories(gbench PRIVATE include
+  ${CUDA_INCLUDE_DIRS}
+  include/eigen3)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)

@@ -14,7 +14,7 @@
 /* global variable placeholder for missing values */
 #define MISSING 1.0e+100
 
-#define WITH_GPU_PROFILING 1
+#define WITH_GPU_PROFILING 0
 
 typedef int retcode;
 

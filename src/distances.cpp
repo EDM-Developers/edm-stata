@@ -328,14 +328,21 @@ DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
   if (useCustomKernel) {
     af::array valids(M.nobs, npreds, b8);
     af::array dists(M.nobs, npreds, cType);
-
-    cuLPDistances(valids.device<char>(), dists.device<double>(),
-            npreds, opts.distance == Distance::MeanAbsoluteError, opts.panelMode,
-            opts.idw, opts.missingdistance, M.E_actual, M.nobs,
-            M.mdata.device<double>(), M.panel.device<int>(),
-            Mp.mdata.device<double>(), Mp.panel.device<int>(),
-            metricOpts.device<char>(), afcu::getStream(0));
-
+    if (cType == f64) {
+      cuLPDistances(valids.device<char>(), dists.device<double>(),
+              npreds, opts.distance == Distance::MeanAbsoluteError, opts.panelMode,
+              opts.idw, opts.missingdistance, M.E_actual, M.nobs,
+              M.mdata.device<double>(), M.panel.device<int>(),
+              Mp.mdata.device<double>(), Mp.panel.device<int>(),
+              metricOpts.device<char>(), afcu::getStream(0));
+    } else if (cType == f32) {
+      cuLPDistances(valids.device<char>(), dists.device<float>(),
+              npreds, opts.distance == Distance::MeanAbsoluteError, opts.panelMode,
+              opts.idw, opts.missingdistance, M.E_actual, M.nobs,
+              M.mdata.device<float>(), M.panel.device<int>(),
+              Mp.mdata.device<float>(), Mp.panel.device<int>(),
+              metricOpts.device<char>(), afcu::getStream(0));
+    }
     valids.unlock();
     dists.unlock();
     M.mdata.unlock();
