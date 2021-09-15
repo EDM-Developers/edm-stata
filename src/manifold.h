@@ -1,8 +1,8 @@
 #pragma once
 
 /* global variable placeholder for missing values */
-
 const double MISSING_D = 1.0e+100;
+const float MISSING_F = 1.0e+30;
 
 #include <memory>
 #include <utility>
@@ -141,7 +141,7 @@ public:
       return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
   }
 
-  operator ManifoldOnGPU() const;
+  ManifoldOnGPU toGPU(const bool useFloat=false) const;
 };
 
 class ManifoldGenerator

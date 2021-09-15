@@ -3,8 +3,25 @@
 #include <cstdio>
 #include <algorithm>
 
-#define MISSING 1.0e+100
 #define divup(a, b) (((a) + (b)-1) / (b))
+
+template<typename T>
+__device__ constexpr T getMissingConstant()
+{
+  if constexpr (std::is_same<T, float>::value) {
+    return 1.0e+30;
+  }
+  return 1.0e+100; // double
+}
+
+template<typename T>
+__device__ constexpr inline T getValue(T value)
+{
+  if constexpr (std::is_same<T, float>::value) {
+    return isinf(value) ? getMissingConstant<T>() : value;
+  }
+  return value;
+}
 
 template<typename T, int BLOCK_DIM_X, int BLOCK_DIM_Y>
 __device__ T reduceEacts(int tid, T* smem)
@@ -40,6 +57,8 @@ void lpDistances(char * const valids, T * const distances,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts)
 {
+  constexpr T MISSING = getMissingConstant<T>();
+
   const int p = blockIdx.y; //nth prediction
 
   if (p < npreds)
@@ -64,8 +83,8 @@ void lpDistances(char * const valids, T * const distances,
       }
       for (int e = threadIdx.y; e < eacts; e += BLOCK_DIM_Y)
       {
-        T M_ij    = predsM[e];
-        T Mp_ij   = predsMp[e];
+        T M_ij    = getValue(predsM[e]);
+        T Mp_ij   = getValue(predsMp[e]);
         bool mopt = mopts[e];
         bool msng = (M_ij == MISSING || Mp_ij == MISSING);
         T diffM   = M_ij - Mp_ij;
@@ -154,8 +173,6 @@ void cuLPDistances(char * const valids, T * const distances,
 
   dim3 blocks(divup(mnobs, threads.x), npreds);
 
-  //printf("eacts %d mnobs %d npreds %d \n", eacts, mnobs, npreds);
-  //printf("grid %d, %d block %d, %d \n", blocks.x, blocks.y, threads.x, threads.y);
   switch(threads.y) {
     case 8:
       lpDistances<T, 8>(valids, distances, npreds, isDMAE, isPanelMode, idw, missingDistance,
