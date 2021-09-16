@@ -8,19 +8,25 @@
 template<typename T>
 __device__ constexpr T getMissingConstant()
 {
-  if constexpr (std::is_same<T, float>::value) {
-    return 1.0e+30;
-  }
   return 1.0e+100; // double
 }
 
-template<typename T>
-__device__ constexpr inline T getValue(T value)
+template<>
+__device__ float getMissingConstant()
 {
-  if constexpr (std::is_same<T, float>::value) {
-    return isinf(value) ? getMissingConstant<T>() : value;
-  }
+  return 1.0e+30;
+}
+
+template<typename T>
+__device__ inline T getValue(T value)
+{
   return value;
+}
+
+template<>
+__device__ inline float getValue(float value)
+{
+  return isinf(value) ? getMissingConstant<float>() : value;
 }
 
 template<typename T, int BLOCK_DIM_X, int BLOCK_DIM_Y>
@@ -57,7 +63,7 @@ void lpDistances(char * const valids, T * const distances,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts)
 {
-  constexpr T MISSING = getMissingConstant<T>();
+  const T MISSING = getMissingConstant<T>();
 
   const int p = blockIdx.y; //nth prediction
 
