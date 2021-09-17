@@ -44,16 +44,9 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
   workerPool.set_num_workers(opts.nthreads);
   taskRunnerPool.set_num_workers(num_physical_cores());
 
-  // Construct the instance which will (repeatedly) split the data into either the training manifold
-  // or the prediction manifold; sometimes this is randomised so the RNG state may need to be set.
-  bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
-
-  TrainPredictSplitter splitter;
-  if (requiresRandomNumbers && !rngState.empty()) {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState);
-  } else {
-    splitter = TrainPredictSplitter(explore, full, crossfold, usable);
-  }
+  // Construct the instance which will (repeatedly) split the data
+  // into either the training manifold or the prediction manifold.
+  TrainPredictSplitter splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState);
 
   int numLibraries = (explore ? 1 : libraries.size());
 
@@ -299,8 +292,9 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       PredictionStats stats;
 
       std::vector<double> y1, y2;
+
       for (int i = 0; i < Mp.ySize(); i++) {
-        if (Mp.y(i) != MISSING_D && ystar[i] != MISSING_D) {
+        if (Mp.y(i) != MISSING_D && ystarView(t, i) != MISSING_D) {
           y1.push_back(Mp.y(i));
           y2.push_back(ystarView(t, i));
         }

@@ -16,26 +16,18 @@ private:
   MtRng64 _rng;
 
 public:
-  TrainPredictSplitter() = default;
-
-  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable)
-    : _explore(explore)
-    , _full(full)
-    , _crossfold(crossfold)
-    , _usable(usable)
-    , _rng(1)
-  {
-    _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
-  };
-
   TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, const std::string& rngState)
     : _explore(explore)
     , _full(full)
     , _crossfold(crossfold)
     , _usable(usable)
   {
-    // Sync the local random number generator with Stata's
-    set_rng_state(rngState);
+    if (!rngState.empty()) {
+      // Sync the local random number generator with Stata's
+      set_rng_state(rngState);
+    } else {
+      _rng.init((unsigned long long)0);
+    }
 
     _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
 

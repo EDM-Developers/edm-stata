@@ -1,12 +1,6 @@
 clear
 
 set linesize 255
-set obs 500
-set seed 12345678
-if c(MP) {
-    qui set processor 1
-}
-
 global EDM_VERBOSITY = 0
 global EDM_NTHREADS = 4
 global EDM_SAVE_INPUTS = "ci-test"
@@ -24,6 +18,26 @@ else {
 di "Running tests using the `dist' distance"
 global EDM_DISTANCE = "`dist'"
 
+if c(MP) {
+    qui set processor 1
+}
+
+
+// Test that we don't crash when the RNG seed hasn't yet been set
+set obs 10
+gen t = _n
+gen x = _n
+tsset t
+
+di c(rngstate)
+
+edm explore x
+
+drop *
+discard
+
+set obs 500
+set seed 12345678
 
 gen t = _n
 tsset t

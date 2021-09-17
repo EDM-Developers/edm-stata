@@ -575,9 +575,28 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
     rngState = std::string(buffer);
 
-    if (rngState.empty()) {
-      io.print("Error: couldn't read the c(rngstate).\n");
+    // If the rng state is too small, it must be malformed.
+    if (rngState.size() < 3 + 312 * 16 + 4 + 8) {
+      rngState.clear();
+    } else {
+      // However, even if the right length, it may be all zeros, which indicates
+      // an invalid state which should also be ignored.
+      bool allZeros = true;
+      for (int i = 0; i < 312; i++) {
+        if (std::stoull(rngState.substr(3 + i * 16, 16), nullptr, 16) != 0) {
+          allZeros = false;
+          break;
+        }
+      }
+
+      if (allZeros) {
+        rngState.clear();
+      }
     }
+
+    // if (rngState.empty()) {
+    //  io.print("Error: couldn't read the c(rngstate), using seed(0) for this command.\n");
+    //}
   }
 
   std::vector<int> libraries;

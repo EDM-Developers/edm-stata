@@ -58,7 +58,7 @@
 struct Mt64Traits
 {
   typedef unsigned long long UINTTYPE;
-  typedef signed long long INTTYPE;
+
   static const int INTTYPE_BITS = 64;
   static const unsigned long long MAXDOUBLEVAL = 9007199254740991ULL; // 2^53-1
   static const size_t NN = 312;
@@ -89,7 +89,6 @@ class MtRng64
 {
 public:
   typedef typename Mt64Traits::UINTTYPE UINTTYPE;
-  typedef typename Mt64Traits::INTTYPE INTTYPE;
 
   // member variables
   UINTTYPE state_[Mt64Traits::NN];
@@ -115,6 +114,40 @@ protected:
   }
 
 public:
+  MtRng64() { init((UINTTYPE)time(NULL)); }
+
+  MtRng64(UINTTYPE seed) { init(seed); }
+
+  void init(UINTTYPE seed)
+  {
+    assert(sizeof(UINTTYPE) * 8 == (size_t)Mt64Traits::INTTYPE_BITS);
+
+    state_[0] = seed;
+
+    for (size_t j = 1; j < Mt64Traits::NN; j++) {
+      state_[j] =
+        (Mt64Traits::INITVAL * (state_[j - 1] ^ (state_[j - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) + (UINTTYPE)j);
+    }
+    left_ = 1;
+
+    next_ = state_;
+  }
+
+  /* generates a random number on [0,1)-real-interval */
+  double getReal2()
+  {
+    if (left_-- == 0)
+      nextState();
+    if (Mt64Traits::INTTYPE_BITS > 53) {
+      return ((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740992.0));
+    } else {
+      return ((double)Mt64Traits::temper(*next_++) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
+    }
+  }
+
+  // We don't currently need the following constructors, but perhaps we do
+  // in the future, and the shallow copying of the state array may create problems.
+
   MtRng64(const MtRng64& obj)
   {
     for (int i = 0; i < 312; i++) {
@@ -134,91 +167,6 @@ public:
     left_ = obj.left_;
     next_ = state_ + (obj.next_ - obj.state_);
     return *this;
-  }
-
-  MtRng64()
-  {
-    left_ = 1;
-    next_ = NULL;
-    init((UINTTYPE)time(NULL));
-  }
-
-  MtRng64(UINTTYPE seed)
-  {
-    left_ = 1;
-    next_ = NULL;
-    init(seed);
-  }
-
-  MtRng64(std::string rngState, double nextRV)
-  {
-    left_ = 1;
-    next_ = NULL;
-    init(rngState, nextRV);
-  }
-
-  void init(UINTTYPE seed)
-  {
-    assert(sizeof(UINTTYPE) * 8 == (size_t)Mt64Traits::INTTYPE_BITS);
-
-    state_[0] = seed;
-    for (size_t j = 1; j < Mt64Traits::NN; j++) {
-      state_[j] =
-        (Mt64Traits::INITVAL * (state_[j - 1] ^ (state_[j - 1] >> (Mt64Traits::INTTYPE_BITS - 2))) + (UINTTYPE)j);
-    }
-    left_ = 1;
-  }
-
-  void init(const std::string& rngState, double nextRV)
-  {
-    unsigned long long state[312];
-
-    // Set up the rng at the beginning on this batch (given by the 'state' array)
-    for (int i = 0; i < 312; i++) {
-      state[i] = std::stoull(rngState.substr(i * 16, 16), nullptr, 16);
-      state_[i] = state[i];
-    }
-
-    left_ = 312 + 1;
-    next_ = state_;
-
-    // Go through this batch of rv's and find the closest to the
-    // observed 'nextRV'
-    int bestInd = -1;
-    double minDist = 1.0;
-
-    for (int i = 0; i < 312; i++) {
-      double dist = std::abs(getReal2() - nextRV);
-      if (dist < minDist) {
-        minDist = dist;
-        bestInd = i;
-      }
-    }
-
-    // Reset the state to the beginning on this batch
-    for (int i = 0; i < 312; i++) {
-      state_[i] = state[i];
-    }
-
-    left_ = 312;
-    next_ = state_;
-
-    // Burn all the rv's which are already used
-    for (int i = 0; i < bestInd; i++) {
-      getReal2();
-    }
-  }
-
-  /* generates a random number on [0,1)-real-interval */
-  double getReal2()
-  {
-    if (left_-- == 0)
-      nextState();
-    if (Mt64Traits::INTTYPE_BITS > 53) {
-      return ((double)(Mt64Traits::temper(*next_++) >> (Mt64Traits::INTTYPE_BITS - 53)) * (1.0 / 9007199254740992.0));
-    } else {
-      return ((double)Mt64Traits::temper(*next_++) * (1.0 / ((double)Mt64Traits::MAXDOUBLEVAL + 1.0)));
-    }
   }
 };
 
