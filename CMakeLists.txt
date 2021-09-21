@@ -149,6 +149,7 @@ target_include_directories(edm_plugin
   vendor
   include/eigen3)
 
+target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(edm_plugin PRIVATE Threads::Threads)
@@ -163,6 +164,7 @@ clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/test
 add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
 set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
 set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
+target_compile_definitions(edm_cli PRIVATE NOMINMAX)
 target_include_directories(edm_cli PRIVATE include
   ${CUDA_INCLUDE_DIRS}
   include/eigen3)
@@ -179,6 +181,7 @@ install(TARGETS edm_cli DESTINATION test OPTIONAL)
 # Google Benchmarks
 add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
 set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+target_compile_definitions(gbench PRIVATE NOMINMAX)
 if(WIN32)
   target_compile_options(gbench PRIVATE "/MD")
 endif()
@@ -192,16 +195,16 @@ target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(gbench PRIVATE ArrayFire::afcuda)
-install(TARGETS gbench DESTINATION test OPTIONAL)
 
 find_package(Catch2 REQUIRED)
+
 add_executable(edm_test ${COMMON_SRC} src/test.cpp)
-target_link_libraries(edm_test PRIVATE Catch2::Catch2)
-
 set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
-
+target_compile_definitions(edm_test PRIVATE NOMINMAX)
 target_include_directories(edm_test PRIVATE include)
 target_include_directories(edm_test PRIVATE include/eigen3)
+
+target_link_libraries(edm_test PRIVATE Catch2::Catch2)
 target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_test PRIVATE Threads::Threads)
 target_link_libraries(edm_test PRIVATE nlohmann_json::nlohmann_json)
