@@ -34,9 +34,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
                      Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXd> coeffs,
                      Eigen::Map<Eigen::MatrixXi> rc, int* kUsed);
 
-void af_make_prediction(const int numPredictions, const Options& opts,
-                        const Manifold& hostM, const Manifold& hostMp,
+void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
                         const ManifoldOnGPU& M, const ManifoldOnGPU& Mp, const af::array& metricOpts,
                         Eigen::Map<Eigen::MatrixXd> ystar, Eigen::Map<Eigen::MatrixXi> rc,
-                        Eigen::Map<Eigen::MatrixXd> coeffs,
-                        std::vector<int>& kUseds, bool keep_going());
+                        Eigen::Map<Eigen::MatrixXd> coeffs, std::vector<int>& kUseds, bool keep_going());

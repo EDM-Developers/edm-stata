@@ -7,19 +7,27 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
   using af::array;
 
   if (useFloat) {
-    return ManifoldOnGPU {
-      array(_E_actual, _nobs, _flat.get()).as(f32),
-      (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
-      (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
-      _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual, _missing
-    };
+    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()).as(f32),
+                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
+                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          _nobs,
+                          _E_x,
+                          _E_dt,
+                          _E_extras,
+                          _E_lagged_extras,
+                          _E_actual,
+                          _missing };
   } else {
-    return ManifoldOnGPU {
-      array(_E_actual, _nobs, _flat.get()),
-      (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
-      (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
-      _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual, _missing
-    };
+    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()),
+                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
+                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          _nobs,
+                          _E_x,
+                          _E_dt,
+                          _E_extras,
+                          _E_lagged_extras,
+                          _E_actual,
+                          _missing };
   }
 }
 

@@ -5,15 +5,16 @@
 #include <vector>
 
 #include <Eigen/Core>
-#include <nlohmann/json.hpp>
 #include <arrayfire.h>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-struct ManifoldOnGPU {
-  af::array mdata;      // shape [_E_actual _nobs 1 1] - manifold
-  af::array yvec;       // Shape [_nobs 1 1 1]
-  af::array panel;      // Shape [_nobs 1 1 1] - panel ids
+struct ManifoldOnGPU
+{
+  af::array mdata; // shape [_E_actual _nobs 1 1] - manifold
+  af::array yvec;  // Shape [_nobs 1 1 1]
+  af::array panel; // Shape [_nobs 1 1 1] - panel ids
   int nobs, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
   double missing;
 };
@@ -131,11 +132,12 @@ public:
   const std::vector<int>& panelIds() const { return _panel_ids; }
   std::shared_ptr<double[]> flatf64() const { return _flat; }
   const std::vector<double>& yvec() const { return _y; }
-  std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const {
-      return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
+  std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const
+  {
+    return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
   }
 
-  ManifoldOnGPU toGPU(const bool useFloat=false) const;
+  ManifoldOnGPU toGPU(const bool useFloat = false) const;
 };
 
 class ManifoldGenerator
