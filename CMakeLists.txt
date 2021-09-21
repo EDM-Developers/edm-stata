@@ -80,9 +80,6 @@ else()
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 endif()
 
-# Tell MSVC to compile in parallel
-add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
-
 # Source files common to all targets
 set(COMMON_SRC src/common.cpp src/common.h
                src/cpu.cpp src/cpu.h

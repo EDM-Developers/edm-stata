@@ -51,6 +51,11 @@
 #ifndef ___MERSENNE_TWISTER_RNG___
 #define ___MERSENNE_TWISTER_RNG___
 
+// On Windows, some header gets dragged in which defines
+// macros for min & max which mess with those functions
+// throughout our codebase; this needs to be suppressed.
+#define NOMINMAX
+
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
