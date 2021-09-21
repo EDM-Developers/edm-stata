@@ -796,7 +796,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   {
     array minDist;
     if (isKNeg) {
-      minDist = tile(min(dists + (1.0 - valids.as(f64)) * 1e100, 0), k, 1, tcount);
+      minDist = tile(min(dists, 0), k, 1, tcount);
     } else {
       minDist = tile(dists(0, af::span), k, 1, tcount);
     }
@@ -991,7 +991,7 @@ void af_make_prediction(const int npreds, const Options& opts, const Manifold& h
       afNearestNeighbours(pValids, sDists, yvecs, smData, validDistPair.dists, M.yvec, M.mdata, opts.algorithm,
                           M.E_actual, M.nobs, npreds, k);
     } else {
-      sDists = validDistPair.dists;
+      sDists = af::select(validDistPair.inds, validDistPair.dists, MISSING);
       yvecs = M.yvec;
       smData = M.mdata;
     }
