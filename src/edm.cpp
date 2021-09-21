@@ -72,10 +72,6 @@ std::vector<std::future<Prediction>> launch_task_group(
   int numTasks = numStandardTasks + copredictMode;
   int E, kAdj, library, trainSize;
 
-  Options sharedOpts = opts;
-  sharedOpts.copredict = false;
-  sharedOpts.numTasks = numTasks;
-
   std::vector<std::future<Prediction>> futures;
 
   for (int iter = 1; iter <= numReps; iter++) {
@@ -335,7 +331,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       //      this could potentially be faster on GPU for larger nobs
       std::vector<double> y1, y2;
       for (int i = 0; i < Mp.ySize(); i++) {
-        if (Mp.y(i) != MISSING && ystar[i] != MISSING) {
+        if (Mp.y(i) != MISSING && ystarView(t, i) != MISSING && isfinite(ystarView(t, i))) {
           y1.push_back(Mp.y(i));
           y2.push_back(ystarView(t, i));
         }
@@ -800,7 +796,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   {
     array minDist;
     if (isKNeg) {
-      minDist = tile(min(dists, 0), k, 1, tcount);
+      minDist = tile(min(dists + (1.0 - valids.as(f64)) * 1e100, 0), k, 1, tcount);
     } else {
       minDist = tile(dists(0, af::span), k, 1, tcount);
     }
