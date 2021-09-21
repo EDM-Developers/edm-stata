@@ -818,7 +818,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   retcodes = af::constant(SUCCESS, npreds, tcount, s32);
 
   if (opts.saveKUsed) {
-    kused = moddims(af::count(weights, 0), npreds, tcount);
+    kused = moddims(af::count(weights > 0, 0), npreds, tcount);
   }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
@@ -894,7 +894,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
           coeffs = select(icsOuts == 0.0, double(MISSING), icsOuts).T();
         }
         if (opts.saveKUsed) {
-          kused = af::count(weights, 0);
+          kused = af::count(weights > 0, 0);
         }
       }
     }
@@ -935,7 +935,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused,
       coeffs = select(lastTheta == 0.0, double(MISSING), lastTheta).T();
     }
     if (opts.saveKUsed) {
-      kused = af::count(weights, 0)(span, end);
+      kused = af::count(weights > 0, 0)(span, end);
     }
   }
 
@@ -1009,7 +1009,7 @@ void af_make_prediction(const int npreds, const Options& opts,
               validDistPair.dists, M.yvec, M.mdata,
               opts.algorithm, M.E_actual, M.nobs, npreds, k);
     } else {
-      sDists = validDistPair.dists;
+      sDists = af::select(pValids, validDistPair.dists, MISSING);
       yvecs = M.yvec;
       smData = M.mdata;
     }

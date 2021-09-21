@@ -7,7 +7,7 @@ This repository stores the source code (Stata ado and C++) for the plugin.
 Our dependencies include:
 - the [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) math library is used under Mozilla Public License 2, and
 - [arrayfire][1] which can be downloaded from [ArrayFire download page][2].
-- [CUDA][3]
+- [CUDA 11.\*][3]
 
 [1]: https://github.com/arrayfire/arrayfire
 [2]: https://arrayfire.com/download
