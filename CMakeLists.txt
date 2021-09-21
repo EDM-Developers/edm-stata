@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.18)
 
 # There are three targets in this CMake project:
 # - edm_plugin makes the main plugin (DLL) which is loaded by Stata.
@@ -42,10 +42,15 @@ find_package(ArrayFire CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
-find_library(NVTOOLS
-  NAME nvToolsExt
-  PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-  PATH_SUFFIXES lib lib64)
+# To find the nvToolsExt
+if(WIN32)
+  find_package(CUDAToolkit)
+else()
+  find_library(NVTOOLS
+    NAME nvToolsExt
+    PATHS ${CUDA_TOOLKIT_ROOT_DIR}
+    PATH_SUFFIXES lib lib64)
+endif()
 
 if(NOT WIN32)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -163,16 +168,30 @@ clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/stat
 add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
 set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
 set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
-target_include_directories(edm_cli PRIVATE include
-  ${CUDA_INCLUDE_DIRS}
-  include/eigen3)
-target_link_libraries(edm_cli PRIVATE
-  fmt::fmt-header-only
-  Threads::Threads
-  nlohmann_json::nlohmann_json
-  ArrayFire::afcuda
-  ${NVTOOLS}
-  )
+
+if (WIN32)
+  target_include_directories(edm_cli PRIVATE include
+    ${CUDA_INCLUDE_DIRS}
+    include/eigen3
+    "$ENV{NVTOOLSEXT_PATH}/include")
+  target_link_libraries(edm_cli PRIVATE
+    fmt::fmt-header-only
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    ArrayFire::afcuda
+    CUDA::nvToolsExt)
+else()
+  target_include_directories(edm_cli PRIVATE include
+    ${CUDA_INCLUDE_DIRS}
+    include/eigen3)
+  target_link_libraries(edm_cli PRIVATE
+    fmt::fmt-header-only
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    ArrayFire::afcuda
+    ${NVTOOLS})
+endif()
+
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
