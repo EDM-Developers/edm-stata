@@ -156,6 +156,7 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   opts.k = k;
   opts.savePrediction = savePrediction;
   opts.saveSMAPCoeffs = saveSMAPCoeffs;
+  opts.saveKUsed = true;
 
   // Expand the 'metrics' vector now that we know the value of E.
   std::vector<Metric> metrics;
@@ -233,10 +234,11 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 
   af::array metricOpts(M.E_actual(), mopts.data());
 
-  const ManifoldOnGPU gpuM = M.toGPU(false);
-  const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+  bool useFP32 = false;
+  const ManifoldOnGPU gpuM = M.toGPU(useFP32);
+  const ManifoldOnGPU gpuMp = Mp.toGPU(useFP32);
 
-  constexpr bool useAF = true; // Being on trump mutli-threaded codepath
+  constexpr bool useAF = false; // Being on trump mutli-threaded codepath
   bool multiThreaded = opts.nthreads > 1;
   int numThetas = (int)opts.thetas.size();
   int numPredictions = Mp.nobs();
@@ -810,7 +812,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   retcodes = af::constant(SUCCESS, npreds, tcount, s32);
 
   if (opts.saveKUsed) {
-    kused = moddims(af::count(weights, 0), npreds, tcount);
+    kused = moddims(af::count(weights > 0, 0), npreds, tcount);
   }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
@@ -882,7 +884,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
           coeffs = select(icsOuts == 0.0, double(MISSING), icsOuts).T();
         }
         if (opts.saveKUsed) {
-          kused = af::count(weights, 0);
+          kused = af::count(weights > 0, 0);
         }
       }
     }
@@ -923,7 +925,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
       coeffs = select(lastTheta == 0.0, double(MISSING), lastTheta).T();
     }
     if (opts.saveKUsed) {
-      kused = af::count(weights, 0)(span, end);
+      kused = af::count(weights > 0, 0)(span, end);
     }
   }
 
