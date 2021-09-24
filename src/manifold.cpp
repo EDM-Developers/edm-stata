@@ -2,6 +2,7 @@
 
 #include "manifold.h"
 
+#if defined(WITH_ARRAYFIRE)
 ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 {
   using af::array;
@@ -22,6 +23,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
     };
   }
 }
+#endif
 
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict,
                                             bool prediction) const

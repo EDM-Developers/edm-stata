@@ -6,10 +6,13 @@
 
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
+#if defined(WITH_ARRAYFIRE)
 #include <arrayfire.h>
+#endif
 
 using json = nlohmann::json;
 
+#if defined(WITH_ARRAYFIRE)
 struct ManifoldOnGPU {
   af::array mdata;      // shape [_E_actual _nobs 1 1] - manifold
   af::array yvec;       // Shape [_nobs 1 1 1]
@@ -17,6 +20,7 @@ struct ManifoldOnGPU {
   int nobs, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
   double missing;
 };
+#endif
 
 class Manifold
 {
@@ -135,7 +139,9 @@ public:
       return std::move(std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual));
   }
 
+#if defined(WITH_ARRAYFIRE)
   ManifoldOnGPU toGPU(const bool useFloat=false) const;
+#endif
 };
 
 class ManifoldGenerator
