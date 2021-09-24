@@ -47,10 +47,6 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 if (EDM_WITH_ARRAYFIRE)
   find_package(CUDA)
   find_package(ArrayFire CONFIG REQUIRED)
-  find_library(NVTOOLS
-    NAME nvToolsExt
-    PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-    PATH_SUFFIXES lib lib64)
 endif ()
 
 if(NOT WIN32)
@@ -186,7 +182,7 @@ target_link_libraries(edm_cli PRIVATE
 if (EDM_WITH_ARRAYFIRE)
   target_compile_definitions(edm_cli PRIVATE WITH_ARRAYFIRE)
   target_include_directories(edm_cli PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda ${NVTOOLS})
+  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda)
 endif ()
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)

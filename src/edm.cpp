@@ -34,7 +34,7 @@
 #include <arrayfire.h>
 #include <af/macros.h>
 #if WITH_GPU_PROFILING
-#include <nvToolsExt.h>
+#include <nvtx3/nvToolsExt.h>
 #endif
 #endif
 
