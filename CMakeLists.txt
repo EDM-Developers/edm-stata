@@ -35,18 +35,25 @@ project(edm-stata-package CXX)
 
 option(EDM_WITH_ARRAYFIRE "Enable ArrayFire based GPU support" ON)
 
-if (EDM_WITH_ARRAYFIRE)
-  enable_language(CUDA)
-endif ()
-
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # ↓↓↓ Third-party code ↓↓↓
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 if (EDM_WITH_ARRAYFIRE)
-  find_package(CUDA)
+  find_package(CUDA REQUIRED)
+  if (NOT WIN32)
+    set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+  endif ()
+
   find_package(ArrayFire CONFIG REQUIRED)
+
+  set(CUDA_architecture_build_targets "Auto" CACHE
+    STRING "The compute architectures targeted by this build. (Options: Auto;3.0;Maxwell;All;Common)")
+
+  CUDA_SELECT_NVCC_ARCH_FLAGS(cuda_architecture_flags ${CUDA_architecture_build_targets})
+
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};${cuda_architecture_flags})
 endif ()
 
 if(NOT WIN32)
@@ -94,12 +101,23 @@ set(COMMON_SRC src/common.cpp src/common.h
                src/thread_pool.cpp src/thread_pool.h
                )
 if (EDM_WITH_ARRAYFIRE)
-  list(APPEND COMMON_SRC src/lp_distance.cu src/lp_distance.cuh)
+  if (WIN32)
+    CUDA_ADD_LIBRARY(cu_lpDistance
+      src/lp_distance.cu
+      src/lp_distance.cuh
+      STATIC)
+  else ()
+    CUDA_ADD_LIBRARY(cu_lpDistance
+      src/lp_distance.cu
+      src/lp_distance.cuh
+      STATIC
+      OPTIONS
+      -Xcompiler -fPIC)
+  endif ()
 endif ()
 
 # The main EDM plugin for Stata
 add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
-set_target_properties(edm_plugin PROPERTIES CXX_STANDARD 17 PREFIX "")
 
 # Rename the output plugin to 'edm_Windows_x64.plugin' or 'edm_MacOSX_arm.plugin' as appropriate
 if(WIN32)
@@ -117,8 +135,14 @@ else()
 endif()
 
 set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plugin")
-set_target_properties(edm_plugin PROPERTIES OUTPUT_NAME "edm")
-set_target_properties(edm_plugin PROPERTIES SUFFIX ${BUILD_SUFFIX}.plugin)
+set_target_properties(edm_plugin
+  PROPERTIES
+    CXX_STANDARD 17
+    PREFIX ""
+    POSITION_INDEPENDENT_CODE ON
+    OUTPUT_NAME "edm"
+    SUFFIX ${BUILD_SUFFIX}.plugin
+)
 
 # Store output as both bin/edm_OS_ARCH.plugin and test/edm.plugin
 install(TARGETS edm_plugin DESTINATION bin)
@@ -160,7 +184,7 @@ target_link_libraries(edm_plugin PRIVATE Threads::Threads)
 if (EDM_WITH_ARRAYFIRE)
   target_compile_definitions(edm_plugin PRIVATE WITH_ARRAYFIRE)
   target_include_directories(edm_plugin PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda)
+  target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda cu_lpDistance)
 endif ()
 
 # Formatting with clang-format
@@ -170,8 +194,14 @@ clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/stat
 # ↓↓↓ Developer builds ↓↓↓
 # Command-line interface executable
 add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
-set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
-set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
+
+set_target_properties(edm_cli
+  PROPERTIES
+    CXX_STANDARD 17
+    POSITION_INDEPENDENT_CODE ON
+    OSX_ARCHITECTURES "arm64;x86_64"
+)
+
 target_compile_definitions(edm_cli PRIVATE NOMINMAX)
 target_include_directories(edm_cli PRIVATE include include/eigen3)
 target_link_libraries(edm_cli PRIVATE
@@ -182,14 +212,19 @@ target_link_libraries(edm_cli PRIVATE
 if (EDM_WITH_ARRAYFIRE)
   target_compile_definitions(edm_cli PRIVATE WITH_ARRAYFIRE)
   target_include_directories(edm_cli PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda)
+  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda cu_lpDistance)
 endif ()
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
 # Google Benchmarks
 add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
-set_target_properties(gbench PROPERTIES CXX_STANDARD 17 PREFIX "")
+set_target_properties(gbench
+  PROPERTIES
+    CXX_STANDARD 17
+    PREFIX ""
+    POSITION_INDEPENDENT_CODE ON
+)
 if(WIN32)
   target_compile_options(gbench PRIVATE "/MD")
 endif()
@@ -205,6 +240,6 @@ target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
 if (EDM_WITH_ARRAYFIRE)
   target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
   target_include_directories(gbench PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(gbench PRIVATE ArrayFire::afcuda)
+  target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
 endif ()
 install(TARGETS gbench DESTINATION test OPTIONAL)
