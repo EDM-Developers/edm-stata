@@ -27,5 +27,5 @@ where
 - `AF_PATH` variable points to ArrayFire installation root.
 - `VCPKG_ROOT` variable  points to vcpkg repository root folder.
 
-Currently, `arrayfire` branch uses GPU by default. This can be changed to use CPU by setting the
-`useAF` boolean flag to `false` in the `src/edm.cpp` file inside the function `edm_task`.
+We also have provided a new CMake option `EDM_WITH_ARRAYFIRE` that compiles EDM with ArrayFire support.
+When this option is set to OFF, the resulting edm binary can be used for systems where there are no CUDA GPUs.
