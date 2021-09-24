@@ -13,7 +13,7 @@
 #if defined(WITH_ARRAYFIRE)
 #include <cuda_runtime.h>
 #if WITH_GPU_PROFILING
-#include <nvToolsExt.h>
+#include <nvtx3/nvToolsExt.h>
 #endif
 #define AF_DEFINE_CUDA_TYPES
 #include <arrayfire.h>
