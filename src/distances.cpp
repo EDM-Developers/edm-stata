@@ -10,6 +10,7 @@
 #include <limits>
 #include <vector>
 
+#if defined(WITH_ARRAYFIRE)
 #include <cuda_runtime.h>
 #if WITH_GPU_PROFILING
 #include <nvToolsExt.h>
@@ -21,6 +22,7 @@
 #include "lp_distance.cuh"
 
 using af::array;
+#endif
 
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inpInds)
@@ -313,6 +315,7 @@ DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Ma
 
 /////////////////////////////////////////////////////////////// ArrayFire PORTED versions BEGIN HERE
 
+#if defined(WITH_ARRAYFIRE)
 DistanceIndexPairsOnGPU afLPDistances(const int npreds, const Options& opts,
                                       const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                                       const af::array& metricOpts)
@@ -593,3 +596,4 @@ DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts,
     return {};
   }
 }
+#endif
