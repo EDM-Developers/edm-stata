@@ -1,8 +1,5 @@
 #include "lp_distance.cuh"
 
-#include <cstdio>
-#include <algorithm>
-
 #define divup(a, b) (((a) + (b)-1) / (b))
 
 template<typename T>
