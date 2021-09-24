@@ -1,6 +1,8 @@
 #include "cli.h"
 
+#if defined(WITH_ARRAYFIRE)
 #include <arrayfire.h>
+#endif
 
 #include <iostream>
 #include <queue>
@@ -26,7 +28,9 @@ int main(int argc, char* argv[])
     nthreads = atoi(argv[2]);
   }
 
+#if defined(WITH_ARRAYFIRE)
   af::info();
+#endif
 
   int verbosity = 1;
   ConsoleIO io(verbosity);

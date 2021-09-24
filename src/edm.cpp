@@ -30,9 +30,12 @@
 #include <chrono>
 #include <iostream>
 
+#if defined(WITH_ARRAYFIRE)
 #include <arrayfire.h>
+#include <af/macros.h>
 #if WITH_GPU_PROFILING
 #include <nvToolsExt.h>
+#endif
 #endif
 
 std::atomic<int> numTasksStarted = 0;
@@ -47,6 +50,7 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
                                                        const std::vector<bool>& usable, const std::string& rngState,
                                                        IO* io, bool keep_going(), void all_tasks_finished())
 {
+#if defined(WITH_ARRAYFIRE)
   static bool initOnce = [&]() {
     af::setMemStepSize(1024 * 1024 * 5);
     workerPool.set_num_workers(opts.nthreads);
@@ -54,6 +58,11 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
     taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
     return true;
   }();
+#else
+  workerPool.set_num_workers(opts.nthreads);
+  //taskRunnerPool.set_num_workers(num_physical_cores());
+  taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
+#endif
 
   // Construct the instance which will (repeatedly) split the data
   // into either the training manifold or the prediction manifold.
@@ -236,7 +245,9 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
 Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,
                     IO* io, bool keep_going(), void all_tasks_finished())
 {
+#if defined(WITH_ARRAYFIRE)
   af::setDevice(0); //TODO potentially can cycle through GPUS if > 1
+#endif
 
   // Char is the internal representation of bool in ArrayFire
   std::vector<char> mopts;
@@ -244,12 +255,14 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       mopts.push_back(opts.metrics[j] == Metric::Diff);
   }
 
+#if defined(WITH_ARRAYFIRE)
   af::array metricOpts(M.E_actual(), mopts.data());
 
   const ManifoldOnGPU gpuM  = M.toGPU(false);
   const ManifoldOnGPU gpuMp = Mp.toGPU(false);
 
-  constexpr bool useAF = true;  //Being on trump mutli-threaded codepath
+  constexpr bool useAF = true;  //Being true will trump mutli-threaded codepath
+#endif
   bool multiThreaded = opts.nthreads > 1;
   int numThetas = (int)opts.thetas.size();
   int numPredictions = Mp.nobs();
@@ -277,7 +290,11 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     io->progress_bar(0.0);
   }
 
+#if defined(WITH_ARRAYFIRE)
   if (multiThreaded && !useAF) {
+#else
+  if (multiThreaded) {
+#endif
     std::vector<std::future<void>> results(numPredictions);
 #if WITH_GPU_PROFILING
     workerPool.sync();
@@ -305,6 +322,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
            opts.nthreads, opts.taskNum, diff.count(), numPredictions);
 #endif
   } else {
+#if defined(WITH_ARRAYFIRE)
     if (useAF) {
 #if WITH_GPU_PROFILING
       af::sync(0);
@@ -319,6 +337,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       printf("GPU: Task(%lu) took %lf seconds for %d predictions \n", opts.taskNum, diff.count(), numPredictions);
 #endif
     } else {
+#endif
       if (opts.numTasks == 1) {
         io->progress_bar(0.0);
       }
@@ -331,7 +350,9 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
           io->progress_bar((i + 1) / ((double)numPredictions));
         }
       }
+#if defined(WITH_ARRAYFIRE)
     }
+#endif
   }
 
   Prediction pred;
@@ -440,8 +461,6 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
                      Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going())
 {
-  af::setDevice(0);
-
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
   // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
@@ -696,6 +715,8 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
 
 /////////////////////////////////////////////////////////////// ArrayFire PORTED versions BEGIN HERE
+
+#if defined(WITH_ARRAYFIRE)
 
 // Returns b8 array of shape [mnobs npreds 1 1] when either of skip flags are true
 //        otherwise of shape [mnobs 1 1 1]
@@ -1060,3 +1081,5 @@ void af_make_prediction(const int npreds, const Options& opts,
     retcodes.host(rc.data());
   }
 }
+
+#endif

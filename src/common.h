@@ -23,7 +23,9 @@ typedef int retcode;
 #include <vector>
 
 #include "manifold.h"
+#if defined(WITH_ARRAYFIRE)
 #include <arrayfire.h>
+#endif
 
 enum class Algorithm
 {
@@ -62,11 +64,13 @@ struct DistanceIndexPairs
   std::vector<double> dists;
 };
 
+#if defined(WITH_ARRAYFIRE)
 struct DistanceIndexPairsOnGPU
 {
     af::array inds;
     af::array dists;
 };
+#endif
 
 struct Options
 {

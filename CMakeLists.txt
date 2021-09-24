@@ -32,20 +32,26 @@ endif()
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
 project(edm-stata-package CXX)
-enable_language(CUDA)
+
+option(EDM_WITH_ARRAYFIRE "Enable ArrayFire based GPU support" ON)
+
+if (EDM_WITH_ARRAYFIRE)
+  enable_language(CUDA)
+endif ()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # ↓↓↓ Third-party code ↓↓↓
-find_package(CUDA)
-find_package(ArrayFire CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
-
-find_library(NVTOOLS
-  NAME nvToolsExt
-  PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-  PATH_SUFFIXES lib lib64)
+if (EDM_WITH_ARRAYFIRE)
+  find_package(CUDA)
+  find_package(ArrayFire CONFIG REQUIRED)
+  find_library(NVTOOLS
+    NAME nvToolsExt
+    PATHS ${CUDA_TOOLKIT_ROOT_DIR}
+    PATH_SUFFIXES lib lib64)
+endif ()
 
 if(NOT WIN32)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -90,8 +96,10 @@ set(COMMON_SRC src/common.cpp src/common.h
                src/core.h src/EMD_wrapper.cpp src/EMD_wrapper.h
                src/network_simplex_simple.h src/full_bipartitegraph.h
                src/thread_pool.cpp src/thread_pool.h
-               src/lp_distance.cu src/lp_distance.cuh
                )
+if (EDM_WITH_ARRAYFIRE)
+  list(APPEND COMMON_SRC src/lp_distance.cu src/lp_distance.cuh)
+endif ()
 
 # The main EDM plugin for Stata
 add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
@@ -144,7 +152,6 @@ endif()
 include(vendor/CMakeLists.txt)
 target_include_directories(edm_plugin
   PRIVATE
-  ${CUDA_INCLUDE_DIRS}
   include
   vendor
   include/eigen3)
@@ -153,7 +160,12 @@ target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(edm_plugin PRIVATE Threads::Threads)
-target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda)
+
+if (EDM_WITH_ARRAYFIRE)
+  target_compile_definitions(edm_plugin PRIVATE WITH_ARRAYFIRE)
+  target_include_directories(edm_plugin PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda)
+endif ()
 
 # Formatting with clang-format
 include(ClangFormat)
@@ -165,16 +177,17 @@ add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
 set_target_properties(edm_cli PROPERTIES CXX_STANDARD 17)
 set_target_properties(edm_cli PROPERTIES OSX_ARCHITECTURES "arm64;x86_64")
 target_compile_definitions(edm_cli PRIVATE NOMINMAX)
-target_include_directories(edm_cli PRIVATE include
-  ${CUDA_INCLUDE_DIRS}
-  include/eigen3)
+target_include_directories(edm_cli PRIVATE include include/eigen3)
 target_link_libraries(edm_cli PRIVATE
   fmt::fmt-header-only
   Threads::Threads
   nlohmann_json::nlohmann_json
-  ArrayFire::afcuda
-  ${NVTOOLS}
   )
+if (EDM_WITH_ARRAYFIRE)
+  target_compile_definitions(edm_cli PRIVATE WITH_ARRAYFIRE)
+  target_include_directories(edm_cli PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda ${NVTOOLS})
+endif ()
 install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
@@ -187,14 +200,18 @@ if(WIN32)
 endif()
 
 find_package(benchmark CONFIG REQUIRED)
+target_compile_definitions(gbench PRIVATE NOMINMAX)
 target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-target_include_directories(gbench PRIVATE include
-  ${CUDA_INCLUDE_DIRS}
-  include/eigen3)
+target_include_directories(gbench PRIVATE include include/eigen3)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(gbench PRIVATE ArrayFire::afcuda)
+if (EDM_WITH_ARRAYFIRE)
+  target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
+  target_include_directories(gbench PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(gbench PRIVATE ArrayFire::afcuda)
+endif ()
+install(TARGETS gbench DESTINATION test OPTIONAL)
 
 find_package(Catch2 REQUIRED)
 
@@ -208,4 +225,10 @@ target_link_libraries(edm_test PRIVATE Catch2::Catch2)
 target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_test PRIVATE Threads::Threads)
 target_link_libraries(edm_test PRIVATE nlohmann_json::nlohmann_json)
+if (EDM_WITH_ARRAYFIRE)
+  target_compile_definitions(edm_test PRIVATE WITH_ARRAYFIRE)
+  target_include_directories(edm_test PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(edm_test PRIVATE ArrayFire::afcuda)
+endif ()
+
 install(TARGETS edm_test DESTINATION test OPTIONAL)
