@@ -1,10 +1,11 @@
 EDM_BUILD_DIR ?= build
 EDM_BUILD_CONFIG ?= release
+EDM_GPU ?= ON
 
 all: $(EDM_BUILD_DIR)/CMakeCache.txt plugin test cli gbench install
 
 $(EDM_BUILD_DIR)/CMakeCache.txt:
-	cmake -B $(EDM_BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(EDM_BUILD_CONFIG)
+	cmake -B $(EDM_BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(EDM_BUILD_CONFIG) -DEDM_WITH_ARRAYFIRE=$(EDM_GPU)
 
 .PHONY: plugin
 plugin: $(EDM_BUILD_DIR)/CMakeCache.txt

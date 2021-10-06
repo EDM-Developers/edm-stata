@@ -66,8 +66,7 @@ void ManifoldGenerator::setup_observation_numbers()
     // In 'dt' mode
     int countUp = 0;
     for (int i = 0; i < _t.size(); i++) {
-      if (_t[i] != MISSING_D &&
-          (_allow_missing || (_x[i] != MISSING_D))) { // TODO: What about co_x missing here?
+      if (_t[i] != MISSING_D && (_allow_missing || (_x[i] != MISSING_D))) { // TODO: What about co_x missing here?
         _observation_number.push_back(countUp);
         countUp += 1;
       } else {
@@ -138,26 +137,33 @@ std::vector<int> ManifoldGenerator::get_lagged_indices(int startIndex, int E, in
   return laggedIndices;
 }
 
-
 #if defined(WITH_ARRAYFIRE)
 ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 {
   using af::array;
 
   if (useFloat) {
-    return ManifoldOnGPU {
-      array(_E_actual, _nobs, _flat.get()).as(f32),
-      (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
-      (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
-      _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual, MISSING_F
-    };
+    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()).as(f32),
+                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
+                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          _nobs,
+                          _E_x,
+                          _E_dt,
+                          _E_extras,
+                          _E_lagged_extras,
+                          _E_actual,
+                          MISSING_F };
   } else {
-    return ManifoldOnGPU {
-      array(_E_actual, _nobs, _flat.get()),
-      (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
-      (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
-      _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual, MISSING_D
-    };
+    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()),
+                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
+                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          _nobs,
+                          _E_x,
+                          _E_dt,
+                          _E_extras,
+                          _E_lagged_extras,
+                          _E_actual,
+                          MISSING_D };
   }
 }
 #endif
