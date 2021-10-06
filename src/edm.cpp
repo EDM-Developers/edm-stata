@@ -700,7 +700,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // for the largest value of theta.
   if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
     for (int j = 0; j < M.E_actual() + 1; j++) {
-      if (ics(j) == 0.) {
+      if (std::abs(ics(j)) < 1.0e-11) {
         coeffs(Mp_i, j) = MISSING_D;
       } else {
         coeffs(Mp_i, j) = ics(j);
@@ -909,7 +909,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
 
       if (t == tcount - 1) {
         if (opts.saveSMAPCoeffs) {
-          coeffs = select(icsOuts == 0.0, double(MISSING_D), icsOuts).T();
+          coeffs = select(af::abs(icsOuts) < 1.0e-11, double(MISSING_D), icsOuts).T();
         }
         if (opts.saveKUsed) {
           kused = af::count(weights > 0, 0);
@@ -950,7 +950,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
     if (opts.saveSMAPCoeffs) {
       array lastTheta = icsOuts(span, span, tcount - 1);
 
-      coeffs = select(lastTheta == 0.0, double(MISSING_D), lastTheta).T();
+      coeffs = select(af::abs(lastTheta) < 1.0e-11, double(MISSING_D), lastTheta).T();
     }
     if (opts.saveKUsed) {
       kused = af::count(weights > 0, 0)(span, end);
