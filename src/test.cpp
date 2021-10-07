@@ -17,6 +17,15 @@ const double NA = MISSING_D;
 std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
                                                   const Options& opts, int& len_i, int& len_j);
 
+DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                         std::vector<int> inds);
+
+#if defined(WITH_ARRAYFIRE)
+DistanceIndexPairs afWassersteinDistances(int Mp_i, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
+                                          const ManifoldOnGPU& M, const ManifoldOnGPU& Mp, const std::vector<int>& inds,
+                                          const af::array& metricOpts);
+#endif
+
 void print_raw_matrix(const double* M, int rows, int cols)
 {
 
@@ -352,6 +361,17 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   std::vector<double> yp_true = y_true;
   require_manifolds_match(Mp, Mp_true, yp_true);
 
+  Options opts;
+
+  opts.missingdistance = 0;
+  opts.aspectRatio = 1.0;
+  opts.panelMode = false;
+
+  opts.metrics = {};
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+
   SECTION("Cost matrix")
   {
     int i = 2, j = 2;
@@ -365,19 +385,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     REQUIRE(M_i.cols() == 5);
     REQUIRE(Mp_j.cols() == 5);
 
-    Options opts;
-
-    opts.missingdistance = 0;
-    opts.aspectRatio = 1.0;
-    opts.panelMode = false;
-
-    opts.metrics = {};
-    for (int i = 0; i < M.E_actual(); i++) {
-      opts.metrics.push_back(Metric::Diff);
-    }
-
     int len_i, len_j;
-
     std::unique_ptr<double[]> C = wasserstein_cost_matrix(M, Mp, i, j, opts, len_i, len_j);
 
     REQUIRE(len_i == 3);
@@ -388,6 +396,59 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     for (int i = 0; i < C_true.size(); i++) {
       REQUIRE(C[i] == C_true[i]);
     }
+  }
+
+  SECTION("Multiple Wasserstein distances")
+  {
+
+    int Mp_j = 2;
+
+    std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
+    for (int i = 0; i < M.nobs(); i++) {
+      std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
+    }
+
+    for (int i = 0; i < M.nobs(); i++) {
+      std::cout << fmt::format("Cost matrix M_i={}\n", i);
+
+      auto M_i_map = M.laggedObsMap(i);
+      auto Mp_j_map = Mp.laggedObsMap(Mp_j);
+
+      std::cout << "M_i_map={}\n";
+      print_eig_matrix(M_i_map);
+
+      std::cout << "Mp_j_map={}\n";
+      print_eig_matrix(Mp_j_map);
+
+      int len_i, len_j;
+      std::unique_ptr<double[]> C = wasserstein_cost_matrix(M, Mp, i, Mp_j, opts, len_i, len_j);
+      print_raw_matrix(C.get(), len_i, len_j);
+
+      std::cout << fmt::format("len_i = {} len_j = {}\n", len_i, len_j);
+
+      std::cout << std::endl;
+    }
+
+    DistanceIndexPairs wDistPairCPU = wasserstein_distances(Mp_j, opts, M, Mp, tryInds);
+    print_raw_matrix(wDistPairCPU.dists.data(), 1, wDistPairCPU.dists.size());
+    assert(wDistPairCPU.dists.size() == tryInds.size());
+
+#if defined(WITH_ARRAYFIRE)
+    // Char is the internal representation of bool in ArrayFire
+    std::vector<char> mopts;
+    for (int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+    }
+
+    af::array metricOpts(M.E_actual(), mopts.data());
+
+    const ManifoldOnGPU gpuM = M.toGPU(false);
+    const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+
+    // The next line currently crashes:
+    DistanceIndexPairs wDistPairGPU = afWassersteinDistances(Mp_j, opts, M, Mp, gpuM, gpuMp, tryInds, metricOpts);
+    assert(wDistPairGPU.dists.size() == tryInds.size());
+#endif
   }
 }
 

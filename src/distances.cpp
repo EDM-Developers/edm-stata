@@ -510,9 +510,9 @@ array afWassersteinCostMatrix(const bool& skipMissing, const Options& opts, cons
   return costMatrix;
 }
 
-DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts, const Manifold& hostM,
-                                               const Manifold& hostMp, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
-                                               const af::array& inIndices, const af::array& metricOpts)
+DistanceIndexPairs afWassersteinDistances(int Mp_i, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
+                                          const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                          const std::vector<int>& inpInds, const af::array& metricOpts)
 {
   using af::anyTrue;
   using af::seq;
@@ -546,9 +546,6 @@ DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts, co
   std::vector<int> inds;
   std::vector<double> dists;
 
-  std::vector<int> inpInds(inIndices.elements());
-  inIndices.host(inpInds.data());
-
   // Compare every observation in the M manifold to the Mp_i'th observation in the Mp manifold.
   for (int i : inpInds) {
     const seq miRange0(M.E_x);
@@ -581,10 +578,6 @@ DistanceIndexPairsOnGPU afWassersteinDistances(int Mp_i, const Options& opts, co
     }
   }
 
-  if (inds.size() > 0) {
-    return { array(inds.size(), inds.data()), array(dists.size(), dists.data()) };
-  } else {
-    return {};
-  }
+  return { inds, dists };
 }
 #endif
