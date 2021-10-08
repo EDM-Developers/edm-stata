@@ -495,6 +495,8 @@ edm explore x, copredictvar(y) full
 
 edm xmap x y, copredictvar(u1)
 
+// Note the E=5, theta=0 predictions are all the exact same value
+// so the correlation being '.' is actually correct.
 edm explore x, e(2/5) theta(0 1) copredictvar(y)
 
 edm xmap x y, library(5 10 20 40) copredictvar(u1)

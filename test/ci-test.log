@@ -5065,6 +5065,8 @@ Copredictions
 Note: The embedding dimension E is 2
 
 . 
+. // Note the E=5, theta=0 predictions are all the exact same value
+. // so the correlation being '.' is actually correct.
 . edm explore x, e(2/5) theta(0 1) copredictvar(y)
 
 Empirical Dynamic Modelling

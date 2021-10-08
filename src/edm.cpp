@@ -73,6 +73,7 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
   opts.numTasks = numReps * Es.size() * numLibraries;
   opts.configNum = 0;
   opts.taskNum = 0;
+  opts.saveKUsed = false;
 
   int maxE = Es[Es.size() - 1];
 
@@ -1045,7 +1046,12 @@ void af_make_prediction(const int npreds, const Options& opts, const Manifold& h
 #if WITH_GPU_PROFILING
     auto returnRange = nvtxRangeStartA("ReturnValues");
 #endif
-    ystars.T().as(f64).host(ystar.data());
+    if (opts.algorithm == Algorithm::Simplex) {
+      ystars.as(f64).host(ystar.data());
+    } else {
+      ystars.T().as(f64).host(ystar.data());
+    }
+
     retcodes.T().host(rc.data());
     if (opts.saveKUsed) {
       kused.host(kUseds.data());
