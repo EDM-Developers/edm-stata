@@ -1045,7 +1045,12 @@ void af_make_prediction(const int npreds, const Options& opts, const Manifold& h
 #if WITH_GPU_PROFILING
     auto returnRange = nvtxRangeStartA("ReturnValues");
 #endif
-    ystars.T().as(f64).host(ystar.data());
+    if (opts.algorithm == Algorithm::Simplex) {
+      ystars.as(f64).host(ystar.data());
+    } else {
+      ystars.T().as(f64).host(ystar.data());
+    }
+
     retcodes.T().host(rc.data());
     if (opts.saveKUsed) {
       kused.host(kUseds.data());
