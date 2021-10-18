@@ -137,17 +137,33 @@ end
 
 
 program define edmPluginCheck, rclass
-	syntax , [mata]
-	if "${EDM_MATA}" == "1" | "`mata'" =="mata" {
+	syntax , [mata] [gpu]
+	if "${EDM_MATA}" == "1" | "`mata'" == "mata" {
 		return scalar mata_mode = 1
-
+		return scalar gpu_mode = 0
 	}
 	else {
-		cap edm_plugin
-		if _rc == 199 {
-			di as text "Warning: Using slow (mata) edm implementation (failed to load the compiled plugin)"
+		local mata_mode = 0
+		local gpu_mode = "${EDM_GPU}" == "1" | "`gpu'" == "gpu"
+
+		if `gpu_mode' {
+			cap edm_plugin_gpu
+			if _rc == 199 {
+				di as text "Warning: GPU-powered plugin failed to load, falling back to CPU version"
+				local gpu_mode = 0
+			}	
 		}
-		return scalar mata_mode = _rc==199
+
+		if !`gpu_mode' {
+			cap edm_plugin
+			if _rc == 199 {
+				di as text "Warning: Failed to load the compiled C++ plugin, falling back to the slower Mata backup"
+				local mata_mode = 1
+			}
+		}
+
+		return scalar mata_mode = `mata_mode'
+		return scalar gpu_mode = `gpu_mode'
 	}
 end
 
@@ -296,7 +312,9 @@ program define edmPreprocessExtras, rclass
 end
 
 program define edmPrintPluginProgress
-	plugin call edm_plugin , "report_progress"
+	syntax , plugin_name(string)
+
+	plugin call `plugin_name' , "report_progress"
 
 	local breakJustHit = 0
 	local breakEverHit = 0
@@ -313,7 +331,7 @@ program define edmPrintPluginProgress
 			local breakJustHit = 1
 			local breakEverHit = 1
 		}
-		plugin call edm_plugin , "report_progress" "`breakJustHit'"
+		plugin call `plugin_name' , "report_progress" "`breakJustHit'"
 
 		local breakJustHit = 0
 
@@ -333,7 +351,7 @@ program define edmExplore, eclass
 			[PRedict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
 			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
-			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [nthreads(integer 0)] ///
+			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] ///
 			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
 			[distance(string)] [metrics(string)] [idw(real 0)] [wassdt(integer 1)]
 
@@ -419,8 +437,17 @@ program define edmExplore, eclass
 		local algorithm "simplex"
 	}
 
-	edmPluginCheck, `mata'
+	edmPluginCheck, `mata' `gpu'
 	local mata_mode = r(mata_mode)
+
+	if !`mata_mode' {
+		if `r(gpu_mode)' {
+			local plugin_name = "edm_plugin_gpu"
+		}
+		else {
+			local plugin_name = "edm_plugin"
+		}
+	}
 
 	if "`distance'" == "" {
 		local distance = "euclidean"
@@ -671,7 +698,7 @@ program define edmExplore, eclass
 			}
 		}
 
-		plugin call edm_plugin `timevar' `x' `x' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -938,11 +965,11 @@ program define edmExplore, eclass
 
 	// Collect all the asynchronous predictions from the plugin
 	if `mata_mode' == 0 {
-		edmPrintPluginProgress
+		edmPrintPluginProgress , plugin_name(`plugin_name')
 		local result_matrix = "r"
 		local save_predict_mode = ("`predict'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call edm_plugin `predict' `copredict' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call `plugin_name' `predict' `copredict' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	mat cfull = r[1,3]
@@ -1009,7 +1036,7 @@ program define edmExplore, eclass
 			ereturn local cmdfootnote "`cmdfootnote'Note: dt option is ignored due to lack of variations in time delta"
 		}
 	}
-	ereturn local mode = cond(`mata_mode', "mata","plugin")
+	ereturn local mode = cond(`mata_mode', "mata", "`plugin_name'")
 	edmDisplay
 end
 
@@ -1020,7 +1047,7 @@ program define edmXmap, eclass
 			[SAVEsmap(string)] [DETails] [DIrection(string)] [PRedict(name)] [CI(integer 0)] ///
 			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
-			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] ///
+			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
 			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)]
 
@@ -1136,8 +1163,17 @@ program define edmXmap, eclass
 		error 197
 	}
 
-	edmPluginCheck, `mata'
+	edmPluginCheck, `mata' `gpu'
 	local mata_mode = r(mata_mode)
+
+	if !`mata_mode' {
+		if `r(gpu_mode)' {
+			local plugin_name = "edm_plugin_gpu"
+		}
+		else {
+			local plugin_name = "edm_plugin"
+		}
+	}
 
 	if "`distance'" == "" {
 		local distance = "euclidean"
@@ -1438,7 +1474,7 @@ program define edmXmap, eclass
 				}
 			}
 
-			plugin call edm_plugin `timevar' `x' `y' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1700,11 +1736,11 @@ program define edmXmap, eclass
 
 		// Collect all the asynchronous predictions from the plugin
 		if !`mata_mode' {
-			edmPrintPluginProgress
+			edmPrintPluginProgress , plugin_name(`plugin_name')
 			local result_matrix = "r`direction_num'"
 			local save_predict_mode = ("`predict'" != "")
 			local save_copredict_mode = ("`copredictvar'" != "")
-			plugin call edm_plugin `predict' `copredict' `all_savesmap_vars`direction_num'' if `touse', ///
+			plugin call `plugin_name' `predict' `copredict' `all_savesmap_vars`direction_num'' if `touse', ///
 					"collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
@@ -1805,7 +1841,7 @@ program define edmXmap, eclass
 	else {
 		ereturn local extraembed = "`z_names'"
 	}
-	ereturn local mode = cond(`mata_mode', "mata","plugin")
+	ereturn local mode = cond(`mata_mode', "mata", "`plugin_name'")
 	edmDisplay
 end
 
@@ -2864,11 +2900,5 @@ end
 // Load the C++ implementation
 cap program edm_plugin, plugin using(edm.plugin)
 
-// The developers of this plugin may have the file by a different
-// name locally, so this will load the plugin based on the OS-specific
-// filenames.
-cap program edm_plugin, plugin using(edm_`=c(os)'_x64.plugin)
-cap program edm_plugin, plugin using("`=strlower("edm_`=c(os)'_x64.plugin")'")
-cap program edm_plugin, plugin using(edm_`=c(os)'_arm.plugin)
-cap program edm_plugin, plugin using("`=strlower("edm_`=c(os)'_arm.plugin")'")
-cap program edm_plugin, plugin using(edm_plugin.plugin)
+// Load the C++/GPU implementation
+cap program edm_plugin_gpu, plugin using(edm_gpu.plugin)

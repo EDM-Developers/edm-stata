@@ -50,19 +50,17 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
                                                        const std::vector<bool>& usable, const std::string& rngState,
                                                        IO* io, bool keep_going(), void all_tasks_finished())
 {
-#if defined(WITH_ARRAYFIRE)
   static bool initOnce = [&]() {
+#if defined(WITH_ARRAYFIRE)
     af::setMemStepSize(1024 * 1024 * 5);
-    workerPool.set_num_workers(opts.nthreads);
-    // taskRunnerPool.set_num_workers(num_physical_cores());
     taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
+#else
+    taskRunnerPool.set_num_workers(num_physical_cores());
+#endif
     return true;
   }();
-#else
+
   workerPool.set_num_workers(opts.nthreads);
-  // taskRunnerPool.set_num_workers(num_physical_cores());
-  taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
-#endif
 
   // Construct the instance which will (repeatedly) split the data
   // into either the training manifold or the prediction manifold.

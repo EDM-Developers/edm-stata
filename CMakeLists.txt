@@ -48,7 +48,7 @@ if (EDM_WITH_ARRAYFIRE)
 
   find_package(ArrayFire CONFIG REQUIRED)
 
-  set(CUDA_architecture_build_targets "Auto" CACHE
+  set(CUDA_architecture_build_targets "Common" CACHE
     STRING "The compute architectures targeted by this build. (Options: Auto;3.0;Maxwell;All;Common)")
 
   CUDA_SELECT_NVCC_ARCH_FLAGS(cuda_architecture_flags ${CUDA_architecture_build_targets})
@@ -134,6 +134,10 @@ else()
   set(BUILD_SUFFIX "${BUILD_SUFFIX}_x64")
 endif()
 
+if (EDM_WITH_ARRAYFIRE)
+  set(BUILD_SUFFIX "${BUILD_SUFFIX}_gpu")
+endif()
+
 set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plugin")
 set_target_properties(edm_plugin
   PROPERTIES
@@ -146,7 +150,11 @@ set_target_properties(edm_plugin
 
 # Store output as both bin/edm_OS_ARCH.plugin and test/edm.plugin
 install(TARGETS edm_plugin DESTINATION bin)
-install(FILES bin/edm${BUILD_SUFFIX}.plugin DESTINATION test RENAME edm.plugin)
+if (EDM_WITH_ARRAYFIRE)
+  install(FILES bin/edm${BUILD_SUFFIX}.plugin DESTINATION test RENAME edm_gpu.plugin)
+else()
+  install(FILES bin/edm${BUILD_SUFFIX}.plugin DESTINATION test RENAME edm.plugin)
+endif()
 install(FILES stata/edm.ado DESTINATION test)
 
 # To make CI builds easier to access, have the outputs be copied to Dropbox also.

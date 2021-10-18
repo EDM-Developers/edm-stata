@@ -1,10 +1,12 @@
 clear
 
 set linesize 255
+
 global EDM_VERBOSITY = 0
 global EDM_NTHREADS = 4
 global EDM_SAVE_INPUTS = "ci-test"
 cap rm ci-test.json
+global EDM_GPU = 0
 
 args suppliedDistance
 
