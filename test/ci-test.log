@@ -5,6 +5,7 @@
 . 
 . set linesize 255
 
+. 
 . global EDM_VERBOSITY = 0
 
 . global EDM_NTHREADS = 4
@@ -12,6 +13,8 @@
 . global EDM_SAVE_INPUTS = "ci-test"
 
 . cap rm ci-test.json
+
+. global EDM_GPU = 0
 
 . 
 . args suppliedDistance
@@ -177,7 +180,7 @@ scalars:
 macros:
             e(cmdline) : "edm explore x, e(2/10)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data"
@@ -227,7 +230,7 @@ scalars:
 macros:
             e(cmdline) : "edm xmap x y, k(5)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "edm_plugin"
           e(direction) : "both"
         e(cmdfootnote) : "Note: Number of neighbours (k) is adjusted to 5
 "
@@ -605,7 +608,7 @@ scalars:
 macros:
             e(cmdline) : "edm explore x, e(2 3) theta(0 1)"
                 e(cmd) : "edm"
-               e(mode) : "plugin"
+               e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data"
