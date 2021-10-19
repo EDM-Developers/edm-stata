@@ -33,7 +33,7 @@ set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
 project(edm-stata-package CXX)
 
-option(EDM_WITH_ARRAYFIRE "Enable ArrayFire based GPU support" ON)
+option(EDM_WITH_ARRAYFIRE "Enable ArrayFire based GPU support" OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

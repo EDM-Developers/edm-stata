@@ -13,12 +13,17 @@ jobs:
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v2
+      with:
+        path: x64
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+      working-directory: ${{github.workspace}}/x64
+      run: cmake -B ${{github.workspace}}/x64/build -DCMAKE_BUILD_TYPE=Release
     - name: Build plugin
-      run: cmake --build ${{github.workspace}}/build --target edm_plugin --parallel 8
+      run: cmake --build ${{github.workspace}}/x64/build --target edm_plugin --parallel 8
+      working-directory: ${{github.workspace}}/x64
     - name: Install plugin
-      run: cmake --build ${{github.workspace}}/build --target install
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build ${{github.workspace}}/x64/build --target install
 
   build-mac-arm:
     runs-on: macos
@@ -59,25 +64,30 @@ jobs:
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v2
+      with:
+        path: x64
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build 
+      working-directory: ${{github.workspace}}/x64
+      run: cmake -B ${{github.workspace}}/x64/build
     - name: Build plugin
-      run: cmake --build ${{github.workspace}}/build --config Release --target edm_plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build ${{github.workspace}}/x64/build --config Release --target edm_plugin
     - name: Install plugin
-      run: cmake --build ${{github.workspace}}/build --config Release --target install
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build ${{github.workspace}}/x64/build --config Release --target install
 
   test-linux:
     runs-on: linux
     needs: build-linux
     steps:
     - name: Prepare integration test
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: mv ci-test.log reference.log
     - name: Run integration test
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: stata -e -q ci-test.do Euclidean
     - name: Check test results
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log ci-test.log
 
   test-cli-linux:
@@ -85,22 +95,22 @@ jobs:
     needs: test-linux
     steps:
     - name: Wipe the previous build
-      run: rm -rf ${{github.workspace}}/build
+      run: rm -rf ${{github.workspace}}/x64/build
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
+      run: cmake -B ${{github.workspace}}/x64/build -DCMAKE_BUILD_TYPE=Debug
     - name: Build unit tests with address sanitizer
-      run: cmake --build ${{github.workspace}}/build --target edm_test --parallel 8
+      run: cmake --build ${{github.workspace}}/x64/build --target edm_test --parallel 8
     - name: Build CLI with address sanitizer
-      run: cmake --build ${{github.workspace}}/build --target edm_cli --parallel 8
+      run: cmake --build ${{github.workspace}}/x64/build --target edm_cli --parallel 8
     - name: Install unit tests
-      run: cp ${{github.workspace}}/build/edm_test ${{github.workspace}}/test
+      run: cp ${{github.workspace}}/x64/build/edm_test ${{github.workspace}}/x64/test
     - name: Install CLI
-      run: cp ${{github.workspace}}/build/edm_cli ${{github.workspace}}/test
+      run: cp ${{github.workspace}}/x64/build/edm_cli ${{github.workspace}}/x64/test
     - name: Run unit tests with address sanitizer
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: ./edm_test
     - name: Run CLI test with address sanitizer
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: ./edm_cli ci-test.json
 
   test-mac-arm:
@@ -194,13 +204,13 @@ jobs:
     needs: build-windows
     steps:
     - name: Prepare integration test
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: mv ci-test.log reference.log
     - name: Run integration test
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q ci-test.do Euclidean
     - name: Check test results
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "fc /W reference.log ci-test.log"
 
   test-cli-windows:
@@ -208,18 +218,18 @@ jobs:
     needs: test-windows
     steps:
     - name: Build unit tests (todo -- need to get Debug version working here)
-      run: cmake --build ${{github.workspace}}/build --config Release --target edm_test
+      run: cmake --build ${{github.workspace}}/x64/build --config Release --target edm_test
     - name: Build CLI with address sanitizer
-      run: cmake --build ${{github.workspace}}/build --config Debug --target edm_cli
+      run: cmake --build ${{github.workspace}}/x64/build --config Debug --target edm_cli
     - name: Install unit tests
-      run: cp ${{github.workspace}}/build/Release/edm_test.exe test
+      run: cp ${{github.workspace}}/x64/build/Release/edm_test.exe ${{github.workspace}}/x64/test
     - name: Install CLI
-      run: cp ${{github.workspace}}/build/Debug/edm_cli.exe test
+      run: cp ${{github.workspace}}/x64/build/Debug/edm_cli.exe ${{github.workspace}}/x64/test
     - name: Run unit tests
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: .\edm_test.exe
     - name: Run CLI test with address sanitizer
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: .\edm_cli.exe ci-test.json
 
   speed-test-linux:
@@ -227,7 +237,7 @@ jobs:
     needs: test-cli-linux
     steps:
     - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: stata -e -q speed-test.do
 
   speed-test-mac-arm:
@@ -257,7 +267,7 @@ jobs:
     needs: test-cli-windows
     steps:
     - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q speed-test.do
 
   single-thread-speed-test-linux:
@@ -265,7 +275,7 @@ jobs:
     needs: speed-test-linux
     steps:
     - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: stata -e -q single-thread-speed-test.do
 
   single-thread-speed-test-mac-arm:
@@ -295,5 +305,39 @@ jobs:
     needs: speed-test-windows
     steps:
     - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/test
+      working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q single-thread-speed-test.do
+
+  build-gpu-linux:
+    runs-on: linux
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        path: gpu
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake -B ${{github.workspace}}/gpu/build -DCMAKE_BUILD_TYPE=Release -DEDM_WITH_ARRAYFIRE=ON
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build ${{github.workspace}}/gpu/build --target edm_plugin --parallel 8
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build ${{github.workspace}}/gpu/build --target install
+
+  build-gpu-windows:
+    runs-on: windows
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        path: gpu
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake -B ${{github.workspace}}/gpu/build -DEDM_WITH_ARRAYFIRE=ON -DArrayFire_DIR=C:\dev\ArrayFire\v3\cmake
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build ${{github.workspace}}/gpu/build --config Release --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build ${{github.workspace}}/gpu/build --config Release --target install
