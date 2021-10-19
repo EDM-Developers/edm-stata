@@ -1,6 +1,6 @@
 EDM_BUILD_DIR ?= build
 EDM_BUILD_CONFIG ?= release
-EDM_GPU ?= ON
+EDM_GPU ?= OFF
 
 all: $(EDM_BUILD_DIR)/CMakeCache.txt plugin test cli gbench install
 
