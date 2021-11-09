@@ -216,6 +216,7 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
 
   numTasksStarted += 1;
 
+#ifdef DUMP_LOW_LEVEL_INPUTS
   // This hack is simply to dump some really low level data structures
   // purely for the purpose of generating microbenchmarks.
   if (io != nullptr && io->verbosity > 4) {
@@ -229,6 +230,7 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
     std::ofstream o("lowLevelInputDump.json");
     o << lowLevelInputDump << std::endl;
   }
+#endif
 
   // Note, we can't have missing data inside the training manifold when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
