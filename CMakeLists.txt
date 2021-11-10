@@ -88,14 +88,15 @@ endif()
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 # Source files common to all targets
-set(COMMON_SRC src/common.cpp src/common.h
+set(COMMON_SRC src/cli.cpp src/cli.h
+               src/common.cpp src/common.h
                src/cpu.cpp src/cpu.h
                src/distances.cpp src/distances.h
                src/edm.cpp src/edm.h
                src/manifold.cpp src/manifold.h
                src/mersennetwister.h
                src/stats.cpp src/stats.h
-               src/train_predict_split.h
+               src/library_prediction_split.h
                src/core.h src/EMD_wrapper.cpp src/EMD_wrapper.h
                src/network_simplex_simple.h src/full_bipartitegraph.h
                src/thread_pool.cpp src/thread_pool.h
@@ -197,11 +198,11 @@ endif ()
 
 # Formatting with clang-format
 include(ClangFormat)
-clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli.cpp src/cli.h src/test.cpp src/stata.cpp)
+clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli_main.cpp src/test.cpp src/stata.cpp)
 
 # ↓↓↓ Developer builds ↓↓↓
 # Command-line interface executable
-add_executable(edm_cli ${COMMON_SRC} src/cli.cpp src/cli.h)
+add_executable(edm_cli ${COMMON_SRC} src/cli_main.cpp)
 
 set_target_properties(edm_cli
   PROPERTIES
@@ -226,7 +227,7 @@ install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
 # Google Benchmarks
-add_executable(gbench ${COMMON_SRC} src/benchmark.cpp src/cli.h)
+add_executable(gbench ${COMMON_SRC} src/benchmark.cpp)
 set_target_properties(gbench
   PROPERTIES
     CXX_STANDARD 17

@@ -13,9 +13,9 @@
 #include "edm.h"
 #include "cpu.h"
 #include "distances.h"
+#include "library_prediction_split.h"
 #include "stats.h" // for correlation and mean_absolute_error
 #include "thread_pool.h"
-#include "train_predict_split.h"
 
 #ifndef FMT_HEADER_ONLY
 #define FMT_HEADER_ONLY
@@ -63,8 +63,8 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
   workerPool.set_num_workers(opts.nthreads);
 
   // Construct the instance which will (repeatedly) split the data
-  // into either the training manifold or the prediction manifold.
-  TrainPredictSplitter splitter = TrainPredictSplitter(explore, full, crossfold, usable, rngState);
+  // into either the library set or the prediction set.
+  LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(explore, full, crossfold, usable, rngState);
 
   int numLibraries = (explore ? 1 : libraries.size());
 
@@ -82,11 +82,11 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
     cousable = generator.generate_usable(maxE, true);
   }
 
-  int E, kAdj, library, trainSize;
+  int E, kAdj, library, librarySize;
 
   std::vector<std::future<Prediction>> futures;
 
-  bool newTrainPredictSplit = true;
+  bool newLibraryPredictionSplit = true;
 
   // Note: the 'numReps' either refers to the 'replicate' option
   // used for bootstrap resampling, or the 'crossfold' number of
@@ -94,8 +94,8 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
   // so numReps = max(replicate, crossfold).
   for (int iter = 1; iter <= numReps; iter++) {
     if (explore) {
-      newTrainPredictSplit = true;
-      trainSize = splitter.next_training_size(iter);
+      newLibraryPredictionSplit = true;
+      librarySize = splitter.next_library_size(iter);
     }
 
     for (int i = 0; i < Es.size(); i++) {
@@ -105,11 +105,11 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
       // though in xmap mode it is a user-supplied list which we loop over.
       for (int l = 0; l == 0 || l < libraries.size(); l++) {
         if (!explore) {
-          newTrainPredictSplit = true;
+          newLibraryPredictionSplit = true;
         }
 
         if (explore) {
-          library = trainSize;
+          library = librarySize;
         } else {
           library = libraries[l];
         }
@@ -134,15 +134,15 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
         }
         opts.saveSMAPCoeffs = saveSMAPCoeffs;
 
-        if (newTrainPredictSplit) {
-          splitter.update_train_predict_split(library, iter);
-          newTrainPredictSplit = false;
+        if (newLibraryPredictionSplit) {
+          splitter.update_library_prediction_split(library, iter);
+          newLibraryPredictionSplit = false;
         }
 
         opts.copredict = false;
         opts.k = kAdj;
 
-        futures.emplace_back(launch_edm_task(generator, opts, E, splitter.trainingRows(), splitter.predictionRows(), io,
+        futures.emplace_back(launch_edm_task(generator, opts, E, splitter.libraryRows(), splitter.predictionRows(), io,
                                              keep_going, all_tasks_finished));
 
         opts.taskNum += 1;
@@ -156,7 +156,7 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
           }
           opts.saveSMAPCoeffs = false;
           futures.emplace_back(
-            launch_edm_task(generator, opts, E, splitter.trainingRows(), cousable, io, keep_going, all_tasks_finished));
+            launch_edm_task(generator, opts, E, splitter.libraryRows(), cousable, io, keep_going, all_tasks_finished));
 
           opts.taskNum += 1;
         }
@@ -170,7 +170,7 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
 }
 
 std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int E,
-                                        const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows,
+                                        const std::vector<bool>& libraryRows, const std::vector<bool>& predictionRows,
                                         IO* io, bool keep_going(), void all_tasks_finished())
 {
   // Expand the 'metrics' vector now that we know the value of E.
@@ -224,7 +224,7 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
     lowLevelInputDump["generator"] = generator;
     lowLevelInputDump["opts"] = opts;
     lowLevelInputDump["E"] = E;
-    lowLevelInputDump["trainingRows"] = trainingRows;
+    lowLevelInputDump["libraryRows"] = libraryRows;
     lowLevelInputDump["predictionRows"] = predictionRows;
 
     std::ofstream o("lowLevelInputDump.json");
@@ -232,10 +232,10 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   }
 #endif
 
-  // Note, we can't have missing data inside the training manifold when using the S-Map algorithm
+  // Note, we can't have missing data inside the library set when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
 
-  Manifold M = generator.create_manifold(E, trainingRows, opts.copredict, false, opts.dtWeight, skipMissing);
+  Manifold M = generator.create_manifold(E, libraryRows, opts.copredict, false, opts.dtWeight, skipMissing);
   Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true, opts.dtWeight);
 
   return taskRunnerPool.enqueue([opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished] {
@@ -443,8 +443,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   return pred;
 }
 
-// Use a training manifold 'M' to make a prediction about the prediction manifold 'Mp'.
-// Specifically, predict the 'Mp_i'-th value of the prediction manifold 'Mp'.
+// Use a library set 'M' to make a prediction about the prediction set 'Mp'.
+// Specifically, predict the 'Mp_i'-th value of the prediction set 'Mp'.
 //
 // The predicted value is stored in 'ystar', along with any return codes in 'rc'.
 // Optionally, the user may ask to store some S-map intermediate values in 'coeffs'.
@@ -454,8 +454,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 // see whether the user still wants this result, or if they have given up & simply want the execution
 // to terminate.
 //
-// We sometimes let 'M' and 'Mp' be the same manifold, so we train and predict using the same values.
-// In this case, the algorithm may cheat by pulling out the identical trajectory from the training manifold
+// We sometimes let 'M' and 'Mp' be the same set, so we train and predict using the same values.
+// In this case, the algorithm may cheat by pulling out the identical trajectory from the library set
 // and using this as the prediction. As such, we throw away any neighbours which have a distance of 0 from
 // the target point.
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,

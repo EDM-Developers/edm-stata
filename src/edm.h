@@ -16,7 +16,7 @@ using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::Ro
 using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int E,
-                                        const std::vector<bool>& trainingRows, const std::vector<bool>& predictionRows,
+                                        const std::vector<bool>& libraryRows, const std::vector<bool>& predictionRows,
                                         IO* io, bool keep_going(), void all_tasks_finished());
 
 Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,

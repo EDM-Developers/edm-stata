@@ -5,18 +5,19 @@
 #include "mersennetwister.h"
 #include "stats.h"
 
-class TrainPredictSplitter
+class LibraryPredictionSetSplitter
 {
 private:
   bool _explore, _full;
   int _crossfold, _numObsUsable;
   std::vector<bool> _usable;
-  std::vector<bool> _trainingRows, _predictionRows;
+  std::vector<bool> _libraryRows, _predictionRows;
   std::vector<int> _crossfoldURank;
   MtRng64 _rng;
 
 public:
-  TrainPredictSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable, const std::string& rngState)
+  LibraryPredictionSetSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable,
+                               const std::string& rngState)
     : _explore(explore)
     , _full(full)
     , _crossfold(crossfold)
@@ -67,16 +68,16 @@ public:
   }
 
   // Assuming this is called in explore mode
-  int next_training_size(int crossfoldIter) const
+  int next_library_size(int crossfoldIter) const
   {
-    int trainSize = 0;
+    int librarySize = 0;
     if (_crossfold > 0) {
       for (int obsNum = 0; obsNum < _numObsUsable; obsNum++) {
         if ((obsNum + 1) % _crossfold != (crossfoldIter - 1)) {
-          trainSize += 1;
+          librarySize += 1;
         }
       }
-      return trainSize;
+      return librarySize;
     } else if (_full) {
       return _numObsUsable;
     } else {
@@ -84,31 +85,31 @@ public:
     }
   }
 
-  void update_train_predict_split(int library, int crossfoldIter)
+  void update_library_prediction_split(int library, int crossfoldIter)
   {
     if (_explore && _full) {
-      _trainingRows = _usable;
+      _libraryRows = _usable;
       _predictionRows = _usable;
       return;
     }
 
-    _trainingRows = std::vector<bool>(_usable.size());
+    _libraryRows = std::vector<bool>(_usable.size());
     _predictionRows = std::vector<bool>(_usable.size());
 
     if (_explore && _crossfold > 0) {
       int obsNum = 0;
-      for (int i = 0; i < _trainingRows.size(); i++) {
+      for (int i = 0; i < _libraryRows.size(); i++) {
         if (_usable[i]) {
           if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
-            _trainingRows[i] = false;
+            _libraryRows[i] = false;
             _predictionRows[i] = true;
           } else {
-            _trainingRows[i] = true;
+            _libraryRows[i] = true;
             _predictionRows[i] = false;
           }
           obsNum += 1;
         } else {
-          _trainingRows[i] = false;
+          _libraryRows[i] = false;
           _predictionRows[i] = false;
         }
       }
@@ -126,18 +127,18 @@ public:
       double med = median(u);
 
       int obsNum = 0;
-      for (int i = 0; i < _trainingRows.size(); i++) {
+      for (int i = 0; i < _libraryRows.size(); i++) {
         if (_usable[i]) {
           if (u[obsNum] < med) {
-            _trainingRows[i] = true;
+            _libraryRows[i] = true;
             _predictionRows[i] = false;
           } else {
-            _trainingRows[i] = false;
+            _libraryRows[i] = false;
             _predictionRows[i] = true;
           }
           obsNum += 1;
         } else {
-          _trainingRows[i] = false;
+          _libraryRows[i] = false;
           _predictionRows[i] = false;
         }
       }
@@ -151,23 +152,23 @@ public:
       }
 
       int obsNum = 0;
-      for (int i = 0; i < _trainingRows.size(); i++) {
+      for (int i = 0; i < _libraryRows.size(); i++) {
         if (_usable[i]) {
           _predictionRows[i] = true;
           if (u[obsNum] < uCutoff) {
-            _trainingRows[i] = true;
+            _libraryRows[i] = true;
           } else {
-            _trainingRows[i] = false;
+            _libraryRows[i] = false;
           }
           obsNum += 1;
         } else {
-          _trainingRows[i] = false;
+          _libraryRows[i] = false;
           _predictionRows[i] = false;
         }
       }
     }
   }
 
-  std::vector<bool> trainingRows() const { return _trainingRows; }
+  std::vector<bool> libraryRows() const { return _libraryRows; }
   std::vector<bool> predictionRows() const { return _predictionRows; }
 };
