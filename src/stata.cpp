@@ -16,9 +16,9 @@
 #include <string>
 #include <vector>
 
-#include "cli.h" // to save the inputs to a local file for debugging
+#include "cli.h"                      // to save the inputs to a local file for debugging
+#include "library_prediction_split.h" // Just for 'LibraryPredictionSetSplitter::requiresRandomNumbers', can simplify
 #include "stats.h"
-#include "train_predict_split.h" // Just for 'TrainPredictSplitter::requiresRandomNumbers', can simplify
 
 // These are all the variables in the edm.ado script we modify in the plugin.
 // These definitions also suppress the "C++ doesn't permit string literals as char*" warnings.
@@ -562,9 +562,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     return SUCCESS; // Let Stata give the error here.
   }
 
-  // If we need to create a randomised train/predict split, then sync the state of the
+  // If we need to create a randomised library/prediction split, then sync the state of the
   // Mersenne Twister in Stata to that in the splitter instance.
-  bool requiresRandomNumbers = TrainPredictSplitter::requiresRandomNumbers(crossfold, full);
+  bool requiresRandomNumbers = LibraryPredictionSetSplitter::requiresRandomNumbers(crossfold, full);
   std::string rngState;
 
   if (requiresRandomNumbers) {

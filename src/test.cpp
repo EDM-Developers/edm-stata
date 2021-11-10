@@ -405,32 +405,29 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
 
     std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
     for (int i = 0; i < M.nobs(); i++) {
-      std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
+      // std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
     }
 
     for (int i = 0; i < M.nobs(); i++) {
-      std::cout << fmt::format("Cost matrix M_i={}\n", i);
+      // std::cout << fmt::format("Cost matrix M_i={}\n", i);
 
       auto M_i_map = M.laggedObsMap(i);
       auto Mp_j_map = Mp.laggedObsMap(Mp_j);
 
-      std::cout << "M_i_map={}\n";
-      print_eig_matrix(M_i_map);
-
-      std::cout << "Mp_j_map={}\n";
-      print_eig_matrix(Mp_j_map);
+      // std::cout << "M_i_map={}\n";
+      // print_eig_matrix(M_i_map);
+      //
+      // std::cout << "Mp_j_map={}\n";
+      // print_eig_matrix(Mp_j_map);
 
       int len_i, len_j;
       std::unique_ptr<double[]> C = wasserstein_cost_matrix(M, Mp, i, Mp_j, opts, len_i, len_j);
-      print_raw_matrix(C.get(), len_i, len_j);
-
-      std::cout << fmt::format("len_i = {} len_j = {}\n", len_i, len_j);
-
-      std::cout << std::endl;
+      // print_raw_matrix(C.get(), len_i, len_j);
+      // std::cout << fmt::format("len_i = {} len_j = {}\n", len_i, len_j) << std::endl;
     }
 
     DistanceIndexPairs wDistPairCPU = wasserstein_distances(Mp_j, opts, M, Mp, tryInds);
-    print_raw_matrix(wDistPairCPU.dists.data(), 1, wDistPairCPU.dists.size());
+    // print_raw_matrix(wDistPairCPU.dists.data(), 1, wDistPairCPU.dists.size());
     assert(wDistPairCPU.dists.size() == tryInds.size());
 
 #if defined(WITH_ARRAYFIRE)
@@ -452,7 +449,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   }
 }
 
-TEST_CASE("Coprediction and usable/training set/prediction sets", "[copredSets]")
+TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
 {
   int E = 2;
   int tau = 1;
