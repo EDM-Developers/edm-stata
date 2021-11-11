@@ -42,13 +42,11 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
-std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& generator, Options opts,
-                                                       const std::vector<int>& Es, const std::vector<int>& libraries,
-                                                       int k, int numReps, int crossfold, bool explore, bool full,
-                                                       bool saveFinalPredictions, bool saveFinalCoPredictions,
-                                                       bool saveSMAPCoeffs, bool copredictMode,
-                                                       const std::vector<bool>& usable, const std::string& rngState,
-                                                       IO* io, bool keep_going(), void all_tasks_finished())
+std::vector<std::future<Prediction>> launch_task_group(
+  const ManifoldGenerator& generator, Options opts, const std::vector<int>& Es, const std::vector<int>& libraries,
+  int k, int numReps, int crossfold, bool explore, bool full, bool shuffle, bool saveFinalPredictions,
+  bool saveFinalCoPredictions, bool saveSMAPCoeffs, bool copredictMode, const std::vector<bool>& usable,
+  const std::string& rngState, IO* io, bool keep_going(), void all_tasks_finished())
 {
   static bool initOnce = [&]() {
 #if defined(WITH_ARRAYFIRE)
@@ -64,7 +62,8 @@ std::vector<std::future<Prediction>> launch_task_group(const ManifoldGenerator& 
 
   // Construct the instance which will (repeatedly) split the data
   // into either the library set or the prediction set.
-  LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(explore, full, crossfold, usable, rngState);
+  LibraryPredictionSetSplitter splitter =
+    LibraryPredictionSetSplitter(explore, full, shuffle, crossfold, usable, rngState);
 
   int numLibraries = (explore ? 1 : libraries.size());
 

@@ -77,6 +77,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
     int crossfold = taskGroup["crossfold"];
     bool explore = taskGroup["explore"];
     bool full = taskGroup["full"];
+    bool shuffle = taskGroup["shuffle"];
     bool saveFinalPredictions = taskGroup["saveFinalPredictions"];
     bool saveFinalCoPredictions = taskGroup["saveFinalCoPredictions"];
     bool saveSMAPCoeffs = taskGroup["saveSMAPCoeffs"];
@@ -84,9 +85,9 @@ json run_tests(json testInputs, int nthreads, IO* io)
     std::vector<bool> usable = int_to_bool(taskGroup["usable"]);
     std::string rngState = taskGroup["rngState"];
 
-    std::vector<std::future<Prediction>> futures =
-      launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, saveFinalPredictions,
-                        saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, io, nullptr, nullptr);
+    std::vector<std::future<Prediction>> futures = launch_task_group(
+      generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
+      saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     for (int f = 0; f < futures.size(); f++) {

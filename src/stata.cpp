@@ -303,10 +303,10 @@ void reset_global_state()
 
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 28) {
+  if (argc < 29) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 28) {
+  if (argc > 29) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -338,22 +338,23 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.numTasks = atoi(argv[9]);
   bool explore = atoi(argv[10]);
   bool full = atoi(argv[11]);
-  int crossfold = atoi(argv[12]);
-  int tau = atoi(argv[13]);
-  int maxE = atoi(argv[14]);
-  bool allowMissing = atoi(argv[15]);
-  opts.thetas = numlist_to_vector<double>(std::string(argv[16]));
-  opts.aspectRatio = atof(argv[17]);
-  std::string distance(argv[18]);
-  std::string requestedMetrics(argv[19]);
-  bool copredictMode = atoi(argv[20]);
-  opts.cmdLine = argv[21];
-  int numExtrasLagged = atoi(argv[22]);
-  opts.idw = atof(argv[23]);
-  opts.panelMode = atoi(argv[24]);
-  bool reldt = atoi(argv[25]);
-  bool wassDT = atoi(argv[26]);
-  int p = atoi(argv[27]);
+  bool shuffle = atoi(argv[12]);
+  int crossfold = atoi(argv[13]);
+  int tau = atoi(argv[14]);
+  int maxE = atoi(argv[15]);
+  bool allowMissing = atoi(argv[16]);
+  opts.thetas = numlist_to_vector<double>(std::string(argv[17]));
+  opts.aspectRatio = atof(argv[18]);
+  std::string distance(argv[19]);
+  std::string requestedMetrics(argv[20]);
+  bool copredictMode = atoi(argv[21]);
+  opts.cmdLine = argv[22];
+  int numExtrasLagged = atoi(argv[23]);
+  opts.idw = atof(argv[24]);
+  opts.panelMode = atoi(argv[25]);
+  bool reldt = atoi(argv[26]);
+  bool wassDT = atoi(argv[27]);
+  int p = atoi(argv[28]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -624,6 +625,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     taskGroup["crossfold"] = crossfold;
     taskGroup["explore"] = explore;
     taskGroup["full"] = full;
+    taskGroup["shuffle"] = shuffle;
     taskGroup["saveFinalPredictions"] = saveFinalPredictions;
     taskGroup["saveFinalCoPredictions"] = saveFinalCoPredictions;
     taskGroup["saveSMAPCoeffs"] = saveSMAPCoeffs;
@@ -639,7 +641,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // return SUCCESS; // Let Stata give the error here.
   }
 
-  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full,
+  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle,
                               saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable,
                               rngState, &io, keep_going, all_tasks_finished);
 

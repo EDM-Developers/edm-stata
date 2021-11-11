@@ -349,7 +349,7 @@ program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
 			[PRedict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
-			[COPredict(name)] [copredictvar(string)] [full] [force] [strict] [EXTRAembed(string)] ///
+			[COPredict(name)] [copredictvar(string)] [full] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] ///
 			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
@@ -380,13 +380,20 @@ program define edmExplore, eclass
 		}
 	}
 
+	if "`randomize'" == "randomize" | `replicate' > 1 {
+		local shuffle = 1
+	}
+	else {
+		local shuffle = 0
+	}
+
 	local copredictvar = strtrim("`copredictvar'")
 	if "`copredictvar'" != "" & strpos("`copredictvar'", " ") {
 		di as error "The copredictvar() should only specify one variable"
 		error 111
 	}
 
-	if `crossfold' > 0 {
+	if `crossfold' > 1 {
 		if `replicate' > 1 {
 			di as error "Replication must be not set if crossfold validation is used."
 			error 119
@@ -700,7 +707,7 @@ program define edmExplore, eclass
 
 		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
-				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
 				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
 
@@ -730,19 +737,33 @@ program define edmExplore, eclass
 	sum `usable', meanonly
 	local num_usable = r(sum)
 
-	if `crossfold' > 0 {
+	if `crossfold' > 1 {
 		if `crossfold' > `num_usable' / `max_e' {
 			di as error "Not enough observations for cross-validations"
 			error 149
 		}
 		if `mata_mode' {
-			tempvar crossfoldu crossfoldunum
-			qui gen double `crossfoldu' = runiform() if `usable'
-			qui egen `crossfoldunum'= rank(`crossfoldu'), unique
+			if `shuffle' {
+				tempvar crossfoldu crossfoldunum
+				qui gen double `crossfoldu' = runiform() if `usable'
+				qui egen `crossfoldunum'= rank(`crossfoldu'), unique
+			}
+		}
+
+		tempvar counting_up fold_number
+		qui gen double `counting_up' = sum(`usable') if `usable'
+		qui gen `fold_number' = .
+
+		local num_in_each_fold = round(`num_usable' / `crossfold')
+
+		local start = 1
+		forvalues t=1/`crossfold' {
+			qui replace `fold_number' = `t' if `counting_up' >= `start' & `counting_up' < `start' + `num_in_each_fold'
+			local start = `start' + `num_in_each_fold'
 		}
 	}
 
-	if `num_usable' == 0 | (`num_usable' == 1 & "`full'" != "full") | (`crossfold' > 0 & `num_usable' < `crossfold') {
+	if `num_usable' == 0 | (`num_usable' == 1 & "`full'" != "full") | (`crossfold' > 1 & `num_usable' < `crossfold') {
 		noi display as error "Invalid dimension or library specifications"
 		error 9
 	}
@@ -757,22 +778,17 @@ program define edmExplore, eclass
 		local finished_rep = 0
 	}
 
-	if (`crossfold' == 0 & "`full'" != "full") {
+	if (`crossfold' <= 1 & "`full'" != "full") {
 		tempvar u
 	}
 
 	if !`mata_mode' {
 		// Count how many random numbers that the plugin will have used
-		if (`crossfold' > 0) {
-			local numRVs = `num_usable'
+		if (`crossfold' > 1) {
+			local numRVs = `num_usable' * `shuffle'
 		}
 		else {
-			if ("`full'" != "full") {
-				local numRVs = `num_usable' * `round'
-			}
-			else {
-				local numRVs = 0
-			}
+			local numRVs = `num_usable' * `round' * `shuffle' * ("`full'" != "full")
 		}
 
 		// Burn through them in the Stata RNG so that both streams are synchronised
@@ -796,7 +812,7 @@ program define edmExplore, eclass
 
 		// Generate some random numbers (if we're in a mode which needs them
 		// to separate the testing and prediction sets.)
-		if `mata_mode' & `crossfold' == 0 & "`full'" != "full" {
+		if `mata_mode' & `crossfold' <= 1 & "`full'" != "full" & `shuffle' {
 			if `t' == 1 {
 				qui gen double `u' = runiform() if `usable'
 			}
@@ -809,27 +825,40 @@ program define edmExplore, eclass
 		// (The plugin will do this itself.)
 		if `mata_mode' {
 			cap drop `train_set' `predict_set'
-			if `crossfold' > 0 {
-				qui gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
-				qui gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
+			if `crossfold' > 1 {
+				if `shuffle' {
+					qui gen byte `train_set' = mod(`crossfoldunum',`crossfold') != (`t' - 1) & `usable'
+					qui gen byte `predict_set' = mod(`crossfoldunum',`crossfold') == (`t' - 1) & `usable'
+				}
+				else {
+					qui gen byte `predict_set' = `fold_number' == `t' & `usable'
+					qui gen byte `train_set' = `fold_number' != `t' & `usable'
+				}
 			}
 			else if "`full'" == "full"  {
 				gen byte `train_set' = `usable'
-				gen byte `predict_set' = `train_set'
+				gen byte `predict_set' = `usable'
 			}
 			else {
-				qui sum `u', d
-				qui gen byte `train_set' = `u' < r(p50) & `u' !=.
-				qui gen byte `predict_set' = `u' >= r(p50) & `u' !=.
+				if `shuffle' {
+					qui sum `u', d
+					qui gen byte `train_set' = `u' < r(p50) & `u' !=.
+					qui gen byte `predict_set' = `u' >= r(p50) & `u' !=.
+				}
+				else {
+					tempvar counting_up
+					cap drop `counting_up'
+					qui gen double `counting_up' = sum(`usable') if `usable'
+					local half_size = `num_usable' / 2
+
+					qui gen byte `train_set' = `counting_up' <= `half_size' & `counting_up' != .
+					qui gen byte `predict_set' = `counting_up' > `half_size' & `counting_up' != .
+				}
 			}
 		}
 
-		if `crossfold' > 0 {
-			// PJL: Try to clean up this part a bit.
-			tempvar counting_up not_in_crossfold_t
-			qui gen `counting_up' = _n if _n <= `num_usable'
-			qui gen `not_in_crossfold_t' = mod(`counting_up',`crossfold') != (`t' - 1)
-			qui count if `not_in_crossfold_t' & _n <= `num_usable'
+		if `crossfold' > 1 {
+			qui count if `fold_number' != `t'
 			local train_size = r(N)
 		}
 		else if "`full'" == "full"  {
@@ -902,7 +931,7 @@ program define edmExplore, eclass
 						mat r[`task_num', 4] = 0
 					}
 
-					if ("`predict'" != "") & ((`crossfold' > 0) | (`task_num' == `num_tasks')) {
+					if ("`predict'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
 						cap replace `predict' = `x_p' if `x_p' !=.
 					}
 
@@ -924,7 +953,7 @@ program define edmExplore, eclass
 							mat co_r[`task_num', 4] = 0
 						}
 
-						if ("`copredict'" != "") & ((`crossfold' > 0) | (`task_num' == `num_tasks')) {
+						if ("`copredict'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
 							cap replace `copredict' = `co_x_p' if `co_x_p' !=.
 						}
 					}
@@ -985,7 +1014,7 @@ program define edmExplore, eclass
 	ereturn scalar e_offset = `e_offset'
 	ereturn scalar report_actuale = `report_actuale'
 	ereturn local x "`ori_x'"
-	if `crossfold' > 0 {
+	if `crossfold' > 1 {
 		ereturn local cmdfootnote "`cmdfootnote'Note: `crossfold'-fold cross validation results reported"
 	}
 	else {
@@ -993,7 +1022,12 @@ program define edmExplore, eclass
 			ereturn local cmdfootnote "`cmdfootnote'Note: Full sample used for the computation"
 		}
 		else {
-			ereturn local cmdfootnote "`cmdfootnote'Note: Random 50/50 split for training and validation data"
+			if `shuffle' {
+				ereturn local cmdfootnote "`cmdfootnote'Note: Random 50/50 split for training and validation data"
+			}
+			else {
+				ereturn local cmdfootnote "`cmdfootnote'Note: 50/50 split for training and validation data"
+			}
 		}
 
 	}
@@ -1045,7 +1079,7 @@ program define edmXmap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
 			[SAVEsmap(string)] [DETails] [DIrection(string)] [PRedict(name)] [CI(integer 0)] ///
-			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [force] [strict] [EXTRAembed(string)] ///
+			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
@@ -1059,6 +1093,13 @@ program define edmXmap, eclass
 
 	if `seed' != 0 {
 		set seed `seed'
+	}
+
+	if "`randomize'" == "randomize" | `replicate' > 1 {
+		local shuffle = 1
+	}
+	else {
+		local shuffle = 0
 	}
 
 	if "`oneway'" == "oneway" {
@@ -1476,7 +1517,7 @@ program define edmXmap, eclass
 
 			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`parsed_dt0'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
-					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`crossfold'" "`tau'" ///
+					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
 					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
 
@@ -1545,7 +1586,7 @@ program define edmXmap, eclass
 
 		if !`mata_mode' {
 			// Count how many random numbers that the plugin will have used
-			local numRVs = `num_usable' * `round' * `l_size'
+			local numRVs = `num_usable' * `round' * `l_size' * `shuffle'
 
 			// Burn through them in the Stata RNG so that both streams are synchronised
 			mata: burn_rvs(`numRVs')
@@ -1563,9 +1604,14 @@ program define edmXmap, eclass
 
 				foreach lib_size of numlist `library' {
 					if `mata_mode' {
-						qui replace `u' = runiform() if `usable'
 						cap drop `urank'
-						qui egen double `urank' = rank(`u') if `usable', unique
+						if `shuffle' {
+							qui replace `u' = runiform() if `usable'
+							qui egen double `urank' = rank(`u') if `usable', unique
+						}
+						else {
+							qui gen double `urank' = sum(`usable')
+						}
 						qui replace `train_set' = `urank' <= `lib_size' & `usable'
 					}
 
