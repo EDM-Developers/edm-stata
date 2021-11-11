@@ -8,7 +8,7 @@
 class LibraryPredictionSetSplitter
 {
 private:
-  bool _explore, _full;
+  bool _explore, _full, _shuffle;
   int _crossfold, _numObsUsable;
   std::vector<bool> _usable;
   std::vector<bool> _libraryRows, _predictionRows;
@@ -16,14 +16,15 @@ private:
   MtRng64 _rng;
 
 public:
-  LibraryPredictionSetSplitter(bool explore, bool full, int crossfold, std::vector<bool> usable,
+  LibraryPredictionSetSplitter(bool explore, bool full, bool shuffle, int crossfold, std::vector<bool> usable,
                                const std::string& rngState)
     : _explore(explore)
     , _full(full)
+    , _shuffle(shuffle)
     , _crossfold(crossfold)
     , _usable(usable)
   {
-    if (!rngState.empty()) {
+    if (!rngState.empty() && shuffle) {
       // Sync the local random number generator with Stata's
       set_rng_state(rngState);
     } else {
@@ -33,13 +34,19 @@ public:
     _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
 
     if (crossfold > 0) {
-      std::vector<double> u;
+      if (shuffle) {
+        std::vector<double> u;
 
-      for (int i = 0; i < _numObsUsable; i++) {
-        u.push_back(_rng.getReal2());
+        for (int i = 0; i < _numObsUsable; i++) {
+          u.push_back(_rng.getReal2());
+        }
+
+        _crossfoldURank = rank(u);
+      } else {
+        for (int i = 0; i < _numObsUsable; i++) {
+          _crossfoldURank.push_back(i + 1);
+        }
       }
-
-      _crossfoldURank = rank(u);
     }
   }
 
@@ -85,21 +92,46 @@ public:
     }
   }
 
+  std::vector<bool> libraryRows() const { return _libraryRows; }
+  std::vector<bool> predictionRows() const { return _predictionRows; }
+
   void update_library_prediction_split(int library, int crossfoldIter)
   {
     if (_explore && _full) {
       _libraryRows = _usable;
       _predictionRows = _usable;
-      return;
+    } else if (_explore && _crossfold > 0) {
+      crossfold_split(crossfoldIter);
+    } else if (_explore) {
+      half_library_prediction_split();
+    } else {
+      fixed_size_library(library);
     }
+
+    int numInLibrarySet = 0, numInPredictionSet = 0;
+    for (int i = 0; i < _libraryRows.size(); i++) {
+      if (_libraryRows[i]) {
+        numInLibrarySet += 1;
+      }
+      if (_predictionRows[i]) {
+        numInPredictionSet += 1;
+      }
+    }
+    assert(numInLibrarySet > 0);
+    assert(numInPredictionSet > 0);
+  }
+
+  void crossfold_split(int crossfoldIter)
+  {
+    int obsNum = 0;
+    int sizeOfEachFold = std::round(((float)_numObsUsable) / _crossfold);
 
     _libraryRows = std::vector<bool>(_usable.size());
     _predictionRows = std::vector<bool>(_usable.size());
 
-    if (_explore && _crossfold > 0) {
-      int obsNum = 0;
-      for (int i = 0; i < _libraryRows.size(); i++) {
-        if (_usable[i]) {
+    for (int i = 0; i < _libraryRows.size(); i++) {
+      if (_usable[i]) {
+        if (_shuffle) {
           if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
             _libraryRows[i] = false;
             _predictionRows[i] = true;
@@ -107,23 +139,35 @@ public:
             _libraryRows[i] = true;
             _predictionRows[i] = false;
           }
-          obsNum += 1;
         } else {
-          _libraryRows[i] = false;
-          _predictionRows[i] = false;
+          int foldGroup = obsNum / sizeOfEachFold;
+          if ((crossfoldIter - 1) == foldGroup) {
+            _libraryRows[i] = false;
+            _predictionRows[i] = true;
+          } else {
+            _libraryRows[i] = true;
+            _predictionRows[i] = false;
+          }
         }
+        obsNum += 1;
+      } else {
+        _libraryRows[i] = false;
+        _predictionRows[i] = false;
+      }
+    }
+  }
+
+  void half_library_prediction_split()
+  {
+    _libraryRows = std::vector<bool>(_usable.size());
+    _predictionRows = std::vector<bool>(_usable.size());
+
+    if (_shuffle) {
+      std::vector<double> u;
+      for (int i = 0; i < _numObsUsable; i++) {
+        u.push_back(_rng.getReal2());
       }
 
-      return;
-    }
-
-    std::vector<double> u;
-
-    for (int i = 0; i < _numObsUsable; i++) {
-      u.push_back(_rng.getReal2());
-    }
-
-    if (_explore) {
       double med = median(u);
 
       int obsNum = 0;
@@ -143,6 +187,38 @@ public:
         }
       }
     } else {
+      int librarySize = _numObsUsable / 2;
+
+      int obsNum = 0;
+      for (int i = 0; i < _libraryRows.size(); i++) {
+        if (_usable[i]) {
+          if (obsNum < librarySize) {
+            _libraryRows[i] = true;
+            _predictionRows[i] = false;
+          } else {
+            _libraryRows[i] = false;
+            _predictionRows[i] = true;
+          }
+          obsNum += 1;
+        } else {
+          _libraryRows[i] = false;
+          _predictionRows[i] = false;
+        }
+      }
+    }
+  }
+
+  void fixed_size_library(int library)
+  {
+    _libraryRows = std::vector<bool>(_usable.size());
+    _predictionRows = _usable;
+
+    if (_shuffle) {
+      std::vector<double> u;
+      for (int i = 0; i < _numObsUsable; i++) {
+        u.push_back(_rng.getReal2());
+      }
+
       double uCutoff = 1.0;
       if (library < u.size()) {
         std::vector<double> uCopy(u);
@@ -163,12 +239,36 @@ public:
           obsNum += 1;
         } else {
           _libraryRows[i] = false;
-          _predictionRows[i] = false;
+        }
+      }
+    } else {
+      int obsNum = 0;
+      for (int i = 0; i < _libraryRows.size(); i++) {
+        if (_usable[i]) {
+          if (obsNum < library) {
+            _libraryRows[i] = true;
+          } else {
+            _libraryRows[i] = false;
+          }
+          obsNum += 1;
+        } else {
+          _libraryRows[i] = false;
+          ;
         }
       }
     }
-  }
 
-  std::vector<bool> libraryRows() const { return _libraryRows; }
-  std::vector<bool> predictionRows() const { return _predictionRows; }
+    int numInLibrary = 0;
+    for (int i = 0; i < _libraryRows.size(); i++) {
+      if (_libraryRows[i]) {
+        numInLibrary += 1;
+      }
+    }
+
+    if (library < _numObsUsable) {
+      assert(numInLibrary == library);
+    } else {
+      assert(numInLibrary == _numObsUsable);
+    }
+  }
 };

@@ -7,6 +7,7 @@ global EDM_NTHREADS = 4
 global EDM_SAVE_INPUTS = "ci-test"
 cap rm ci-test.json
 global EDM_GPU = 0
+global EDM_MATA = 0
 
 args suppliedDistance
 
@@ -24,7 +25,6 @@ if c(MP) {
     qui set processor 1
 }
 
-
 // Test that we don't crash when the RNG seed hasn't yet been set
 set obs 10
 gen t = _n
@@ -33,7 +33,9 @@ tsset t
 
 di c(rngstate)
 
-edm explore x
+edm explore x , rand
+
+di c(rngstate)
 
 drop *
 discard

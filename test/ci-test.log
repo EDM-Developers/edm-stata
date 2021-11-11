@@ -16,6 +16,8 @@
 
 . global EDM_GPU = 0
 
+. global EDM_MATA = 0
+
 . 
 . args suppliedDistance
 
@@ -39,7 +41,6 @@ Running tests using the Euclidean distance
 .     qui set processor 1
 . }
 
-. 
 . 
 . // Test that we don't crash when the RNG seed hasn't yet been set
 . set obs 10
@@ -78,7 +79,7 @@ XAA00000000000000000000000000000000000000000000000000000000000000000000000000000
 > 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000001391839
 
 . 
-. edm explore x
+. edm explore x , rand
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
@@ -89,6 +90,29 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
 Note: Random 50/50 split for training and validation data
+
+. 
+. di c(rngstate)
+XAA3b8ba9cd046ba5ba4fb08a4cdddb806275fbf6adf94193b2a4be96d8ed674e75b0165bdfff6f96b5446446fd85412a3d5d933bb83440909262dee2415bd3e60d2a7a8f65cd555dda65e79cc98433bf230e75a8f5aadfc54fdb1c2357ce19dec82fbca4b6939e6cb4b92985c74ad26643cba258a4a00f030a4df2e2fa4b51
+> aefaf3b2738c705505ffa833082ffe7fca2f9748f8be4f5e8b8a7e2249c96613a5e131a7674f0168513aac913b516d44072a48a0faf341466b9ddfb6a2718f78c635108509a60246ddda9af4c160791e5ba7cc6310b377866cec49e335597c2b37a64b270f6c1815b9792bbdb2f6c32f5cd5566c0e0a31b152486063b6fdb
+> 90e1dcf24d9d7d9ffa00d761f3fae749df6ad360220895a77b61c5e97950e27561a5b0bad10aaf7a697452566cd402226a5530ccf649ad99d8bf61cba37e25feb1260772eb83efc5d8d32c5eee85d31482869e43c2937bd5c3b4d0204f161a2cc807e4968d8f66b615aa4209fbb8dc79e7ccc3559c4bdcefc6bb3050c6393
+> 73414e5973541a851e64f285027bb0fd4ea5a6f9216165f84f1a6f4ef144567c07ffe5e25b5df75b8a6d782fc0f85c5cafc238183c47931b64341b80bbf0a0fc14a8e63c4b61abdd46512c4d54b38652604efcc32a33150756b0da3d762a907f9e82b7198bfd5961e37c93ca4f17013cf94cfa79239d653817f323e4067bf
+> b614a1f7ec0edeace7674fdca193853cc2e6715028c0efbd8691e2e3d63864c8729db794273243a89a98cee217760e3a0f1bed339c85d510c114289d89f8ffa1b253fa9b765040b2c63f60ad01dad36abb7b0799aabb5257fd62c8cdf7f96b3bd0c2c190ccf4859c3a65466bc3d72c41c9701a7fb2c09c67a9890abce9a3f
+> 09fb9c49cc6961fc92fd558e72fba1161bb597c1e3071e40721b3844d5a82fd2606e336871783c2d100654dad588ee5c148ecfac32f793448d70fb73a7e000949be601f9e037a45fbccf55dd7b5733f8c1b7434d55665d962540bb61daedd10b20fc7bdeac0e1b483d23e94c355ded489b38dc8112aefcae7d6ffd8968dd1
+> 564dbd12d32c9731e4edf1f6b1942632bbda9ca0628a69adf4ee6f756452fae113c2ca1ccee2e6e61bad3a460d749117390c8c987fa1c5d1596acc6ba4c260b79b1b40ff50e97339ed6f4bd4cb1a40d9d288238b018ad148ee360437f0f342f58b9109c930204a4f9c973e485d263375c0808af8fc807e137277a078ecb56
+> d479a0398eed50993b2c6d9589325968b34654113c07a189a7c58dd8fa179ee754e886e78b2843f0099fc6a8ca296be0856ac487fff3276ecd72c4c9fbca533d23a65f06dc756460172228e5d81954baf8c0abc9d7441490d5ed1171d12767473434940ebfcdc9090b992b06853e578f1e11277686a029d431e4ef3d44add
+> 07f37459d466989c0a26918b68f1e1c6129816bb127c26310e85634c62241c804f14fbc992262d270c959c0083f5d7706d5b97f1c7bba77195e8c6ede7da1a5d3f6eaef1fae8243c946fe3e4959968064f99bbf29404e91728d33c239b47d2493baa3fc82fa5640af07d916a11185f43457ae8e518f02735bfba3c284806c
+> f07d6fafcce6381c7f0d1ec0b14900cda06536632bb6020bf56983f5cab19b3641814e354200ed07524a5ba11d41a791724be3f88908ba78ca86c87f38792189f28776db4e35909d1ff2839f9402cc3dcee241eea201dfff4e4b96826a83e53e9202f687e742276141f29ad5dcfe264e7d2ba9c29f3808f51fadb0dec6349
+> 3a9fa1b5c520cc1c3b85fc0b7c1c0fa0adf04556b328f2f333a64ce27b08866ae3d45992740b958092caf78ca72b241c7170863eacc40e89bc55269ba3d66f1dd8095eded314c23a0020a80349f3d40d8afda0df5ab8334489845bbea66d799db79b60bcb7d9ee9ce561ea8ccd4aac0bacc3e1c33692e28f3aea85e489f14
+> daab2e970b9458f075e8772c23f228b0c9e7efbfc9f66036cb59b4dcaf64f04f9756e351304639dc2993127c8f9a97d01ef90729ecfe577f8fadc82dff79841fc034e7c1fca48ad54cfffcc2cd12470d88c0b2cd1b1a28a3c71bbf2a894865e37d619369bf15fb9a34a65340d43dcf04cb3018108013ac71e8ce0054c0264
+> a3c370e79c05f1811f4e00682dfc2cea6a9be6b6d342238aede755b78c5a8f9f592ea2000fb93f43b41098915eeb32425a6d91c0a9a875463cc4a276d2d26a77580e2efc4bc1b42c838d2aee1abc3508a6b5ff509ef018ae777feb9551c90118a19257c5cea23d6da90c9ddacb34152a9fe9fcd4490aaf76f7eac47747afa
+> 3f7c06c3979c06df0386cf5670f1e3c2ecd79a45b00adf91439f48f2dbe768a6eb10e9d4baba0ce8d9af840c92b76e62492a775695f0fd27e9324ceb04544473991d6bdcf94e94ae1492202e43dd32c1dd6d3ad750c2079ea09b083ef7fbcbb9205920229b777f25df11a4caa98fcc8a9a8e0e092d280e8cb182c15be6e7f
+> 2fc82bcaea06ea2712d62e6de85323a0626ceafe19b0d4eabf81a243bfa21b982eb7c2ecdf24f2c91e6a829edd9e617df99ba80a694622a9957da52122b3519d5e204149eb4437fdf69d14a6e9cb542bd3410753a7e32f9b12a78d81ec490dd7665452e3ca9b3561f8c597d11669d9046e2cdc71da4cfb92a33d99d4eeb17
+> 53482ddf60acb011fe93e9bd27ecb923caa14cd690cc3775d95fb9e899b7920064b247f68868eb228c53d6b7b01641ec361067faa7556cdd78943a88d1c023841a224a72f25e5b0378ef77416ecf10a0c99c0094956d70396bd0c79fa8fb980e01d5a6ab0817e4b4dd8eb13b28087ae924f48f7a6276a7bed88547b00e636
+> 020b85919f0bbf74928bc3175f3ac50578320b9962b88b4a3c8fefe622f58a5d791438d3707587159cc06f8bec12ed3ff79b2c7e1b53467c4612b67a44983956021b0d07576fb2f6c7d60e098c2779cb155da84f118b314d099d609a0a79ad05d784aba9808f222999c4b526a85fdf45114ef33da1557dcd3e7eddb09dcb9
+> 94e4c27c0ba6377d445ed670fbde94eca0d6ef54ad57a9ddf95e4afac9fbc5ab834078a5a09a7a95fc36dd89c46150db12805bbf3e45c3b0cfb8428912bd0bb1eb98232c048f97fba1587b438bc906a819d60f6cd9d27b5a2a0d3f6146115cbb06f6bbdf9e432067e2b56fbef71c8d24e5f351735b493066dd526449a6d4a
+> adc16971551173bebb85d349978b73261780b6986656c9b1fae186aaee5344b59569c0a04a9784014174fe9925e9807b0a057f98842e189a687ff7ca5d423402f7e6476e64588582daf9ff765660919892f302a19b12f5bd123f322da862d7ac0d0e3dbfe547a605ab0d14bf349f6ac33f1a184b13b19694a9730c687ef78
+> 2148b556db60005c71aabd6c49fdd5025ec3e7e2f3b8edf648eb19446317a103a6b7f7197396c845fa58b9a53a8367990ef951b5bc682ab9d4fa4827d64f53f404acb88bbba7120a860aa94786cf15638043a7c2516c49dc1798e00e230001000000082ed3
 
 . 
 . drop *
@@ -148,18 +172,18 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99838         .008126 
-                 3               1          .99777          .01015 
-                 4               1          .99726         .011441 
-                 5               1          .99707         .012625 
-                 6               1          .99397          .01607 
-                 7               1          .99222         .018344 
-                 8               1          .98998         .021055 
-                 9               1          .98896         .022099 
-                10               1          .98566          .02446 
+                 2               1          .99894        .0074747 
+                 3               1          .99879        .0082312 
+                 4               1          .99833        .0093088 
+                 5               1          .99763         .010505 
+                 6               1          .99459          .01301 
+                 7               1          .99389         .014472 
+                 8               1          .99106         .017536 
+                 9               1          .98979         .019725 
+                10               1          .98581         .024019 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . ereturn list
@@ -183,7 +207,7 @@ macros:
                e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data"
+Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
          e(subcommand) : "explore"
@@ -256,8 +280,8 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)               8          .34074          .15729 
-   x ~ x|M(y)               8           .5642          .16437 
+   y ~ y|M(x)               8           .3362          .16994 
+   x ~ x|M(y)               8          .51116          .15069 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 6
 
@@ -271,7 +295,7 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .99939    .00028279     .0051435     .0012207
+        2        1       .99946    .00033511     .0049735      .001639
 ----------------------------------------------------------------------
 Note: Results from 10 runs
 Note: Number of neighbours (k) is adjusted to 5
@@ -285,28 +309,28 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2              .2          .99945        .0041219 
-                 2              .3          .99946        .0040956 
-                 2              .4          .99946        .0040696 
-                 2              .5          .99947        .0040449 
-                 2              .6          .99947        .0040294 
-                 2              .7          .99947        .0040157 
-                 2              .8          .99948        .0040043 
-                 2              .9          .99948        .0039953 
-                 2               1          .99948        .0039876 
-                 2             1.1          .99948        .0039823 
-                 2             1.2          .99948        .0039795 
-                 2             1.3          .99948        .0039776 
-                 2             1.4          .99948        .0039776 
-                 2             1.5          .99948        .0039776 
-                 2             1.6          .99948        .0039773 
-                 2             1.7          .99947        .0039766 
-                 2             1.8          .99947        .0039761 
-                 2             1.9          .99946        .0039839 
-                 2               2          .99946        .0039918 
+                 2              .2          .99875        .0049256 
+                 2              .3          .99875        .0049032 
+                 2              .4          .99875        .0048842 
+                 2              .5          .99876        .0048715 
+                 2              .6          .99876        .0048596 
+                 2              .7          .99876        .0048476 
+                 2              .8          .99877        .0048358 
+                 2              .9          .99877        .0048234 
+                 2               1          .99877        .0048109 
+                 2             1.1          .99878        .0047992 
+                 2             1.2          .99878        .0047905 
+                 2             1.3          .99879        .0047826 
+                 2             1.4          .99879        .0047747 
+                 2             1.5           .9988        .0047665 
+                 2             1.6           .9988        .0047578 
+                 2             1.7          .99881        .0047484 
+                 2             1.8          .99882        .0047387 
+                 2             1.9          .99882         .004731 
+                 2               2          .99883        .0047261 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+2
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
@@ -345,17 +369,17 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99902        .0065958 
+                 2               1          .99891        .0079384 
 --------------------------------------------------------------------
 
 Copredictions
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .78197          .12054 
+                 2               1          .78002          .12068 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . assert teste!=. if (_n>1 & _n < _N)
 
@@ -367,10 +391,10 @@ Univariate mapping with z.x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1           .9163          .32768 
+                 2               1          .90563          .34048 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm xmap y x, p(10) direction(oneway)
@@ -523,13 +547,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               0          .99835         .008931 
-                 2               1          .99898        .0068283 
-                 3               0          .99771         .010797 
-                 3               1          .99887        .0074365 
+                 2               0          .99863        .0095346 
+                 2               1          .99895        .0077678 
+                 3               0          .99734         .013262 
+                 3               1          .99872        .0089209 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . ereturn list
 
@@ -552,7 +576,7 @@ macros:
                e(mode) : "mata"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data"
+Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
          e(subcommand) : "explore"
@@ -582,13 +606,13 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               0          .99835         .008931 
-                 2               1          .99898        .0068283 
-                 3               0          .99771         .010797 
-                 3               1          .99887        .0074365 
+                 2               0          .99863        .0095346 
+                 2               1          .99895        .0077678 
+                 3               0          .99734         .013262 
+                 3               1          .99872        .0089209 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . ereturn list
 
@@ -611,7 +635,7 @@ macros:
                e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data"
+Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
          e(subcommand) : "explore"
@@ -663,10 +687,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99826         .010198 
+                 2               1          .99841         .011205 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -678,11 +702,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .95776         .029025 
+                 4               1          .95569         .030603 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+3
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
 . 
@@ -696,11 +720,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .95776         .029025 
+                 4               1          .95569         .030603 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+3
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
 . 
@@ -727,7 +751,7 @@ macros:
          e(extraembed) : "(time delta)"
           e(algorithm) : "simplex"
         e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+3
-Note: Random 50/50 split for training and validation data"
+Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
          e(subcommand) : "explore"
@@ -742,26 +766,26 @@ functions:
 
 . 
 . di c(rngstate)
-XAA3f973a2aa2db768a102d2aa96e7df27d1ec25f37477864d052d23e8ba40638e0f737d81154c71db6f9da91af7cf844c023133d9500e185d21dbeff7b1b847be97d743f3e8dc70c64195ebcfdeb85968548a237f5196d26cc4a046849c8a6bf688bb5acc8b0a71ef4869b3d27e3820ce9ea6b65b0ebd76362b2d2a25e0f5e
-> bfe718b587a3d7bc3521d0f16657c6ebacb28fffa76b78c7a96d287fc3d1c3137cb4678b7e7dafa619cbe52af67e1127598cbe50f9746cfba8b1c301efe116c65813662dafaff3482cefde7cab9b19dbc65525180070603ebcf7a65144d131b102080badce3e18934133fcd78d40725c5f0bbbac90eebe61c4af64ee3bff5
-> 2fd666bfc4a67952ca20abf1ffab06105051967eb2981d54e96d089aa6238bf1f2e1760bf3afeee69bd4db37cab42164dc3c5fcd224a1734d5aad7795605d2dfecff03869a220733aeb29eb49f2618eb7cc2910b5488e37e445c3b5fa4aa2712c82bd97abe74d7178e68b30b5bcd0ab379cc99c41a47dd3a9daf5fb80cb8d
-> f0638b0e3adf8350cc999e1a2a056da53c738105ba4d401652b835ef9ef33e5cc418b3ff01f871ae45ccac9f6b40f366d7b14c55d00652d1e80d32ab632a953ad70c44ed9249e8081166fc590710902d684b556afdda92acde10423597cb306f2a31e32765b4425325f11f3684dd234eae2bf0d334531eb0d5d851244d428
-> 7d446975b35fb4c59832354c8a8cf7915bd4ad1539bbfaa77ac4ebc801aee7eeae26f89b552cc78410c1c20f8179782887ab63f27559eda99018608032e56a156256d48dc195a45538c847f32eca137da4ea96b262fbd7698347cc820fbda0594b440691ae4c235217221db43bad8865f229af69d6a040ecfac738ee18b5d
-> 3e05d2dab46f555364adc18bb3ee947ac36576689c7aa69d05245fe5368e4fc3207767c562a83afdefb5a987a7e4408257e88fbb695939f3493084d45e874d7e410bf0d9e6320281456d405117de7753244e9cc941d8586f90e4aae2717cd8ffe2b821e57c8cd8a812f751a72e353252e157e7dc6a9b8ab81855f906d247a
-> d045501eb501ea0945b8bff76cf146e7787c2785ec25de26a538826221f90d1fc0d628fcb469e905f0c2bc5e5485340bced669c19953d77934096b8f7926d6051f6dc4ae79a71e792d5c39c97b1b59e5d3803a205c1d3029e337f107ce7fbd397325bb2a27d3167eb5a1966e5ce6d9b8e57b693652d14cf3778257a593838
-> 4757419bcef2c962a83f6d1c8a7f317b09596b8070d25eb540309c0545feb4baea7ccd8493574d554bdb90528b7195a1f041d26eb696f6693d8a72c7a069018ac3bd4b93c0a6354a6d3ff316b65719a873958e67d10d585c6ae5b3943e6f0e8b3d86b3844a7e5efd9fba76594908277be5fe3e528a1a0483709b89e7e1d90
-> 019f40b26f524abe85ffe847df91be154d786d921d9c5f1a3b4cffd9ae382dd1a59def8022cbd1d4b7e7db9e768ed7641d4be46f8c30daa1921896e2f320d8d234610f7b25b37cffd192b7df8c2843cc45842d19622d1a26069e8b04e83a8bc0010a10650705918e5fd1904f895fc6ffd2fb5a733d8f8ca1bcc40be17ee16
-> b14c2d778b3ee538db1a03e16e4d5d0112e3d9f0229b7087bce72ddd53524955a63cada5e1757035b25f7fd576016dd468d19ca43c97f81365e41d46826937394e3065b4119ee826e15afb3b1bb285fcaeb451e8d4bcaa97e13c474f29815b9f274cec44d8980e2edc2713b29041205ca73fc7f8285154aef55bee5a20dca
-> 2e1ffc9422c98a5eda0ae519391a15bf0c6c34979e7e1e76690140a0cf6140d76c7a09ba89073bb9d82a28d504c455d3d8a1282113d4371d686448ca0ca1d0140cb04ef85c3b6df940780181d2da79516885a0b80171bc5fa6deaa09abdb593c9e6ad00d454833cfc186f4e6e962dee6f5b119a621a56745cd8f0f483c7d5
-> 8512dc0d1ba9f699d99146c3cb50364d1afb9be98852dc4df14ee30722d1ee5b63e0baf3ec0b76519a8c64b19bf6c4faafd79d9483ecb3ea60b2a5cc84df5c98234c6ed5372308df2a3f903cd036d2eb2a0540ff5541628991e4801f6e120efddcc538ee661c464d3d3779544d463f7a5e8a258e665e098ba68adb945d1f6
-> bd8d4ef991a84e819bd41a5514bc82b3a93e8817aa4a35770ce6ca03654fca9a9d3e89ad822bdc6593e33dd7e14435616eebb02927f205eaab33884f0d3df1b71141a3b88ae7557d2c316d1d483f6ab7d95f142a5c4a04558a1a650ee536b2cd79f541e7b4a8ce9f87d679d19d20e992869e8fa0e59e0132137cdc37e9904
-> ba6ff738de5a88cebf718141ccd82035c71341e751b5fc8414192e54aac719e4da4f5af349394a224db7ddcc6a11e20904d8c292f5058583d65f0384707790222e3085c7fdc862e3afe7a6a39d83c3af8c180cd84a57f8865c3ddb15bf8d8769c024d3862ad624a30b4788365059d44a557f62f6a2216f869c20f0ac1c4a6
-> 682333fe1619a4f62ab130661e271fed0c4f61fc7401d0bd7437e70eb47414f9f413d2e93b3c9601041be087f2aee826956eff74f313877410b734b6a0a3dc94d988b94ae3fc1ea59d0270ca07e2fa20539cdd83e3fc1fea11097aa21f12c831fec53da88264fbd69e0265eb3d334b18a4e2d3e363f4e1b576f14295a73cd
-> 8ece5b68e80991230b7ac36c6836e93f3d57e42cb91827cb2f03f3c79e46e340149e5da84b0775a65cc967422da3a33067dd24e7b1bd4abbf7fa3846678246d758d7aa2fc7aa0c4d71fe5f70359dfc008b1d855b976b20919bc7b61d413932d8f615622887b32ae5cb2c633d34b8b922bcde16f2eac234e4f64440922cf4e
-> c569bb78b34f09d5e8e5bb66b68de2627bbd1a3392aa028407040b8b7579332062f6b97e2ce3fa6e3b97e0df675175b49c7032225618b37c07cb6eb2c46cf34e27e71761f9283197e90481689c7aaf204be9fce43c8fa279389f442cb3262c09a84a278d01afe1aa119f5c4b41dbc2100d48514e9e2b5b6ab617bcefaaca1
-> e8739b821b17fe3a3923f30f4eb571529dc92192bcd81ec6d6be86fd494b6948b96d42b85dd59c38ccd5b0dad1197621380507df412f5ba8c6cc55f7565570b57b622b2a3ebc2b1a7687f8e66a802cc96dc05b0f44bc5a8612b39f860eb8f20b9fa2fca9cef7403475d4e8deb8821ae29dee6d0477d5fee0e4d8a302de9f4
-> af09c8f98a4e39869f8ecc886c428b74a0100bfabdafeda340b9c512949f2323c73b855dcca44e695b7f9d5d14005e19a0bd2ebba402884fd225e54503b3d3f81bab1cc932a5dd5c93a5807d9b9ca15dd0c1e2764358eb0aaca5287303810d295298b3de8021d72db6cad27486a52881f25a2d2195322e85e1a5b4443049c
-> 3ae47ee11666d63f6b7ff10032e2edc28cb2c4b0ebdd1c0629557be9f1277d9b3a6bac06f0b21adb819b8e5cee5c2f2c8cec4846207aba489f029e6ccd549ca9f2a09497704b65324cb2b144ed450f76e6b00aee0b658ee38bc2df2b040001000000941e95
+XAA00000000000000015851f42d4c957f2e190380fc9abaac458c6783158e6f83249baf03f7f8c7e7b230925614008409f57b70d1a51fbf4b17ef853445b6ae1ce59314163a96cf2e76b3d3fbe1c3fab66db0e0a380f62e228d520a120bba7c042edd91e142b13b0d4ffeed2452c0360a6930e53714205c6ab05e8e70fde19c
+> 10ff84d5891460b2feb62f49f5fd7a9611b5d57c84ca0982e7e360123aa3126ae2736b5d1e46e77a5c1edb7f4a50364092880709d88920f3b785bb96a629ff4b3d78de920e8533bb548a0f9ccb49e69ad32e85ef8b48e9c0f13095aa0a7908ac33e52cef59d1bd77b8b7f2f58c8c893141488d08dbffd1b3af4ded8517837
+> d890202212b68e77fa8d94dbf784d588a4c65aaae95b05940a436aa020d621783c2f3abed704a5d76adaa33352fbc5851e4ba9587bb4ddcb27db7570ab99fe1ae8565181581e31ed191ad6019e36984847e1a09ef9cfebaac520abf30e91c490d2b273726cd00cce00d2dd72a3a133c6e31b7f89630f86fbc595ec61cdaba
+> aec9cce4a343365b9e95500dd7ac9ad9448b7d98cf02e3ebbf9f328f3b73e194faf2487292e9ff7453db22110b973a52bdb517f69d5b0f124c771a3b293d3dc863413d3e3fb46f9b02c850324bc8ba714cef880e0e424abfffa373eb83ccae6c42e7dfe41544dbb5af1d50021a30fdba4315d2c3fc2b1beec546f2778ace7
+> 7a8be4d3e79819f5dd70ee2ecda1a0d50cb0373cc3e79fe08bdbef6520287c1850e72a27ded770fadabf0ad7349a8de06dfda6d964acd90d29aa7846d587c7dfd7a346f75106d1430f1814995774447f89195b004b33de4f0632067aa45d6a3f3ad66928bf1bc0730cb594b1cc0b219c3d33077402d977250901c29c8ecd9
+> 56dac7e7ff88ca476381d8854a22489ed760d2ab8298a54492f42b53f52646cd3dc60f0fbf5623b62705246b2ec99152f02158ed254039bf91dd5cbbd35a6a622da388f26b8a5337cebd0ad8499bea033ac977c07b7e22598395ba5ab20330ff99b50f207f1e1fd4fc55466059a4c2fa4e2cdbf4e59ccd2278ddc445efb36
+> c851ef3dd0e7e338f93abda27a0f7d92a3769727b7e99f5b6b263becb597002ead91e6b54acf2bc705b539a63d98fd3e56380e2d4400114f09ff86ed8013b6d2effbfb6077dc52c46b3c59dbecb50df3c859a0d1a4ff8421df7fd4c33a89c14cf7b9ddd97de236d0083a48eeae3e47e1619cfe6631b98d8482cb8cac44021
+> 2f01b10ab27d10484a19e6a4d6e7f8d2bda7de052e5f2d24a8a61d6dac5eb166ee968b232c63100af0ecb54ac3638ff32067456d5601631a80e36952aa3260d50091bec9f3b3dd4192600a4a6c75b5b59c590d964a0b94e0a49b959b1cc82789024305a189aa5d4bb941b617a369efe4ecd920c992daac9cf90b1d993aeab
+> d84c0d6c434c744f9c9affb4d9a533d87e16b6009b60faba80eec5770521e6c809c46ed8c90ec09b9c761b54cbd4c23f93384913a93003179f7f04f5d57205a9232e915398dbd61c28e17835f71f91db8b56e3ae15645077c57f579e96f14a05711a88652b100689e8791ca2202e4409b4c86682c181e1726d2ea2449fbd3
+> 8e5705a59863efd7ec975493696fc2141ea36b121c8cb84977ffe194f6b4e84363d32d81a89080c4080c13fa8f6a9b0bc0b927b7cddcd800325ee4a6529ba82fc827e6aded4e2432067d82876af39a70fd19834b5a4f06ed32d1e0dc1322cd7f0830eef73b94d8d998482ae863263f973a2a8491c91d8907bfe54a46bdb61
+> 2439f49004fa54214e1ff015865cb390fe236b03de300a55491d5ffda41f8a2aba93a1d32d092496a7c6559d0e3ecd281fc5b79455c4ebbf5b52e57b9f49e2a10d26635445324dbd6030e16b95d2026507f333379da0229f9edaf0eb3ac39b1471b9160727f72f49d959a20ff07c0bcefdd2c73439124127257f3f3eb4cc6
+> aa50438a54d894c1bd1876de8070ae52bb5225f15ef486508f3d973c0ca8389ba7bdd41530d35e360d9ecabcf5cf1bf2560964a8ed40054578d9b2ce3fed3bbecdd2edaa8e8d0ebcec59862eb7066cc7ba1dda62d6dc0be19730af245cb3e39144fd28fd1140a545aea72edf64444f1324ecdfd3e6a984386a404696cd655
+> 70232096136a36611b0b51e66e6ee4d1edb907c80b49a68290910d33ef360fd9b07be91f9079d1a181ffb903c92dd16072688d660bea6d1b23d06f001ba16488335a677849e300bb649c7573c430f35e23295b881cd170ffe50cca0a1d93529b066ffbfbe6ebee45a9e433ba4bffd804511384b1a12597546cfa4e622a6c4
+> 957e5bce4c31e38d4111d6d77fccf9e3dc44ee6d398c7b36bf417dccbe6c20d3e3a751ad9ed7379484ca2d958109b1bc010aed5e13dfc59011385e00c1cf7a94b38a86d54eb59c7b4acbde74ad67590b7f4b2668962f89f27bf6577ac55d938f8889e8f1f39128edd7a8016425bc0019a62d58f6b6f507fe8448ae1acabfb
+> 791c31c831560719dcb44d8f5bc1e286556df0cf618ca95b6beff552b18ed8b155b3d11f9a027f2238f56dfbf899fa898776c16a2f8fa499b1e4e56acd61426066398f30d5604e005ecc1650304546d62f30c94849b83bb78d7c985b5fa3fbca4584b1f058182e58b271843f7971568b129517e711c556d2dc932a2c6d81d
+> d77067cf8f9c124c5e4a4ce9255e183e946042b5ccf254493554e89c2245b42ff823cdc0f40cc2b4dc45d302247d0ce2d85bfa6b99ee699731aa6783077f968c284873f1bfd9f9d12e77cf0ef3d715ae62a675505eb9d56cddf2971cfb54c37343e57cb42425139139747e84387324ef7a6a8d8c2a18a9de12651f5894acd
+> e43c30c278c8506d60cfb28e980e9ddc9d8b80e4a701fb454b70abbfe3aacdd4b93ef1cef89a71dd65f8df4c866906b4636938b7e30ee157e1450278ea0d94a2afba6e7bcb46ee067b4b40a6903030e9aa05e06c8aa3ef9bf4b2190bfa1f7aa4164623bfa6d3eae49791f3b181c625bb29e97cc414bf6ec82fbe36397803b
+> 138c37e59292af5162308691beb696f4137e2007099fc5bdf1dbc2e8af08c5d6298f581d9647c3bdc2adeef57031ea0a8d4e423b108179c50a9c86820299f147c1ad99f667c8b18dddd8d9b00b1d6ee12668d48eab704fe9d6e6e79ad38a1cff625936437752c110f0eb1e7ec3045445ef695a4566ce062d2d90b4327f971
+> 0f0f29982c22477baec8b5cca8deb5a3a6e22a464cb1997a7bff17a834908e7c62078bf3f8fddff519bfd5aac9fcf30e87d2ff4a8eb1046eafa79614f7add429ade748b09f321de613cf367b422ec2b9369e34128d92caa9b5a30ee218c20ea2fa6acfe61f5aed227f46bcf26fd193d2e58266092d32d51b668600b3c0b1d
+> b2693a59c12ca30718fb1d871a3d7417d52458a6c03057b6596c0e90ef9553e7d787910c3394137ccb6e1074ced62cc5790d91bd0e4f3d8d3e93f8af7cc8c4d038a186dd2da9e17854b034b44b3d20a354b930e90bd7407f59b89c6d2600010000013830cb
 
 . 
 . edm explore x, allowmissing
@@ -772,33 +796,33 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99638         .014025 
+                 2               1          .99766         .012361 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . di c(rngstate)
-XAA3f973a2aa2db768a102d2aa96e7df27d1ec25f37477864d052d23e8ba40638e0f737d81154c71db6f9da91af7cf844c023133d9500e185d21dbeff7b1b847be97d743f3e8dc70c64195ebcfdeb85968548a237f5196d26cc4a046849c8a6bf688bb5acc8b0a71ef4869b3d27e3820ce9ea6b65b0ebd76362b2d2a25e0f5e
-> bfe718b587a3d7bc3521d0f16657c6ebacb28fffa76b78c7a96d287fc3d1c3137cb4678b7e7dafa619cbe52af67e1127598cbe50f9746cfba8b1c301efe116c65813662dafaff3482cefde7cab9b19dbc65525180070603ebcf7a65144d131b102080badce3e18934133fcd78d40725c5f0bbbac90eebe61c4af64ee3bff5
-> 2fd666bfc4a67952ca20abf1ffab06105051967eb2981d54e96d089aa6238bf1f2e1760bf3afeee69bd4db37cab42164dc3c5fcd224a1734d5aad7795605d2dfecff03869a220733aeb29eb49f2618eb7cc2910b5488e37e445c3b5fa4aa2712c82bd97abe74d7178e68b30b5bcd0ab379cc99c41a47dd3a9daf5fb80cb8d
-> f0638b0e3adf8350cc999e1a2a056da53c738105ba4d401652b835ef9ef33e5cc418b3ff01f871ae45ccac9f6b40f366d7b14c55d00652d1e80d32ab632a953ad70c44ed9249e8081166fc590710902d684b556afdda92acde10423597cb306f2a31e32765b4425325f11f3684dd234eae2bf0d334531eb0d5d851244d428
-> 7d446975b35fb4c59832354c8a8cf7915bd4ad1539bbfaa77ac4ebc801aee7eeae26f89b552cc78410c1c20f8179782887ab63f27559eda99018608032e56a156256d48dc195a45538c847f32eca137da4ea96b262fbd7698347cc820fbda0594b440691ae4c235217221db43bad8865f229af69d6a040ecfac738ee18b5d
-> 3e05d2dab46f555364adc18bb3ee947ac36576689c7aa69d05245fe5368e4fc3207767c562a83afdefb5a987a7e4408257e88fbb695939f3493084d45e874d7e410bf0d9e6320281456d405117de7753244e9cc941d8586f90e4aae2717cd8ffe2b821e57c8cd8a812f751a72e353252e157e7dc6a9b8ab81855f906d247a
-> d045501eb501ea0945b8bff76cf146e7787c2785ec25de26a538826221f90d1fc0d628fcb469e905f0c2bc5e5485340bced669c19953d77934096b8f7926d6051f6dc4ae79a71e792d5c39c97b1b59e5d3803a205c1d3029e337f107ce7fbd397325bb2a27d3167eb5a1966e5ce6d9b8e57b693652d14cf3778257a593838
-> 4757419bcef2c962a83f6d1c8a7f317b09596b8070d25eb540309c0545feb4baea7ccd8493574d554bdb90528b7195a1f041d26eb696f6693d8a72c7a069018ac3bd4b93c0a6354a6d3ff316b65719a873958e67d10d585c6ae5b3943e6f0e8b3d86b3844a7e5efd9fba76594908277be5fe3e528a1a0483709b89e7e1d90
-> 019f40b26f524abe85ffe847df91be154d786d921d9c5f1a3b4cffd9ae382dd1a59def8022cbd1d4b7e7db9e768ed7641d4be46f8c30daa1921896e2f320d8d234610f7b25b37cffd192b7df8c2843cc45842d19622d1a26069e8b04e83a8bc0010a10650705918e5fd1904f895fc6ffd2fb5a733d8f8ca1bcc40be17ee16
-> b14c2d778b3ee538db1a03e16e4d5d0112e3d9f0229b7087bce72ddd53524955a63cada5e1757035b25f7fd576016dd468d19ca43c97f81365e41d46826937394e3065b4119ee826e15afb3b1bb285fcaeb451e8d4bcaa97e13c474f29815b9f274cec44d8980e2edc2713b29041205ca73fc7f8285154aef55bee5a20dca
-> 2e1ffc9422c98a5eda0ae519391a15bf0c6c34979e7e1e76690140a0cf6140d76c7a09ba89073bb9d82a28d504c455d3d8a1282113d4371d686448ca0ca1d0140cb04ef85c3b6df940780181d2da79516885a0b80171bc5fa6deaa09abdb593c9e6ad00d454833cfc186f4e6e962dee6f5b119a621a56745cd8f0f483c7d5
-> 8512dc0d1ba9f699d99146c3cb50364d1afb9be98852dc4df14ee30722d1ee5b63e0baf3ec0b76519a8c64b19bf6c4faafd79d9483ecb3ea60b2a5cc84df5c98234c6ed5372308df2a3f903cd036d2eb2a0540ff5541628991e4801f6e120efddcc538ee661c464d3d3779544d463f7a5e8a258e665e098ba68adb945d1f6
-> bd8d4ef991a84e819bd41a5514bc82b3a93e8817aa4a35770ce6ca03654fca9a9d3e89ad822bdc6593e33dd7e14435616eebb02927f205eaab33884f0d3df1b71141a3b88ae7557d2c316d1d483f6ab7d95f142a5c4a04558a1a650ee536b2cd79f541e7b4a8ce9f87d679d19d20e992869e8fa0e59e0132137cdc37e9904
-> ba6ff738de5a88cebf718141ccd82035c71341e751b5fc8414192e54aac719e4da4f5af349394a224db7ddcc6a11e20904d8c292f5058583d65f0384707790222e3085c7fdc862e3afe7a6a39d83c3af8c180cd84a57f8865c3ddb15bf8d8769c024d3862ad624a30b4788365059d44a557f62f6a2216f869c20f0ac1c4a6
-> 682333fe1619a4f62ab130661e271fed0c4f61fc7401d0bd7437e70eb47414f9f413d2e93b3c9601041be087f2aee826956eff74f313877410b734b6a0a3dc94d988b94ae3fc1ea59d0270ca07e2fa20539cdd83e3fc1fea11097aa21f12c831fec53da88264fbd69e0265eb3d334b18a4e2d3e363f4e1b576f14295a73cd
-> 8ece5b68e80991230b7ac36c6836e93f3d57e42cb91827cb2f03f3c79e46e340149e5da84b0775a65cc967422da3a33067dd24e7b1bd4abbf7fa3846678246d758d7aa2fc7aa0c4d71fe5f70359dfc008b1d855b976b20919bc7b61d413932d8f615622887b32ae5cb2c633d34b8b922bcde16f2eac234e4f64440922cf4e
-> c569bb78b34f09d5e8e5bb66b68de2627bbd1a3392aa028407040b8b7579332062f6b97e2ce3fa6e3b97e0df675175b49c7032225618b37c07cb6eb2c46cf34e27e71761f9283197e90481689c7aaf204be9fce43c8fa279389f442cb3262c09a84a278d01afe1aa119f5c4b41dbc2100d48514e9e2b5b6ab617bcefaaca1
-> e8739b821b17fe3a3923f30f4eb571529dc92192bcd81ec6d6be86fd494b6948b96d42b85dd59c38ccd5b0dad1197621380507df412f5ba8c6cc55f7565570b57b622b2a3ebc2b1a7687f8e66a802cc96dc05b0f44bc5a8612b39f860eb8f20b9fa2fca9cef7403475d4e8deb8821ae29dee6d0477d5fee0e4d8a302de9f4
-> af09c8f98a4e39869f8ecc886c428b74a0100bfabdafeda340b9c512949f2323c73b855dcca44e695b7f9d5d14005e19a0bd2ebba402884fd225e54503b3d3f81bab1cc932a5dd5c93a5807d9b9ca15dd0c1e2764358eb0aaca5287303810d295298b3de8021d72db6cad27486a52881f25a2d2195322e85e1a5b4443049c
-> 3ae47ee11666d63f6b7ff10032e2edc28cb2c4b0ebdd1c0629557be9f1277d9b3a6bac06f0b21adb819b8e5cee5c2f2c8cec4846207aba489f029e6ccd549ca9f2a09497704b65324cb2b144ed450f76e6b00aee0b658ee38bc2df2b0400010000010a216c
+XAA00000000000000015851f42d4c957f2e190380fc9abaac458c6783158e6f83249baf03f7f8c7e7b230925614008409f57b70d1a51fbf4b17ef853445b6ae1ce59314163a96cf2e76b3d3fbe1c3fab66db0e0a380f62e228d520a120bba7c042edd91e142b13b0d4ffeed2452c0360a6930e53714205c6ab05e8e70fde19c
+> 10ff84d5891460b2feb62f49f5fd7a9611b5d57c84ca0982e7e360123aa3126ae2736b5d1e46e77a5c1edb7f4a50364092880709d88920f3b785bb96a629ff4b3d78de920e8533bb548a0f9ccb49e69ad32e85ef8b48e9c0f13095aa0a7908ac33e52cef59d1bd77b8b7f2f58c8c893141488d08dbffd1b3af4ded8517837
+> d890202212b68e77fa8d94dbf784d588a4c65aaae95b05940a436aa020d621783c2f3abed704a5d76adaa33352fbc5851e4ba9587bb4ddcb27db7570ab99fe1ae8565181581e31ed191ad6019e36984847e1a09ef9cfebaac520abf30e91c490d2b273726cd00cce00d2dd72a3a133c6e31b7f89630f86fbc595ec61cdaba
+> aec9cce4a343365b9e95500dd7ac9ad9448b7d98cf02e3ebbf9f328f3b73e194faf2487292e9ff7453db22110b973a52bdb517f69d5b0f124c771a3b293d3dc863413d3e3fb46f9b02c850324bc8ba714cef880e0e424abfffa373eb83ccae6c42e7dfe41544dbb5af1d50021a30fdba4315d2c3fc2b1beec546f2778ace7
+> 7a8be4d3e79819f5dd70ee2ecda1a0d50cb0373cc3e79fe08bdbef6520287c1850e72a27ded770fadabf0ad7349a8de06dfda6d964acd90d29aa7846d587c7dfd7a346f75106d1430f1814995774447f89195b004b33de4f0632067aa45d6a3f3ad66928bf1bc0730cb594b1cc0b219c3d33077402d977250901c29c8ecd9
+> 56dac7e7ff88ca476381d8854a22489ed760d2ab8298a54492f42b53f52646cd3dc60f0fbf5623b62705246b2ec99152f02158ed254039bf91dd5cbbd35a6a622da388f26b8a5337cebd0ad8499bea033ac977c07b7e22598395ba5ab20330ff99b50f207f1e1fd4fc55466059a4c2fa4e2cdbf4e59ccd2278ddc445efb36
+> c851ef3dd0e7e338f93abda27a0f7d92a3769727b7e99f5b6b263becb597002ead91e6b54acf2bc705b539a63d98fd3e56380e2d4400114f09ff86ed8013b6d2effbfb6077dc52c46b3c59dbecb50df3c859a0d1a4ff8421df7fd4c33a89c14cf7b9ddd97de236d0083a48eeae3e47e1619cfe6631b98d8482cb8cac44021
+> 2f01b10ab27d10484a19e6a4d6e7f8d2bda7de052e5f2d24a8a61d6dac5eb166ee968b232c63100af0ecb54ac3638ff32067456d5601631a80e36952aa3260d50091bec9f3b3dd4192600a4a6c75b5b59c590d964a0b94e0a49b959b1cc82789024305a189aa5d4bb941b617a369efe4ecd920c992daac9cf90b1d993aeab
+> d84c0d6c434c744f9c9affb4d9a533d87e16b6009b60faba80eec5770521e6c809c46ed8c90ec09b9c761b54cbd4c23f93384913a93003179f7f04f5d57205a9232e915398dbd61c28e17835f71f91db8b56e3ae15645077c57f579e96f14a05711a88652b100689e8791ca2202e4409b4c86682c181e1726d2ea2449fbd3
+> 8e5705a59863efd7ec975493696fc2141ea36b121c8cb84977ffe194f6b4e84363d32d81a89080c4080c13fa8f6a9b0bc0b927b7cddcd800325ee4a6529ba82fc827e6aded4e2432067d82876af39a70fd19834b5a4f06ed32d1e0dc1322cd7f0830eef73b94d8d998482ae863263f973a2a8491c91d8907bfe54a46bdb61
+> 2439f49004fa54214e1ff015865cb390fe236b03de300a55491d5ffda41f8a2aba93a1d32d092496a7c6559d0e3ecd281fc5b79455c4ebbf5b52e57b9f49e2a10d26635445324dbd6030e16b95d2026507f333379da0229f9edaf0eb3ac39b1471b9160727f72f49d959a20ff07c0bcefdd2c73439124127257f3f3eb4cc6
+> aa50438a54d894c1bd1876de8070ae52bb5225f15ef486508f3d973c0ca8389ba7bdd41530d35e360d9ecabcf5cf1bf2560964a8ed40054578d9b2ce3fed3bbecdd2edaa8e8d0ebcec59862eb7066cc7ba1dda62d6dc0be19730af245cb3e39144fd28fd1140a545aea72edf64444f1324ecdfd3e6a984386a404696cd655
+> 70232096136a36611b0b51e66e6ee4d1edb907c80b49a68290910d33ef360fd9b07be91f9079d1a181ffb903c92dd16072688d660bea6d1b23d06f001ba16488335a677849e300bb649c7573c430f35e23295b881cd170ffe50cca0a1d93529b066ffbfbe6ebee45a9e433ba4bffd804511384b1a12597546cfa4e622a6c4
+> 957e5bce4c31e38d4111d6d77fccf9e3dc44ee6d398c7b36bf417dccbe6c20d3e3a751ad9ed7379484ca2d958109b1bc010aed5e13dfc59011385e00c1cf7a94b38a86d54eb59c7b4acbde74ad67590b7f4b2668962f89f27bf6577ac55d938f8889e8f1f39128edd7a8016425bc0019a62d58f6b6f507fe8448ae1acabfb
+> 791c31c831560719dcb44d8f5bc1e286556df0cf618ca95b6beff552b18ed8b155b3d11f9a027f2238f56dfbf899fa898776c16a2f8fa499b1e4e56acd61426066398f30d5604e005ecc1650304546d62f30c94849b83bb78d7c985b5fa3fbca4584b1f058182e58b271843f7971568b129517e711c556d2dc932a2c6d81d
+> d77067cf8f9c124c5e4a4ce9255e183e946042b5ccf254493554e89c2245b42ff823cdc0f40cc2b4dc45d302247d0ce2d85bfa6b99ee699731aa6783077f968c284873f1bfd9f9d12e77cf0ef3d715ae62a675505eb9d56cddf2971cfb54c37343e57cb42425139139747e84387324ef7a6a8d8c2a18a9de12651f5894acd
+> e43c30c278c8506d60cfb28e980e9ddc9d8b80e4a701fb454b70abbfe3aacdd4b93ef1cef89a71dd65f8df4c866906b4636938b7e30ee157e1450278ea0d94a2afba6e7bcb46ee067b4b40a6903030e9aa05e06c8aa3ef9bf4b2190bfa1f7aa4164623bfa6d3eae49791f3b181c625bb29e97cc414bf6ec82fbe36397803b
+> 138c37e59292af5162308691beb696f4137e2007099fc5bdf1dbc2e8af08c5d6298f581d9647c3bdc2adeef57031ea0a8d4e423b108179c50a9c86820299f147c1ad99f667c8b18dddd8d9b00b1d6ee12668d48eab704fe9d6e6e79ad38a1cff625936437752c110f0eb1e7ec3045445ef695a4566ce062d2d90b4327f971
+> 0f0f29982c22477baec8b5cca8deb5a3a6e22a464cb1997a7bff17a834908e7c62078bf3f8fddff519bfd5aac9fcf30e87d2ff4a8eb1046eafa79614f7add429ade748b09f321de613cf367b422ec2b9369e34128d92caa9b5a30ee218c20ea2fa6acfe61f5aed227f46bcf26fd193d2e58266092d32d51b668600b3c0b1d
+> b2693a59c12ca30718fb1d871a3d7417d52458a6c03057b6596c0e90ef9553e7d787910c3394137ccb6e1074ced62cc5790d91bd0e4f3d8d3e93f8af7cc8c4d038a186dd2da9e17854b034b44b3d20a354b930e90bd7407f59b89c6d2600010000013830cb
 
 . 
 . edm explore x, missingdistance(1)
@@ -809,10 +833,10 @@ Missing values are assumed to have a distance of 1 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99709         .012753 
+                 2               1          .99765         .012369 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . edm xmap x l.x, allowmissing
 
@@ -885,7 +909,7 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        5        1       .87368      .056575       .05884      .010819
+        5        1       .92791      .048691      .048504      .014999
 ----------------------------------------------------------------------
 Note: Results from 5 runs
 Note: Actual E is higher than the specified E due to extras
@@ -902,11 +926,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 4               1          .92587          .09195 
+                 4               1          .89192         .090264 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+3
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .27
 
 . 
@@ -919,10 +943,10 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .99551     .0052791      .013544     .0051015
-  Est. mean 95% CI   [   .99304,    .99798 ]   [  .011156,   .015932 ]
-2.5/97.5 Pc (Est.)   [   .98516,    1.0059 ]   [ .0035452,   .023543 ]
-2.5/97.5 Pc (Obs.)   [   .98028,    .99864 ]   [ .0095148,   .027757 ]
+        2        1       .99591     .0038534      .013209     .0028662
+  Est. mean 95% CI   [    .9941,    .99771 ]   [  .011868,   .014551 ]
+2.5/97.5 Pc (Est.)   [   .98835,    1.0035 ]   [ .0075917,   .018827 ]
+2.5/97.5 Pc (Obs.)   [   .98653,     .9989 ]   [ .0082875,   .019012 ]
 ----------------------------------------------------------------------
 Note: Results from 20 runs
 Note: Number of neighbours (k) is set to E+1
@@ -937,14 +961,14 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping        Lib size        Mean rho       Std. Dev.
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .37401         .066206
-  Est. mean 95% CI                    [   .34303,      .405 ]
-2.5/97.5 Pc (Est.)                    [   .24425,    .50377 ]
-2.5/97.5 Pc (Obs.)                    [   .20097,    .46089 ]
-   x ~ x|M(y)              50          .85786         .020945
-  Est. mean 95% CI                    [   .84806,    .86766 ]
-2.5/97.5 Pc (Est.)                    [   .81681,    .89891 ]
-2.5/97.5 Pc (Obs.)                    [   .82105,    .89197 ]
+   y ~ y|M(x)              50          .37264         .044375
+  Est. mean 95% CI                    [   .35187,    .39341 ]
+2.5/97.5 Pc (Est.)                    [   .28567,    .45961 ]
+2.5/97.5 Pc (Obs.)                    [    .2994,     .4715 ]
+   x ~ x|M(y)              50          .84089         .034276
+  Est. mean 95% CI                    [   .82485,    .85693 ]
+2.5/97.5 Pc (Est.)                    [   .77371,    .90807 ]
+2.5/97.5 Pc (Obs.)                    [   .75606,     .9097 ]
 ---------------------------------------------------------------
 Note: Results from 20 replications
 Note: The embedding dimension E is 2
@@ -1127,17 +1151,17 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1            .999        .0074196 
+                 2               1          .99891        .0079384 
 --------------------------------------------------------------------
 
 Copredictions
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .95758          .70131 
+                 2               1          .95519          .69511 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm explore x, predict(predicted_x) copredict(predicted_y_from_mx) copredictvar(y) full
@@ -1277,17 +1301,17 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99816        .0079605 
+                 2               1          .99891        .0079384 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . ereturn display
 ------------------------------------------------------------------------------
              |              Jackknife
              | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
 -------------+----------------------------------------------------------------
-           x |   .9981602    .013791    72.38   0.000     .9709658    1.025355
+           x |   .9989099   .0008814  1133.27   0.000     .9971718    1.000648
 ------------------------------------------------------------------------------
 
 . 
@@ -1345,10 +1369,10 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1        .9841      .019881       .01627     .0092308
+        2        1       .98175       .02318      .018023       .01006
 ----------------------------------------------------------------------
 Note: Results from 2 runs
-Note: Number of neighbours (k) is adjusted to 49
+Note: Number of neighbours (k) is adjusted to 51
 Note: 2-fold cross validation results reported
 
 . 
@@ -1362,10 +1386,10 @@ Missing values are assumed to have a distance of .25 with all values.
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1        .9833      .047649      .015903      .019961
+        2        1       .98325      .040737      .015122      .016545
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is adjusted to 89
+Note: Number of neighbours (k) is adjusted to 91
 Note: 10-fold cross validation results reported
 
 . 
@@ -1519,18 +1543,18 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1           .9953         .011088 
-                 3               1          .99447         .013158 
-                 4               1          .99263         .015718 
-                 5               1          .99137         .017481 
-                 6               1           .9842         .026615 
-                 7               1          .98151          .03038 
-                 8               1          .97929         .033132 
-                 9               1          .97753         .035106 
-                10               1          .96492         .044269 
+                 2               1          .99809        .0092387 
+                 3               1          .99789         .011108 
+                 4               1          .99657         .014828 
+                 5               1          .99468         .017975 
+                 6               1          .98955         .022197 
+                 7               1          .98825         .024846 
+                 8               1          .98568         .028762 
+                 9               1          .98415         .029228 
+                10               1          .97962         .030217 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm xmap x y, e(10) k(5)
@@ -2061,11 +2085,11 @@ Additional variables in the embedding: u1 (+ time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1          .28061          .21082 
+                 7               1         .033161          .22055 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+5
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .37
 
 . 
@@ -2077,10 +2101,10 @@ Missing values are assumed to have a distance of .26 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .98651         .026572 
+                 2               1          .98519          .02994 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . format pred %8.0g
@@ -2092,25 +2116,25 @@ Note: Random 50/50 split for training and validation data
      |---------|
   1. |       . |
   2. |       . |
-  3. | .887863 |
+  3. |       . |
   4. |       . |
-  5. | .847633 |
+  5. |       . |
      |---------|
   6. |       . |
-  7. | .825099 |
+  7. |       . |
   8. |       . |
   9. |       . |
  10. |       . |
      |---------|
  11. |       . |
- 12. | .546854 |
+ 12. |       . |
  13. |       . |
- 14. | .378829 |
+ 14. |       . |
  15. |       . |
      |---------|
- 16. | .479724 |
+ 16. |       . |
  17. |       . |
- 18. | .326262 |
+ 18. |       . |
  19. |       . |
  20. |       . |
      |---------|
@@ -2118,9 +2142,9 @@ Note: Random 50/50 split for training and validation data
  22. |       . |
  23. |       . |
  24. |       . |
- 25. |  .89335 |
+ 25. |       . |
      |---------|
- 26. | .316258 |
+ 26. |       . |
  27. |       . |
  28. |       . |
  29. |       . |
@@ -2134,71 +2158,71 @@ Note: Random 50/50 split for training and validation data
      |---------|
  36. |       . |
  37. |       . |
- 38. | .887882 |
- 39. | .383334 |
- 40. |  .82487 |
+ 38. |       . |
+ 39. |       . |
+ 40. |       . |
      |---------|
  41. |       . |
  42. |       . |
  43. |       . |
  44. |       . |
- 45. | .536141 |
+ 45. |       . |
      |---------|
- 46. | .887779 |
- 47. |       . |
- 48. | .876867 |
+ 46. | .870027 |
+ 47. |  .36477 |
+ 48. | .861942 |
  49. |       . |
  50. |       . |
      |---------|
  51. |       . |
- 52. |       . |
+ 52. | .355754 |
  53. |       . |
  54. |       . |
- 55. |       . |
+ 55. | .365836 |
      |---------|
- 56. | .822033 |
- 57. | .491088 |
- 58. | .872679 |
- 59. | .368355 |
- 60. |       . |
+ 56. | .833957 |
+ 57. | .491871 |
+ 58. | .856762 |
+ 59. | .404888 |
+ 60. | .826131 |
      |---------|
- 61. |       . |
- 62. | .887934 |
- 63. |       . |
+ 61. | .542544 |
+ 62. | .880371 |
+ 63. | .368416 |
  64. |       . |
  65. |       . |
      |---------|
  66. |       . |
  67. |       . |
- 68. |       . |
+ 68. |  .88618 |
  69. |       . |
  70. |       . |
      |---------|
  71. |       . |
- 72. | .887951 |
- 73. |       . |
+ 72. | .870023 |
+ 73. | .359635 |
  74. |       . |
- 75. |       . |
+ 75. | .555887 |
      |---------|
- 76. |  .88787 |
- 77. |       . |
+ 76. | .870025 |
+ 77. | .369637 |
  78. |       . |
  79. |       . |
  80. |       . |
      |---------|
- 81. |       . |
- 82. | .494794 |
- 83. |       . |
- 84. |       . |
- 85. | .811415 |
+ 81. | .826876 |
+ 82. | .518037 |
+ 83. | .883865 |
+ 84. | .351064 |
+ 85. |  .82658 |
      |---------|
- 86. | .532808 |
+ 86. | .560973 |
  87. |       . |
  88. |       . |
  89. |       . |
  90. |       . |
      |---------|
- 91. | .810597 |
+ 91. | .826874 |
  92. |       . |
      +---------+
 
@@ -4504,11 +4528,11 @@ Additional variables in the embedding: u1 (+ time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1         .058007          .55539 
+                 7               1          .20328          .41537 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
 . set seed 1
@@ -4521,11 +4545,11 @@ Additional variables in the embedding: u1 (+ time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1         .058007          .55539 
+                 7               1          .20328          .41537 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
 . 
@@ -4574,11 +4598,11 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1         .015448          1.5812 
+                 7               1          .34151          .52986 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .65
 
 . edm explore x, e(3) extra(u1) allowmissing dt alg(smap) dtsave(mata) mata
@@ -4590,11 +4614,11 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 7               1         -.19225          .35209 
+                 7               1          .34151          .52986 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .65
 
 . 
@@ -4655,11 +4679,11 @@ Additional variable in the embedding: i.y
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 3               1          .93324         .067038 
+                 3               1          .97154         .038502 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+2
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . edm xmap x y, extra(i.y)
 
@@ -4682,13 +4706,13 @@ Additional variables in the embedding: i.y(e) x L.x
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 6               1          .89856          .17278 
-                 8               1          .88688          .18595 
-                10               1          .91309          .18711 
+                 6               1           .8596          .15223 
+                 8               1           .8332          .16946 
+                10               1          .86402          .17018 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+4
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . // Having factor variables like the following probably doesn't make sense;
@@ -4700,10 +4724,10 @@ Univariate mapping with i.x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1           .9942         .017675 
+                 2               1          .99237          .02051 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . edm xmap i.x i.y
 
@@ -4752,32 +4776,32 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              10          .44913          .15662 
-   y ~ y|M(x)              15          .21959          .20041 
-   y ~ y|M(x)              20          .47025          .15967 
-   y ~ y|M(x)              25          .38507          .16434 
-   y ~ y|M(x)              30          .57347          .14021 
-   y ~ y|M(x)              35          .44151          .15088 
-   y ~ y|M(x)              40          .35238          .15252 
-   y ~ y|M(x)              45          .40833          .14961 
-   y ~ y|M(x)              50          .38744          .16073 
-   y ~ y|M(x)              55          .51865          .14296 
-   y ~ y|M(x)              60          .48668           .1545 
-   y ~ y|M(x)              65          .47603          .15386 
-   y ~ y|M(x)              70          .43908          .15627 
-   x ~ x|M(y)              10          .63241          .13969 
-   x ~ x|M(y)              15          .60091          .16047 
-   x ~ x|M(y)              20          .65844          .12909 
-   x ~ x|M(y)              25          .55389          .14499 
-   x ~ x|M(y)              30          .71109          .11504 
-   x ~ x|M(y)              35          .78962         .097346 
-   x ~ x|M(y)              40          .80792          .10201 
-   x ~ x|M(y)              45          .79095          .10042 
-   x ~ x|M(y)              50          .84463         .084754 
-   x ~ x|M(y)              55          .86584         .081631 
-   x ~ x|M(y)              60          .87021         .076437 
-   x ~ x|M(y)              65          .87283         .078708 
-   x ~ x|M(y)              70          .88185         .075508 
+   y ~ y|M(x)              10          .20492          .20405 
+   y ~ y|M(x)              15          .11316          .19095 
+   y ~ y|M(x)              20          .15244          .19307 
+   y ~ y|M(x)              25          .18469           .1942 
+   y ~ y|M(x)              30           .2577          .18462 
+   y ~ y|M(x)              35          .28964          .17071 
+   y ~ y|M(x)              40          .29208          .16944 
+   y ~ y|M(x)              45          .33099          .16271 
+   y ~ y|M(x)              50          .39233          .15621 
+   y ~ y|M(x)              55          .41628          .15253 
+   y ~ y|M(x)              60          .37522          .15338 
+   y ~ y|M(x)              65          .36816          .15423 
+   y ~ y|M(x)              70          .40495          .15341 
+   x ~ x|M(y)              10          .43575          .16522 
+   x ~ x|M(y)              15          .54725          .15811 
+   x ~ x|M(y)              20          .68514          .12832 
+   x ~ x|M(y)              25          .71176          .12161 
+   x ~ x|M(y)              30          .73487          .11819 
+   x ~ x|M(y)              35          .77774          .10446 
+   x ~ x|M(y)              40          .80807          .09767 
+   x ~ x|M(y)              45          .83358         .089591 
+   x ~ x|M(y)              50          .83503         .090233 
+   x ~ x|M(y)              55          .85401         .082386 
+   x ~ x|M(y)              60          .87652         .074851 
+   x ~ x|M(y)              65          .88086         .074876 
+   x ~ x|M(y)              70          .87951          .07579 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 4 (including 2 extras)
 Note: Embedding includes the delta of the time variable with a weight of .65 and .59
@@ -4794,8 +4818,8 @@ Additional variables in the embedding: v(e) u
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)              50          .16865            .362 
-   x ~ x|M(y)              62          .11298          .46876 
+   y ~ y|M(x)              50          .22838          .39096 
+   x ~ x|M(y)              62          .21228          .36001 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 5 (including 3 extras)
 
@@ -4835,114 +4859,114 @@ beta2_b5_rep1   double  %10.0g                u predicting x or x|M(y) S-map coe
      |-----------------------------------------------------------------------------------------------------------------------------------|
   1. |        .          .          .          .          .          .          .          .          .          .          .          . |
   2. |        .          .          .          .          .          .          .          .          .          .          .          . |
-  3. | -8.1e+00    1.0e+01    1.1e-02    2.8e+00   -2.7e+00    1.2e+00   -6.5e+00    3.3e+00    7.3e+00   -3.2e-01    4.0e-01   -4.2e-02 |
+  3. | -7.0e-01    1.5e+00   -1.9e-01    5.8e-02   -4.1e-01    6.5e-01   -5.9e+00    3.3e+00    7.2e+00   -7.9e-02   -5.7e-01   -7.8e-01 |
   4. |        .          .          .          .          .          .          .          .          .          .          .          . |
-  5. |        .          .          .          .          .          .   -1.3e+01    1.2e+01    8.7e+00   -3.6e-01    1.5e-01    4.5e-01 |
+  5. |        .          .          .          .          .          .   -9.5e-01    1.8e+00    1.5e+00   -5.6e-01   -1.9e-01   -8.8e-01 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
-  6. | -4.3e+00    2.6e+00    3.7e+00   -4.4e-02    9.8e-01    7.4e-01   -4.2e+00    2.4e+00    4.4e+00    5.7e-01    1.5e+00   -2.8e-01 |
-  7. |  5.0e+00   -6.1e+00    5.6e-01    1.0e+00   -5.2e-01    1.6e-01    7.7e-01    1.2e-01   -1.8e-01    3.9e-01   -1.3e-01   -4.0e-01 |
-  8. |  5.5e+01   -2.4e+01   -5.5e+01    2.2e+00   -1.8e-01    2.2e+00   -4.5e+00    3.4e+00    5.4e+00    1.4e-01   -4.0e-01   -4.7e-01 |
+  6. |  1.7e+01   -7.9e+00   -1.5e+01   -5.2e-01    3.6e-01    8.1e-02   -3.1e+01    1.4e+01    3.4e+01    3.9e-02    2.5e-02    8.6e-02 |
+  7. | -7.0e-01    8.5e-01   -7.8e-01    6.7e-01    8.5e-01    1.8e-01    7.3e-01    7.4e-01   -5.6e-01   -3.5e-01    5.4e-02   -2.2e-01 |
+  8. | -2.0e+02    7.6e+01    2.0e+02   -5.0e-01   -1.1e+00   -2.8e-01    9.6e-01    8.6e-01   -1.6e-01   -4.8e-01   -8.5e-01   -5.0e-01 |
   9. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 10. |        .          .          .          .          .          .    7.0e+00   -2.4e+00   -7.0e+00    2.0e-01    1.4e+00   -1.0e+00 |
+ 10. |        .          .          .          .          .          .    7.2e-02    3.6e-01   -8.6e-01    1.2e+00    1.0e+00   -1.9e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 11. | -5.6e-01    1.6e+00   -3.8e-01    2.5e-02    6.3e-02    1.9e-01   -6.2e-01    1.7e+00   -1.7e+00    3.9e-01   -2.8e-04    1.3e+00 |
- 12. |  4.8e+00   -1.7e+00   -3.8e+00   -3.2e-01   -6.8e-01    5.2e-01   -1.2e+01    7.4e+00    1.4e+01   -9.7e-02   -1.5e-01   -1.2e+00 |
- 13. | -2.6e+00    2.7e+00   -1.3e+00    1.9e+00   -1.4e-01    4.6e-01   -1.5e+00    6.7e+00   -4.2e+00    2.1e-01   -1.2e+00   -1.4e-01 |
- 14. |  7.2e+00   -2.5e+00   -7.2e+00   -1.9e-02   -5.0e-02    8.3e-01    4.1e+00    6.1e-01    4.7e-01   -3.8e+00   -1.9e-01   -1.7e+00 |
- 15. |  6.0e+00   -3.2e+00   -1.2e+00   -3.0e-01   -2.1e+00   -4.3e-01   -4.5e+00    4.3e+00    5.8e+00    2.2e-01   -1.1e+00   -1.0e+00 |
+ 11. | -2.3e+00    4.0e+00   -1.7e+00   -3.4e-01    3.0e-01    5.9e-01   -1.2e+00    2.3e+00    6.6e-02   -2.7e-01   -7.6e-02    1.6e-01 |
+ 12. |  5.3e+00   -2.9e+00   -2.9e+00   -1.3e+00    1.3e-01   -8.6e-01   -1.6e+01    8.1e+00    1.7e+01   -8.0e-03   -2.1e-01   -1.0e-01 |
+ 13. | -1.5e+00    2.3e+00   -4.9e-01   -4.9e-02    6.3e-01    3.9e-01   -8.8e-01    2.7e+00   -1.8e+00   -2.9e-02   -2.9e-01    9.8e-01 |
+ 14. | -3.9e+00    3.5e+00    2.6e+00   -3.3e-01    5.9e-01    5.6e-01    1.2e+00   -3.5e-02   -8.6e-01    6.5e-01    3.9e-01   -5.7e-01 |
+ 15. | -9.1e+01    2.0e+02   -1.8e+02   -7.6e+00    2.2e+00   -3.9e+00   -1.1e+01    8.8e+00    9.0e+00   -2.6e-03    1.8e-01   -2.4e-01 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 16. | -7.3e+01    3.0e+01    7.2e+01    3.3e-01   -1.9e+00    8.8e-01    1.8e+01   -2.1e+01   -6.9e+00   -2.2e+00   -4.8e+00    6.6e+00 |
- 17. | -2.8e+00    3.8e+00   -1.1e-01    1.4e+00   -1.4e+00    1.4e+00   -7.7e+00    5.7e+00    6.4e+00   -5.2e-01   -3.4e-02    1.1e+00 |
- 18. | -4.9e+00    3.6e+00    4.9e+00   -2.0e-01    7.0e-01   -8.0e-01   -2.3e+00    3.5e+00    1.5e+00   -1.6e+00    1.7e+00   -9.9e-01 |
- 19. | -6.3e-02    4.3e-01    4.3e-02    8.4e-02    5.7e-02    8.7e-01    2.7e+00   -2.1e+00    1.2e+00    8.2e-01   -2.3e+00   -1.8e+00 |
+ 16. | -1.2e+02    4.5e+01    1.1e+02    4.8e-01   -1.1e-02    4.4e-01   -9.4e+00    7.8e+00    7.9e+00   -1.0e-01    3.1e-02   -3.3e-01 |
+ 17. | -3.9e+00    6.8e+00   -3.1e+00    1.3e-02   -1.8e-02    3.3e-01   -1.9e+00    2.3e+00    2.1e+00   -8.1e-01   -1.5e-01   -7.9e-02 |
+ 18. | -3.2e+01    1.3e+01    3.3e+01   -1.8e+00    2.3e-01   -3.7e-01   -6.1e+00    3.6e+00    5.5e+00    7.4e-01   -1.5e-01    4.1e-01 |
+ 19. | -1.6e+00    2.0e+00   -6.9e-01    6.1e-01    5.1e-01    5.6e-01    2.6e+00    7.7e-01    1.1e+00   -5.4e+00    4.3e-02   -3.2e-01 |
  20. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  21. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 22. | -4.8e+01    2.0e+01    4.8e+01    7.6e-02   -9.4e-01   -2.7e-01   -9.2e+00   -4.2e+00   -2.0e+00    2.6e+00    1.1e+01    4.3e+00 |
- 23. |  7.7e-01   -4.0e-01    3.1e-01    3.9e-01   -4.2e-01    3.5e-01    4.7e-01    8.2e-01   -7.7e-01    3.0e-01    3.8e-01   -5.3e-01 |
+ 22. | -6.7e+01    2.7e+01    6.6e+01   -1.9e-01    4.5e-01    2.5e-01    9.6e-01    6.3e-02    5.2e-01   -1.3e+00    6.3e-01   -1.7e-01 |
+ 23. |  4.0e-01   -1.4e-01   -3.0e-01    2.7e-01    4.2e-01    3.0e-01    5.0e+00   -1.4e+01    7.8e+00    4.4e+00    1.6e+00   -4.4e-01 |
  24. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 25. |        .          .          .          .          .          .    3.9e+00   -5.4e+00    1.6e+00    1.5e+00   -2.9e+00    3.6e-02 |
+ 25. |        .          .          .          .          .          .   -1.4e+00    1.9e+00    2.1e+00   -8.6e-01    2.9e-03   -6.0e-01 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 26. | -4.3e+01    1.6e+01    4.3e+01    5.6e-01   -7.1e-01    1.7e-01   -2.4e+01    1.1e+01    2.7e+01    1.4e-01   -1.7e-01   -5.7e-02 |
- 27. | -3.0e-01    1.2e+00    6.7e-01    9.3e-01   -7.5e-01   -3.4e-01    8.7e+00   -4.7e+00    2.1e+00    2.3e+00   -5.0e+00   -4.2e+00 |
+ 26. | -2.6e+02    1.0e+02    2.5e+02    2.2e+00   -9.5e-01    1.4e+00   -2.0e+00    1.3e+00    4.1e+00   -1.3e+00   -4.5e-01   -1.4e+00 |
+ 27. | -6.7e-01    3.2e+00   -2.6e+00   -4.6e-01   -2.5e-01   -1.9e-01    1.7e+01   -1.3e+01   -1.0e+01    2.7e+00   -1.8e-01   -1.6e+00 |
  28. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 29. |        .          .          .          .          .          .   -5.8e+00    5.8e+00    6.9e+00   -1.8e-01   -2.8e-01   -1.9e+00 |
+ 29. |        .          .          .          .          .          .   -5.2e+00    3.1e+00    6.6e+00   -8.6e-01    4.8e-01   -2.7e-01 |
  30. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  31. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 32. |        .          .          .          .          .          .    1.3e+00    9.4e-03   -3.4e-01    5.0e-01   -3.7e-01   -8.0e-01 |
- 33. | -1.0e+02    3.8e+01    1.0e+02    1.6e-01   -6.4e-01    2.3e-01   -6.5e+00    4.8e+00    5.7e+00    3.0e-01   -1.5e-01    1.4e-01 |
+ 32. |        .          .          .          .          .          .    3.2e+00   -5.0e+00    2.5e+00    1.6e+00    1.0e+00   -2.3e+00 |
+ 33. | -5.5e+01    2.1e+01    5.4e+01    1.5e-01    5.3e-01    1.5e-02   -6.3e+00    5.9e+00    6.2e+00   -5.7e-01   -5.5e-01   -8.5e-01 |
  34. |        .          .          .          .          .          .          .          .          .          .          .          . |
  35. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  36. |        .          .          .          .          .          .          .          .          .          .          .          . |
  37. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 38. |  5.2e+00   -5.6e+00   -4.7e-01    5.9e-01    2.7e-01   -2.9e-01    1.6e-01    9.5e-01   -1.8e-01    2.6e-01    8.5e-02   -4.2e-01 |
- 39. |  1.7e+01   -7.2e+00   -1.6e+01    2.8e+00   -2.6e-02   -1.4e+00    1.8e+01   -1.1e+01   -1.7e+01    6.6e+00    4.1e-01   -4.3e+00 |
- 40. |  1.1e+01   -8.0e+00   -2.6e+00   -2.6e+00    9.5e-02   -3.4e+00   -1.8e+00    3.1e+00    4.9e-01   -4.4e-01   -8.9e-02   -6.1e-02 |
+ 38. | -1.1e+00    1.4e+00   -3.5e-01   -2.7e-01    7.2e-01    8.9e-01    1.4e+00    4.3e-01   -1.2e+00    5.8e-01   -5.7e-01   -4.2e-01 |
+ 39. | -1.0e+02    3.8e+01    9.9e+01    4.1e-01    1.5e-01    8.8e-02    1.9e+00    1.3e+00   -6.0e-01    1.6e+00   -1.9e+00   -1.8e+00 |
+ 40. |  1.0e+00    1.1e+00   -1.9e+00   -4.6e-01    3.2e-02   -5.6e-01    2.7e+00    4.5e-01    3.1e-01   -8.2e-01    8.9e-02   -2.7e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  41. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 42. |        .          .          .          .          .          .    9.1e-01    1.7e-01   -6.9e-01    1.3e-01   -8.9e-02   -5.1e-02 |
- 43. | -3.2e+01    1.3e+01    3.1e+01    6.4e-01    2.3e-01    5.0e-01    1.5e+00   -1.6e-01   -5.7e-01    5.2e-01    2.8e-01   -1.1e+00 |
+ 42. |        .          .          .          .          .          .    1.9e+00    1.1e-01   -2.3e+00   -8.7e-01   -1.8e-01   -2.1e-01 |
+ 43. | -4.2e+01    1.6e+01    4.1e+01    7.4e-02    9.7e-01    5.1e-01   -8.0e-01    1.6e+00    2.0e+00   -7.5e-01   -1.3e+00   -3.5e-01 |
  44. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 45. |        .          .          .          .          .          .   -1.8e+02    1.3e+02    1.1e+02    9.3e+01    2.8e+01   -4.2e+01 |
+ 45. |        .          .          .          .          .          .   -1.8e+00    1.7e+00    3.1e+00   -4.9e-01   -3.7e-01   -1.1e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 46. | -2.7e+00    2.6e+00    1.1e+00    2.1e+00   -6.9e-01    1.1e+00   -4.3e+00    4.5e+00    3.3e+00   -1.1e+00    4.8e-01   -3.5e-01 |
- 47. | -6.7e+00    4.2e+00    6.0e+00    4.7e-01   -7.4e-01    6.1e-01    4.2e-01    9.0e-01    9.8e-01   -2.1e+00   -2.6e-01   -1.0e+00 |
- 48. | -1.5e+00    2.7e+00   -1.3e-02    3.3e-01   -1.5e+00    5.6e-01   -3.5e+00    4.9e+00    2.6e+00   -5.0e-01   -1.2e+00   -9.1e-01 |
- 49. | -1.3e+02    5.0e+01    1.3e+02    5.3e-01    3.9e-01   -4.9e-02   -3.4e+00    1.8e+00    3.9e+00   -1.6e-01   -4.8e-01    3.5e-01 |
+ 46. | -2.9e-01    1.6e+00   -4.5e-01   -1.5e-01    4.5e-01   -5.7e-01   -2.6e+00    2.1e+00    1.7e+00    1.0e+00    3.4e-01   -5.9e-01 |
+ 47. |  9.6e+00   -3.5e+00   -8.4e+00   -4.6e-01   -9.8e-01    1.1e+00    2.6e+00   -6.1e-02   -1.3e+00   -6.1e-01   -7.8e-01   -1.8e-01 |
+ 48. | -9.7e-01    2.7e+00   -2.2e-01   -4.2e-01    5.4e-01   -8.8e-01   -4.4e+00    1.5e+00    3.3e+00    8.3e-01    1.9e+00    6.2e-01 |
+ 49. | -1.0e+01    8.6e+00    1.4e+01   -5.9e+00   -1.8e+00    1.7e+00   -6.2e+00    2.8e+00    6.3e+00    7.8e-01    2.7e-01   -1.8e-01 |
  50. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  51. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 52. |        .          .          .          .          .          .   -2.9e+01    1.3e+01    3.1e+01    3.7e-02   -1.9e-01    2.4e-04 |
- 53. |  2.8e+00   -2.4e-01   -2.3e+00   -2.8e-02   -6.2e-01   -6.7e-01   -3.1e+00    9.9e+00   -6.3e+00    1.7e+00   -2.0e+00   -5.5e-01 |
+ 52. |        .          .          .          .          .          .   -1.1e+01    5.0e+00    1.2e+01    7.3e-02    4.6e-02    3.6e-02 |
+ 53. | -3.4e+00    5.1e+00   -2.5e+00    9.4e-02    6.5e-01    5.3e-01   -7.8e+00   -4.0e+00    3.5e+00    6.1e+00    1.1e+01   -8.1e-01 |
  54. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 55. | -1.5e+02    5.7e+01    1.5e+02   -1.8e-01   -1.8e-01   -1.1e-01   -4.1e+00    1.6e+00    4.3e+00   -6.8e-01    2.7e-01    1.2e+00 |
+ 55. | -3.1e+02    1.2e+02    3.1e+02   -9.5e-02   -2.4e+00   -6.6e-01   -7.2e+00    5.6e+00    5.0e+00   -2.3e+00    8.0e-01    1.3e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 56. |  2.6e+00   -2.6e+00    2.4e-01   -2.3e-02    2.0e-01    3.3e-01   -1.2e+00    1.6e+00    8.0e-01    7.6e-01   -2.4e-01   -1.6e-01 |
- 57. | -9.5e+01    3.6e+01    9.4e+01   -1.6e-02   -2.8e-01   -1.0e-01   -4.5e+00    1.7e+00    5.1e+00   -7.9e-02   -1.1e-01    7.6e-01 |
- 58. |  1.5e+00    1.3e+00   -3.7e+00    1.8e-01    1.6e-01   -9.6e-01   -1.1e+00    2.9e+00   -7.4e-01   -4.1e-02    6.4e-01   -7.8e-01 |
- 59. | -4.6e+01    1.8e+01    4.5e+01   -1.4e-02   -9.1e-02    5.6e-01    2.6e+00   -1.3e+00   -1.5e+00   -2.7e+00   -3.5e-01    2.2e-01 |
- 60. |  2.8e+00   -1.8e+00   -8.7e-01   -7.9e-01   -4.3e-02    1.7e-01    1.2e+00    4.2e-01   -5.2e-01   -4.0e-01    1.4e-02   -7.2e-01 |
+ 56. | -7.8e-01    2.8e-01    1.5e+00   -1.5e+00    2.2e+00    7.9e-01   -8.8e+00    6.1e+00    7.9e+00   -8.3e-02    4.0e-02    6.8e-01 |
+ 57. | -1.4e+02    5.2e+01    1.4e+02   -2.8e-03   -6.1e-01   -1.9e-01    1.1e+00    9.0e-01   -7.0e-01    2.8e-01   -1.4e+00   -3.9e-02 |
+ 58. | -1.9e+00    4.1e+00   -2.2e+00   -1.5e-01   -5.0e-01    1.1e-01    8.2e-01    2.5e-01   -8.2e-01    1.0e+00    1.4e-01   -1.5e-01 |
+ 59. | -1.3e+00    1.8e+00    9.4e-01    8.1e-01   -6.3e-01    4.4e-01    2.8e+01   -8.2e+00   -2.9e+01    2.5e+00   -4.2e+00    1.8e-02 |
+ 60. |  3.7e+00   -7.1e-01   -2.7e+00   -1.5e+00   -5.9e-01   -1.5e+00    6.8e+00   -3.3e+00   -3.8e+00   -1.2e+00    3.6e-02   -2.8e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 61. | -1.3e+02    4.9e+01    1.2e+02    7.7e-01    4.8e-01    5.5e-02    1.1e+00    1.4e+00   -9.3e-01   -8.2e-01   -6.5e-01   -1.0e+00 |
- 62. | -8.0e+00    6.8e+00    2.4e+00    2.6e+00    1.2e-01    2.7e+00   -8.9e+00    5.1e+00    1.0e+01    8.1e-01   -1.2e+00   -4.5e-01 |
- 63. | -1.4e+02    5.3e+01    1.3e+02    1.0e+00   -2.0e+00    2.1e+00    5.4e-02    1.1e+00   -9.6e-02    2.9e-02    2.6e-01   -2.3e-01 |
- 64. |  7.7e-01    2.1e+00   -2.7e+00   -8.0e-02   -1.1e+00    2.6e-01   -4.9e+00    1.6e+00    6.2e+00   -1.3e-01   -9.6e-01    1.4e+00 |
+ 61. |  4.7e+00   -3.2e+00   -4.9e+00   -3.3e+00    1.5e+00    1.8e+00    5.8e-01    2.7e-01    2.6e-01   -1.8e-01    1.0e-01   -9.1e-02 |
+ 62. | -6.8e-01    1.7e+00    6.3e-01   -7.4e-01   -1.7e+00    9.3e-02   -2.5e+00    1.9e+00    2.8e+00    5.0e-01   -2.5e-01    9.1e-03 |
+ 63. | -1.6e+02    6.2e+01    1.6e+02    1.8e-01   -5.7e-01   -3.7e-02    1.4e+00   -1.2e+00   -4.2e-01    7.0e-01   -1.0e+00    5.4e-01 |
+ 64. | -1.7e+00    4.6e+00   -3.1e+00   -4.2e-01   -4.9e-01   -3.3e-02   -4.1e+00    3.2e+00    4.6e+00   -3.3e-01   -1.1e-01   -3.5e-01 |
  65. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  66. |        .          .          .          .          .          .          .          .          .          .          .          . |
  67. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 68. |        .          .          .          .          .          .    1.2e+00   -6.7e-01    2.0e-01   -3.8e-02    6.5e-03    7.2e-02 |
- 69. | -1.9e+01    7.0e+00    2.0e+01   -4.7e-01    6.3e-02    1.7e-01   -7.8e+00    3.9e+00    8.7e+00   -1.7e-01    5.3e-01   -6.3e-01 |
+ 68. |        .          .          .          .          .          .   -2.4e-01    8.8e-01   -2.5e+00    3.0e+00   -2.4e+00    4.2e+00 |
+ 69. | -2.7e+02    1.1e+02    2.6e+02   -5.7e-01    2.9e+00    3.4e-01   -9.5e+00    5.1e+00    1.1e+01   -4.0e-01    1.1e-01   -2.8e-01 |
  70. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
  71. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 72. | -9.1e-01    5.3e-01    9.5e-01    2.1e+00   -6.3e-01    1.1e+00   -6.7e-01    2.4e+00    4.4e-01   -5.0e-01    2.6e-01   -1.2e+00 |
- 73. | -1.1e+02    4.3e+01    1.1e+02    6.7e-01    2.8e-01   -9.8e-02   -1.2e+01    6.3e+00    1.3e+01   -5.9e-01    1.3e+00   -2.5e-01 |
+ 72. |  1.4e+00   -3.0e-01   -8.2e-01   -6.1e-03    5.1e-01   -5.1e-01   -4.5e+00    2.5e+00    3.7e+00    3.4e-01    2.2e+00   -7.7e-01 |
+ 73. |  7.1e+00   -2.6e+00   -6.1e+00   -8.0e-01    7.1e-02    3.3e-01   -7.9e+00    3.8e+00    8.8e+00   -1.6e-02    1.2e-01   -6.6e-02 |
  74. |        .          .          .          .          .          .          .          .          .          .          .          . |
- 75. |        .          .          .          .          .          .   -6.5e+00    4.8e+00    6.4e+00   -8.6e-02   -4.9e-01    1.8e-01 |
+ 75. |        .          .          .          .          .          .   -3.7e+00    2.5e+00    4.0e+00    2.0e-01    5.5e-02   -3.3e-02 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 76. |  1.2e+00    2.2e-01   -1.1e+00   -3.0e-01   -1.1e-01    3.0e-01   -4.8e-01    1.4e+00    1.4e+00   -5.5e-01   -4.3e-01    7.4e-02 |
- 77. | -8.8e+01    3.3e+01    8.8e+01    1.2e-01   -5.9e-01    1.7e-01   -4.5e+00    3.2e+00    5.1e+00    2.2e-01   -2.8e-01   -2.5e-01 |
- 78. |  7.0e-02    1.2e+00   -8.0e-01    1.5e-01   -1.3e-01   -2.0e-01    8.5e-01   -1.8e+00    7.5e-01    1.8e+00   -1.4e+00    8.3e-03 |
+ 76. |  1.8e+00   -9.1e-01   -2.0e+00    9.5e-01   -1.4e-01    7.3e-02   -1.0e+01    5.4e+00    1.1e+01    7.2e-02    6.8e-02   -5.7e-02 |
+ 77. |  1.5e+00   -3.2e-01   -2.3e+00   -8.7e-01    1.3e+00    7.7e-01    3.8e+00   -1.1e+00   -2.1e+00   -9.9e-01   -9.9e-01    5.9e-01 |
+ 78. |  1.8e-01   -5.6e-02   -4.9e-01    3.6e-01    7.9e-01    5.8e-02   -2.1e+00   -1.3e-02    9.9e-01    1.1e+00    7.6e-01    2.0e+00 |
  79. |        .          .          .          .          .          .          .          .          .          .          .          . |
  80. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 81. |        .          .          .          .          .          .   -3.8e-01    1.4e+00   -3.4e-01    4.9e-01    6.0e-01   -5.0e-01 |
- 82. | -5.3e+00    2.9e+00    3.6e+00    7.0e-01    1.5e+00   -4.9e-01   -2.8e+01    1.2e+01    3.1e+01    1.0e-01    4.7e-02   -4.2e-01 |
- 83. | -7.0e-01    1.2e+00    3.3e-01    1.2e-01   -4.9e-01    1.1e+00    1.5e-01    1.3e+00   -8.5e-01    3.2e-01   -2.8e-02   -1.4e-01 |
- 84. | -8.2e+01    3.2e+01    8.0e+01    9.1e-01   -2.6e-01    7.0e-01    1.4e+01   -7.9e+00   -9.8e+00   -5.1e-01   -6.4e-01   -3.9e+00 |
- 85. | -1.1e+01    9.4e+00    5.3e+00    5.3e+00   -1.2e-01    3.3e-01   -1.1e+00    1.7e+00    9.5e-01   -1.6e+00   -3.0e-01    5.6e-01 |
+ 81. |        .          .          .          .          .          .   -2.1e+00    3.1e+00    3.6e-01    2.0e-01    1.4e-01    2.3e-02 |
+ 82. |  1.0e+00    5.2e-01   -3.4e-01   -9.9e-01   -9.8e-01    2.2e+00   -1.1e+01    5.4e+00    1.3e+01   -9.9e-01   -9.0e-01    1.9e+00 |
+ 83. |  5.9e+00   -1.2e+01   -6.2e+00    1.4e+00    5.8e+00    4.5e+00    1.0e+00   -1.1e+00   -7.9e-02    7.1e-01    3.0e-01   -5.1e-02 |
+ 84. | -2.3e+02    9.1e+01    2.2e+02    2.9e-01   -9.9e-01    1.7e-01   -5.1e+00    3.8e+00    4.9e+00    2.0e-01    1.8e-01   -5.6e-01 |
+ 85. | -1.9e-01    7.5e-01   -8.9e-01    1.0e-01    1.1e+00   -1.6e-01   -1.1e+01    6.5e+00    9.6e+00    6.8e-01    8.6e-02    1.1e+00 |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 86. |  2.9e+00   -4.8e-01   -1.5e+00    6.8e-01   -1.0e+00   -1.2e+00    8.8e-01   -2.9e-02   -6.4e-01   -1.9e+00   -4.0e-01    7.8e-01 |
- 87. | -4.6e+00    3.7e+00    4.2e+00   -4.4e-03   -2.1e+00    8.0e-01   -4.1e-02    1.9e+00    1.6e-01   -2.3e-01   -1.5e-01   -1.3e+00 |
+ 86. | -2.5e+00    1.2e+00   -2.3e-01    5.6e-01    1.8e+00    9.9e-01   -5.6e+00    2.8e+00    7.0e+00   -5.5e-01   -1.1e-01    1.1e-01 |
+ 87. | -4.7e+00    6.2e+00   -2.5e+00    2.1e-01    1.2e+00    5.8e-01   -7.6e-01    2.1e+00   -5.0e-01   -2.6e-01    5.1e-01   -1.0e-01 |
  88. |        .          .          .          .          .          .          .          .          .          .          .          . |
  89. |        .          .          .          .          .          .          .          .          .          .          .          . |
  90. |        .          .          .          .          .          .          .          .          .          .          .          . |
      |-----------------------------------------------------------------------------------------------------------------------------------|
- 91. |        .          .          .          .          .          .   -3.4e+00    4.3e+00    3.7e-01    4.1e-01    9.7e-01   -2.4e-02 |
- 92. |  8.2e-01    8.1e-01    1.6e+00    3.5e-01   -1.4e+00   -1.0e+00   -4.9e+00    3.0e+00    6.2e+00   -3.7e-01   -1.5e-01   -4.4e-01 |
+ 91. |        .          .          .          .          .          .    1.3e+00   -1.4e+00    5.6e-01   -7.0e-01   -1.7e+00    7.3e-01 |
+ 92. |  7.4e+00   -2.1e+00   -1.3e+00   -3.7e+00    4.0e+00   -4.6e+00   -2.2e+01    8.8e+00    2.4e+01    5.9e-02   -9.2e-03    7.5e-03 |
      +-----------------------------------------------------------------------------------------------------------------------------------+
 
 . drop beta*
@@ -4958,10 +4982,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99701         .010503 
+                 2               1          .99751         .011008 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . edm xmap x y, p(-1)
 
@@ -4985,10 +5009,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .99701         .010503 
+                 2               1          .99751         .011008 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . edm xmap x y, p(-1) mata
 
@@ -5014,17 +5038,17 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .95364         .042028 
+                 2               1          .99237          .02051 
 --------------------------------------------------------------------
 
 Copredictions
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               1          .63735          .15483 
+                 2               1          .67756          .13773 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm explore x, copredictvar(y) full
@@ -5076,27 +5100,27 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               0          .97862         .043585 
-                 2               1          .98883         .031301 
-                 3               0          .97106          .11002 
-                 3               1          .98539         .035137 
-                 4               0           .9454          .15578 
-                 4               1          .98061         .041278 
+                 2               0          .90515         .072266 
+                 2               1          .95347         .044513 
+                 3               0           .8919         .074603 
+                 3               1          .95296         .045482 
+                 4               0           .8919         .094809 
+                 4               1          .94067         .054625 
 --------------------------------------------------------------------
 
 Copredictions
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 2               0          .54705          .14978 
-                 2               1          .64622          .13139 
-                 3               0          .54178          .13892 
-                 3               1          .54174          .14453 
-                 4               0          .33875           .1644 
-                 4               1          .38277          .16592 
+                 2               0          .55133          .16402 
+                 2               1          .55878          .16463 
+                 3               0          .46976          .17298 
+                 3               1          .47501          .17528 
+                 4               0          .33074          .16245 
+                 4               1          .38705          .17883 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . edm xmap x y, library(5 10 20 40) copredictvar(u1)
@@ -5106,28 +5130,28 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)               5          .40541          .22152 
-   y ~ y|M(x)              10           .3295          .18765 
-   y ~ y|M(x)              20          .36799          .17744 
-   y ~ y|M(x)              40          .37172          .18024 
-   x ~ x|M(y)               5          .47882          .19092 
-   x ~ x|M(y)              10          .45181          .16886 
-   x ~ x|M(y)              20          .73349          .11652 
-   x ~ x|M(y)              40          .83348         .091874 
+   y ~ y|M(x)               5          .18385          .24829 
+   y ~ y|M(x)              10         .085223          .22204 
+   y ~ y|M(x)              20         .085659          .20366 
+   y ~ y|M(x)              40          .22313          .18449 
+   x ~ x|M(y)               5          .43805          .16247 
+   x ~ x|M(y)              10          .55214          .15302 
+   x ~ x|M(y)              20          .75827          .11031 
+   x ~ x|M(y)              40          .86152         .081335 
 ---------------------------------------------------------------
 
 Copredictions
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)               5          .66226           .8453 
-   y ~ y|M(x)              10          .65229          .87588 
-   y ~ y|M(x)              20          .66823          .86085 
-   y ~ y|M(x)              40          .39029          .96699 
-   x ~ x|M(y)               5          .72543          .87138 
-   x ~ x|M(y)              10          .48804          1.0024 
-   x ~ x|M(y)              20          .49597          1.0203 
-   x ~ x|M(y)              40          .48437          .99023 
+   y ~ y|M(x)               5          .18429          .93536 
+   y ~ y|M(x)              10          .26729          .97282 
+   y ~ y|M(x)              20          .37307          .98207 
+   y ~ y|M(x)              40          .36359          .96934 
+   x ~ x|M(y)               5          .59116          .97259 
+   x ~ x|M(y)              10          .45972          .99502 
+   x ~ x|M(y)              20          .57276          .99957 
+   x ~ x|M(y)              40          .51664          1.0025 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -5141,7 +5165,7 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .98653      .010205      .025391     .0081693
+        2        1       .98805      .010539      .022651      .007707
 ----------------------------------------------------------------------
 
 Copredictions
@@ -5149,7 +5173,7 @@ Copredictions
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .68684      .032097        .1392     .0097204
+        2        1       .68588      .033774        .1398          .01
 ----------------------------------------------------------------------
 Note: Results from 20 runs
 Note: Number of neighbours (k) is set to E+1
@@ -5164,28 +5188,28 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping        Lib size        Mean rho       Std. Dev.
 ---------------------------------------------------------------
-   y ~ y|M(x)               5          .18397          .27568
-   y ~ y|M(x)              10          .28052          .16131
-   y ~ y|M(x)              20          .32078          .11753
-   y ~ y|M(x)              40          .32086         .045664
-   x ~ x|M(y)               5          .39985          .21614
-   x ~ x|M(y)              10          .60463         .086819
-   x ~ x|M(y)              20          .70724         .068884
-   x ~ x|M(y)              40          .83981         .030641
+   y ~ y|M(x)               5          .24016           .2518
+   y ~ y|M(x)              10           .2967          .19754
+   y ~ y|M(x)              20          .32689          .10576
+   y ~ y|M(x)              40          .31102         .048324
+   x ~ x|M(y)               5          .43337          .22523
+   x ~ x|M(y)              10          .57384         .096002
+   x ~ x|M(y)              20          .71464         .056638
+   x ~ x|M(y)              40          .84217         .021177
 ---------------------------------------------------------------
 
 Copredictions
 ---------------------------------------------------------------
       Mapping        Lib size        Mean rho       Std. Dev.
 ---------------------------------------------------------------
-   y ~ y|M(x)               5           .3531          .46749
-   y ~ y|M(x)              10          .52791           .2167
-   y ~ y|M(x)              20          .55391          .17366
-   y ~ y|M(x)              40          .39759          .15117
-   x ~ x|M(y)               5          .47579          .38158
-   x ~ x|M(y)              10          .57401          .13533
-   x ~ x|M(y)              20          .53991          .11155
-   x ~ x|M(y)              40          .50434         .081289
+   y ~ y|M(x)               5          .33878          .40022
+   y ~ y|M(x)              10          .56131          .18034
+   y ~ y|M(x)              20          .54244          .13385
+   y ~ y|M(x)              40          .44814         .079987
+   x ~ x|M(y)               5          .54678          .33203
+   x ~ x|M(y)              10           .6225         .091634
+   x ~ x|M(y)              20          .54889          .10904
+   x ~ x|M(y)              40          .50753          .06332
 ---------------------------------------------------------------
 Note: Results from 20 replications
 Note: The embedding dimension E is 2
@@ -5200,10 +5224,10 @@ Univariate mapping with x and its lag values
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .99005      .007793       .02244      .007713
-  Est. mean 10% CI   [   .98995,    .99014 ]   [  .022343,   .022537 ]
-   45/55 Pc (Est.)   [   .98907,    .99103 ]   [  .021471,   .023409 ]
-   45/55 Pc (Obs.)   [   .99132,    .99228 ]   [    .0202,    .02209 ]
+        2        1       .98843      .011367      .023069     .0084368
+  Est. mean 10% CI   [   .98829,    .98857 ]   [  .022963,   .023175 ]
+   45/55 Pc (Est.)   [     .987,    .98986 ]   [  .022009,   .024129 ]
+   45/55 Pc (Obs.)   [   .99124,    .99213 ]   [  .019894,   .021632 ]
 ----------------------------------------------------------------------
 
 Copredictions
@@ -5211,10 +5235,10 @@ Copredictions
                       --------- rho ---------  --------- MAE ---------
  Actual E    theta         Mean    Std. Dev.         Mean    Std. Dev.
 ----------------------------------------------------------------------
-        2        1       .70058      .037737       .13594     .0089626
-  Est. mean 10% CI   [   .70011,    .70106 ]   [   .13582,    .13605 ]
-   45/55 Pc (Est.)   [   .69584,    .70532 ]   [   .13481,    .13706 ]
-   45/55 Pc (Obs.)   [   .70267,    .71279 ]   [   .13447,    .13624 ]
+        2        1       .69848      .040525        .1359      .008777
+  Est. mean 10% CI   [   .69797,    .69899 ]   [   .13579,    .13601 ]
+   45/55 Pc (Est.)   [   .69339,    .70357 ]   [   .13479,      .137 ]
+   45/55 Pc (Obs.)   [   .70365,    .70994 ]   [   .13432,    .13577 ]
 ----------------------------------------------------------------------
 Note: Results from 100 runs
 Note: Number of neighbours (k) is set to E+1
@@ -5229,76 +5253,76 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)               5          .40953          .17538 
-   y ~ y|M(x)              10          .24693          .18781 
-   y ~ y|M(x)              20          .28413           .1725 
-   y ~ y|M(x)              40          .32836          .17907 
-   y ~ y|M(x)               5          .26692          .18918 
-   y ~ y|M(x)              10         -.19703          .22622 
-   y ~ y|M(x)              20          .44191          .17901 
-   y ~ y|M(x)              40          .36942          .17342 
-   y ~ y|M(x)               5          .49204          .19078 
-   y ~ y|M(x)              10           .2106          .17533 
-   y ~ y|M(x)              20          .42211          .16296 
-   y ~ y|M(x)              40          .35149          .17132 
-   y ~ y|M(x)               5          .18878          .17765 
-   y ~ y|M(x)              10          .26645          .18674 
-   y ~ y|M(x)              20          .38337          .17697 
-   y ~ y|M(x)              40           .2818          .17845 
-   x ~ x|M(y)               5           .6063           .1774 
-   x ~ x|M(y)              10            .694          .12836 
-   x ~ x|M(y)              20           .6128          .13538 
-   x ~ x|M(y)              40          .82682         .090107 
-   x ~ x|M(y)               5          .63508          .16425 
-   x ~ x|M(y)              10          .71661          .14661 
-   x ~ x|M(y)              20          .78616          .10579 
-   x ~ x|M(y)              40          .81179         .095373 
-   x ~ x|M(y)               5        -.058513          .25615 
-   x ~ x|M(y)              10          .61121          .13736 
-   x ~ x|M(y)              20           .7084          .11559 
-   x ~ x|M(y)              40          .83783         .095542 
-   x ~ x|M(y)               5          .44533          .15899 
-   x ~ x|M(y)              10          .59415          .14564 
-   x ~ x|M(y)              20          .58383          .15033 
-   x ~ x|M(y)              40          .87438         .079937 
+   y ~ y|M(x)               5        -.018063          .20115 
+   y ~ y|M(x)              10          .40408          .16988 
+   y ~ y|M(x)              20          .44535          .17068 
+   y ~ y|M(x)              40          .45093          .16164 
+   y ~ y|M(x)               5          .31532          .17985 
+   y ~ y|M(x)              10          .17798          .20104 
+   y ~ y|M(x)              20          .23327           .1909 
+   y ~ y|M(x)              40          .32564          .17284 
+   y ~ y|M(x)               5          .39792           .1637 
+   y ~ y|M(x)              10           .3202          .16959 
+   y ~ y|M(x)              20          .32817          .18389 
+   y ~ y|M(x)              40          .29458          .18327 
+   y ~ y|M(x)               5          .37301          .18113 
+   y ~ y|M(x)              10          .37103          .17517 
+   y ~ y|M(x)              20          .23239          .20116 
+   y ~ y|M(x)              40          .33408          .18013 
+   x ~ x|M(y)               5          .46426          .17051 
+   x ~ x|M(y)              10          .47253          .16301 
+   x ~ x|M(y)              20          .72742          .11062 
+   x ~ x|M(y)              40          .83755         .089204 
+   x ~ x|M(y)               5          .40535          .17826 
+   x ~ x|M(y)              10           .5674          .14684 
+   x ~ x|M(y)              20          .78936          .10123 
+   x ~ x|M(y)              40          .83866         .085289 
+   x ~ x|M(y)               5          .29414          .19959 
+   x ~ x|M(y)              10          .56256          .15805 
+   x ~ x|M(y)              20          .60028          .14056 
+   x ~ x|M(y)              40          .81817         .098682 
+   x ~ x|M(y)               5          .48991          .17922 
+   x ~ x|M(y)              10          .66981          .15165 
+   x ~ x|M(y)              20          .72444           .1087 
+   x ~ x|M(y)              40          .78271          .10782 
 ---------------------------------------------------------------
 
 Copredictions
 ---------------------------------------------------------------
       Mapping    Library size             rho             MAE
 ---------------------------------------------------------------
-   y ~ y|M(x)               5          .66728          .89649 
-   y ~ y|M(x)              10          .78858          .87306 
-   y ~ y|M(x)              20          .48533          .98378 
-   y ~ y|M(x)              40          .47497           .9782 
-   y ~ y|M(x)               5           .7461          .81515 
-   y ~ y|M(x)              10          .52577          .97143 
-   y ~ y|M(x)              20          .64355          .83117 
-   y ~ y|M(x)              40          .49707          .96773 
-   y ~ y|M(x)               5          .51838           .8925 
-   y ~ y|M(x)              10          .61685          .96604 
-   y ~ y|M(x)              20          .49048          .96388 
-   y ~ y|M(x)              40         .074074          1.0149 
-   y ~ y|M(x)               5         -.47494          1.0278 
-   y ~ y|M(x)              10          .31257          .98452 
-   y ~ y|M(x)              20          .59983          .90155 
-   y ~ y|M(x)              40          .51881           .9708 
-   x ~ x|M(y)               5          .76636            .854 
-   x ~ x|M(y)              10          .66327          .94321 
-   x ~ x|M(y)              20          .50466          .96094 
-   x ~ x|M(y)              40           .5339          .99411 
-   x ~ x|M(y)               5          .53416          .89511 
-   x ~ x|M(y)              10          .57486          .89531 
-   x ~ x|M(y)              20          .41018          .98354 
-   x ~ x|M(y)              40          .45199          1.0169 
-   x ~ x|M(y)               5       .00093799          .96741 
-   x ~ x|M(y)              10           .6915          .90547 
-   x ~ x|M(y)              20          .55462          .92626 
-   x ~ x|M(y)              40          .48755          .97444 
-   x ~ x|M(y)               5          .72005          .90645 
-   x ~ x|M(y)              10           .7031          .87411 
-   x ~ x|M(y)              20          .38084          1.0275 
-   x ~ x|M(y)              40          .45043          .98603 
+   y ~ y|M(x)               5          .45961          .94343 
+   y ~ y|M(x)              10          .59256          .93672 
+   y ~ y|M(x)              20          .66536          .89014 
+   y ~ y|M(x)              40         .091509          1.0239 
+   y ~ y|M(x)               5          .70632          .94227 
+   y ~ y|M(x)              10          .59809          .97337 
+   y ~ y|M(x)              20          .59593          .93079 
+   y ~ y|M(x)              40          .54083          .97021 
+   y ~ y|M(x)               5          .63735          .95285 
+   y ~ y|M(x)              10          .67281          .89873 
+   y ~ y|M(x)              20          .67542          .88845 
+   y ~ y|M(x)              40          .39896          .97063 
+   y ~ y|M(x)               5          .55898          .94332 
+   y ~ y|M(x)              10          .49232          .94031 
+   y ~ y|M(x)              20          .56342          .95249 
+   y ~ y|M(x)              40          .33408           .9687 
+   x ~ x|M(y)               5          .47198          .96401 
+   x ~ x|M(y)              10          .26472          1.0309 
+   x ~ x|M(y)              20          .55122          .97587 
+   x ~ x|M(y)              40          .51531          .97159 
+   x ~ x|M(y)               5          .60481          1.0229 
+   x ~ x|M(y)              10          .59717            .945 
+   x ~ x|M(y)              20          .51269           .9645 
+   x ~ x|M(y)              40           .5243          .98913 
+   x ~ x|M(y)               5          .45626          .93101 
+   x ~ x|M(y)              10          .73769           .8628 
+   x ~ x|M(y)              20          .43174          1.0199 
+   x ~ x|M(y)              40          .56255          1.0069 
+   x ~ x|M(y)               5          .55232          1.0382 
+   x ~ x|M(y)              10           .6292          .88108 
+   x ~ x|M(y)              20          .55459          .97277 
+   x ~ x|M(y)              40          .53932          1.0021 
 ---------------------------------------------------------------
 Note: The embedding dimension E is 2
 
@@ -5375,10 +5399,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .94798          .11217 
+                40               1           .8818         .085668 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+-27
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5389,10 +5413,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .94798          .11217 
+                40               1           .8818         .085668 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+-27
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5404,10 +5428,10 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .84825             .12 
+                40               1          .92115          .13115 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5419,10 +5443,10 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .84825             .12 
+                40               1          .92115          .13115 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set seed 2
@@ -5434,10 +5458,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .89047         .081137 
+                40               1           .8818         .085668 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+-27
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5448,10 +5472,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1          .89047         .081137 
+                40               1           .8818         .085668 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+-27
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5463,10 +5487,10 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1           .6653          .13894 
+                40               1          .91768          .17221 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5478,10 +5502,10 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                40               1           .6653          .13894 
+                40               1          .91768          .17221 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set seed 3
@@ -5621,10 +5645,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5635,10 +5659,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5650,10 +5674,10 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .92504         .064149 
+                 5               1          .95905          .04389 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5665,10 +5689,10 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .92504         .064149 
+                 5               1          .95905          .04389 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set seed 2
@@ -5680,10 +5704,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .92599          .12301 
+                 5               1          .92472          .10559 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5694,10 +5718,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .92599          .12301 
+                 5               1          .92472          .10559 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5709,10 +5733,10 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .89011         .068362 
+                 5               1          .93052         .070038 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 2
 
@@ -5724,10 +5748,10 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .89011         .068362 
+                 5               1          .93052         .070038 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set seed 3
@@ -5739,10 +5763,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1         -.20844          .20224 
+                 5               1          .92472          .10559 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is adjusted to 6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 3
 
@@ -5753,10 +5777,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1         -.20844          .20224 
+                 5               1          .92472          .10559 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is adjusted to 6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . // See if the relative dt flags work
@@ -5770,11 +5794,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .84753         .086909 
+                10               1          .90239         .069705 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 1
@@ -5787,11 +5811,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .84753         .086909 
+                10               1          .90239         .069705 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 1
@@ -5805,11 +5829,11 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .72988          .10056 
+                10               1           .9085         .068373 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 1
@@ -5823,11 +5847,11 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .72988          .10056 
+                10               1           .9085         .068373 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . 
@@ -5841,11 +5865,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .71404          .11786 
+                10               1          .78473          .10454 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 2
@@ -5858,11 +5882,11 @@ Additional variables in the embedding: (time delta)
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .71404          .11786 
+                10               1          .78473          .10454 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 2
@@ -5876,11 +5900,11 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .69365          .12747 
+                10               1          .75709          .11395 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . set seed 2
@@ -5894,11 +5918,11 @@ Missing values are assumed to have a distance of .24 with all values.
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                10               1          .69365          .12747 
+                10               1          .75709          .11395 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to E+6
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . 
@@ -5921,10 +5945,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5935,10 +5959,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .87492          .10616 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set rng mt64
@@ -5958,10 +5982,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -5972,10 +5996,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set rng mt64
@@ -5995,10 +6019,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -6009,10 +6033,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 . set rng mt64
@@ -6032,10 +6056,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . set seed 1
 
@@ -6046,10 +6070,10 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
           Actual E           theta             rho             MAE
 --------------------------------------------------------------------
-                 5               1          .81441         .098325 
+                 5               1          .95118         .083988 
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to E+1
-Note: Random 50/50 split for training and validation data
+Note: 50/50 split for training and validation data
 
 . 
 end of do-file
