@@ -130,7 +130,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, false };
@@ -180,7 +180,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
@@ -205,7 +205,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = true;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<int> obsNums = { 0, 1, 2, 3, 4, 5 };
     for (int i = 0; i < obsNums.size(); i++) {
@@ -230,7 +230,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     bool dtMode = true, reldtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, reldtMode, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, reldtMode, allowMissing);
 
     std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
@@ -265,7 +265,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = true;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { true, false, true, true, true, false };
@@ -287,7 +287,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = false;
-    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, true, false, allowMissing);
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, false, false, true, true, false };
@@ -413,8 +413,8 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   std::vector<double> co_x = { 1, NA, NA, 4, 5 };
   auto xmap = co_x;
 
-  bool dt = true, dt0 = true, reldt = true, allowMissing = true;
-  ManifoldGenerator generator(t, x, tau, p, xmap, co_x, {}, {}, 0, dt, dt0, reldt, allowMissing);
+  bool dt = true, reldt = true, allowMissing = true;
+  ManifoldGenerator generator(t, x, tau, p, xmap, co_x, {}, {}, 0, dt, reldt, allowMissing);
 
   std::vector<bool> usable = generator.generate_usable(E);
   std::vector<bool> usableTrue = { true, false, false, true, true };

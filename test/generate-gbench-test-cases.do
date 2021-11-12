@@ -68,7 +68,7 @@ cap rm affectsmall.json
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(10) k(-1) force alg(smap) verbosity(10)
+edm xmap PA NA, dt e(10) k(-1) alg(smap) verbosity(10)
 timer off 1
 timer list 1
 
@@ -80,7 +80,7 @@ cap rm affectbige.json
 
 timer clear 1
 timer on 1
-edm xmap PA NA, dt e(150) k(20) force alg(smap) verbosity(10)
+edm xmap PA NA, dt e(150) k(20) alg(smap) verbosity(10)
 timer off 1
 timer list 1
 

@@ -356,7 +356,6 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction
 void to_json(json& j, const ManifoldGenerator& g)
 {
   j = json{ { "_dt", g._dt },
-            { "_dt0", g._dt0 },
             { "_reldt", g._reldt },
             { "_panel_mode", g._panel_mode },
             { "_xmap_mode", g._xmap_mode },
@@ -376,7 +375,6 @@ void to_json(json& j, const ManifoldGenerator& g)
 void from_json(const json& j, ManifoldGenerator& g)
 {
   j.at("_dt").get_to(g._dt);
-  j.at("_dt0").get_to(g._dt0);
   j.at("_reldt").get_to(g._reldt);
   j.at("_panel_mode").get_to(g._panel_mode);
   j.at("_xmap_mode").get_to(g._xmap_mode);

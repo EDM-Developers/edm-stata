@@ -77,7 +77,7 @@ edm xmap x y, k(5)
 
 ereturn list
 
-edm xmap x y, e(6) lib(8) force
+edm xmap x y, e(6) lib(8)
 
 edm explore x, k(5) crossfold(10)
 
@@ -272,9 +272,9 @@ qui {
     }
 }
 
-edm explore x, e(2) crossfold(2) k(-1) allowmissing force
+edm explore x, e(2) crossfold(2) k(-1) allowmissing
 
-edm explore x, e(2) crossfold(10) k(-1) allowmissing force
+edm explore x, e(2) crossfold(10) k(-1) allowmissing
 
 edm explore x, e(5) extra(d.y) full allowmissing
 
@@ -376,7 +376,7 @@ format beta* %3.0g
 list beta*
 drop beta*
 
-edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta) force
+edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta)
 
 ds, detail
 format beta* %3.0g
@@ -453,7 +453,7 @@ sum err
 capture drop plugin mata err
 
 // Make sure theta changes are reflected, even when k(-1) is specified.
-edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full force
+edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full
 
 
 // Check that factor variables don't crash everything
