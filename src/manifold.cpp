@@ -82,7 +82,7 @@ bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, 
   while (k >= 0 && k < _observation_number.size()) {
     // If in panel mode, make sure we don't wander over a panel boundary.
     if (_panel_mode) {
-      if (panel != _panel_ids[k]) {
+      if (panel != _panelIDs[k]) {
         return false;
       }
     }
@@ -145,7 +145,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
   if (useFloat) {
     return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()).as(f32),
                           (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
-                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          (_panelIDs.size() > 0 ? array(_nobs, _panelIDs.data()) : array()),
                           _nobs,
                           _E_x,
                           _E_dt,
@@ -156,7 +156,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
   } else {
     return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()),
                           (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
-                          (_panel_ids.size() > 0 ? array(_nobs, _panel_ids.data()) : array()),
+                          (_panelIDs.size() > 0 ? array(_nobs, _panelIDs.data()) : array()),
                           _nobs,
                           _E_x,
                           _E_dt,
@@ -212,7 +212,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 
     y.push_back(target);
     if (_panel_mode) {
-      panelIDs.push_back(_panel_ids[pointNumToStartIndex[i]]);
+      panelIDs.push_back(_panelIDs[pointNumToStartIndex[i]]);
     }
 
     M_i += 1;
@@ -226,7 +226,7 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double dtWeight, double* point,
                                       double& target) const
 {
-  int panel = _panel_mode ? _panel_ids[i] : -1;
+  int panel = _panel_mode ? _panelIDs[i] : -1;
   bool use_co_x = copredict && prediction;
 
   std::vector<int> laggedIndices = get_lagged_indices(i, E, panel);
@@ -370,7 +370,7 @@ void to_json(json& j, const ManifoldGenerator& g)
             { "_t", g._t },
             { "_observation_number", g._observation_number },
             { "_extras", g._extras },
-            { "_panel_ids", g._panel_ids } };
+            { "_panelIDs", g._panelIDs } };
 }
 
 void from_json(const json& j, ManifoldGenerator& g)
@@ -390,5 +390,5 @@ void from_json(const json& j, ManifoldGenerator& g)
   j.at("_t").get_to(g._t);
   j.at("_observation_number").get_to(g._observation_number);
   j.at("_extras").get_to(g._extras);
-  j.at("_panel_ids").get_to(g._panel_ids);
+  j.at("_panelIDs").get_to(g._panelIDs);
 }
