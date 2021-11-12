@@ -13,13 +13,13 @@ cap rm single-thread-speed-test.json
 set seed 1
 timer clear
 timer on 1
-edm explore pa, dt k(-1) e(10) force alg(simplex)
+edm explore pa, dt k(-1) e(10) alg(simplex)
 timer off 1
 timer list
 
 set seed 1
 timer clear
 timer on 1
-edm xmap na pa, dt k(-1) e(3) force alg(smap) oneway
+edm xmap na pa, dt k(-1) e(3) alg(smap) oneway
 timer off 1
 timer list

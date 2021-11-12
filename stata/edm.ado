@@ -341,14 +341,13 @@ program define edmPrintPluginProgress
 end
 
 program define edmExplore, eclass
-	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
-			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
-			[PREDICTionsave(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
-			[COPREDICTionsave(name)] [copredictvar(string)] [full] [RANDomize] [strict] [EXTRAembed(string)] ///
-			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
-			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] ///
-			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [aspectratio(real 1)] ///
-			[distance(string)] [metrics(string)] [idw(real 0)] [wassdt(integer 1)]
+	syntax anything [if], [e(numlist ascending >=2)] ///
+		[tau(integer 1)] [theta(numlist ascending)] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 1)] ///
+		[seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
+		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
+		[dt] [reldt] [DTWeight(real 0)] [DTSave(name)] [DETails] [reportrawe] [strict] [Predictionhorizon(string)] ///
+		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[verbosity(integer 1)] [saveinputs(string)] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -1061,14 +1060,13 @@ end
 
 
 program define edmXmap, eclass
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
-			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
-			[SAVEsmap(string)] [DETails] [DIrection(string)] [PREDICTionsave(name)] [CI(integer 0)] ///
-			[Predictionhorizon(string)] [COPREDICTionsave(name)] [copredictvar(string)] [RANDomize] [strict] [EXTRAembed(string)] ///
-			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
-			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] ///
-			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] ///
-			[aspectratio(real 1)] [distance(string)] [metrics(string)] [idw(real 0)]
+	syntax anything [if],  [e(integer 2)] [tau(integer 1)] [theta(real 1)] ///
+		[Library(numlist)] [RANDomize] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 1)] [strict] ///
+		[DIrection(string)] [seed(integer 0)] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
+		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
+		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
+		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[verbosity(integer 1)] [saveinputs(string)] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
