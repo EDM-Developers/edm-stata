@@ -94,12 +94,12 @@ set(COMMON_SRC src/cli.cpp src/cli.h
                src/distances.cpp src/distances.h
                src/edm.cpp src/edm.h
                src/manifold.cpp src/manifold.h
-               src/mersennetwister.h
                src/stats.cpp src/stats.h
                src/library_prediction_split.h
-               src/core.h src/EMD_wrapper.cpp src/EMD_wrapper.h
-               src/network_simplex_simple.h src/full_bipartitegraph.h
-               src/thread_pool.cpp src/thread_pool.h
+               vendor/mersennetwister.h
+               vendor/core.h vendor/EMD_wrapper.cpp vendor/EMD_wrapper.h
+               vendor/network_simplex_simple.h vendor/full_bipartitegraph.h
+               vendor/thread_pool.cpp vendor/thread_pool.h
                )
 if (EDM_WITH_ARRAYFIRE)
   if (WIN32)
@@ -179,11 +179,7 @@ endif()
 
 # Grab vendored files (e.g. the Stata/C interface files)
 include(vendor/CMakeLists.txt)
-target_include_directories(edm_plugin
-  PRIVATE
-  include
-  vendor
-  include/eigen3)
+target_include_directories(edm_plugin PRIVATE vendor vendor/eigen-3.4.0)
 
 target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
@@ -212,7 +208,7 @@ set_target_properties(edm_cli
 )
 
 target_compile_definitions(edm_cli PRIVATE NOMINMAX)
-target_include_directories(edm_cli PRIVATE include include/eigen3)
+target_include_directories(edm_cli PRIVATE vendor vendor/eigen-3.4.0)
 target_link_libraries(edm_cli PRIVATE
   fmt::fmt-header-only
   Threads::Threads
@@ -241,7 +237,7 @@ endif()
 find_package(benchmark CONFIG REQUIRED)
 target_compile_definitions(gbench PRIVATE NOMINMAX)
 target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-target_include_directories(gbench PRIVATE include include/eigen3)
+target_include_directories(gbench PRIVATE vendor vendor/eigen-3.4.0)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
@@ -257,8 +253,7 @@ find_package(Catch2 REQUIRED)
 add_executable(edm_test ${COMMON_SRC} src/test.cpp)
 set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
 target_compile_definitions(edm_test PRIVATE NOMINMAX)
-target_include_directories(edm_test PRIVATE include)
-target_include_directories(edm_test PRIVATE include/eigen3)
+target_include_directories(edm_test PRIVATE vendor vendor/eigen-3.4.0)
 
 target_link_libraries(edm_test PRIVATE Catch2::Catch2)
 target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
