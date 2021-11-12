@@ -107,18 +107,6 @@ public:
     } else {
       fixed_size_library(library);
     }
-
-    int numInLibrarySet = 0, numInPredictionSet = 0;
-    for (int i = 0; i < _libraryRows.size(); i++) {
-      if (_libraryRows[i]) {
-        numInLibrarySet += 1;
-      }
-      if (_predictionRows[i]) {
-        numInPredictionSet += 1;
-      }
-    }
-    assert(numInLibrarySet > 0);
-    assert(numInPredictionSet > 0);
   }
 
   void crossfold_split(int crossfoldIter)
@@ -253,7 +241,6 @@ public:
           obsNum += 1;
         } else {
           _libraryRows[i] = false;
-          ;
         }
       }
     }
@@ -263,12 +250,6 @@ public:
       if (_libraryRows[i]) {
         numInLibrary += 1;
       }
-    }
-
-    if (library < _numObsUsable) {
-      assert(numInLibrary == library);
-    } else {
-      assert(numInLibrary == _numObsUsable);
     }
   }
 };

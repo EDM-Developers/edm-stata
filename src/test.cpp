@@ -335,8 +335,8 @@ TEST_CASE("Library prediction splits", "[splitting]")
     int library = splitter.next_library_size(1);
     splitter.update_library_prediction_split(library, 1);
 
-    std::vector<bool> libraryTrue = { true, true, false, false, false, false, false };   // 3
-    std::vector<bool> predictionTrue = { false, false, true, false, false, true, true }; // 2
+    std::vector<bool> libraryTrue = { true, true, false, false, false, false, false };   // 2
+    std::vector<bool> predictionTrue = { false, false, true, false, false, true, true }; // 3
 
     require_vectors_match<bool>(splitter.libraryRows(), libraryTrue);
     require_vectors_match<bool>(splitter.predictionRows(), predictionTrue);

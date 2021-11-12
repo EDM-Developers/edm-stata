@@ -34,7 +34,7 @@ class Manifold
 {
   std::shared_ptr<double[]> _flat = nullptr;
   std::vector<double> _y;
-  std::vector<int> _panel_ids;
+  std::vector<int> _panelIDs;
   int _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
 
 public:
@@ -42,7 +42,7 @@ public:
            int E_dt, int E_extras, int E_lagged_extras, int E_actual)
     : _flat(std::move(flat))
     , _y(y)
-    , _panel_ids(panelIDs)
+    , _panelIDs(panelIDs)
     , _nobs(nobs)
     , _E_x(E_x)
     , _E_dt(E_dt)
@@ -70,7 +70,7 @@ public:
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
   double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
-  int panel(int i) const { return _panel_ids[i]; }
+  int panel(int i) const { return _panelIDs[i]; }
 
   double unlagged_extras(int obsNum, int varNum) const
   {
@@ -139,7 +139,7 @@ public:
   int E_lagged_extras() const { return _E_lagged_extras; }
   int E_extras() const { return _E_extras; }
   int E_actual() const { return _E_actual; }
-  const std::vector<int>& panelIds() const { return _panel_ids; }
+  const std::vector<int>& panelIDs() const { return _panelIDs; }
   std::shared_ptr<double[]> flatf64() const { return _flat; }
   const std::vector<double>& yvec() const { return _y; }
   std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const
@@ -166,7 +166,7 @@ private:
   int _num_extras, _num_extras_lagged;
   std::vector<double> _x, _xmap, _co_x, _t;
   std::vector<std::vector<double>> _extras;
-  std::vector<int> _panel_ids;
+  std::vector<int> _panelIDs;
 
   std::vector<int> _observation_number;
 
@@ -197,7 +197,7 @@ public:
     , _p(p)
     , _xmap(xmap)
     , _co_x(co_x)
-    , _panel_ids(panelIDs)
+    , _panelIDs(panelIDs)
     , _extras(extras)
     , _num_extras((int)extras.size())
     , _num_extras_lagged(numExtrasLagged)
@@ -222,4 +222,6 @@ public:
 
   int numExtrasLagged() const { return _num_extras_lagged; }
   int numExtras() const { return _num_extras; }
+
+  const std::vector<int>& panelIDs() const { return _panelIDs; }
 };
