@@ -126,8 +126,8 @@ program define edmUpdate
 		di "Updating edm from SSC"
 		ssc install edm, `replace'
 	}
+	prog drop _all
 	discard
-
 end
 
 program define edmVersion
@@ -166,11 +166,6 @@ program define edmPluginCheck, rclass
 		return scalar gpu_mode = `gpu_mode'
 	}
 end
-
-/*
-program define edmCoremap, eclass
-	syntax anything  [if], [e(integer 2)] [theta(real 1)] [k(integer 0)] [library(integer 0)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] [Predict(name)] [Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [full] [force] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] trainset(string) predictset(string)
- */
 
 program define hasMissingValues
 	syntax [anything] , out(name)
@@ -348,8 +343,8 @@ end
 program define edmExplore, eclass
 	syntax anything  [if], [e(numlist ascending >=2)] [theta(numlist ascending)] [k(integer 0)] ///
 			[REPlicate(integer 1)] [seed(integer 0)] [ALGorithm(string)] [tau(integer 1)] [DETails] ///
-			[PRedict(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
-			[COPredict(name)] [copredictvar(string)] [full] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
+			[PREDICTionsave(name)] [CROSSfold(integer 0)] [CI(integer 0)] [Predictionhorizon(string)] ///
+			[COPREDICTionsave(name)] [copredictvar(string)] [full] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[reportrawe] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] ///
 			[savemanifold(name)] [saveinputs(string)] [verbosity(integer 1)] [olddt] [aspectratio(real 1)] ///
@@ -368,11 +363,11 @@ program define edmExplore, eclass
 	if "`dtsave'" != "" {
 		confirm new variable `dtsave'
 	}
-	if "`predict'" != "" {
-		confirm new variable `predict'
+	if "`predictionsave'" != "" {
+		confirm new variable `predictionsave'
 	}
-	if "`copredict'" != "" {
-		confirm new variable `copredict'
+	if "`copredictionsave'" != "" {
+		confirm new variable `copredictionsave'
 
 		if "`copredictvar'" == "" {
 			di as error "The copredictvar() option is not specified"
@@ -798,14 +793,14 @@ program define edmExplore, eclass
 	}
 
 
-	if "`predict'" != "" {
-		cap gen double `predict' = .
-		qui label variable `predict' "edm prediction result"
+	if "`predictionsave'" != "" {
+		cap gen double `predictionsave' = .
+		qui label variable `predictionsave' "edm prediction result"
 	}
 
-	if ("`copredict'" != "") {
-		qui gen double `copredict' = .
-		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x'"
+	if ("`copredictionsave'" != "") {
+		qui gen double `copredictionsave' = .
+		qui label variable `copredictionsave' "edm copredicted `copredictvar' using manifold `ori_x'"
 	}
 
 	forvalues t=1/`round' {
@@ -931,8 +926,8 @@ program define edmExplore, eclass
 						mat r[`task_num', 4] = 0
 					}
 
-					if ("`predict'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
-						cap replace `predict' = `x_p' if `x_p' !=.
+					if ("`predictionsave'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
+						cap replace `predictionsave' = `x_p' if `x_p' !=.
 					}
 
 					if "`copredictvar'" != "" {
@@ -953,8 +948,8 @@ program define edmExplore, eclass
 							mat co_r[`task_num', 4] = 0
 						}
 
-						if ("`copredict'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
-							cap replace `copredict' = `co_x_p' if `co_x_p' !=.
+						if ("`copredictionsave'" != "") & ((`crossfold' > 1) | (`task_num' == `num_tasks')) {
+							cap replace `copredictionsave' = `co_x_p' if `co_x_p' !=.
 						}
 					}
 				}
@@ -996,9 +991,9 @@ program define edmExplore, eclass
 	if `mata_mode' == 0 {
 		edmPrintPluginProgress , plugin_name(`plugin_name')
 		local result_matrix = "r"
-		local save_predict_mode = ("`predict'" != "")
+		local save_predict_mode = ("`predictionsave'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call `plugin_name' `predict' `copredict' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call `plugin_name' `predictionsave' `copredictionsave' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	mat cfull = r[1,3]
@@ -1043,8 +1038,8 @@ program define edmExplore, eclass
 	ereturn scalar crossfold = `crossfold'
 	ereturn scalar rep_details = "`details'" == "details"
 	ereturn scalar ci = `ci'
-	ereturn local copredict ="`copredict'"
-	ereturn local copredictvar ="`copredictvar'"
+	ereturn local copredict = "`copredictionsave'"
+	ereturn local copredictvar = "`copredictvar'"
 	ereturn scalar force_compute = "`force'" =="force"
 	ereturn scalar panel =`ispanel'
 	ereturn scalar dt =`parsed_dt'
@@ -1078,8 +1073,8 @@ end
 program define edmXmap, eclass
 	syntax anything  [if], [e(integer 2)] [theta(real 1)] [Library(numlist)] [seed(integer 0)] ///
 			[k(integer 0)] [ALGorithm(string)] [tau(integer 1)] [REPlicate(integer 1)] ///
-			[SAVEsmap(string)] [DETails] [DIrection(string)] [PRedict(name)] [CI(integer 0)] ///
-			[Predictionhorizon(string)] [COPredict(name)] [copredictvar(string)] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
+			[SAVEsmap(string)] [DETails] [DIrection(string)] [PREDICTionsave(name)] [CI(integer 0)] ///
+			[Predictionhorizon(string)] [COPREDICTionsave(name)] [copredictvar(string)] [RANDomize] [force] [strict] [EXTRAembed(string)] ///
 			[ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] [DTWeight(real 0)] [DTSave(name)] ///
 			[oneway] [savemanifold(name)] [CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] ///
 			[nthreads(integer 0)] [saveinputs(string)] [verbosity(integer 1)] [olddt] ///
@@ -1117,11 +1112,11 @@ program define edmXmap, eclass
 			di as error "dtsave() option can only be used together with oneway"
 			error 9
 		}
-		if "`predict'" != "" {
+		if "`predictionsave'" != "" {
 			dis as error "direction() option must be set to oneway if predicted values are to be saved."
 			error 197
 		}
-		if "`copredict'" != "" {
+		if "`copredictionsave'" != "" {
 			dis as error "direction() option must be set to oneway if copredicted values are to be saved."
 			error 197
 		}
@@ -1130,11 +1125,11 @@ program define edmXmap, eclass
 	if "`dtsave'" != ""{
 		confirm new variable `dtsave'
 	}
-	if "`predict'" != "" {
-		confirm new variable `predict'
+	if "`predictionsave'" != "" {
+		confirm new variable `predictionsave'
 	}
-	if "`copredict'" != "" {
-		confirm new variable `copredict'
+	if "`copredictionsave'" != "" {
+		confirm new variable `copredictionsave'
 
 		if "`copredictvar'" == "" {
 			di as error "The copredictvar() option is not specified"
@@ -1348,13 +1343,13 @@ program define edmXmap, eclass
 		mat co_r2 = J(1, 4, .)
 	}
 
-	if "`predict'" != "" {
-		cap gen double `predict' = .
-		qui label variable `predict' "edm prediction result"
+	if "`predictionsave'" != "" {
+		cap gen double `predictionsave' = .
+		qui label variable `predictionsave' "edm prediction result"
 	}
-	if "`copredict'" != "" {
-		qui gen double `copredict' = .
-		qui label variable `copredict' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
+	if "`copredictionsave'" != "" {
+		qui gen double `copredictionsave' = .
+		qui label variable `copredictionsave' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
 	}
 
 	local num_directions = 1 + ("`direction'" == "both")
@@ -1733,8 +1728,8 @@ program define edmXmap, eclass
 								mat r`direction_num'[`task_num', 4] = 0
 							}
 
-							if (`task_num' == `num_tasks' & "`predict'" != "") {
-								cap replace `predict' = `x_p' if `x_p' != .
+							if (`task_num' == `num_tasks' & "`predictionsave'" != "") {
+								cap replace `predictionsave' = `x_p' if `x_p' != .
 							}
 
 							if "`copredictvar'" != "" {
@@ -1754,8 +1749,8 @@ program define edmXmap, eclass
 									mat co_r`direction_num'[`task_num', 4] = 0
 								}
 
-								if (`task_num' == `num_tasks' & "`copredict'" != "") {
-									cap replace `copredict' = `co_x_p' if `co_x_p' != .
+								if (`task_num' == `num_tasks' & "`copredictionsave'" != "") {
+									cap replace `copredictionsave' = `co_x_p' if `co_x_p' != .
 								}
 							}
 
@@ -1784,9 +1779,9 @@ program define edmXmap, eclass
 		if !`mata_mode' {
 			edmPrintPluginProgress , plugin_name(`plugin_name')
 			local result_matrix = "r`direction_num'"
-			local save_predict_mode = ("`predict'" != "")
+			local save_predict_mode = ("`predictionsave'" != "")
 			local save_copredict_mode = ("`copredictvar'" != "")
-			plugin call `plugin_name' `predict' `copredict' `all_savesmap_vars`direction_num'' if `touse', ///
+			plugin call `plugin_name' `predictionsave' `copredictionsave' `all_savesmap_vars`direction_num'' if `touse', ///
 					"collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
@@ -1857,8 +1852,8 @@ program define edmXmap, eclass
 	ereturn scalar rep_details = "`details'" == "details"
 	ereturn local direction = "`direction'"
 	ereturn scalar ci = `ci'
-	ereturn local copredict ="`copredict'"
-	ereturn local copredictvar ="`copredictvar'"
+	ereturn local copredict = "`copredictionsave'"
+	ereturn local copredictvar = "`copredictvar'"
 	ereturn scalar force_compute = "`force'" =="force"
 	ereturn local extraembed = "`extraembed'"
 	ereturn scalar panel =`ispanel'
