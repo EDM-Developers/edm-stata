@@ -303,10 +303,10 @@ void reset_global_state()
 
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 29) {
+  if (argc < 28) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 29) {
+  if (argc > 28) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -318,9 +318,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.calcRhoMAE = true;
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
-  bool dt0 = atoi(argv[2]);
-  opts.dtWeight = dtMode ? atof(argv[3]) : 0.0;
-  std::string alg = std::string(argv[4]);
+  opts.dtWeight = dtMode ? atof(argv[2]) : 0.0;
+  std::string alg = std::string(argv[3]);
   if (alg.empty() || alg == "simplex") {
     opts.algorithm = Algorithm::Simplex;
   } else if (alg == "smap") {
@@ -330,31 +329,31 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   } else {
     return INVALID_ALGORITHM;
   }
-  opts.forceCompute = (std::string(argv[5]) == "force");
-  opts.missingdistance = atof(argv[6]);
-  char* reqThreads = argv[7];
+  opts.forceCompute = (std::string(argv[4]) == "force");
+  opts.missingdistance = atof(argv[5]);
+  char* reqThreads = argv[6];
   opts.nthreads = atoi(reqThreads);
-  io.verbosity = atoi(argv[8]);
-  opts.numTasks = atoi(argv[9]);
-  bool explore = atoi(argv[10]);
-  bool full = atoi(argv[11]);
-  bool shuffle = atoi(argv[12]);
-  int crossfold = atoi(argv[13]);
-  int tau = atoi(argv[14]);
-  int maxE = atoi(argv[15]);
-  bool allowMissing = atoi(argv[16]);
-  opts.thetas = numlist_to_vector<double>(std::string(argv[17]));
-  opts.aspectRatio = atof(argv[18]);
-  std::string distance(argv[19]);
-  std::string requestedMetrics(argv[20]);
-  bool copredictMode = atoi(argv[21]);
-  opts.cmdLine = argv[22];
-  int numExtrasLagged = atoi(argv[23]);
-  opts.idw = atof(argv[24]);
-  opts.panelMode = atoi(argv[25]);
-  bool reldt = atoi(argv[26]);
-  bool wassDT = atoi(argv[27]);
-  int p = atoi(argv[28]);
+  io.verbosity = atoi(argv[7]);
+  opts.numTasks = atoi(argv[8]);
+  bool explore = atoi(argv[9]);
+  bool full = atoi(argv[10]);
+  bool shuffle = atoi(argv[11]);
+  int crossfold = atoi(argv[12]);
+  int tau = atoi(argv[13]);
+  int maxE = atoi(argv[14]);
+  bool allowMissing = atoi(argv[15]);
+  opts.thetas = numlist_to_vector<double>(std::string(argv[16]));
+  opts.aspectRatio = atof(argv[17]);
+  std::string distance(argv[18]);
+  std::string requestedMetrics(argv[19]);
+  bool copredictMode = atoi(argv[20]);
+  opts.cmdLine = argv[21];
+  int numExtrasLagged = atoi(argv[22]);
+  opts.idw = atof(argv[23]);
+  opts.panelMode = atoi(argv[24]);
+  bool reldt = atoi(argv[25]);
+  bool wassDT = atoi(argv[26]);
+  int p = atoi(argv[27]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -494,7 +493,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
     if (wassDT && !dtMode) {
       opts.dtWeight = 1.0;
-      dt0 = true;
       reldt = true;
     }
   }
@@ -508,7 +506,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // If we have to set the default 'dt' weight, then make a manifold with dtweight of 1 then
     // we can rescale this by the appropriate variances in the future.
     // TODO: How would we change this for 'reldt'?
-    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0, false,
+    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, false,
                                         allowMissing);
     double DT_WEIGHT = 1.0;
     Manifold manifold = dtgenerator.create_manifold(maxE, {}, false, false, DT_WEIGHT);
@@ -524,7 +522,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   SF_macro_save(DTW_USED, (char*)fmt::format("{}", opts.dtWeight).c_str());
 
-  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, dt0, reldt,
+  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, reldt,
                                     allowMissing);
 
   // Save some variables back to Stata, like usable, and the manifold (if savemanifold) or the dt (if dtsave).

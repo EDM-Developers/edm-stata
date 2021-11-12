@@ -156,7 +156,6 @@ class ManifoldGenerator
 {
 private:
   bool _dt;
-  bool _dt0;
   bool _reldt;
   bool _panel_mode;
   bool _xmap_mode;
@@ -189,8 +188,7 @@ public:
   ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, int tau, int p,
                     const std::vector<double>& xmap = {}, const std::vector<double>& co_x = {},
                     const std::vector<int>& panelIDs = {}, const std::vector<std::vector<double>>& extras = {},
-                    int numExtrasLagged = 0, bool dt = false, bool dt0 = false, bool reldt = false,
-                    bool allowMissing = false)
+                    int numExtrasLagged = 0, bool dt = false, bool reldt = false, bool allowMissing = false)
     : _t(t)
     , _x(x)
     , _tau(tau)
@@ -202,7 +200,6 @@ public:
     , _num_extras((int)extras.size())
     , _num_extras_lagged(numExtrasLagged)
     , _dt(dt)
-    , _dt0(dt0)
     , _reldt(reldt)
     , _allow_missing(allowMissing)
   {
@@ -216,7 +213,7 @@ public:
 
   std::vector<bool> generate_usable(int maxE, bool coprediction = false) const;
 
-  int E_dt(int E) const { return (_dt) * (E - 1 + _dt0); }
+  int E_dt(int E) const { return _dt * E; }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
   int E_actual(int E) const { return E + E_dt(E) + E_extras(E); }
 

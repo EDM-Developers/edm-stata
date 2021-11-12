@@ -273,7 +273,7 @@ functions:
              e(sample)   
 
 . 
-. edm xmap x y, e(6) lib(8) force
+. edm xmap x y, e(6) lib(8)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -1359,7 +1359,7 @@ Time variable: t, 1 to 100
 . qui {
 
 . 
-. edm explore x, e(2) crossfold(2) k(-1) allowmissing force
+. edm explore x, e(2) crossfold(2) k(-1) allowmissing
 2-fold cross-validation progress (2 in total)
 
 Empirical Dynamic Modelling
@@ -1376,7 +1376,7 @@ Note: Number of neighbours (k) is adjusted to 51
 Note: 2-fold cross validation results reported
 
 . 
-. edm explore x, e(2) crossfold(10) k(-1) allowmissing force
+. edm explore x, e(2) crossfold(10) k(-1) allowmissing
 10-fold cross-validation progress (10 in total)
 
 Empirical Dynamic Modelling
@@ -3001,7 +3001,7 @@ beta2_b7_rep1   double  %10.0g                u1 predicting x or x|M(y) S-map co
 . drop beta*
 
 . 
-. edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta) force
+. edm xmap x y, e(4) extra(L(1/3).u1) allowmissing dt alg(smap) savesmap(beta)
 
 Empirical Dynamic Modelling
 Convergent Cross-mapping result for variables x and y
@@ -4635,7 +4635,7 @@ Note: Embedding includes the delta of the time variable with a weight of .65
 
 . 
 . // Make sure theta changes are reflected, even when k(-1) is specified.
-. edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full force
+. edm explore x, k(-1) theta(0(0.1)2.0) algorithm(smap) full
 
 Empirical Dynamic Modelling
 Univariate mapping with x and its lag values
