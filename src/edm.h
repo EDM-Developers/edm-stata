@@ -20,16 +20,17 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
 Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,
                     IO* io, bool keep_going(), void all_tasks_finished());
 
-void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
-                     Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going());
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
+                     int* kUsed, bool keep_going());
 
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXi> rc,
-                        int* kUsed);
+                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
+                        Eigen::Map<MatrixXi> rcView, int* kUsed);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,

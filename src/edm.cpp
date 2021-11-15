@@ -276,9 +276,9 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   int numPredictions = Mp.numPoints();
   int numCoeffCols = M.E_actual() + 1;
 
-  auto ystar = std::make_unique<double[]>(numThetas * numPredictions);
-  std::fill_n(ystar.get(), numThetas * numPredictions, MISSING_D);
-  Eigen::Map<MatrixXd> ystarView(ystar.get(), numThetas, numPredictions);
+  auto predictions = std::make_unique<double[]>(numThetas * numPredictions);
+  std::fill_n(predictions.get(), numThetas * numPredictions, MISSING_D);
+  Eigen::Map<MatrixXd> predictionsView(predictions.get(), numThetas, numPredictions);
 
   // If we're saving the coefficients (i.e. in xmap mode), then we're not running with multiple 'theta' values.
   auto coeffs = std::make_unique<double[]>(numPredictions * numCoeffCols);
@@ -306,7 +306,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 #endif
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
-        [&, i] { make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going); });
+        [&, i] { make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
     }
     if (opts.numTasks == 1) {
       io->progress_bar(0.0);
@@ -331,8 +331,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       af::sync(0);
       auto start = std::chrono::high_resolution_clock::now();
 #endif
-      af_make_prediction(numPredictions, opts, M, Mp, gpuM, gpuMp, metricOpts, ystarView, rcView, coeffsView, kUsed,
-                         keep_going);
+      af_make_prediction(numPredictions, opts, M, Mp, gpuM, gpuMp, metricOpts, predictionsView, rcView, coeffsView,
+                         kUsed, keep_going);
 #if WITH_GPU_PROFILING
       af::sync(0);
       auto end = std::chrono::high_resolution_clock::now();
@@ -348,7 +348,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         if (keep_going != nullptr && !keep_going()) {
           break;
         }
-        make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going);
+        make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going);
         if (opts.numTasks == 1) {
           io->progress_bar((i + 1) / ((double)numPredictions));
         }
@@ -366,14 +366,14 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     for (int t = 0; t < numThetas * opts.calcRhoMAE; t++) {
       PredictionStats stats;
 
-      // TODO POTENTIAL SPEEDUP: if ystar and y exist on GPU
+      // TODO POTENTIAL SPEEDUP: if predictions and y exist on GPU
       //      this could potentially be faster on GPU for larger numPoints
       std::vector<double> y1, y2;
 
       for (int i = 0; i < Mp.numTargets(); i++) {
-        if (Mp.target(i) != MISSING_D && ystarView(t, i) != MISSING_D) {
+        if (Mp.target(i) != MISSING_D && predictionsView(t, i) != MISSING_D) {
           y1.push_back(Mp.target(i));
-          y2.push_back(ystarView(t, i));
+          y2.push_back(predictionsView(t, i));
         }
       }
 
@@ -398,11 +398,11 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     if (opts.savePrediction) {
       // Take only the predictions for the largest theta value.
       if (numThetas == 1) {
-        pred.ystar = std::move(ystar);
+        pred.ystar = std::move(predictions);
       } else {
         pred.ystar = std::make_unique<double[]>(numPredictions);
         for (int i = 0; i < numPredictions; i++) {
-          pred.ystar[i] = ystarView(numThetas - 1, i);
+          pred.ystar[i] = predictionsView(numThetas - 1, i);
         }
       }
     } else {
@@ -449,8 +449,8 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 // Use a library set 'M' to make a prediction about the prediction set 'Mp'.
 // Specifically, predict the 'Mp_i'-th value of the prediction set 'Mp'.
 //
-// The predicted value is stored in 'ystar', along with any return codes in 'rc'.
-// Optionally, the user may ask to store some S-map intermediate values in 'coeffs'.
+// The predicted value is stored in 'predictionsView', along with any return codes in 'rcView'.
+// Optionally, the user may ask to store some S-map intermediate values in 'coeffsView'.
 //
 // The 'opts' value specifies the kind of prediction to make (e.g. S-map, or simplex method).
 // This function is usually run in a worker thread, and the 'keep_going' callback is frequently called to
@@ -461,14 +461,15 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
 // In this case, the algorithm may cheat by pulling out the identical trajectory from the library set
 // and using this as the prediction. As such, we throw away any neighbours which have a distance of 0 from
 // the target point.
-void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp, Eigen::Map<MatrixXd> ystar,
-                     Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs, int* kUsed, bool keep_going())
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
+                     int* kUsed, bool keep_going())
 {
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
   // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
   if (keep_going != nullptr && !keep_going()) {
-    rc(0, Mp_i) = BREAK_HIT;
+    rcView(0, Mp_i) = BREAK_HIT;
     return;
   }
 
@@ -483,7 +484,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (keep_going != nullptr && !keep_going()) {
-    rc(0, Mp_i) = BREAK_HIT;
+    rcView(0, Mp_i) = BREAK_HIT;
     return;
   }
 
@@ -495,7 +496,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     if (opts.forceCompute) {
       k = numValidDistances;
     } else {
-      rc(0, Mp_i) = INSUFFICIENT_UNIQUE;
+      rcView(0, Mp_i) = INSUFFICIENT_UNIQUE;
       return;
     }
   }
@@ -503,7 +504,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (k == 0) {
     // Whether we throw an error or just silently ignore this prediction
     // depends on whether we are in 'strict' mode or not.
-    rc(0, Mp_i) = opts.forceCompute ? SUCCESS : INSUFFICIENT_UNIQUE;
+    rcView(0, Mp_i) = opts.forceCompute ? SUCCESS : INSUFFICIENT_UNIQUE;
     return;
   }
 
@@ -516,20 +517,20 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   }
 
   if (keep_going != nullptr && !keep_going()) {
-    rc(0, Mp_i) = BREAK_HIT;
+    rcView(0, Mp_i) = BREAK_HIT;
     return;
   }
 
   if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, ystar, rc, kUsed);
+      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, predictionsView, rcView, kUsed);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, ystar, coeffs, rc, kUsed);
+      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, predictionsView, coeffsView, rcView, kUsed);
     }
   } else {
-    rc(0, Mp_i) = INVALID_ALGORITHM;
+    rcView(0, Mp_i) = INVALID_ALGORITHM;
   }
 }
 
@@ -617,8 +618,8 @@ DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentia
 }
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
-                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXi> rc,
-                        int* kUsed)
+                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
+                        Eigen::Map<MatrixXi> rcView, int* kUsed)
 {
   int k = kNNInds.size();
 
@@ -649,8 +650,8 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   }
 
   // Store the results & return value.
-  ystar(t, Mp_i) = r;
-  rc(t, Mp_i) = SUCCESS;
+  predictionsView(t, Mp_i) = r;
+  rcView(t, Mp_i) = SUCCESS;
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
