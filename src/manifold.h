@@ -22,9 +22,9 @@ using json = nlohmann::json;
 #if defined(WITH_ARRAYFIRE)
 struct ManifoldOnGPU
 {
-  af::array mdata; // shape [_E_actual _numPoints 1 1] - manifold
-  af::array yvec;  // Shape [_numPoints 1 1 1]
-  af::array panel; // Shape [_numPoints 1 1 1] - panel ids
+  af::array mdata;   // shape [_E_actual _numPoints 1 1] - manifold
+  af::array targets; // Shape [_numPoints 1 1 1]
+  af::array panel;   // Shape [_numPoints 1 1 1] - panel ids
   int numPoints, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
   double missing;
 };
@@ -33,15 +33,15 @@ struct ManifoldOnGPU
 class Manifold
 {
   std::shared_ptr<double[]> _flat = nullptr;
-  std::vector<double> _y;
+  std::vector<double> _targets;
   std::vector<int> _panelIDs;
   int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
 
 public:
-  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> y, std::vector<int> panelIDs, int numPoints, int E_x,
-           int E_dt, int E_extras, int E_lagged_extras, int E_actual)
-    : _flat(std::move(flat))
-    , _y(y)
+  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> targets, std::vector<int> panelIDs, int numPoints,
+           int E_x, int E_dt, int E_extras, int E_lagged_extras, int E_actual)
+    : _flat(flat)
+    , _targets(targets)
     , _panelIDs(panelIDs)
     , _numPoints(numPoints)
     , _E_x(E_x)
@@ -65,7 +65,7 @@ public:
     return { &(_flat[obsNum * _E_actual]), 1 + (_E_dt > 0) + numLaggedExtras, _E_x };
   }
 
-  Eigen::Map<const Eigen::VectorXd> yMap() const { return { &(_y[0]), _numPoints }; }
+  Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
@@ -129,8 +129,9 @@ public:
     return count;
   }
 
-  double y(int i) const { return _y[i]; }
-  int ySize() const { return (int)_y.size(); }
+  double target(int i) const { return _targets[i]; }
+  int numTargets() const { return (int)_targets.size(); }
+  const std::vector<double>& targets() const { return _targets; }
 
   double* data() const { return _flat.get(); };
   int numPoints() const { return _numPoints; }
@@ -141,7 +142,6 @@ public:
   int E_actual() const { return _E_actual; }
   const std::vector<int>& panelIDs() const { return _panelIDs; }
   std::shared_ptr<double[]> flatf64() const { return _flat; }
-  const std::vector<double>& yvec() const { return _y; }
   std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const
   {
     return std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual);
@@ -208,8 +208,8 @@ public:
     setup_observation_numbers();
   }
 
-  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredictMode, bool predictionSet,
-                           double dtWeight = 0.0, bool skipMissing = false) const;
+  Manifold create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight = 0.0,
+                           bool copredictMode = false, bool skipMissing = false) const;
 
   std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
 
