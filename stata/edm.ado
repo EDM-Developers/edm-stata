@@ -1,7 +1,7 @@
-*! version 1.9.1, 12Nov2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
+*! version 1.9.2, 15Nov2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
 *! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@unimelb.edu.au>
 
-global EDM_VERSION = "1.9.1"
+global EDM_VERSION = "1.9.2"
 /* Empirical dynamic modelling
 
 Version history:
