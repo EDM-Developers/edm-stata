@@ -342,7 +342,7 @@ end
 
 program define edmExplore, eclass
 	syntax anything [if], [e(numlist ascending >=2)] ///
-		[tau(integer 1)] [theta(numlist ascending)] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 1)] ///
+		[tau(integer 1)] [theta(numlist ascending)] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 0)] ///
 		[seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
 		[dt] [reldt] [DTWeight(real 0)] [DTSave(name)] [DETails] [reportrawe] [strict] [Predictionhorizon(string)] ///
@@ -374,11 +374,15 @@ program define edmExplore, eclass
 		}
 	}
 
-	if "`randomize'" == "randomize" | `replicate' > 1 {
+	if "`randomize'" == "randomize" | `replicate' > 0 {
 		local shuffle = 1
 	}
 	else {
 		local shuffle = 0
+	}
+
+	if `replicate' == 0 {
+		local replicate = 1
 	}
 
 	local copredictvar = strtrim("`copredictvar'")
@@ -1061,7 +1065,7 @@ end
 
 program define edmXmap, eclass
 	syntax anything [if],  [e(integer 2)] [tau(integer 1)] [theta(real 1)] ///
-		[Library(numlist)] [RANDomize] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 1)] [strict] ///
+		[Library(numlist)] [RANDomize] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 0)] [strict] ///
 		[DIrection(string)] [seed(integer 0)] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
 		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
@@ -1078,11 +1082,15 @@ program define edmXmap, eclass
 		set seed `seed'
 	}
 
-	if "`randomize'" == "randomize" | `replicate' > 1 {
+	if "`randomize'" == "randomize" | `replicate' > 0 {
 		local shuffle = 1
 	}
 	else {
 		local shuffle = 0
+	}
+
+	if `replicate' == 0 {
+		local replicate = 1
 	}
 
 	if "`oneway'" == "oneway" {
