@@ -601,14 +601,13 @@ program define edmExplore, eclass
 				foreach v of local max_e_manifold {
 					replace `usable' = 1 if `v' != . & `touse'
 				}
-				qui replace `usable' = 0 if `x_f' == .
 			}
 		}
 		else {
 			// Find which rows of the manifold have any values which are missing
 			tempvar any_missing_in_manifold
 			hasMissingValues `max_e_manifold', out(`any_missing_in_manifold')
-			gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
+			gen byte `usable' = `touse' & !`any_missing_in_manifold'
 		}
 	}
 
@@ -630,12 +629,11 @@ program define edmExplore, eclass
 			foreach v of local max_e_co_manifold {
 				qui replace `co_usable' = 1 if `v' !=. & `touse'
 			}
-			qui replace `co_usable' = 0 if `co_x_f' == .
 		}
 		else {
 			tempvar any_missing_in_co_manifold
 			hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
-			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
+			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
 		}
 
 		tempvar co_predict_set
@@ -839,6 +837,8 @@ program define edmExplore, eclass
 					qui gen byte `predict_set' = `counting_up' > `half_size' & `counting_up' != .
 				}
 			}
+
+			qui replace `train_set' = 0 if `x_f' == .
 		}
 
 		if `crossfold' > 1 {
@@ -1403,7 +1403,6 @@ program define edmXmap, eclass
 				foreach v of local max_e_manifold {
 					qui replace `usable' = 1 if `v' !=. & `touse'
 				}
-				qui replace `usable' = 0 if `x_f' == .
 
 				if `missingdistance' <= 0 {
 					qui sum `x' if `touse'
@@ -1414,7 +1413,7 @@ program define edmXmap, eclass
 			else {
 				tempvar any_missing_in_manifold
 				hasMissingValues `max_e_manifold', out(`any_missing_in_manifold')
-				gen byte `usable' = `touse' & !`any_missing_in_manifold' & `x_f' != .
+				gen byte `usable' = `touse' & !`any_missing_in_manifold'
 			}
 		}
 
@@ -1430,12 +1429,11 @@ program define edmXmap, eclass
 				foreach v of local max_e_co_manifold {
 					qui replace `co_usable' = 1 if `v' !=. & `touse'
 				}
-				qui replace `co_usable' = 0 if `co_x_f' == .
 			}
 			else {
 				tempvar any_missing_in_co_manifold
 				hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
-				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' & `co_x_f' != .
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' //& `co_x_f' != .
 			}
 
 			tempvar co_predict_set
@@ -1587,6 +1585,7 @@ program define edmXmap, eclass
 							qui gen double `urank' = sum(`usable')
 						}
 						qui replace `train_set' = `urank' <= `lib_size' & `usable'
+						qui replace `train_set' = 0 if `x_f' == .
 					}
 
 					local train_size = `lib_size'

@@ -63,7 +63,7 @@ void print_manifold(const Manifold& M)
   auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
 
   std::cout << "\n";
-  for (int i = 0; i < M.nobs(); i++) {
+  for (int i = 0; i < M.numPoints(); i++) {
     for (int j = 0; j < M.E_actual(); j++) {
       std::cout << stringVersion(M(i, j)) << "\t";
     }
@@ -86,11 +86,11 @@ void require_vectors_match(const std::vector<T>& u, const std::vector<T>& v)
 void require_manifolds_match(const Manifold& M, const std::vector<std::vector<double>>& M_true,
                              const std::vector<double>& y_true)
 {
-  REQUIRE(M.nobs() == M_true.size());  // TODO: Rename this to numPoints
-  REQUIRE(M.ySize() == y_true.size()); // Shouldn't this always be the same as M.nobs()?
+  REQUIRE(M.numPoints() == M_true.size());
+  REQUIRE(M.ySize() == y_true.size()); // Shouldn't this always be the same as M.numPoints()?
   REQUIRE(M.E_actual() == M_true[0].size());
 
-  for (int i = 0; i < M.nobs(); i++) {
+  for (int i = 0; i < M.numPoints(); i++) {
     CAPTURE(i);
     for (int j = 0; j < M.E_actual(); j++) {
       CAPTURE(j);
@@ -98,6 +98,12 @@ void require_manifolds_match(const Manifold& M, const std::vector<std::vector<do
     }
     REQUIRE(M.y(i) == y_true[i]);
   }
+}
+
+void check_usable_matches_prediction_set(const std::vector<bool>& usable, const Manifold& Mp)
+{
+  int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
+  REQUIRE(numUsable == Mp.numPoints());
 }
 
 TEST_CASE("Basic manifold creation", "[basicManifold]")
@@ -114,19 +120,25 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     ManifoldGenerator generator(t, x, tau, p);
 
     std::vector<bool> usable = generator.generate_usable(E);
-    std::vector<bool> usableTrue = { false, true, true, false };
+    std::vector<bool> usableTrue = { false, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
+    Manifold M = generator.create_manifold(E, usable, false, false);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0 }, { 13.0, 12.0 } };
     std::vector<double> y_true = { 13.0, 14.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp = generator.create_manifold(E, usable, false, true);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 12.0, 11.0 }, { 13.0, 12.0 }, { 14.0, 13.0 } };
+    std::vector<double> yp_true = { 13.0, 14.0, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
   SECTION("Manifold with dt (not allowing missing)")
   {
-    // TODO: This test is a bit fake; edm.ado would not allow dt to be
-    // applied when there's no gaps in the time variable.
+    // TODO: This test is a bit fake; edm.ado would not allow dt to be applied when there's no gaps in the time
+    // variable.
     bool dtMode = true;
     double dtWeight = 1.0;
     bool allowMissing = false;
@@ -136,10 +148,15 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usableTrue = { false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 1.0, 1.0 }, { 13.0, 12.0, 1.0, 1.0 } };
     std::vector<double> y_true = { 13.0, 14.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    // Here, there's no difference between library and prediction sets
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    require_manifolds_match(Mp, M_true, y_true);
   }
 }
 
@@ -166,13 +183,19 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     }
 
     std::vector<bool> usable = generator.generate_usable(E);
-    std::vector<bool> usableTrue = { false, false, false, false, false, false };
+    std::vector<bool> usableTrue = { false, false, false, false, true, false };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, false);
-    REQUIRE(M.nobs() == 0);
+    Manifold M = generator.create_manifold(E, usable, false, false);
+    REQUIRE(M.numPoints() == 0);
     REQUIRE(M.ySize() == 0);
     REQUIRE(M.E_actual() == 2);
+
+    Manifold Mp = generator.create_manifold(E, usable, false, true);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 15.0, 14.0 } };
+    std::vector<double> yp_true = { NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
   SECTION("dt")
@@ -192,12 +215,17 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 2.0, 1.5 },
                                                 { 14.0, 12.0, 0.5, 2.0 },
                                                 { 15.0, 14.0, 1.0, 0.5 } };
     std::vector<double> y_true = { 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    // Here, there's no difference between library and prediction sets
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    require_manifolds_match(Mp, M_true, y_true);
   }
 
   SECTION("dt and allowingmissing")
@@ -214,15 +242,23 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     }
 
     std::vector<bool> usable = generator.generate_usable(E);
-    std::vector<bool> usableTrue = { true, false, true, true, true, false };
+    std::vector<bool> usableTrue = { true, true, true, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = {
       { 11.0, NA, 1.5, NA }, { NA, 12.0, 1.5, 0.5 }, { 14.0, NA, 0.5, 1.5 }, { 15.0, 14.0, 1.0, 0.5 }
     };
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 11.0, NA, 1.5, NA },    { 12.0, 11.0, 0.5, 1.5 },
+                                                 { NA, 12.0, 1.5, 0.5 },   { 14.0, NA, 0.5, 1.5 },
+                                                 { 15.0, 14.0, 1.0, 0.5 }, { 16.0, 15.0, NA, 1.0 } };
+    std::vector<double> yp_true = { 12.0, NA, 14.0, 15.0, 16.0, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
   SECTION("reldt")
@@ -242,12 +278,17 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 2.0, 3.5 },
                                                 { 14.0, 12.0, 0.5, 2.5 },
                                                 { 15.0, 14.0, 1.0, 1.5 } };
     std::vector<double> y_true = { 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    // Here, there's no difference between library and prediction sets
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    require_manifolds_match(Mp, M_true, y_true);
   }
 }
 
@@ -268,10 +309,10 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
     std::vector<bool> usable = generator.generate_usable(E);
-    std::vector<bool> usableTrue = { true, false, true, true, true, false };
+    std::vector<bool> usableTrue = { true, true, true, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = {
       { 11.0, NA, 1.5, NA },
       { NA, 11.0, 1.5, 2.0 },
@@ -280,6 +321,15 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     };
     std::vector<double> y_true = { 12.0, 14.0, 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = {
+      { 11.0, NA, 1.5, NA },    { 12.0, NA, 0.5, NA },  { NA, 11.0, 1.5, 2.0 },
+      { 14.0, 12.0, 0.5, 2.0 }, { 15.0, NA, 1.0, 2.0 }, { 16.0, 14.0, NA, 1.5 },
+    };
+    std::vector<double> yp_true = { 12.0, NA, 14.0, 15.0, 16.0, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
   SECTION("Not allowing missing values")
@@ -293,10 +343,15 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     std::vector<bool> usableTrue = { false, false, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
 
-    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight, false);
+    Manifold M = generator.create_manifold(E, usable, false, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 14.0, 11.0, 0.5, 3.5 }, { 15.0, 12.0, 1.0, 2.5 } };
     std::vector<double> y_true = { 15.0, 16.0 };
     require_manifolds_match(M, M_true, y_true);
+
+    // Here, there's no difference between library and prediction sets
+    Manifold Mp = generator.create_manifold(E, usable, false, true, dtWeight);
+    check_usable_matches_prediction_set(usable, Mp);
+    require_manifolds_match(Mp, M_true, y_true);
   }
 }
 
@@ -417,13 +472,14 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   ManifoldGenerator generator(t, x, tau, p, xmap, co_x, {}, {}, 0, dt, reldt, allowMissing);
 
   std::vector<bool> usable = generator.generate_usable(E);
-  std::vector<bool> usableTrue = { true, false, false, true, true };
+  std::vector<bool> usableTrue = { true, true, true, true, true };
   require_vectors_match<bool>(usable, usableTrue);
 
   double dtWeight = 1.0;
   bool copredict = true;
   Manifold M = generator.create_manifold(E, usable, copredict, false, dtWeight);
   Manifold Mp = generator.create_manifold(E, usable, copredict, true, dtWeight);
+  check_usable_matches_prediction_set(usable, Mp);
 
   std::vector<std::vector<double>> M_true = {
     { 1, NA, NA, NA, NA, 0, NA, NA, NA, NA },
@@ -434,11 +490,11 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   require_manifolds_match(M, M_true, y_true);
 
   std::vector<std::vector<double>> Mp_true = {
-    { 1, NA, NA, NA, NA, 0, NA, NA, NA, NA },
-    { 4, NA, NA, 1, NA, 0, 1, 2, 3, NA },
+    { 1, NA, NA, NA, NA, 0, NA, NA, NA, NA }, { NA, 1, NA, NA, NA, 0, 1, NA, NA, NA },
+    { NA, NA, 1, NA, NA, 0, 1, 2, NA, NA },   { 4, NA, NA, 1, NA, 0, 1, 2, 3, NA },
     { 5, 4, NA, NA, 1, 0, 1, 2, 3, 4 },
   };
-  std::vector<double> yp_true = y_true;
+  std::vector<double> yp_true = { 1, NA, NA, 4, 5 };
   require_manifolds_match(Mp, Mp_true, yp_true);
 
   Options opts;
@@ -454,7 +510,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
 
   SECTION("Cost matrix")
   {
-    int i = 2, j = 2;
+    int i = 2, j = 4;
 
     auto M_i = M.laggedObsMap(i);
     auto Mp_j = Mp.laggedObsMap(j);
@@ -484,11 +540,11 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     int Mp_j = 2;
 
     std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
-    for (int i = 0; i < M.nobs(); i++) {
+    for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
     }
 
-    for (int i = 0; i < M.nobs(); i++) {
+    for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("Cost matrix M_i={}\n", i);
 
       auto M_i_map = M.laggedObsMap(i);
@@ -542,11 +598,11 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
   ManifoldGenerator generator(t, x, tau, p, {}, co_x);
 
   std::vector<bool> usable = generator.generate_usable(E);
-  std::vector<bool> usableTrue = { false, false, false, true, true, false };
+  std::vector<bool> usableTrue = { false, false, false, true, true, true };
   require_vectors_match<bool>(usable, usableTrue);
 
   std::vector<bool> cousable = generator.generate_usable(E, true);
-  std::vector<bool> cousableTrue = { false, true, false, false, false, false };
+  std::vector<bool> cousableTrue = { false, true, true, false, false, true };
   require_vectors_match<bool>(cousable, cousableTrue);
 
   SECTION("Standard predictions")
@@ -554,13 +610,14 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
     bool copredict = false;
     Manifold M = generator.create_manifold(E, usable, copredict, false);
     Manifold Mp = generator.create_manifold(E, usable, copredict, true);
+    check_usable_matches_prediction_set(usable, Mp);
 
     std::vector<std::vector<double>> M_true = { { 4, 3 }, { 5, 4 } };
     std::vector<double> y_true = { 5, 6 };
     require_manifolds_match(M, M_true, y_true);
 
-    std::vector<std::vector<double>> Mp_true = { { 4, 3 }, { 5, 4 } };
-    std::vector<double> yp_true = { 5, 6 };
+    std::vector<std::vector<double>> Mp_true = { { 4, 3 }, { 5, 4 }, { 6, 5 } };
+    std::vector<double> yp_true = { 5, 6, NA };
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
@@ -574,8 +631,8 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
     std::vector<double> y_co_true = { 5, 6 };
     require_manifolds_match(M_co, M_co_true, y_co_true);
 
-    std::vector<std::vector<double>> Mp_co_true = { { 12, 11 } };
-    std::vector<double> yp_co_true = { 13 };
+    std::vector<std::vector<double>> Mp_co_true = { { 12, 11 }, { 13, 12 }, { 16, 15 } };
+    std::vector<double> yp_co_true = { 13, NA, NA };
     require_manifolds_match(Mp_co, Mp_co_true, yp_co_true);
   }
 }
