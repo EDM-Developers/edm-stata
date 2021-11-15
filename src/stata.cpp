@@ -509,7 +509,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, false,
                                         allowMissing);
     double DT_WEIGHT = 1.0;
-    Manifold manifold = dtgenerator.create_manifold(maxE, {}, false, true, DT_WEIGHT);
+    Manifold manifold = dtgenerator.create_manifold(maxE, {}, true, DT_WEIGHT);
     std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
@@ -538,7 +538,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
   if (saveDT) {
     double SAVE_DT_WEIGHT = 1.0;
-    Manifold manifold = generator.create_manifold(maxE, {}, false, true, SAVE_DT_WEIGHT);
+    Manifold manifold = generator.create_manifold(maxE, {}, true, SAVE_DT_WEIGHT);
 
     std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
@@ -550,7 +550,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   // Save the manifold back to Stata if requested.
   if (saveManifold) {
-    Manifold manifold = generator.create_manifold(maxE, {}, false, true, opts.dtWeight);
+    Manifold manifold = generator.create_manifold(maxE, {}, true, opts.dtWeight);
 
     ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + saveDT + 1;
     write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);

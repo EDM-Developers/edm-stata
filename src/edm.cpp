@@ -27,8 +27,11 @@
 #include <algorithm> // std::partial_sort
 #include <chrono>
 #include <cmath>
-#include <fstream> // just to create low-level input dumps
+
+#if defined(DUMP_LOW_LEVEL_INPUTS) || defined(WITH_ARRAYFIRE)
+#include <fstream>
 #include <iostream>
+#endif
 
 #if defined(WITH_ARRAYFIRE)
 #include <af/macros.h>
@@ -234,8 +237,8 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   // Note, we can't have missing data inside the library set when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
 
-  Manifold M = generator.create_manifold(E, libraryRows, opts.copredict, false, opts.dtWeight, skipMissing);
-  Manifold Mp = generator.create_manifold(E, predictionRows, opts.copredict, true, opts.dtWeight);
+  Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
+  Manifold Mp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
 
   return taskRunnerPool.enqueue([opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished] {
     return edm_task(opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished);
@@ -261,9 +264,14 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   const ManifoldOnGPU gpuM = M.toGPU(false);
   const ManifoldOnGPU gpuMp = Mp.toGPU(false);
 
-  constexpr bool useAF = true; // Being true will trump mutli-threaded codepath
+  constexpr bool useAF = true;
 #endif
   bool multiThreaded = opts.nthreads > 1;
+
+#if defined(WITH_ARRAYFIRE)
+  multiThreaded = multiThreaded && !useAF;
+#endif
+
   int numThetas = (int)opts.thetas.size();
   int numPredictions = Mp.numPoints();
   int numCoeffCols = M.E_actual() + 1;
@@ -290,11 +298,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     io->progress_bar(0.0);
   }
 
-#if defined(WITH_ARRAYFIRE)
-  if (multiThreaded && !useAF) {
-#else
   if (multiThreaded) {
-#endif
     std::vector<std::future<void>> results(numPredictions);
 #if WITH_GPU_PROFILING
     workerPool.sync();
@@ -341,7 +345,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
         io->progress_bar(0.0);
       }
       for (int i = 0; i < numPredictions; i++) {
-        if (keep_going != nullptr && keep_going() == false) {
+        if (keep_going != nullptr && !keep_going()) {
           break;
         }
         make_prediction(i, opts, M, Mp, ystarView, rcView, coeffsView, &(kUsed[i]), keep_going);
@@ -357,7 +361,7 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
   Prediction pred;
 
   // Store the results, so long as we weren't interrupted by a 'break'.
-  if (keep_going == nullptr || keep_going() == true) {
+  if (keep_going == nullptr || keep_going()) {
     // Start by calculating the MAE & rho of prediction, if requested
     for (int t = 0; t < numThetas * opts.calcRhoMAE; t++) {
       PredictionStats stats;
@@ -366,9 +370,9 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
       //      this could potentially be faster on GPU for larger numPoints
       std::vector<double> y1, y2;
 
-      for (int i = 0; i < Mp.ySize(); i++) {
-        if (Mp.y(i) != MISSING_D && ystarView(t, i) != MISSING_D) {
-          y1.push_back(Mp.y(i));
+      for (int i = 0; i < Mp.numTargets(); i++) {
+        if (Mp.target(i) != MISSING_D && ystarView(t, i) != MISSING_D) {
+          y1.push_back(Mp.target(i));
           y2.push_back(ystarView(t, i));
         }
       }
@@ -463,7 +467,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   // An impatient user may want to cancel a long-running EDM command, so we occasionally check using this
   // callback to see whether we ought to keep going with this EDM command. Of course, this adds a tiny inefficiency,
   // but there doesn't seem to be a simple way to easily kill running worker threads across all OSs.
-  if (keep_going != nullptr && keep_going() == false) {
+  if (keep_going != nullptr && !keep_going()) {
     rc(0, Mp_i) = BREAK_HIT;
     return;
   }
@@ -478,7 +482,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     potentialNN = lp_distances(Mp_i, opts, M, Mp, tryInds);
   }
 
-  if (keep_going != nullptr && keep_going() == false) {
+  if (keep_going != nullptr && !keep_going()) {
     rc(0, Mp_i) = BREAK_HIT;
     return;
   }
@@ -511,7 +515,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     kNNs = kNearestNeighbours(potentialNN, k);
   }
 
-  if (keep_going != nullptr && keep_going() == false) {
+  if (keep_going != nullptr && !keep_going()) {
     rc(0, Mp_i) = BREAK_HIT;
     return;
   }
@@ -641,7 +645,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   // Make the simplex projection/prediction.
   double r = 0.0;
   for (int j = 0; j < k; j++) {
-    r = r + M.y(kNNInds[j]) * (w[j] / sumw);
+    r = r + M.target(kNNInds[j]) * (w[j] / sumw);
   }
 
   // Store the results & return value.
@@ -695,11 +699,11 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // Scale everything by our weights vector
 #if EIGEN_VERSION_AT_LEAST(3, 4, 0)
   X_ls_cj.array().colwise() *= w.array();
-  Eigen::VectorXd y_ls = M.yMap()(kNNInds).array() * w.array();
+  Eigen::VectorXd y_ls = M.targetsMap()(kNNInds).array() * w.array();
 #else
   Eigen::VectorXd y_ls(k);
   for (int i = 0; i < k; i++) {
-    y_ls[i] = M.y(kNNInds[i]) * w[i];
+    y_ls[i] = M.target(kNNInds[i]) * w[i];
   }
 #endif
 
@@ -1042,11 +1046,11 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
     }
 
     if (!isKNeg) {
-      afNearestNeighbours(pValids, sDists, yvecs, smData, validDistPair.dists, M.yvec, M.mdata, opts.algorithm,
+      afNearestNeighbours(pValids, sDists, yvecs, smData, validDistPair.dists, M.targets, M.mdata, opts.algorithm,
                           M.E_actual, M.numPoints, numPredictions, k);
     } else {
       sDists = af::select(pValids, validDistPair.dists, MISSING_D);
-      yvecs = M.yvec;
+      yvecs = M.targets;
       smData = M.mdata;
     }
 #if WITH_GPU_PROFILING

@@ -144,7 +144,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 
   if (useFloat) {
     return ManifoldOnGPU{ array(_E_actual, _numPoints, _flat.get()).as(f32),
-                          (_y.size() > 0 ? array(_numPoints, _y.data()) : array()).as(f32),
+                          (_targets.size() > 0 ? array(_numPoints, _targets.data()) : array()).as(f32),
                           (_panelIDs.size() > 0 ? array(_numPoints, _panelIDs.data()) : array()),
                           _numPoints,
                           _E_x,
@@ -155,7 +155,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
                           MISSING_F };
   } else {
     return ManifoldOnGPU{ array(_E_actual, _numPoints, _flat.get()),
-                          (_y.size() > 0 ? array(_numPoints, _y.data()) : array()),
+                          (_targets.size() > 0 ? array(_numPoints, _targets.data()) : array()),
                           (_panelIDs.size() > 0 ? array(_numPoints, _panelIDs.data()) : array()),
                           _numPoints,
                           _E_x,
@@ -168,8 +168,8 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 }
 #endif
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredictMode,
-                                            bool predictionSet, double dtWeight, bool skipMissing) const
+Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
+                                            bool copredictMode, bool skipMissing) const
 {
   bool takeEveryPoint = filter.size() == 0;
 

@@ -168,7 +168,7 @@ static void bm_simplex(benchmark::State& state)
       // Make the simplex projection/prediction.
       double r = 0.0;
       for (int j = 0; j < k; j++) {
-        r = r + M.y(kNNInds[j]) * (w[j] / sumw);
+        r = r + M.target(kNNInds[j]) * (w[j] / sumw);
       }
     }
   }
@@ -229,7 +229,7 @@ static void bm_smap(benchmark::State& state)
 
       // Scale everything by our weights vector
       X_ls_cj.array().colwise() *= w.array();
-      Eigen::VectorXd y_ls = M.yMap()(kNNInds).array() * w.array();
+      Eigen::VectorXd y_ls = M.targetsMap()(kNNInds).array() * w.array();
 
       // The old way to solve this system:
       // Eigen::BDCSVD<Eigen::MatrixXd> svd(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
