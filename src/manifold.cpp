@@ -210,6 +210,11 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
       }
     }
 
+    // Skip this point if we need the targets values to be observed (e.g. in the library set).
+    if (!predictionSet && target == MISSING_D) {
+      continue;
+    }
+
     y.push_back(target);
     if (_panel_mode) {
       panelIDs.push_back(_panelIDs[pointNumToStartIndex[i]]);
@@ -337,7 +342,7 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction
 {
   const double USABLE_DTWEIGHT = 1.0;
 
-  bool targetRequired = true;
+  bool targetRequired = false;
 
   std::vector<bool> usable(_t.size());
 
