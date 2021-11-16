@@ -5,6 +5,14 @@
 #include "mersennetwister.h"
 #include "stats.h"
 
+enum class Set
+{
+  Neither,
+  Library,
+  Prediction,
+  Both
+};
+
 class LibraryPredictionSetSplitter
 {
 private:
@@ -12,12 +20,12 @@ private:
   int _crossfold, _numObsUsable;
   std::vector<bool> _usable;
   std::vector<bool> _libraryRows, _predictionRows;
-  std::vector<int> _crossfoldURank;
+  std::vector<int> _crossfoldGroup;
   MtRng64 _rng;
 
 public:
   LibraryPredictionSetSplitter(bool explore, bool full, bool shuffle, int crossfold, std::vector<bool> usable,
-                               const std::string& rngState)
+                               const std::string& rngState = "")
     : _explore(explore)
     , _full(full)
     , _shuffle(shuffle)
@@ -34,19 +42,7 @@ public:
     _numObsUsable = std::accumulate(usable.begin(), usable.end(), 0);
 
     if (crossfold > 0) {
-      if (shuffle) {
-        std::vector<double> u;
-
-        for (int i = 0; i < _numObsUsable; i++) {
-          u.push_back(_rng.getReal2());
-        }
-
-        _crossfoldURank = rank(u);
-      } else {
-        for (int i = 0; i < _numObsUsable; i++) {
-          _crossfoldURank.push_back(i + 1);
-        }
-      }
+      setup_crossfold_groups();
     }
   }
 
@@ -74,6 +70,37 @@ public:
     }
   }
 
+  void setup_crossfold_groups()
+  {
+    std::vector<int> uRank;
+
+    if (_shuffle) {
+      std::vector<double> u;
+      for (int i = 0; i < _numObsUsable; i++) {
+        u.push_back(_rng.getReal2());
+      }
+      uRank = rank(u);
+    }
+
+    int sizeOfEachFold = std::round(((float)_numObsUsable) / _crossfold);
+    int obsNum = 0;
+
+    _crossfoldGroup = std::vector<int>(_usable.size());
+
+    for (int i = 0; i < _usable.size(); i++) {
+      if (_usable[i]) {
+        if (_shuffle) {
+          _crossfoldGroup[i] = uRank[obsNum] % _crossfold;
+        } else {
+          _crossfoldGroup[i] = obsNum / sizeOfEachFold;
+        }
+        obsNum += 1;
+      } else {
+        _crossfoldGroup[i] = -1;
+      }
+    }
+  }
+
   // Assuming this is called in explore mode
   int next_library_size(int crossfoldIter) const
   {
@@ -95,7 +122,27 @@ public:
   std::vector<bool> libraryRows() const { return _libraryRows; }
   std::vector<bool> predictionRows() const { return _predictionRows; }
 
-  void update_library_prediction_split(int library, int crossfoldIter)
+  std::vector<Set> setMemberships() const
+  {
+
+    std::vector<Set> m;
+
+    for (int i = 0; i < _libraryRows.size(); i++) {
+      if (_libraryRows[i] && _predictionRows[i]) {
+        m.push_back(Set::Both);
+      } else if (_libraryRows[i]) {
+        m.push_back(Set::Library);
+      } else if (_predictionRows[i]) {
+        m.push_back(Set::Prediction);
+      } else {
+        m.push_back(Set::Neither);
+      }
+    }
+
+    return m;
+  }
+
+  void update_library_prediction_split(int library = -1, int crossfoldIter = -1)
   {
     if (_explore && _full) {
       _libraryRows = _usable;
@@ -111,33 +158,18 @@ public:
 
   void crossfold_split(int crossfoldIter)
   {
-    int obsNum = 0;
-    int sizeOfEachFold = std::round(((float)_numObsUsable) / _crossfold);
-
     _libraryRows = std::vector<bool>(_usable.size());
     _predictionRows = std::vector<bool>(_usable.size());
 
     for (int i = 0; i < _libraryRows.size(); i++) {
       if (_usable[i]) {
-        if (_shuffle) {
-          if (_crossfoldURank[obsNum] % _crossfold == (crossfoldIter - 1)) {
-            _libraryRows[i] = false;
-            _predictionRows[i] = true;
-          } else {
-            _libraryRows[i] = true;
-            _predictionRows[i] = false;
-          }
+        if (_crossfoldGroup[i] == (crossfoldIter - 1)) {
+          _libraryRows[i] = false;
+          _predictionRows[i] = true;
         } else {
-          int foldGroup = obsNum / sizeOfEachFold;
-          if ((crossfoldIter - 1) == foldGroup) {
-            _libraryRows[i] = false;
-            _predictionRows[i] = true;
-          } else {
-            _libraryRows[i] = true;
-            _predictionRows[i] = false;
-          }
+          _libraryRows[i] = true;
+          _predictionRows[i] = false;
         }
-        obsNum += 1;
       } else {
         _libraryRows[i] = false;
         _predictionRows[i] = false;

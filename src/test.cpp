@@ -381,75 +381,54 @@ TEST_CASE("Library prediction splits", "[splitting]")
 
   SECTION("Explore")
   {
-    LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(true, false, false, 0, usable, "");
+    LibraryPredictionSetSplitter splitter(true, false, false, 0, usable);
 
-    int library = splitter.next_library_size(1);
-    splitter.update_library_prediction_split(library, 1);
-
-    std::vector<bool> libraryTrue = { true, true, false, false, false, false, false };   // 2
-    std::vector<bool> predictionTrue = { false, false, true, false, false, true, true }; // 3
-
-    require_vectors_match<bool>(splitter.libraryRows(), libraryTrue);
-    require_vectors_match<bool>(splitter.predictionRows(), predictionTrue);
+    splitter.update_library_prediction_split();
+    std::vector<Set> splitTrue = { Set::Library, Set::Library,    Set::Prediction, Set::Neither,
+                                   Set::Neither, Set::Prediction, Set::Prediction };
+    require_vectors_match<Set>(splitter.setMemberships(), splitTrue);
   }
 
   SECTION("Explore and full")
   {
-    LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(true, true, false, 0, usable, "");
+    LibraryPredictionSetSplitter splitter(true, true, false, 0, usable);
 
-    int library = splitter.next_library_size(1);
-    splitter.update_library_prediction_split(library, 1);
-
-    require_vectors_match<bool>(splitter.libraryRows(), usable);
-    require_vectors_match<bool>(splitter.predictionRows(), usable);
+    splitter.update_library_prediction_split();
+    std::vector<Set> splitTrue = { Set::Both, Set::Both, Set::Both, Set::Neither, Set::Neither, Set::Both, Set::Both };
+    require_vectors_match<Set>(splitter.setMemberships(), splitTrue);
   }
 
   SECTION("Crossfold mode (explore)")
   {
     int crossfold = 3;
 
-    LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(true, false, false, crossfold, usable, "");
+    LibraryPredictionSetSplitter splitter(true, false, false, crossfold, usable);
 
-    std::vector<std::vector<bool>> libraryTrueFolds = {
-      { false, false, true, false, false, true, true }, // 3
-      { true, true, false, false, false, false, true }, // 3
-      { true, true, true, false, false, true, false }   // 4
-    };
-
-    std::vector<std::vector<bool>> predictionTrueFolds = {
-      { true, true, false, false, false, false, false }, // 2
-      { false, false, true, false, false, true, false }, // 2
-      { false, false, false, false, false, false, true } // 1
+    std::vector<std::vector<Set>> splitsTrue = {
+      { Set::Prediction, Set::Prediction, Set::Library, Set::Neither, Set::Neither, Set::Library, Set::Library },
+      { Set::Library, Set::Library, Set::Prediction, Set::Neither, Set::Neither, Set::Prediction, Set::Library },
+      { Set::Library, Set::Library, Set::Library, Set::Neither, Set::Neither, Set::Library, Set::Prediction },
     };
 
     for (int iter = 1; iter <= crossfold; iter++) {
-      int library = splitter.next_library_size(iter);
-      splitter.update_library_prediction_split(library, iter);
-
-      require_vectors_match<bool>(splitter.libraryRows(), libraryTrueFolds[iter - 1]);
-      require_vectors_match<bool>(splitter.predictionRows(), predictionTrueFolds[iter - 1]);
+      splitter.update_library_prediction_split(-1, iter);
+      require_vectors_match<Set>(splitter.setMemberships(), splitsTrue[iter - 1]);
     }
   }
 
   SECTION("Xmap")
   {
-    LibraryPredictionSetSplitter splitter = LibraryPredictionSetSplitter(false, false, false, 0, usable, "");
+    LibraryPredictionSetSplitter splitter(false, false, false, 0, usable);
 
-    int library = 1;
-    splitter.update_library_prediction_split(library, 1);
+    splitter.update_library_prediction_split(1);
+    std::vector<Set> splitTrue1 = { Set::Both,    Set::Prediction, Set::Prediction, Set::Neither,
+                                    Set::Neither, Set::Prediction, Set::Prediction };
+    require_vectors_match<Set>(splitter.setMemberships(), splitTrue1);
 
-    std::vector<bool> libraryTrue = { true, false, false, false, false, false, false }; // 1
-
-    require_vectors_match<bool>(splitter.libraryRows(), libraryTrue);
-    require_vectors_match<bool>(splitter.predictionRows(), usable);
-
-    library = 4;
-    splitter.update_library_prediction_split(library, 1);
-
-    std::vector<bool> libraryTrue2 = { true, true, true, false, false, true, false }; // 4
-
-    require_vectors_match<bool>(splitter.libraryRows(), libraryTrue2);
-    require_vectors_match<bool>(splitter.predictionRows(), usable);
+    splitter.update_library_prediction_split(4);
+    std::vector<Set> splitTrue4 = { Set::Both,    Set::Both, Set::Both,      Set::Neither,
+                                    Set::Neither, Set::Both, Set::Prediction };
+    require_vectors_match<Set>(splitter.setMemberships(), splitTrue4);
   }
 }
 
