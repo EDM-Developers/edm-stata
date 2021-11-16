@@ -851,7 +851,7 @@ program define edmExplore, eclass
 				local train_size = `num_usable' - `num_in_each_fold'
 			}
 			else {
-				local train_size = `num_in_each_fold' * (`crossfold'-1)
+				local train_size = `num_in_each_fold' * (`crossfold' - 1)
 			}
 		}
 		else if "`full'" == "full"  {
@@ -898,15 +898,16 @@ program define edmExplore, eclass
 
 			foreach j of numlist `theta' {
 
-				mat r[`task_num',1] = `current_e'
-				mat r[`task_num',2] = `j'
-
-				if "`copredictvar'" != "" {
-					mat co_r[`task_num',1] = `current_e'
-					mat co_r[`task_num',2] = `j'
-				}
-
 				if `mata_mode' {
+					mat r[`task_num',1] = `current_e'
+					mat r[`task_num',2] = `j'
+
+					if "`copredictvar'" != "" {
+						mat co_r[`task_num',1] = `current_e'
+						mat co_r[`task_num',2] = `j'
+					}
+
+
 					local savesmap_vars ""
 					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', ///
 						`lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'", ///
@@ -1348,9 +1349,9 @@ program define edmXmap, eclass
 	local num_directions = 1 + ("`direction'" == "both")
 
 	forvalues direction_num = 1/`num_directions' {
-		mat r`direction_num' = J(`num_tasks', 4, .)
+		mat r`direction_num' = J(`num_tasks', 1, `direction_num'), J(`num_tasks', 3, .)
 		if "`copredictvar'" != "" {
-			mat co_r`direction_num' = J(`num_tasks', 4, .)
+			mat co_r`direction_num' = J(`num_tasks', 1, `direction_num'), J(`num_tasks', 3, .)
 		}
 
 		if `direction_num' == 2 {
@@ -1689,15 +1690,13 @@ program define edmXmap, eclass
 
 					foreach j of numlist `theta' {
 
-						mat r`direction_num'[`task_num',1] = `direction_num'
-						mat r`direction_num'[`task_num',2] = `lib_size'
-
-						if "`copredictvar'" != "" {
-							mat co_r`direction_num'[`task_num',1] = `direction_num'
-							mat co_r`direction_num'[`task_num',2] = `lib_size'
-						}
-
 						if `mata_mode' {
+							mat r`direction_num'[`task_num',2] = `lib_size'
+
+							if "`copredictvar'" != "" {
+								mat co_r`direction_num'[`task_num',2] = `lib_size'
+							}
+
 							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
 								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', ///
 								`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
