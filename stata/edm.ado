@@ -1816,14 +1816,14 @@ program define edmXmap, eclass
 	ereturn scalar N = `num_touse'
 
 	ereturn local subcommand = "xmap"
-	ereturn matrix xmap_1  = r1
+	ereturn matrix xmap_1 = r1
 	if "`direction'" == "both" {
-		ereturn matrix xmap_2  = r2
+		ereturn matrix xmap_2 = r2
 	}
 	if "`copredictvar'" != "" {
-		ereturn matrix co_xmap_1  = co_r1
+		ereturn matrix co_xmap_1 = co_r1
 		if "`direction'" == "both" {
-			ereturn matrix co_xmap_2  = co_r2
+			ereturn matrix co_xmap_2 = co_r2
 		}
 	}
 

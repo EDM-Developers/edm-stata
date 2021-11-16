@@ -12,8 +12,8 @@
 
 const double NA = MISSING_D;
 
-// Add in some function declarations for 'private' functions not listed
-// in the relevant header files.
+// Function declarations for 'private' functions not listed in the relevant header files.
+std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
 std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
                                                   const Options& opts, int& len_i, int& len_j);

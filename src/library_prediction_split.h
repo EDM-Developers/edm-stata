@@ -119,6 +119,7 @@ public:
 
   std::vector<bool> libraryRows() const { return _libraryRows; }
   std::vector<bool> predictionRows() const { return _predictionRows; }
+  std::vector<int> crossfold_groups() const { return _crossfoldGroup; }
 
   std::vector<Set> setMemberships() const
   {

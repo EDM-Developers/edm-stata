@@ -41,6 +41,35 @@
 #endif
 #endif
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
+Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
+                    const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished());
+
+void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
+                     int* kUsed, bool keep_going());
+
+std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
+
+DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
+
+void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
+                        const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
+                        Eigen::Map<MatrixXi> rcView, int* kUsed);
+
+void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
+                     Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed);
+
+#if defined(WITH_ARRAYFIRE)
+void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
+                        const ManifoldOnGPU& M, const ManifoldOnGPU& Mp, const af::array& metricOpts,
+                        Eigen::Map<MatrixXd> ystar, Eigen::Map<MatrixXi> rc, Eigen::Map<MatrixXd> coeffs,
+                        std::vector<int>& kUseds, bool keep_going());
+#endif
+
 std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
@@ -56,7 +85,7 @@ std::vector<std::future<Prediction>> launch_task_group(
     af::setMemStepSize(1024 * 1024 * 5);
     taskRunnerPool.set_num_workers(1); // Avoid oversubscribing to the GPU
 #else
-    taskRunnerPool.set_num_workers(num_physical_cores());
+    taskRunnerPool.set_num_workers(1);
 #endif
     return true;
   }();
@@ -65,8 +94,7 @@ std::vector<std::future<Prediction>> launch_task_group(
 
   // Construct the instance which will (repeatedly) split the data
   // into either the library set or the prediction set.
-  LibraryPredictionSetSplitter splitter =
-    LibraryPredictionSetSplitter(explore, full, shuffle, crossfold, usable, rngState);
+  LibraryPredictionSetSplitter splitter(explore, full, shuffle, crossfold, usable, rngState);
 
   int numLibraries = (explore ? 1 : libraries.size());
 
@@ -144,8 +172,10 @@ std::vector<std::future<Prediction>> launch_task_group(
         opts.copredict = false;
         opts.k = kAdj;
 
-        futures.emplace_back(launch_edm_task(generator, opts, E, splitter.libraryRows(), splitter.predictionRows(), io,
-                                             keep_going, all_tasks_finished));
+        futures.emplace_back(taskRunnerPool.enqueue([generator, opts, E, splitter, io, keep_going, all_tasks_finished] {
+          return edm_task(generator, opts, E, splitter.libraryRows(), splitter.predictionRows(), io, keep_going,
+                          all_tasks_finished);
+        }));
 
         opts.taskNum += 1;
 
@@ -157,8 +187,11 @@ std::vector<std::future<Prediction>> launch_task_group(
             opts.savePrediction = saveFinalCoPredictions && ((iter == numReps)) && lastConfig;
           }
           opts.saveSMAPCoeffs = false;
+
           futures.emplace_back(
-            launch_edm_task(generator, opts, E, splitter.libraryRows(), cousable, io, keep_going, all_tasks_finished));
+            taskRunnerPool.enqueue([generator, opts, E, splitter, cousable, io, keep_going, all_tasks_finished] {
+              return edm_task(generator, opts, E, splitter.libraryRows(), cousable, io, keep_going, all_tasks_finished);
+            }));
 
           opts.taskNum += 1;
         }
@@ -171,45 +204,10 @@ std::vector<std::future<Prediction>> launch_task_group(
   return futures;
 }
 
-std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Options opts, int E,
-                                        const std::vector<bool>& libraryRows, const std::vector<bool>& predictionRows,
-                                        IO* io, bool keep_going(), void all_tasks_finished())
+Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
+                    const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished())
 {
-  // Expand the 'metrics' vector now that we know the value of E.
-  std::vector<Metric> metrics;
-
-  // For the Wasserstein distance, it's more convenient to have one 'metric' for each variable (before taking lags).
-  // However, for the L^1 / L^2 distances, it's more convenient to have one 'metric' for each individual
-  // point of each observations, so metrics.size() == M.E_actual().
-  if (opts.distance == Distance::Wasserstein) {
-    // Add a metric for the main variable and for the dt variable.
-    // These are always treated as a continuous values (though perhaps in the future this will change).
-    metrics.push_back(Metric::Diff);
-    if (generator.E_dt(E) > 0) {
-      metrics.push_back(Metric::Diff);
-    }
-
-    // Add in the metrics for the 'extra' variables as they were supplied to us.
-    for (int k = 0; k < generator.numExtras(); k++) {
-      metrics.push_back(opts.metrics[k]);
-    }
-  } else {
-    // Add metrics for the main variable and the dt variable and their lags.
-    // These are always treated as a continuous values (though perhaps in the future this will change).
-    for (int lagNum = 0; lagNum < E + generator.E_dt(E); lagNum++) {
-      metrics.push_back(Metric::Diff);
-    }
-
-    // The user specified how to treat the extra variables.
-    for (int k = 0; k < generator.numExtras(); k++) {
-      int numLags = (k < generator.numExtrasLagged()) ? E : 1;
-      for (int lagNum = 0; lagNum < numLags; lagNum++) {
-        metrics.push_back(opts.metrics[k]);
-      }
-    }
-  }
-
-  opts.metrics = metrics;
+  opts.metrics = expand_metrics(generator, E, opts.distance, opts.metrics);
 
   if (opts.taskNum == 0) {
     numTasksStarted = 0;
@@ -240,17 +238,10 @@ std::future<Prediction> launch_edm_task(const ManifoldGenerator& generator, Opti
   Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
   Manifold Mp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
 
-  return taskRunnerPool.enqueue([opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished] {
-    return edm_task(opts, M, Mp, predictionRows, io, keep_going, all_tasks_finished);
-  });
-}
+  bool multiThreaded = opts.nthreads > 1;
 
-Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, const std::vector<bool> predictionRows,
-                    IO* io, bool keep_going(), void all_tasks_finished())
-{
 #if defined(WITH_ARRAYFIRE)
   af::setDevice(0); // TODO potentially can cycle through GPUS if > 1
-#endif
 
   // Char is the internal representation of bool in ArrayFire
   std::vector<char> mopts;
@@ -258,17 +249,12 @@ Prediction edm_task(const Options opts, const Manifold M, const Manifold Mp, con
     mopts.push_back(opts.metrics[j] == Metric::Diff);
   }
 
-#if defined(WITH_ARRAYFIRE)
   af::array metricOpts(M.E_actual(), mopts.data());
 
   const ManifoldOnGPU gpuM = M.toGPU(false);
   const ManifoldOnGPU gpuMp = Mp.toGPU(false);
 
   constexpr bool useAF = true;
-#endif
-  bool multiThreaded = opts.nthreads > 1;
-
-#if defined(WITH_ARRAYFIRE)
   multiThreaded = multiThreaded && !useAF;
 #endif
 
