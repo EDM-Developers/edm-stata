@@ -24,6 +24,46 @@
 using af::array;
 #endif
 
+std::vector<Metric> expand_metrics(const ManifoldGenerator& generator, int E, Distance distance,
+                                   const std::vector<Metric>& metrics)
+{
+  // Expand the 'metrics' vector now that we know the value of E.
+  std::vector<Metric> expandedMetrics;
+
+  // For the Wasserstein distance, it's more convenient to have one 'metric' for each variable (before taking lags).
+  // However, for the L^1 / L^2 distances, it's more convenient to have one 'metric' for each individual
+  // point of each observations, so metrics.size() == M.E_actual().
+  if (distance == Distance::Wasserstein) {
+    // Add a metric for the main variable and for the dt variable.
+    // These are always treated as a continuous values (though perhaps in the future this will change).
+    expandedMetrics.push_back(Metric::Diff);
+    if (generator.E_dt(E) > 0) {
+      expandedMetrics.push_back(Metric::Diff);
+    }
+
+    // Add in the metrics for the 'extra' variables as they were supplied to us.
+    for (int k = 0; k < generator.numExtras(); k++) {
+      expandedMetrics.push_back(metrics[k]);
+    }
+  } else {
+    // Add metrics for the main variable and the dt variable and their lags.
+    // These are always treated as a continuous values (though perhaps in the future this will change).
+    for (int lagNum = 0; lagNum < E + generator.E_dt(E); lagNum++) {
+      expandedMetrics.push_back(Metric::Diff);
+    }
+
+    // The user specified how to treat the extra variables.
+    for (int k = 0; k < generator.numExtras(); k++) {
+      int numLags = (k < generator.numExtrasLagged()) ? E : 1;
+      for (int lagNum = 0; lagNum < numLags; lagNum++) {
+        expandedMetrics.push_back(metrics[k]);
+      }
+    }
+  }
+
+  return expandedMetrics;
+}
+
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                                 std::vector<int> inpInds)
 {

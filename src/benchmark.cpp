@@ -24,6 +24,10 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
+// Function declarations for 'private' functions not listed in the relevant header files.
+std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
+DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
+
 // Compiler flags tried on Windows: "/GL" and "/GL /LTCG", both slightly worse. "/O2" is the default.
 
 std::vector<std::string> lowLevelInputDumps = { "logmapsmall.json", "logmaplarge.json", "affectsmall.json",
