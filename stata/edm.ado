@@ -590,14 +590,12 @@ program define edmExplore, eclass
 		mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`x'", ///
 			`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
 			`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
-	}
 
-	// Choose which rows of the manifold we will use for the analysis
-	// (this mainly depends on whether we're keeping or discarding rows
-	// with some missing values).
-	tempvar usable
+		// Choose which rows of the manifold we will use for the analysis
+		// (this mainly depends on whether we're keeping or discarding rows
+		// with some missing values).
+		tempvar usable
 
-	if `mata_mode' {
 		if `allow_missing_mode' {
 			// Work on any row of the manifold with >= 1 non-missing value
 			qui {
@@ -613,35 +611,35 @@ program define edmExplore, eclass
 			hasMissingValues `max_e_manifold', out(`any_missing_in_manifold')
 			gen byte `usable' = `touse' & !`any_missing_in_manifold'
 		}
-	}
 
-	// Default value for 'missingdistance'
-	if `mata_mode' & `allow_missing_mode' & `missingdistance' <= 0 {
-		qui sum `x' if `touse'
-		local missingdistance = 2/sqrt(c(pi))*r(sd)
-	}
+		// Default value for 'missingdistance'
+		if `allow_missing_mode' & `missingdistance' <= 0 {
+			qui sum `x' if `touse'
+			local missingdistance = 2/sqrt(c(pi))*r(sd)
+		}
 
-	if `mata_mode' & "`copredictvar'" != "" {
-		mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`co_x'", ///
-			`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
-			`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
+		if "`copredictvar'" != "" {
+			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`co_x'", ///
+				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
+				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
-		// Generate the same way as `usable'.
-		tempvar co_usable
-		if `allow_missing_mode' {
-			qui gen byte `co_usable' = 0
-			foreach v of local max_e_co_manifold {
-				qui replace `co_usable' = 1 if `v' !=. & `touse'
+			// Generate the same way as `usable'.
+			tempvar co_usable
+			if `allow_missing_mode' {
+				qui gen byte `co_usable' = 0
+				foreach v of local max_e_co_manifold {
+					qui replace `co_usable' = 1 if `v' !=. & `touse'
+				}
 			}
-		}
-		else {
-			tempvar any_missing_in_co_manifold
-			hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
-			gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
-		}
+			else {
+				tempvar any_missing_in_co_manifold
+				hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
+				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+			}
 
-		tempvar co_predict_set
-		gen byte `co_predict_set' = `co_usable'
+			tempvar co_predict_set
+			gen byte `co_predict_set' = `co_usable'
+		}
 	}
 
 	if !`mata_mode' {
@@ -713,9 +711,7 @@ program define edmExplore, eclass
 			tempvar co_x_p
 			qui gen double `co_x_p' = .
 		}
-	}
 
-	if `mata_mode' {
 		sum `usable', meanonly
 		local num_usable = r(sum)
 	}
@@ -732,9 +728,7 @@ program define edmExplore, eclass
 				qui gen double `crossfoldu' = runiform() if `usable'
 				qui egen `crossfoldunum'= rank(`crossfoldu'), unique
 			}
-		}
 
-		if `mata_mode' {
 			tempvar counting_up fold_number
 			qui gen double `counting_up' = sum(`usable') if `usable'
 			qui gen `fold_number' = .
@@ -794,22 +788,24 @@ program define edmExplore, eclass
 		qui label variable `copredictionsave' "edm copredicted `copredictvar' using manifold `ori_x'"
 	}
 
-	forvalues t=1/`round' {
+	if `mata_mode' {
+		local k_min = .
+		local k_max = .
 
-		// Generate some random numbers (if we're in a mode which needs them
-		// to separate the testing and prediction sets.)
-		if `mata_mode' & `crossfold' <= 1 & "`full'" != "full" & `shuffle' {
-			if `t' == 1 {
-				qui gen double `u' = runiform() if `usable'
-			}
-			else {
-				qui replace `u' = runiform() if `usable'
-			}
-		}
+		forvalues t=1/`round' {
 
-		// Split the data into training and prediction sets.
-		// (The plugin will do this itself.)
-		if `mata_mode' {
+			// Generate some random numbers (if we're in a mode which needs them
+			// to separate the testing and prediction sets.)
+			if `crossfold' <= 1 & "`full'" != "full" & `shuffle' {
+				if `t' == 1 {
+					qui gen double `u' = runiform() if `usable'
+				}
+				else {
+					qui replace `u' = runiform() if `usable'
+				}
+			}
+
+			// Split the data into training and prediction sets.
 			cap drop `train_set' `predict_set'
 			if `crossfold' > 1 {
 				if `shuffle' {
@@ -843,62 +839,51 @@ program define edmExplore, eclass
 			}
 
 			qui replace `train_set' = 0 if `x_f' == .
-		}
 
-		if `crossfold' > 1 {
-			local num_in_each_fold = round(`num_usable' / `crossfold')
-			if `t' != `crossfold' {
-				local train_size = `num_usable' - `num_in_each_fold'
+			if `crossfold' > 1 {
+				local num_in_each_fold = round(`num_usable' / `crossfold')
+				if `t' != `crossfold' {
+					local train_size = `num_usable' - `num_in_each_fold'
+				}
+				else {
+					local train_size = `num_in_each_fold' * (`crossfold' - 1)
+				}
+			}
+			else if "`full'" == "full"  {
+				local train_size = `num_usable'
 			}
 			else {
-				local train_size = `num_in_each_fold' * (`crossfold' - 1)
+				local train_size = floor(`num_usable'/2)
 			}
-		}
-		else if "`full'" == "full"  {
-			local train_size = `num_usable'
-		}
-		else {
-			local train_size = floor(`num_usable'/2)
-		}
 
-		// Set library size (unless k=0, when an adaptive default is applied)
-		if `k' > 0 {
-			local lib_size = min(`k', `train_size')
-		}
-		else if `k' < 0 {
-			local lib_size = `train_size'
-		}
+			// Set library size (unless k=0, when an adaptive default is applied)
+			if `k' > 0 {
+				local lib_size = min(`k', `train_size')
+			}
+			else if `k' < 0 {
+				local lib_size = `train_size'
+			}
 
-		foreach i of numlist `e' {
-			if `mata_mode' {
+			foreach i of numlist `e' {
+
 				local manifold "mapping_`=`i'-1'"
 				local co_manifold "co_mapping_`=`i'-1'"
-			}
 
-			edmManifoldSize, e(`i') dt(`parsed_dt') ///
-				num_extras(`z_count') num_eextras(`z_e_varying_count')
-			local total_num_extras = `r(total_num_extras)'
-			local e_offset = `r(manifold_size)' - `i'
-			local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
+				edmManifoldSize, e(`i') dt(`parsed_dt') ///
+					num_extras(`z_count') num_eextras(`z_e_varying_count')
+				local total_num_extras = `r(total_num_extras)'
+				local e_offset = `r(manifold_size)' - `i'
+				local current_e =`i' + cond(`report_actuale'==1,`e_offset',0)
 
-			// Set the adaptive default library size
-			if `k' == 0 {
-				local is_smap = cond("`algorithm'" == "smap", 1, 0)
-				local def_lib_size = `r(manifold_size)' + `is_smap' + 1
-				local lib_size = min(`def_lib_size',`train_size')
-			}
+				// Set the adaptive default library size
+				if `k' == 0 {
+					local is_smap = cond("`algorithm'" == "smap", 1, 0)
+					local def_lib_size = `r(manifold_size)' + `is_smap' + 1
+					local lib_size = min(`def_lib_size',`train_size')
+				}
 
-			if `k' != 0 {
-				local cmdfootnote = "Note: Number of neighbours (k) is set to `lib_size'" + char(10)
-			}
-			else if `k' != `lib_size' & `k' == 0 {
-				local plus_amt = `lib_size' - `i'
-				local cmdfootnote = "Note: Number of neighbours (k) is set to E+`plus_amt'" + char(10)
-			}
+				foreach j of numlist `theta' {
 
-			foreach j of numlist `theta' {
-
-				if `mata_mode' {
 					mat r[`task_num',1] = `current_e'
 					mat r[`task_num',2] = `j'
 
@@ -911,6 +896,13 @@ program define edmExplore, eclass
 					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', ///
 						`lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'", ///
 						`i', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
+
+					if `k_min' == . | k_min_scalar < `k_min' {
+						local k_min = k_min_scalar
+					}
+					if `k_max' == . | k_max_scalar > `k_max' {
+						local k_max = k_max_scalar
+					}
 
 					cap corr `x_f' `x_p' if `predict_set'
 					mat r[`task_num',3] = r(rho)
@@ -934,6 +926,13 @@ program define edmExplore, eclass
 							"`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
 							`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
+						if `k_min' == . | k_min_scalar < `k_min' {
+							local k_min = k_min_scalar
+						}
+						if `k_max' == . | k_max_scalar > `k_max' {
+							local k_max = k_max_scalar
+						}
+
 						cap corr `co_x_f' `co_x_p' if `co_predict_set'
 						mat co_r[`task_num',3] = r(rho)
 
@@ -950,23 +949,24 @@ program define edmExplore, eclass
 							cap replace `copredictionsave' = `co_x_p' if `co_x_p' !=.
 						}
 					}
+
+					local ++task_num
 				}
+			}
 
-				local ++task_num
+			if `round' > 1 & `dot' > 0 {
+				local ++finished_rep
+				if mod(`finished_rep', 50*`dot') == 0 {
+					di as text ". `finished_rep'"
+				}
+				else if mod(`finished_rep', `dot') == 0{
+					di as text "." _c
+				}
 			}
 		}
 
-		if `mata_mode' & `round' > 1 & `dot' > 0 {
-			local ++finished_rep
-			if mod(`finished_rep', 50*`dot') == 0 {
-				di as text ". `finished_rep'"
-			}
-			else if mod(`finished_rep', `dot') == 0{
-				di as text "." _c
-			}
-		}
 	}
-	if `mata_mode' & `round' > 1 & `dot' > 0 {
+	if `round' > 1 & `dot' > 0 {
 		if mod(`finished_rep', 50*`dot') != 0 {
 			di ""
 		}
@@ -996,14 +996,14 @@ program define edmExplore, eclass
 		local save_predict_mode = ("`predictionsave'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
 		plugin call `plugin_name' `predictionsave' `copredictionsave' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+	}
 
-		if `k' < 0 | `k_min' != `k_max' {
-			if `k_min' == `k_max' {
-				local cmdfootnote = "Note: Number of neighbours (k) is set to `k_min'" + char(10)
-			}
-			else {
-				local cmdfootnote = "Note: Number of neighbours (k) is set to between `k_min' and `k_max'" + char(10)
-			}
+	if `k' <= 0 | `k_min' != `k_max' {
+		if `k_min' == `k_max' {
+			local cmdfootnote = "Note: Number of neighbours (k) is set to `k_min'" + char(10)
+		}
+		else {
+			local cmdfootnote = "Note: Number of neighbours (k) is set to between `k_min' and `k_max'" + char(10)
 		}
 	}
 
@@ -1017,7 +1017,11 @@ program define edmExplore, eclass
 
 	ereturn local subcommand = "explore"
 	ereturn local direction = "oneway"
-	ereturn scalar e_offset = `e_offset'
+
+	edmManifoldSize, e(`max_e') dt(`parsed_dt') ///
+		num_extras(`z_count') num_eextras(`z_e_varying_count')
+	ereturn scalar e_offset = `r(manifold_size)' - `max_e'
+
 	ereturn scalar report_actuale = `report_actuale'
 	ereturn local x "`ori_x'"
 	if `crossfold' > 1 {
@@ -1594,76 +1598,78 @@ program define edmXmap, eclass
 
 		qui gen double `u' = .
 
-		forvalues rep = 1/`round' {
+		// Setup variables which will hold the S-map coefficients if we are saving them.
+		if "`savesmap'" != "" {
+			forvalues rep = 1/`round' {
 
-					if "`savesmap'" != "" {
+				local xx = "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
+				local yy = "`=cond(`direction_num'==1,"`ori_y'","`ori_x'")'"
 
-							local xx = "`=cond(`direction_num'==1,"`ori_x'","`ori_y'")'"
-							local yy = "`=cond(`direction_num'==1,"`ori_y'","`ori_x'")'"
+				qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
+				qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
+				local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
 
-							qui gen double `savesmap'`direction_num'_b0_rep`rep' = .
-							qui label variable `savesmap'`direction_num'_b0_rep`rep' "constant in `xx' predicting `yy' S-map equation (rep `rep')"
-							local savesmap_vars "`savesmap'`direction_num'_b0_rep`rep'"
+				local mapping_name "`xx'"
 
-							local mapping_name "`xx'"
+				forvalues ii=1/`=`e'-1' {
+					local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
+				}
+				if `parsed_dt' {
+					forvalues ii=0/`=`e'-1' {
+						local mapping_name "`mapping_name' dt`ii'"
+					}
+				}
 
-							forvalues ii=1/`=`e'-1' {
-								local mapping_name "`mapping_name' l`=`ii'*`tau''.`xx'"
-							}
-							if `parsed_dt' {
-								forvalues ii=0/`=`e'-1' {
-									local mapping_name "`mapping_name' dt`ii'"
-								}
-							}
+				forvalues kk=1/`z_count' {
+					local z_name : word `kk' of `z_names'
 
-							forvalues kk=1/`z_count' {
-								local z_name : word `kk' of `z_names'
+					local e_varying = strpos("`z_name'", "(e)")
+					if `e_varying' {
+						local suffix_ind = strlen("`z_name'")-3+1
+						local z_name = substr("`z_name'", 1, `suffix_ind'-1)
+					}
 
-								local e_varying = strpos("`z_name'", "(e)")
-								if `e_varying' {
-									local suffix_ind = strlen("`z_name'")-3+1
-									local z_name = substr("`z_name'", 1, `suffix_ind'-1)
-								}
+					local mapping_name = "`mapping_name' `z_name'"
+					forvalues ii=1/`=(`e_varying'>0)*(`e'-1)' {
+						local lagged_z_name = "l`=`ii'*`tau''.`z_name'"
+						local mapping_name = "`mapping_name' `lagged_z_name'"
+					}
+				}
 
-								local mapping_name = "`mapping_name' `z_name'"
-								forvalues ii=1/`=(`e_varying'>0)*(`e'-1)' {
-									local lagged_z_name = "l`=`ii'*`tau''.`z_name'"
-									local mapping_name = "`mapping_name' `lagged_z_name'"
-								}
-							}
-
-							local ii = 1
-							local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
-							foreach name of local mapping_name {
-								qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
-								qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' `label'"
-								local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
-								local ++ii
-							}
-							local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'"
-						}
+				local ii = 1
+				local label "predicting `yy' or `yy'|M(`xx') S-map coefficient (rep `rep')"
+				foreach name of local mapping_name {
+					qui gen double `savesmap'`direction_num'_b`ii'_rep`rep' = .
+					qui label variable `savesmap'`direction_num'_b`ii'_rep`rep' "`name' `label'"
+					local savesmap_vars "`savesmap_vars' `savesmap'`direction_num'_b`ii'_rep`rep'"
+					local ++ii
+				}
+				local all_savesmap_vars`direction_num' "`all_savesmap_vars`direction_num'' `savesmap_vars'"
+			}
 		}
 
 
 		if `mata_mode' {
+			local k_min = .
+			local k_max = .
+
 			forvalues rep = 1/`round' {
 				foreach i of numlist `e' {
 					local manifold "mapping_`=`i'-1'"
 					local co_manifold "co_mapping_`=`i'-1'"
 
 					foreach lib_size of numlist `library' {
-						if `mata_mode' {
-							cap drop `urank'
-							if `shuffle' {
-								qui replace `u' = runiform() if `usable'
-								qui egen double `urank' = rank(`u') if `usable', unique
-							}
-							else {
-								qui gen double `urank' = sum(`usable')
-							}
-							qui replace `train_set' = `urank' <= `lib_size' & `usable'
-							qui replace `train_set' = 0 if `x_f' == .
+
+						cap drop `urank'
+						if `shuffle' {
+							qui replace `u' = runiform() if `usable'
+							qui egen double `urank' = rank(`u') if `usable', unique
 						}
+						else {
+							qui gen double `urank' = sum(`usable')
+						}
+						qui replace `train_set' = `urank' <= `lib_size' & `usable'
+						qui replace `train_set' = 0 if `x_f' == .
 
 						local train_size = `lib_size'
 
@@ -1686,14 +1692,7 @@ program define edmXmap, eclass
 							local k_size = `lib_size' - 1
 						}
 
-						if `k' != 0 {
-							local cmdfootnote = "Note: Number of neighbours (k) is adjusted to `k_size'" + char(10)
-						}
-						else if `k' != `k_size' & `k' == 0 {
-							/* local cmdfootnote = "Note: Number of neighbours (k) is set to E+1" + char(10) */
-						}
-
-						if `mata_mode' & "`savemanifold'" !="" {
+						if "`savemanifold'" != "" {
 							local counter = 1
 							foreach v of varlist ``manifold'' {
 								cap gen double `savemanifold'`direction_num'_`counter' = `v'
@@ -1707,60 +1706,71 @@ program define edmXmap, eclass
 
 						foreach j of numlist `theta' {
 
-							if `mata_mode' {
-								mat r`direction_num'[`task_num',2] = `lib_size'
+							mat r`direction_num'[`task_num',2] = `lib_size'
 
-								if "`copredictvar'" != "" {
-									mat co_r`direction_num'[`task_num',2] = `lib_size'
-								}
+							if "`copredictvar'" != "" {
+								mat co_r`direction_num'[`task_num',2] = `lib_size'
+							}
 
-								break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
-									`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', ///
+							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
+								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', ///
+								`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
+
+							if `k_min' == . | k_min_scalar < `k_min' {
+								local k_min = k_min_scalar
+							}
+							if `k_max' == . | k_max_scalar > `k_max' {
+								local k_max = k_max_scalar
+							}
+
+							// Ignore super tiny S-map coefficients (the plugin seems to do this)
+							foreach smapvar of local savesmap_vars {
+								qui replace `smapvar' = . if abs(`smapvar') < 1e-8
+							}
+
+							cap corr `x_f' `x_p' if `predict_set'
+							mat r`direction_num'[`task_num',3] = r(rho)
+
+							tempvar mae
+							qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
+							qui sum `mae'
+							drop `mae'
+							mat r`direction_num'[`task_num', 4] = r(mean)
+							if r(mean) < 1e-8 {
+								mat r`direction_num'[`task_num', 4] = 0
+							}
+
+							if (`task_num' == `num_tasks' & "`predictionsave'" != "") {
+								cap replace `predictionsave' = `x_p' if `x_p' != .
+							}
+
+							if "`copredictvar'" != "" {
+								break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", ///
+									"`co_predict_set'", `j', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
 									`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
-								// Ignore super tiny S-map coefficients (the plugin seems to do this)
-								foreach smapvar of local savesmap_vars {
-									qui replace `smapvar' = . if abs(`smapvar') < 1e-8
+								if `k_min' == . | k_min_scalar < `k_min' {
+									local k_min = k_min_scalar
+								}
+								if `k_max' == . | k_max_scalar > `k_max' {
+									local k_max = k_max_scalar
 								}
 
-								cap corr `x_f' `x_p' if `predict_set'
-								mat r`direction_num'[`task_num',3] = r(rho)
+								cap corr `co_x_f' `co_x_p' if `co_predict_set'
+								mat co_r`direction_num'[`task_num',3] = r(rho)
 
 								tempvar mae
-								qui gen double `mae' = abs(`x_p' - `x_f') if `predict_set'
+								qui gen double `mae' = abs(`co_x_p' - `co_x_f') if `co_predict_set'
 								qui sum `mae'
 								drop `mae'
-								mat r`direction_num'[`task_num', 4] = r(mean)
+								mat co_r`direction_num'[`task_num', 4] = r(mean)
 								if r(mean) < 1e-8 {
-									mat r`direction_num'[`task_num', 4] = 0
+									mat co_r`direction_num'[`task_num', 4] = 0
 								}
 
-								if (`task_num' == `num_tasks' & "`predictionsave'" != "") {
-									cap replace `predictionsave' = `x_p' if `x_p' != .
+								if (`task_num' == `num_tasks' & "`copredictionsave'" != "") {
+									cap replace `copredictionsave' = `co_x_p' if `co_x_p' != .
 								}
-
-								if "`copredictvar'" != "" {
-									break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", ///
-										"`co_predict_set'", `j', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
-										`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
-
-									cap corr `co_x_f' `co_x_p' if `co_predict_set'
-									mat co_r`direction_num'[`task_num',3] = r(rho)
-
-									tempvar mae
-									qui gen double `mae' = abs(`co_x_p' - `co_x_f') if `co_predict_set'
-									qui sum `mae'
-									drop `mae'
-									mat co_r`direction_num'[`task_num', 4] = r(mean)
-									if r(mean) < 1e-8 {
-										mat co_r`direction_num'[`task_num', 4] = 0
-									}
-
-									if (`task_num' == `num_tasks' & "`copredictionsave'" != "") {
-										cap replace `copredictionsave' = `co_x_p' if `co_x_p' != .
-									}
-								}
-
 							}
 
 							local ++task_num
@@ -1792,14 +1802,14 @@ program define edmXmap, eclass
 			local save_copredict_mode = ("`copredictvar'" != "")
 			plugin call `plugin_name' `predictionsave' `copredictionsave' `all_savesmap_vars`direction_num'' if `touse', ///
 					"collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		}
 
-			if `k' < 0 | `k_min' != `k_max' {
-				if `k_min' == `k_max' {
-					local cmdfootnote = "Note: Number of neighbours (k) is set to `k_min'" + char(10)
-				}
-				else {
-					local cmdfootnote = "Note: Number of neighbours (k) is set to between `k_min' and `k_max'" + char(10)
-				}
+		if `k' <= 0 | `k_min' != `k_max' {
+			if `k_min' == `k_max' {
+				local cmdfootnote = "Note: Number of neighbours (k) is set to `k_min'" + char(10)
+			}
+			else {
+				local cmdfootnote = "Note: Number of neighbours (k) is set to between `k_min' and `k_max'" + char(10)
 			}
 		}
 
@@ -2752,6 +2762,8 @@ void smap_block(
 	real rowvector b
 	real scalar targetPanel
 
+	real scalar kMin, kMax
+
 	for(i = 1; i <= n; i++) {
 		b = Mp[i,.]
 		if (idw != 0) {
@@ -2760,10 +2772,20 @@ void smap_block(
 		else {
 			targetPanel = .
 		}
-		ystar[i] = mf_smap_single(M,b,y,l,theta,algorithm, save_mode*i, B,
+		ystar[i] = mf_smap_single(M, b, y, l, theta, algorithm, save_mode*i, B,
 				force_compute, missingdistance, idw, train_panel_ids,
-				targetPanel, factorVars)
+				targetPanel, factorVars, k)
+
+		if (i == 1 || k < kMin) {
+			kMin = k
+		}
+		if (i == 1 || k > kMax) {
+			kMax = k
+		}
 	}
+
+	st_numscalar("k_min_scalar", kMin)
+	st_numscalar("k_max_scalar", kMax)
 }
 end
 
@@ -2776,7 +2798,7 @@ real scalar mf_smap_single(
 		real scalar theta, string scalar algorithm, real scalar save_index,
 		real matrix Beta_smap, real scalar force_compute, real scalar missingdistance,
 		real scalar idw, real matrix panel_ids, real scalar targetPanel,
-		real matrix factorVars)
+		real matrix factorVars, real scalar k)
 {
 	/* M : manifold matrix
 	 * b : the vector used for prediction
@@ -2787,7 +2809,7 @@ real scalar mf_smap_single(
 
 	real colvector d, w, a
 	real colvector ind, v
-	real scalar i, j, k, n, r
+	real scalar i, j, n, r
 	n = rows(M)
 	d = J(1, n, .)
 
@@ -2872,12 +2894,12 @@ real scalar mf_smap_single(
 	r = 0
 
 	if (algorithm == "" | algorithm == "simplex") {
-		for(j=1;j<=k;j++) {
+		for(j = 1; j <= k; j++) {
 			w[j] = exp(-theta*(d[ind[j]] / d_base))
 		}
 		w = w/sum(w)
 
-		for(j=1;j<=k;j++) {
+		for(j = 1; j <= k; j++) {
 			r = r +  y[ind[j]] * w[j]
 		}
 
@@ -2890,13 +2912,13 @@ real scalar mf_smap_single(
 		real rowvector x_pred
 		real scalar mean_d
 
-		for(j=1;j<=k;j++) {
+		for(j = 1; j <= k; j++) {
 			w[j] = d[ind[j]]
 		}
 
 		mean_d = mean(w)
 
-		for(j=1;j<=k;j++) {
+		for(j = 1; j <= k; j++) {
 			w[j] = exp(-theta*(w[j] / mean_d))
 		}
 
@@ -2907,16 +2929,16 @@ real scalar mf_smap_single(
 		real scalar rowc
 		rowc = 0
 
-		for(j=1;j<=k;j++) {
+		for(j = 1; j <= k; j++) {
 			rowc++
 			if (algorithm == "llr") {
-				y_ls[rowc]    = y[ind[j]]
-				X_ls[rowc,.]    = M[ind[j],.]
+				y_ls[rowc] = y[ind[j]]
+				X_ls[rowc, .] = M[ind[j], .]
 				w_ls[rowc] = w[j]
 			}
 			else if (algorithm =="smap") {
-				y_ls[rowc]    = y[ind[j]] * w[j]
-				X_ls[rowc,.]    = M[ind[j],.] * w[j]
+				y_ls[rowc] = y[ind[j]] * w[j]
+				X_ls[rowc, .] = M[ind[j], .] * w[j]
 				w_ls[rowc] = w[j]
 			}
 		}
@@ -2943,16 +2965,15 @@ real scalar mf_smap_single(
 		}
 
 		if (save_index>0) {
-			Beta_smap[save_index,.] = editvalue(b_ls',0,.)
+			Beta_smap[save_index, .] = editvalue(b_ls', 0, .)
 		}
 
-		x_pred = 1, editvalue(b,.,0)
+		x_pred = 1, editvalue(b, ., 0)
 
 		r = x_pred * b_ls
 
 		return(r)
 	}
-
 }
 end
 
