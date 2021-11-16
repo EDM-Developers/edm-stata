@@ -291,7 +291,7 @@ std::vector<double> bool_to_double(std::vector<bool> bv)
   return dv;
 }
 
-std::vector<std::future<Prediction>> futures;
+std::vector<std::future<PredictionResult>> futures;
 
 // In case we have some remnants of previous runs still
 // in the system (e.g. after a 'break'), clear our past results.
@@ -672,8 +672,8 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 
   for (int i = 0; i < futures.size(); i++) {
 
-    // If there are no errors, store the prediction ystar and smap coefficients to Stata variables.
-    const Prediction pred = futures[i].get();
+    // If there are no errors, store the predictions and S-map coefficients to Stata variables.
+    const PredictionResult pred = futures[i].get();
 
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results
@@ -691,12 +691,12 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
         save_to_stata_matrix(matName, matRow, 4, pred.stats[t].mae, rc);
       }
 
-      if (pred.ystar != nullptr) {
+      if (pred.predictions != nullptr) {
         if (savePredictMode && !pred.copredict) {
-          write_stata_column(pred.ystar.get(), pred.numPredictions, 1, pred.predictionRows);
+          write_stata_column(pred.predictions.get(), pred.numPredictions, 1, pred.predictionRows);
         }
         if (saveCoPredictMode && pred.copredict) {
-          write_stata_column(pred.ystar.get(), pred.numPredictions, savePredictMode + 1, pred.predictionRows);
+          write_stata_column(pred.predictions.get(), pred.numPredictions, savePredictMode + 1, pred.predictionRows);
         }
       }
 
