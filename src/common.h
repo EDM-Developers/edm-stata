@@ -107,11 +107,11 @@ struct PredictionStats
 void to_json(json& j, const PredictionStats& s);
 void from_json(const json& j, PredictionStats& s);
 
-struct Prediction
+struct PredictionResult
 {
   retcode rc;
   size_t numThetas, numPredictions, numCoeffCols;
-  std::unique_ptr<double[]> ystar;
+  std::unique_ptr<double[]> predictions;
   std::unique_ptr<double[]> coeffs;
   std::vector<PredictionStats> stats;
   std::vector<bool> predictionRows;
@@ -121,8 +121,8 @@ struct Prediction
   int configNum;
 };
 
-void to_json(json& j, const Prediction& p);
-void from_json(const json& j, Prediction& p);
+void to_json(json& j, const PredictionResult& p);
+void from_json(const json& j, PredictionResult& p);
 
 class IO
 {

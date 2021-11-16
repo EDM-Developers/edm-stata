@@ -85,13 +85,13 @@ json run_tests(json testInputs, int nthreads, IO* io)
     std::vector<bool> usable = int_to_bool(taskGroup["usable"]);
     std::string rngState = taskGroup["rngState"];
 
-    std::vector<std::future<Prediction>> futures = launch_task_group(
+    std::vector<std::future<PredictionResult>> futures = launch_task_group(
       generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
       saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, io, nullptr, nullptr);
 
     // Collect the results of this task group before moving on to the next task group
     for (int f = 0; f < futures.size(); f++) {
-      const Prediction pred = futures[f].get();
+      const PredictionResult pred = futures[f].get();
       io->print(io->get_and_clear_async_buffer());
       io->flush();
 

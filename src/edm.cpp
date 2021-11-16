@@ -44,8 +44,8 @@
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
-Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
-                    const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished());
+PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
+                          const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished());
 
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                      Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
@@ -60,8 +60,8 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
                         Eigen::Map<MatrixXi> rcView, int* kUsed);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
-                     Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed);
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
+                     Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView, int* kUsed);
 
 #if defined(WITH_ARRAYFIRE)
 void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
@@ -74,7 +74,7 @@ std::atomic<int> numTasksStarted = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
-std::vector<std::future<Prediction>> launch_task_group(
+std::vector<std::future<PredictionResult>> launch_task_group(
   const ManifoldGenerator& generator, Options opts, const std::vector<int>& Es, const std::vector<int>& libraries,
   int k, int numReps, int crossfold, bool explore, bool full, bool shuffle, bool saveFinalPredictions,
   bool saveFinalCoPredictions, bool saveSMAPCoeffs, bool copredictMode, const std::vector<bool>& usable,
@@ -115,7 +115,7 @@ std::vector<std::future<Prediction>> launch_task_group(
 
   int E, kAdj, library, librarySize;
 
-  std::vector<std::future<Prediction>> futures;
+  std::vector<std::future<PredictionResult>> futures;
 
   bool newLibraryPredictionSplit = true;
 
@@ -206,8 +206,8 @@ std::vector<std::future<Prediction>> launch_task_group(
   return futures;
 }
 
-Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
-                    const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished())
+PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
+                          const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished())
 {
   opts.metrics = expand_metrics(generator, E, opts.distance, opts.metrics);
 
@@ -346,7 +346,7 @@ Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, con
 #endif
   }
 
-  Prediction pred;
+  PredictionResult pred;
 
   pred.explore = opts.explore;
 
@@ -387,19 +387,19 @@ Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, con
     pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
 
     // If we're storing the prediction and/or the S-map coefficients, put them
-    // into the resulting Prediction struct. Otherwise, let them be deleted.
+    // into the resulting PredictionResult struct. Otherwise, let them be deleted.
     if (opts.savePrediction) {
       // Take only the predictions for the largest theta value.
       if (numThetas == 1) {
-        pred.ystar = std::move(predictions);
+        pred.predictions = std::move(predictions);
       } else {
-        pred.ystar = std::make_unique<double[]>(numPredictions);
+        pred.predictions = std::make_unique<double[]>(numPredictions);
         for (int i = 0; i < numPredictions; i++) {
-          pred.ystar[i] = predictionsView(numThetas - 1, i);
+          pred.predictions[i] = predictionsView(numThetas - 1, i);
         }
       }
     } else {
-      pred.ystar = nullptr;
+      pred.predictions = nullptr;
     }
 
     if (opts.saveSMAPCoeffs) {
@@ -648,8 +648,8 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> ystar,
-                     Eigen::Map<MatrixXd> coeffs, Eigen::Map<MatrixXi> rc, int* kUsed)
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
+                     Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView, int* kUsed)
 {
   int k = kNNInds.size();
 
@@ -723,15 +723,15 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   if (opts.saveSMAPCoeffs && t == opts.thetas.size() - 1) {
     for (int j = 0; j < M.E_actual() + 1; j++) {
       if (std::abs(ics(j)) < 1.0e-11) {
-        coeffs(Mp_i, j) = MISSING_D;
+        coeffsView(Mp_i, j) = MISSING_D;
       } else {
-        coeffs(Mp_i, j) = ics(j);
+        coeffsView(Mp_i, j) = ics(j);
       }
     }
   }
 
-  ystar(t, Mp_i) = r;
-  rc(t, Mp_i) = SUCCESS;
+  predictionsView(t, Mp_i) = r;
+  rcView(t, Mp_i) = SUCCESS;
 }
 
 /////////////////////////////////////////////////////////////// ArrayFire PORTED versions BEGIN HERE
