@@ -77,7 +77,8 @@ void to_json(json& j, const PredictionResult& p)
             { "coeffs", coeffsVec },
             { "stats", p.stats },
             { "predictionRows", p.predictionRows },
-            { "kUsed", p.kUsed },
+            { "kMin", p.kMin },
+            { "kMax", p.kMax },
             { "cmdLine", p.cmdLine },
             { "configNum", p.configNum } };
 }
@@ -90,7 +91,8 @@ void from_json(const json& j, PredictionResult& p)
   j.at("numCoeffCols").get_to(p.numCoeffCols);
   j.at("predictionRows").get_to(p.predictionRows);
   j.at("stats").get_to(p.stats);
-  j.at("kUsed").get_to(p.kUsed);
+  j.at("kMin").get_to(p.kMin);
+  j.at("kMax").get_to(p.kMax);
   j.at("cmdLine").get_to(p.cmdLine);
   j.at("configNum").get_to(p.configNum);
 

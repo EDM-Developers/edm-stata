@@ -60,8 +60,9 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
                         Eigen::Map<MatrixXi> rcView, int* kUsed);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                     Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView, int* kUsed);
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
+                     int* kUsed);
 
 #if defined(WITH_ARRAYFIRE)
 void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
@@ -102,6 +103,7 @@ std::vector<std::future<PredictionResult>> launch_task_group(
   opts.numTasks = numReps * Es.size() * numLibraries;
   opts.configNum = 0;
   opts.taskNum = 0;
+  opts.saveKUsed = true;
 
   int maxE = Es[Es.size() - 1];
 
@@ -412,7 +414,8 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
     }
 
     if (opts.saveKUsed) {
-      pred.kUsed = kUsed;
+      pred.kMin = *std::min_element(kUsed.begin(), kUsed.end());
+      pred.kMax = *std::max_element(kUsed.begin(), kUsed.end());
     }
 
     pred.cmdLine = opts.cmdLine;
@@ -647,8 +650,9 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 }
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
-                     const std::vector<double>& dists, const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                     Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView, int* kUsed)
+                     const std::vector<double>& dists, const std::vector<int>& kNNInds,
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
+                     int* kUsed)
 {
   int k = kNNInds.size();
 
