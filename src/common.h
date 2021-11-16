@@ -115,7 +115,7 @@ struct PredictionResult
   std::unique_ptr<double[]> coeffs;
   std::vector<PredictionStats> stats;
   std::vector<bool> predictionRows;
-  std::vector<int> kUsed;
+  int kMin, kMax;
   std::string cmdLine;
   bool explore, copredict;
   int configNum;

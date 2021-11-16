@@ -25,6 +25,8 @@ char* FINISHED_SCALAR = (char*)"plugin_finished";
 char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
 char* DTW_USED = (char*)"_dtw_used";
 char* NUM_USABLE = (char*)"_num_usable";
+char* K_MIN = (char*)"_k_min";
+char* K_MAX = (char*)"_k_max";
 
 // These are all the variables in the edm.ado script we will read from in the plugin.
 char* RNG_STATE = (char*)"_rngstate";
@@ -667,6 +669,7 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
   bool saveCoPredictMode = atoi(argv[2]);
 
   ST_retcode rc = 0;
+  int kMin, kMax;
 
   int numCoeffColsSaved = 0;
 
@@ -674,6 +677,13 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 
     // If there are no errors, store the predictions and S-map coefficients to Stata variables.
     const PredictionResult pred = futures[i].get();
+
+    if (i == 0 || pred.kMin < kMin) {
+      kMin = pred.kMin;
+    }
+    if (i == 0 || pred.kMax > kMax) {
+      kMax = pred.kMax;
+    }
 
     if (pred.rc == SUCCESS) {
       // Save the rho/MAE results
@@ -711,6 +721,9 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
       rc = pred.rc;
     }
   }
+
+  SF_macro_save(K_MIN, (char*)fmt::format("{}", kMin).c_str());
+  SF_macro_save(K_MAX, (char*)fmt::format("{}", kMax).c_str());
 
   return rc;
 }

@@ -182,7 +182,7 @@ Univariate mapping with x and its lag values
                  9               1          .98972         .019903 
                 10               1          .98572         .024249 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
+Note: Number of neighbours (k) is set to between 3 and 11
 Note: 50/50 split for training and validation data
 
 . 
@@ -206,7 +206,7 @@ macros:
                 e(cmd) : "edm"
                e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
-        e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to between 3 and 11
 Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
@@ -231,7 +231,6 @@ Convergent Cross-mapping result for variables x and y
    y ~ y|M(x)             200          .55861          .12802 
    x ~ x|M(y)             200          .94454         .048853 
 ---------------------------------------------------------------
-Note: Number of neighbours (k) is adjusted to 5
 Note: The embedding dimension E is 2
 
 . 
@@ -256,8 +255,6 @@ macros:
                 e(cmd) : "edm"
                e(mode) : "edm_plugin"
           e(direction) : "both"
-        e(cmdfootnote) : "Note: Number of neighbours (k) is adjusted to 5
-"
           e(algorithm) : "simplex"
                   e(y) : "y"
                   e(x) : "x"
@@ -298,7 +295,7 @@ Univariate mapping with x and its lag values
         2        1       .99946    .00033511     .0049735      .001639
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is adjusted to 5
+Note: Number of neighbours (k) is set to 5
 Note: 10-fold cross validation results reported
 
 . 
@@ -611,7 +608,7 @@ Univariate mapping with x and its lag values
                  3               0          .99734         .013262 
                  3               1          .99872        .0089209 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
+Note: Number of neighbours (k) is set to between 3 and 4
 Note: 50/50 split for training and validation data
 
 . ereturn list
@@ -634,7 +631,7 @@ macros:
                 e(cmd) : "edm"
                e(mode) : "edm_plugin"
           e(algorithm) : "simplex"
-        e(cmdfootnote) : "Note: Number of neighbours (k) is set to E+1
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to between 3 and 4
 Note: 50/50 split for training and validation data"
                   e(x) : "x"
           e(direction) : "oneway"
@@ -1372,7 +1369,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98175       .02318      .018023       .01006
 ----------------------------------------------------------------------
 Note: Results from 2 runs
-Note: Number of neighbours (k) is adjusted to 50
+Note: Number of neighbours (k) is set to between 49 and 50
 Note: 2-fold cross validation results reported
 
 . 
@@ -1389,7 +1386,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98325      .040737      .015122      .016545
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is adjusted to 90
+Note: Number of neighbours (k) is set to between 61 and 90
 Note: 10-fold cross validation results reported
 
 . 
@@ -1455,7 +1452,7 @@ Missing values are assumed to have a distance of .25 with all values.
                  8               1          .91323         .050931 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
-Note: Number of neighbours (k) is set to E+5
+Note: Number of neighbours (k) is set to between 5 and 9
 Note: Full sample used for the computation
 
 . edm explore x, e(2) extra(L(0/1).y) full allowmissing
@@ -1553,7 +1550,7 @@ Univariate mapping with x and its lag values
                  9               1          .98415         .029228 
                 10               1          .97962         .030217 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
+Note: Number of neighbours (k) is set to between 3 and 11
 Note: 50/50 split for training and validation data
 
 . 
@@ -1567,7 +1564,6 @@ Convergent Cross-mapping result for variables x and y
    y ~ y|M(x)              91          .42378          .16444 
    x ~ x|M(y)              91          .85868         .083196 
 ---------------------------------------------------------------
-Note: Number of neighbours (k) is adjusted to 5
 Note: The embedding dimension E is 10
 
 . 
@@ -3013,6 +3009,7 @@ Missing values are assumed to have a distance of .25 and .23
    y ~ y|M(x)              87          .18148           .5658 
    x ~ x|M(y)              87          .30215          .34288 
 ---------------------------------------------------------------
+Note: Number of neighbours (k) is set to between 12 and 13
 Note: The embedding dimension E is 11 (including 7 extras)
 Note: Embedding includes the delta of the time variable with a weight of .65 and .59
 
@@ -4664,7 +4661,7 @@ Univariate mapping with x and its lag values
                  2             1.9          .99624         .016526 
                  2               2          .99669         .015617 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is adjusted to 50
+Note: Number of neighbours (k) is set to between 33 and 34
 Note: Full sample used for the computation
 
 . 
@@ -4711,7 +4708,7 @@ Additional variables in the embedding: i.y(e) x L.x
                 10               1          .86402          .17018 
 --------------------------------------------------------------------
 Note: Actual E is higher than the specified E due to extras
-Note: Number of neighbours (k) is set to E+7
+Note: Number of neighbours (k) is set to between 7 and 8
 Note: 50/50 split for training and validation data
 
 . 
@@ -5124,7 +5121,7 @@ Copredictions
                  5               0               .          .13127 
                  5               1          .48008          .12646 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to E+1
+Note: Number of neighbours (k) is set to between 3 and 6
 Note: 50/50 split for training and validation data
 
 . 
@@ -5217,6 +5214,7 @@ Copredictions
    x ~ x|M(y)              40          .52679         .071566
 ---------------------------------------------------------------
 Note: Results from 20 replications
+Note: Number of neighbours (k) is set to between 1 and 3
 Note: The embedding dimension E is 2
 
 . 
@@ -5329,6 +5327,7 @@ Copredictions
    x ~ x|M(y)              20          .50462          .94014 
    x ~ x|M(y)              40          .48754          1.0042 
 ---------------------------------------------------------------
+Note: Number of neighbours (k) is set to between 2 and 3
 Note: The embedding dimension E is 2
 
 . 
@@ -5617,6 +5616,7 @@ Missing values are assumed to have a distance of .25 and .23
    y ~ y|M(x)             100          .55937          .13962 
    x ~ x|M(y)             100          .75815          .13196 
 ---------------------------------------------------------------
+Note: Number of neighbours (k) is set to between 33 and 41
 Note: The embedding dimension E is 40
 
 . set seed 4
@@ -5770,7 +5770,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  5               1          .92472          .10559 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is adjusted to 13
+Note: Number of neighbours (k) is set to 2
 Note: 50/50 split for training and validation data
 
 . set seed 3
@@ -5784,7 +5784,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  5               1          .92472          .10559 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is adjusted to 13
+Note: Number of neighbours (k) is set to 13
 Note: 50/50 split for training and validation data
 
 . 
