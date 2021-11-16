@@ -645,14 +645,11 @@ program define edmExplore, eclass
 	}
 
 	if !`mata_mode' {
-		// PJL: Check that `savesmap' is not needed in explore mode.
 		// Setup variables which the plugin will modify
 		scalar plugin_finished = 0
 		local missing_dist_used = .
 		local dtw_used = .
-
-		// The plugin will save the 'usable' it generates to to here
-		qui gen double `usable' = .
+		local num_usable = .
 
 		local explore_mode = 1
 		local full_mode = ("`full'" == "full")
@@ -691,7 +688,7 @@ program define edmExplore, eclass
 			}
 		}
 
-		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -705,8 +702,6 @@ program define edmExplore, eclass
 				local parsed_dt = 0
 			}
 		}
-
-		qui compress `usable'
 	}
 
 	if `mata_mode' {
@@ -720,14 +715,17 @@ program define edmExplore, eclass
 		}
 	}
 
-	sum `usable', meanonly
-	local num_usable = r(sum)
+	if `mata_mode' {
+		sum `usable', meanonly
+		local num_usable = r(sum)
+	}
 
 	if `crossfold' > 1 {
 		if `crossfold' > `num_usable' / `max_e' {
 			di as error "Not enough observations for cross-validations"
 			error 149
 		}
+
 		if `mata_mode' {
 			if `shuffle' {
 				tempvar crossfoldu crossfoldunum
@@ -736,16 +734,18 @@ program define edmExplore, eclass
 			}
 		}
 
-		tempvar counting_up fold_number
-		qui gen double `counting_up' = sum(`usable') if `usable'
-		qui gen `fold_number' = .
+		if `mata_mode' {
+			tempvar counting_up fold_number
+			qui gen double `counting_up' = sum(`usable') if `usable'
+			qui gen `fold_number' = .
 
-		local num_in_each_fold = round(`num_usable' / `crossfold')
+			local num_in_each_fold = round(`num_usable' / `crossfold')
 
-		local start = 1
-		forvalues t=1/`crossfold' {
-			qui replace `fold_number' = `t' if `counting_up' >= `start' & `counting_up' < `start' + `num_in_each_fold'
-			local start = `start' + `num_in_each_fold'
+			local start = 1
+			forvalues t=1/`crossfold' {
+				qui replace `fold_number' = `t' if `counting_up' >= `start' & `counting_up' < `start' + `num_in_each_fold'
+				local start = `start' + `num_in_each_fold'
+			}
 		}
 	}
 
@@ -846,8 +846,13 @@ program define edmExplore, eclass
 		}
 
 		if `crossfold' > 1 {
-			qui count if `fold_number' != `t'
-			local train_size = r(N)
+			local num_in_each_fold = round(`num_usable' / `crossfold')
+			if `t' != `crossfold' {
+				local train_size = `num_usable' - `num_in_each_fold'
+			}
+			else {
+				local train_size = `num_in_each_fold' * (`crossfold'-1)
+			}
 		}
 		else if "`full'" == "full"  {
 			local train_size = `num_usable'
@@ -1453,9 +1458,7 @@ program define edmXmap, eclass
 			scalar plugin_finished = 0
 			local missing_dist_used = .
 			local dtw_used = .
-
-			// The plugin will save the 'usable' it generates to to here
-			qui gen double `usable' = .
+			local num_usable = .
 
 			local explore_mode = 0
 			local full_mode = 0
@@ -1495,7 +1498,7 @@ program define edmXmap, eclass
 				}
 			}
 
-			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `usable' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1525,10 +1528,10 @@ program define edmXmap, eclass
 				tempvar co_x_p
 				qui gen double `co_x_p' = .
 			}
-		}
 
-		qui gen byte `predict_set' = `usable'
-		qui gen byte `train_set' = . // to be decided by library length
+			qui gen byte `predict_set' = `usable'
+			qui gen byte `train_set' = . // to be decided by library length
+		}
 
 		tempvar u urank
 
@@ -1539,8 +1542,10 @@ program define edmXmap, eclass
 		}
 
 		// Set the default library size to be the number of usable observations.
-		sum `usable', meanonly
-		local num_usable = r(sum)
+		if `mata_mode' {
+			sum `usable', meanonly
+			local num_usable = r(sum)
+		}
 
 		if "`l_ori'" == "" | "`l_ori'" == "0" {
 			local library = `num_usable'

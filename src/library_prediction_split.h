@@ -46,8 +46,6 @@ public:
     }
   }
 
-  static bool requiresRandomNumbers(int crossfold, bool full) { return crossfold > 0 || !full; }
-
   void set_rng_state(const std::string& rngState)
   {
     unsigned long long state[312];
