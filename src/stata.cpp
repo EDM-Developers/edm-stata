@@ -16,8 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "cli.h"                      // to save the inputs to a local file for debugging
-#include "library_prediction_split.h" // Just for 'LibraryPredictionSetSplitter::requiresRandomNumbers', can simplify
+#include "cli.h" // to save the inputs to a local file for debugging
 #include "stats.h"
 
 // These are all the variables in the edm.ado script we modify in the plugin.
@@ -25,8 +24,10 @@
 char* FINISHED_SCALAR = (char*)"plugin_finished";
 char* MISSING_DISTANCE_USED = (char*)"_missing_dist_used";
 char* DTW_USED = (char*)"_dtw_used";
-char* RNG_STATE = (char*)"_rngstate";
+char* NUM_USABLE = (char*)"_num_usable";
 
+// These are all the variables in the edm.ado script we will read from in the plugin.
+char* RNG_STATE = (char*)"_rngstate";
 char* NUM_NEIGHBOURS = (char*)"_k";
 char* SAVE_DT = (char*)"_dtsave";
 char* SAVE_MANIFOLD = (char*)"_savemanifold";
@@ -482,12 +483,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   std::vector<ST_double> co_x;
   if (copredictMode) {
-    co_x = stata_columns<ST_double>(3 + numExtras + 1 + 1);
+    co_x = stata_columns<ST_double>(3 + numExtras + 1);
   }
 
   std::vector<int> panelIDs;
   if (opts.panelMode) {
-    panelIDs = stata_columns<int>(3 + numExtras + 1 + copredictMode + 1);
+    panelIDs = stata_columns<int>(3 + numExtras + copredictMode + 1);
   }
 
   if (dtMode || (opts.distance == Distance::Wasserstein && wassDT)) {
@@ -525,15 +526,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, reldt,
                                     allowMissing);
 
-  // Save some variables back to Stata, like usable, and the manifold (if savemanifold) or the dt (if dtsave).
+  // Save some variables back to Stata, like the manifold (if savemanifold) or the dt (if dtsave).
   // Start by generating the 'usable' variable.
   std::vector<bool> usable = generator.generate_usable(maxE);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
-  {
-    std::vector<double> usableToSave = bool_to_double(usable);
-    write_stata_column(usableToSave.data(), (int)usableToSave.size(), 3 + numExtras + 1);
-  }
+  SF_macro_save(NUM_USABLE, (char*)fmt::format("{}", numUsable).c_str());
 
   // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
   if (saveDT) {
@@ -544,7 +542,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
     }
-    ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + 1;
+    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + 1;
     write_stata_column(dts.data(), (int)dts.size(), startCol);
   }
 
@@ -552,7 +550,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (saveManifold) {
     Manifold manifold = generator.create_manifold(maxE, {}, true, opts.dtWeight);
 
-    ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + saveDT + 1;
+    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + saveDT + 1;
     write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);
   }
 
@@ -563,7 +561,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   // If we need to create a randomised library/prediction split, then sync the state of the
   // Mersenne Twister in Stata to that in the splitter instance.
-  bool requiresRandomNumbers = LibraryPredictionSetSplitter::requiresRandomNumbers(crossfold, full);
+  bool requiresRandomNumbers = numReps > 0 || (shuffle && !full);
+
   std::string rngState;
 
   if (requiresRandomNumbers) {
@@ -592,10 +591,6 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
         rngState.clear();
       }
     }
-
-    // if (rngState.empty()) {
-    //  io.print("Error: couldn't read the c(rngstate), using seed(0) for this command.\n");
-    //}
   }
 
   std::vector<int> libraries;
