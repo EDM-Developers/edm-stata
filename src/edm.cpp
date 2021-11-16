@@ -98,6 +98,7 @@ std::vector<std::future<Prediction>> launch_task_group(
 
   int numLibraries = (explore ? 1 : libraries.size());
 
+  opts.explore = explore;
   opts.numTasks = numReps * Es.size() * numLibraries;
   opts.configNum = 0;
   opts.taskNum = 0;
@@ -170,6 +171,7 @@ std::vector<std::future<Prediction>> launch_task_group(
 
         opts.copredict = false;
         opts.k = kAdj;
+        opts.library = library;
 
         futures.emplace_back(taskRunnerPool.enqueue([generator, opts, E, splitter, io, keep_going, all_tasks_finished] {
           return edm_task(generator, opts, E, splitter.libraryRows(), splitter.predictionRows(), io, keep_going,
@@ -345,14 +347,19 @@ Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, con
 
   Prediction pred;
 
+  pred.explore = opts.explore;
+
   // Store the results, so long as we weren't interrupted by a 'break'.
   if (keep_going == nullptr || keep_going()) {
     // Start by calculating the MAE & rho of prediction, if requested
     for (int t = 0; t < numThetas * opts.calcRhoMAE; t++) {
       PredictionStats stats;
 
-      // TODO POTENTIAL SPEEDUP: if predictions and y exist on GPU
-      //      this could potentially be faster on GPU for larger numPoints
+      stats.library = opts.library; // Could store 'M.numPoints()' here for a more accurate version
+      stats.E = M.E_actual();
+      stats.theta = opts.thetas[t];
+
+      // POTENTIAL SPEEDUP: if predictions and y exist on GPU this could potentially be faster on GPU
       std::vector<double> y1, y2;
 
       for (int i = 0; i < Mp.numTargets(); i++) {
@@ -378,7 +385,7 @@ Prediction edm_task(const ManifoldGenerator& generator, Options opts, int E, con
     // Check if any make_prediction call failed, and if so find the most serious error
     pred.rc = *std::max_element(rc.get(), rc.get() + numThetas * numPredictions);
 
-    // If we're storing the prediction and/or the SMAP coefficients, put them
+    // If we're storing the prediction and/or the S-map coefficients, put them
     // into the resulting Prediction struct. Otherwise, let them be deleted.
     if (opts.savePrediction) {
       // Take only the predictions for the largest theta value.

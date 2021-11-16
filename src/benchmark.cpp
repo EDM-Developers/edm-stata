@@ -45,7 +45,7 @@ static void bm_basic_distances(benchmark::State& state)
   Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
-  int validDistances;
+
   for (auto _ : state) {
     std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
     DistanceIndexPairs potentialNN = lp_distances(Mp_i, vars.opts, M, Mp, tryInds);
@@ -65,7 +65,7 @@ static void bm_wasserstein_distances(benchmark::State& state)
   Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
-  int validDistances;
+
   for (auto _ : state) {
     std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
     DistanceIndexPairs potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp, tryInds);

@@ -641,6 +641,18 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   return SUCCESS;
 }
 
+void save_to_stata_matrix(std::string matName, ST_int r, ST_int c, double v, ST_retcode& rc)
+{
+  if (v == MISSING_D) {
+    v = SV_missval;
+  }
+
+  if (SF_mat_store((char*)matName.c_str(), r, c, v)) {
+    io.error(fmt::format("Error: failed to save {} to matrix '{}[{},{}]'\n", v, matName, r, c).c_str());
+    rc = CANNOT_SAVE_RESULTS;
+  }
+}
+
 ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
 {
   if (argc < 3) {
@@ -664,32 +676,19 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     const Prediction pred = futures[i].get();
 
     if (pred.rc == SUCCESS) {
-      // Save the rho/MAE results if requested (i.e. not for coprediction)
+      // Save the rho/MAE results
+      std::string matName = pred.copredict ? "co_" + resultMatrix : resultMatrix;
+
       for (int t = 0; t < pred.stats.size(); t++) {
-        ST_double rho = pred.stats[t].rho;
-        if (rho == MISSING_D) {
-          rho = SV_missval;
-        }
-
-        std::string matName = pred.copredict ? "co_" + resultMatrix : resultMatrix;
         ST_int matRow = pred.configNum + t + 1;
-
-        if (SF_mat_store((char*)matName.c_str(), matRow, 3, rho)) {
-          io.error(
-            fmt::format("Error: failed to save rho {} to matrix '{}[{},{}]'\n", rho, matName, matRow, 3).c_str());
-          rc = CANNOT_SAVE_RESULTS;
+        if (pred.explore) {
+          save_to_stata_matrix(matName, matRow, 1, pred.stats[t].E, rc);
+          save_to_stata_matrix(matName, matRow, 2, pred.stats[t].theta, rc);
+        } else {
+          save_to_stata_matrix(matName, matRow, 2, pred.stats[t].library, rc);
         }
-
-        ST_double mae = pred.stats[t].mae;
-        if (mae == MISSING_D) {
-          mae = SV_missval;
-        }
-
-        if (SF_mat_store((char*)matName.c_str(), matRow, 4, mae)) {
-          io.error(
-            fmt::format("Error: failed to save MAE {} to matrix '{}[{},{}]'\n", mae, matName, matRow, 4).c_str());
-          rc = CANNOT_SAVE_RESULTS;
-        }
+        save_to_stata_matrix(matName, matRow, 3, pred.stats[t].rho, rc);
+        save_to_stata_matrix(matName, matRow, 4, pred.stats[t].mae, rc);
       }
 
       if (pred.ystar != nullptr) {

@@ -74,11 +74,12 @@ struct DistanceIndexPairsOnGPU
 
 struct Options
 {
+  bool explore;
   bool copredict;
   bool forceCompute;
   bool savePrediction;
   bool saveSMAPCoeffs;
-  int k, nthreads;
+  int k, nthreads, library;
   double missingdistance;
   double dtWeight;
   bool panelMode;
@@ -99,7 +100,8 @@ void from_json(const json& j, Options& o);
 
 struct PredictionStats
 {
-  double mae, rho;
+  int library, E;
+  double theta, mae, rho;
 };
 
 void to_json(json& j, const PredictionStats& s);
@@ -115,7 +117,7 @@ struct Prediction
   std::vector<bool> predictionRows;
   std::vector<int> kUsed;
   std::string cmdLine;
-  bool copredict;
+  bool explore, copredict;
   int configNum;
 };
 
