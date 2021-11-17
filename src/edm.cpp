@@ -57,12 +57,12 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                        Eigen::Map<MatrixXi> rcView, int* kUsed);
+                        Eigen::Map<MatrixXi> rcView);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
-                     int* kUsed);
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView,
+                     Eigen::Map<MatrixXi> rcView);
 
 #if defined(WITH_ARRAYFIRE)
 void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
@@ -486,7 +486,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   // Do we have enough distances to find k neighbours?
   int numValidDistances = potentialNN.inds.size();
   int k = opts.k;
-  *kUsed = numValidDistances;
+
   if (k > numValidDistances) {
     if (opts.forceCompute) {
       k = numValidDistances;
@@ -495,6 +495,8 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
       return;
     }
   }
+
+  *kUsed = k;
 
   if (k == 0) {
     // Whether we throw an error or just silently ignore this prediction
@@ -518,11 +520,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, predictionsView, rcView, kUsed);
+      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, predictionsView, rcView);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, predictionsView, coeffsView, rcView, kUsed);
+      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, predictionsView, coeffsView, rcView);
     }
   } else {
     rcView(0, Mp_i) = INVALID_ALGORITHM;
@@ -614,7 +616,7 @@ DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentia
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                        Eigen::Map<MatrixXi> rcView, int* kUsed)
+                        Eigen::Map<MatrixXi> rcView)
 {
   int k = kNNInds.size();
 
@@ -626,16 +628,9 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   double sumw = 0.0;
   const double theta = opts.thetas[t];
 
-  int numNonZeroWeights = 0;
   for (int j = 0; j < k; j++) {
     w[j] = exp(-theta * (dists[j] / minDist));
     sumw = sumw + w[j];
-    numNonZeroWeights += (w[j] > 0);
-  }
-
-  // For the sake of debugging, count how many neighbours we end up with.
-  if (opts.saveKUsed) {
-    *kUsed = numNonZeroWeights;
   }
 
   // Make the simplex projection/prediction.
@@ -651,8 +646,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
-                     int* kUsed)
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView)
 {
   int k = kNNInds.size();
 
@@ -673,25 +667,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // Calculate the weight for each neighbour
   Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
   Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * (distsMap.array() / distsMap.mean()));
-
-  // For the sake of debugging, count how many neighbours we end up with.
-  if (opts.saveKUsed) {
-    int numNonZeroWeights = 0;
-#if EIGEN_VERSION_AT_LEAST(3, 4, 0)
-    for (double& w_i : w) {
-      if (w_i > 0) {
-        numNonZeroWeights += 1;
-      }
-    }
-#else
-    for (int i = 0; i < w.size(); i++) {
-      if (w[i] > 0) {
-        numNonZeroWeights += 1;
-      }
-    }
-#endif
-    *kUsed = numNonZeroWeights;
-  }
 
   // Scale everything by our weights vector
 #if EIGEN_VERSION_AT_LEAST(3, 4, 0)
