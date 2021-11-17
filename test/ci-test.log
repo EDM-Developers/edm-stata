@@ -1386,7 +1386,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98175       .02318      .018023       .01006
 ----------------------------------------------------------------------
 Note: Results from 2 runs
-Note: Number of neighbours (k) is set to between 49 and 50
+Note: Number of neighbours (k) is set to -1
 Note: 2-fold cross validation results reported
 
 . 
@@ -1403,7 +1403,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98325      .040737      .015122      .016545
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is set to between 61 and 90
+Note: Number of neighbours (k) is set to -1
 Note: 10-fold cross validation results reported
 
 . 
@@ -4691,7 +4691,7 @@ Univariate mapping with x and its lag values
                  2             1.9          .99624         .016526 
                  2               2          .99669         .015617 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to between 33 and 34
+Note: Number of neighbours (k) is set to -1
 Note: Full sample used for the computation
 
 . 
@@ -5817,7 +5817,7 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
                  5               1          .92472          .10559 
 --------------------------------------------------------------------
-Note: Number of neighbours (k) is set to 2
+Note: Number of neighbours (k) is set to -1
 Note: 50/50 split for training and validation data
 
 . set seed 3

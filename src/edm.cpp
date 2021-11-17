@@ -57,12 +57,12 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                        Eigen::Map<MatrixXi> rcView, int* kUsed);
+                        Eigen::Map<MatrixXi> rcView);
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
-                     int* kUsed);
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView,
+                     Eigen::Map<MatrixXi> rcView);
 
 #if defined(WITH_ARRAYFIRE)
 void af_make_prediction(const int numPredictions, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
@@ -492,7 +492,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   // Do we have enough distances to find k neighbours?
   int numValidDistances = potentialNN.inds.size();
   int k = opts.k;
-  *kUsed = numValidDistances;
+
   if (k > numValidDistances) {
     if (opts.forceCompute) {
       k = numValidDistances;
@@ -501,6 +501,8 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
       return;
     }
   }
+
+  *kUsed = k;
 
   if (k == 0) {
     // Whether we throw an error or just silently ignore this prediction
@@ -524,11 +526,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 
   if (opts.algorithm == Algorithm::Simplex) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, predictionsView, rcView, kUsed);
+      simplex_prediction(Mp_i, t, opts, M, kNNs.dists, kNNs.inds, predictionsView, rcView);
     }
   } else if (opts.algorithm == Algorithm::SMap) {
     for (int t = 0; t < opts.thetas.size(); t++) {
-      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, predictionsView, coeffsView, rcView, kUsed);
+      smap_prediction(Mp_i, t, opts, M, Mp, kNNs.dists, kNNs.inds, predictionsView, coeffsView, rcView);
     }
   } else {
     rcView(0, Mp_i) = INVALID_ALGORITHM;
@@ -620,7 +622,7 @@ DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentia
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
-                        Eigen::Map<MatrixXi> rcView, int* kUsed)
+                        Eigen::Map<MatrixXi> rcView)
 {
   int k = kNNInds.size();
 
@@ -632,16 +634,9 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
   double sumw = 0.0;
   const double theta = opts.thetas[t];
 
-  int numNonZeroWeights = 0;
   for (int j = 0; j < k; j++) {
     w[j] = exp(-theta * (dists[j] / minDist));
     sumw = sumw + w[j];
-    numNonZeroWeights += (w[j] > 0);
-  }
-
-  // For the sake of debugging, count how many neighbours we end up with.
-  if (opts.saveKUsed) {
-    *kUsed = numNonZeroWeights;
   }
 
   // Make the simplex projection/prediction.
@@ -657,8 +652,7 @@ void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M,
 
 void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const Manifold& Mp,
                      const std::vector<double>& dists, const std::vector<int>& kNNInds,
-                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView,
-                     int* kUsed)
+                     Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXd> coeffsView, Eigen::Map<MatrixXi> rcView)
 {
   int k = kNNInds.size();
 
@@ -679,25 +673,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // Calculate the weight for each neighbour
   Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
   Eigen::VectorXd w = Eigen::exp(-opts.thetas[t] * (distsMap.array() / distsMap.mean()));
-
-  // For the sake of debugging, count how many neighbours we end up with.
-  if (opts.saveKUsed) {
-    int numNonZeroWeights = 0;
-#if EIGEN_VERSION_AT_LEAST(3, 4, 0)
-    for (double& w_i : w) {
-      if (w_i > 0) {
-        numNonZeroWeights += 1;
-      }
-    }
-#else
-    for (int i = 0; i < w.size(); i++) {
-      if (w[i] > 0) {
-        numNonZeroWeights += 1;
-      }
-    }
-#endif
-    *kUsed = numNonZeroWeights;
-  }
 
   // Scale everything by our weights vector
 #if EIGEN_VERSION_AT_LEAST(3, 4, 0)
@@ -835,7 +810,7 @@ void afNearestNeighbours(af::array& pValids, af::array& sDists, af::array& yvecs
 #endif
 }
 
-void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused, const int numPredictions,
+void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kUsed, const int numPredictions,
                          const Options& opts, const af::array& yvecs, const DistanceIndexPairsOnGPU& pair,
                          const af::array& thetas, const bool isKNeg)
 {
@@ -871,7 +846,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
   retcodes = af::constant(SUCCESS, numPredictions, tcount, s32);
 
   if (opts.saveKUsed) {
-    kused = moddims(af::count(weights > 0, 0), numPredictions, tcount);
+    kUsed = moddims(af::count(weights >= 0, 0), numPredictions, tcount);
   }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
@@ -879,7 +854,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kused
 }
 
 template<typename T>
-void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, af::array& coeffs,
+void afSMapPrediction(af::array& retcodes, af::array& kUsed, af::array& ystar, af::array& coeffs,
                       const int numPredictions, const Options& opts, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                       const DistanceIndexPairsOnGPU& pair, const af::array& mdata, const af::array& yvecs,
                       const af::array& thetas, const bool useLoops)
@@ -943,7 +918,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
           coeffs = select(af::abs(icsOuts) < 1.0e-11, double(MISSING_D), icsOuts).T();
         }
         if (opts.saveKUsed) {
-          kused = af::count(weights > 0, 0);
+          kUsed = af::count(weights >= 0, 0);
         }
       }
     }
@@ -984,7 +959,7 @@ void afSMapPrediction(af::array& retcodes, af::array& kused, af::array& ystar, a
       coeffs = select(af::abs(lastTheta) < 1.0e-11, double(MISSING_D), lastTheta).T();
     }
     if (opts.saveKUsed) {
-      kused = af::count(weights > 0, 0)(span, end);
+      kUsed = af::count(weights >= 0, 0)(span, end);
     }
   }
 
@@ -1037,7 +1012,7 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
     pValids = pValids && validDistPair.inds;
 
     // smData is set only if algo is SMap
-    array retcodes, kused, sDists, yvecs, smData;
+    array retcodes, kUsed, sDists, yvecs, smData;
 
     const int k = opts.k;
     const bool isKNeg = k < 0;
@@ -1062,13 +1037,13 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
 
     array ystars, dcoeffs;
     if (opts.algorithm == Algorithm::Simplex) {
-      afSimplexPrediction(retcodes, ystars, kused, numPredictions, opts, yvecs, { pValids, sDists }, thetas, isKNeg);
+      afSimplexPrediction(retcodes, ystars, kUsed, numPredictions, opts, yvecs, { pValids, sDists }, thetas, isKNeg);
     } else if (opts.algorithm == Algorithm::SMap) {
       if (cType == f32) {
-        afSMapPrediction<float>(retcodes, kused, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
+        afSMapPrediction<float>(retcodes, kUsed, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
                                 smData, yvecs, thetas, isKNeg);
       } else {
-        afSMapPrediction<double>(retcodes, kused, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
+        afSMapPrediction<double>(retcodes, kUsed, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
                                  smData, yvecs, thetas, isKNeg);
       }
     }
@@ -1084,7 +1059,7 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
 
     retcodes.T().host(rc.data());
     if (opts.saveKUsed) {
-      kused.host(kUseds.data());
+      kUsed.host(kUseds.data());
     }
     if (opts.saveSMAPCoeffs) {
       dcoeffs.T().as(f64).host(coeffs.data());
