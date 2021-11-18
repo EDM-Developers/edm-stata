@@ -97,9 +97,9 @@ set(COMMON_SRC src/cli.cpp src/cli.h
                src/stats.cpp src/stats.h
                src/library_prediction_split.h
                vendor/mersennetwister.h
-               vendor/core.h vendor/EMD_wrapper.cpp vendor/EMD_wrapper.h
+               vendor/core.h vendor/EMD_wrapper.h
                vendor/network_simplex_simple.h vendor/full_bipartitegraph.h
-               vendor/thread_pool.cpp vendor/thread_pool.h
+               vendor/thread_pool.h
                )
 if (EDM_WITH_ARRAYFIRE)
   if (WIN32)
@@ -118,7 +118,7 @@ if (EDM_WITH_ARRAYFIRE)
 endif ()
 
 # The main EDM plugin for Stata
-add_library(edm_plugin SHARED ${COMMON_SRC} src/stata.cpp vendor/stplugin.cpp vendor/stplugin.h)
+add_library(edm_plugin SHARED ${COMMON_SRC} src/main/stata.cpp vendor/stplugin.h)
 
 # Rename the output plugin to 'edm_Windows_x64.plugin' or 'edm_MacOSX_arm.plugin' as appropriate
 if(WIN32)
@@ -179,7 +179,7 @@ endif()
 
 # Grab vendored files (e.g. the Stata/C interface files)
 include(vendor/CMakeLists.txt)
-target_include_directories(edm_plugin PRIVATE vendor vendor/eigen-3.4.0)
+target_include_directories(edm_plugin PRIVATE src vendor vendor/eigen-3.4.0)
 
 target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
@@ -194,11 +194,11 @@ endif ()
 
 # Formatting with clang-format
 include(ClangFormat)
-clangformat_setup(${COMMON_SRC} src/benchmark.cpp src/cli_main.cpp src/test.cpp src/stata.cpp)
+clangformat_setup(${COMMON_SRC} src/main/benchmark.cpp src/main/cli_main.cpp src/main/test.cpp src/main/stata.cpp)
 
 # ↓↓↓ Developer builds ↓↓↓
 # Command-line interface executable
-add_executable(edm_cli ${COMMON_SRC} src/cli_main.cpp)
+add_executable(edm_cli ${COMMON_SRC} src/main/cli_main.cpp)
 
 set_target_properties(edm_cli
   PROPERTIES
@@ -208,7 +208,7 @@ set_target_properties(edm_cli
 )
 
 target_compile_definitions(edm_cli PRIVATE NOMINMAX)
-target_include_directories(edm_cli PRIVATE vendor vendor/eigen-3.4.0)
+target_include_directories(edm_cli PRIVATE src vendor vendor/eigen-3.4.0)
 target_link_libraries(edm_cli PRIVATE
   fmt::fmt-header-only
   Threads::Threads
@@ -223,7 +223,7 @@ install(TARGETS edm_cli DESTINATION bin OPTIONAL)
 install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
 # Google Benchmarks
-add_executable(gbench ${COMMON_SRC} src/benchmark.cpp)
+add_executable(gbench ${COMMON_SRC} src/main/benchmark.cpp)
 set_target_properties(gbench
   PROPERTIES
     CXX_STANDARD 17
@@ -237,7 +237,7 @@ endif()
 find_package(benchmark CONFIG REQUIRED)
 target_compile_definitions(gbench PRIVATE NOMINMAX)
 target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-target_include_directories(gbench PRIVATE vendor vendor/eigen-3.4.0)
+target_include_directories(gbench PRIVATE src vendor vendor/eigen-3.4.0)
 target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
 target_link_libraries(gbench PRIVATE Threads::Threads)
 target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
@@ -250,10 +250,10 @@ install(TARGETS gbench DESTINATION test OPTIONAL)
 
 find_package(Catch2 REQUIRED)
 
-add_executable(edm_test ${COMMON_SRC} src/test.cpp)
+add_executable(edm_test ${COMMON_SRC} src/main/test.cpp)
 set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
 target_compile_definitions(edm_test PRIVATE NOMINMAX)
-target_include_directories(edm_test PRIVATE vendor vendor/eigen-3.4.0)
+target_include_directories(edm_test PRIVATE src vendor vendor/eigen-3.4.0)
 
 target_link_libraries(edm_test PRIVATE Catch2::Catch2)
 target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
