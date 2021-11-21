@@ -178,7 +178,6 @@ if(DEFINED ENV{EDM_CI_DIR})
 endif()
 
 # Grab vendored files (e.g. the Stata/C interface files)
-include(vendor/CMakeLists.txt)
 target_include_directories(edm_plugin PRIVATE src vendor vendor/eigen-3.4.0)
 
 target_compile_definitions(edm_plugin PRIVATE NOMINMAX)

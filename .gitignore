@@ -1,6 +1,5 @@
 # Project specific
 compile_commands.json
-vendor/stplugin.*
 test/edm.ado
 test/*.plugin
 test/edm_cli*
