@@ -1403,7 +1403,7 @@ Missing values are assumed to have a distance of .25 with all values.
         2        1       .98325      .040737      .015122      .016545
 ----------------------------------------------------------------------
 Note: Results from 10 runs
-Note: Number of neighbours (k) is set to between 62 and 90
+Note: Number of neighbours (k) is set to between 89 and 90
 Note: 10-fold cross validation results reported
 
 . 

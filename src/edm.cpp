@@ -496,8 +496,6 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     }
   }
 
-  *kUsed = k;
-
   if (k == 0) {
     // Whether we throw an error or just silently ignore this prediction
     // depends on whether we are in 'strict' mode or not.
@@ -512,6 +510,8 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   } else {
     kNNs = kNearestNeighbours(potentialNN, k);
   }
+
+  *kUsed = kNNs.inds.size();
 
   if (keep_going != nullptr && !keep_going()) {
     rcView(0, Mp_i) = BREAK_HIT;
