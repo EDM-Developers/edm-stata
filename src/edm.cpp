@@ -279,13 +279,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
   Eigen::Map<MatrixXi> rcView(rc.get(), numThetas, numPredictions);
 
   std::vector<int> kUsed;
-  int numKUsed = numPredictions;
-#if defined(WITH_ARRAYFIRE)
-  if (useAF) {
-    numKUsed *= numThetas;
-  }
-#endif
-  for (int i = 0; i < numKUsed; i++) {
+  for (int i = 0; i < numPredictions; i++) {
     kUsed.push_back(-1);
   }
 
@@ -502,8 +496,6 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     }
   }
 
-  *kUsed = k;
-
   if (k == 0) {
     // Whether we throw an error or just silently ignore this prediction
     // depends on whether we are in 'strict' mode or not.
@@ -518,6 +510,8 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   } else {
     kNNs = kNearestNeighbours(potentialNN, k);
   }
+
+  *kUsed = kNNs.inds.size();
 
   if (keep_going != nullptr && !keep_going()) {
     rcView(0, Mp_i) = BREAK_HIT;
@@ -810,9 +804,9 @@ void afNearestNeighbours(af::array& pValids, af::array& sDists, af::array& yvecs
 #endif
 }
 
-void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kUsed, const int numPredictions,
-                         const Options& opts, const af::array& yvecs, const DistanceIndexPairsOnGPU& pair,
-                         const af::array& thetas, const bool isKNeg)
+void afSimplexPrediction(af::array& retcodes, af::array& ystar, const int numPredictions, const Options& opts,
+                         const af::array& yvecs, const DistanceIndexPairsOnGPU& pair, const af::array& thetas,
+                         const bool isKNeg)
 {
   using af::array;
   using af::sum;
@@ -845,17 +839,14 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, af::array& kUsed
   ystar = moddims(sum(r4thetas, 0), numPredictions, tcount);
   retcodes = af::constant(SUCCESS, numPredictions, tcount, s32);
 
-  if (opts.saveKUsed) {
-    kUsed = moddims(af::count(weights >= 0, 0), numPredictions, tcount);
-  }
 #if WITH_GPU_PROFILING
   nvtxRangeEnd(range);
 #endif
 }
 
 template<typename T>
-void afSMapPrediction(af::array& retcodes, af::array& kUsed, af::array& ystar, af::array& coeffs,
-                      const int numPredictions, const Options& opts, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+void afSMapPrediction(af::array& retcodes, af::array& ystar, af::array& coeffs, const int numPredictions,
+                      const Options& opts, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
                       const DistanceIndexPairsOnGPU& pair, const af::array& mdata, const af::array& yvecs,
                       const af::array& thetas, const bool useLoops)
 {
@@ -917,9 +908,6 @@ void afSMapPrediction(af::array& retcodes, af::array& kUsed, af::array& ystar, a
         if (opts.saveSMAPCoeffs) {
           coeffs = select(af::abs(icsOuts) < 1.0e-11, double(MISSING_D), icsOuts).T();
         }
-        if (opts.saveKUsed) {
-          kUsed = af::count(weights >= 0, 0);
-        }
       }
     }
   } else {
@@ -957,9 +945,6 @@ void afSMapPrediction(af::array& retcodes, af::array& kUsed, af::array& ystar, a
       array lastTheta = icsOuts(span, span, tcount - 1);
 
       coeffs = select(af::abs(lastTheta) < 1.0e-11, double(MISSING_D), lastTheta).T();
-    }
-    if (opts.saveKUsed) {
-      kUsed = af::count(weights >= 0, 0)(span, end);
     }
   }
 
@@ -1035,16 +1020,20 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
     nvtxRangeEnd(kisRange);
 #endif
 
+    if (opts.saveKUsed) {
+      kUsed = af::sum(pValids, 0);
+    }
+
     array ystars, dcoeffs;
     if (opts.algorithm == Algorithm::Simplex) {
-      afSimplexPrediction(retcodes, ystars, kUsed, numPredictions, opts, yvecs, { pValids, sDists }, thetas, isKNeg);
+      afSimplexPrediction(retcodes, ystars, numPredictions, opts, yvecs, { pValids, sDists }, thetas, isKNeg);
     } else if (opts.algorithm == Algorithm::SMap) {
       if (cType == f32) {
-        afSMapPrediction<float>(retcodes, kUsed, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
-                                smData, yvecs, thetas, isKNeg);
+        afSMapPrediction<float>(retcodes, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists }, smData,
+                                yvecs, thetas, isKNeg);
       } else {
-        afSMapPrediction<double>(retcodes, kUsed, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists },
-                                 smData, yvecs, thetas, isKNeg);
+        afSMapPrediction<double>(retcodes, ystars, dcoeffs, numPredictions, opts, M, Mp, { pValids, sDists }, smData,
+                                 yvecs, thetas, isKNeg);
       }
     }
 
