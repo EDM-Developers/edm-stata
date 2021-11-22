@@ -43,7 +43,8 @@ public:
   //                     double& target) const;
   virtual double unlagged_extras(int obsNum, int varNum) const = 0;
 
-  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> map() const = 0;
+  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> pointMap(
+    int i) const = 0;
   virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(
     int obsNum) const = 0;
   virtual Eigen::Map<const Eigen::VectorXd> targetsMap() const = 0;
@@ -89,9 +90,9 @@ public:
 
   virtual double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
 
-  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> map() const
+  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> pointMap(int i) const
   {
-    return { _flat.get(), _numPoints, _E_actual };
+    return { &(_flat[i * _E_actual]), 1, _E_actual };
   }
 
   virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(

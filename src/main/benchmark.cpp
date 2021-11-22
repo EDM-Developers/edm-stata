@@ -180,6 +180,8 @@ static void bm_simplex(benchmark::State& state)
 
 BENCHMARK(bm_simplex)->DenseRange(0, lowLevelInputDumps.size() - 1);
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 static void bm_smap(benchmark::State& state)
 {
   std::string filename = lowLevelInputDumps[state.range(0)];
@@ -224,8 +226,12 @@ static void bm_smap(benchmark::State& state)
 
       // Pull out the nearest neighbours from the manifold, and
       // simultaneously prepend a column of ones in front of the manifold data.
-      Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
-      X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
+      MatrixXd X_ls(k, M.E_actual());
+      for (int i = 0; i < k; i++) {
+        X_ls.row(i) = M.pointMap(kNNInds[i]);
+      }
+      MatrixXd X_ls_cj(k, M.E_actual() + 1);
+      X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;
 
       // Calculate the weight for each neighbour
       Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());
