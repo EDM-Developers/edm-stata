@@ -238,7 +238,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
   // Note, we can't have missing data inside the library set when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
 
-  Manifold keenM, keenMp;
+  KeenManifold keenM, keenMp;
   Manifold *M = nullptr, *Mp = nullptr;
   if (true) {
     keenM = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
@@ -261,8 +261,9 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
 
   af::array metricOpts(M->E_actual(), mopts.data());
 
-  const ManifoldOnGPU gpuM = M->toGPU(false);
-  const ManifoldOnGPU gpuMp = Mp->toGPU(false);
+  // TODO: To figure out the LazyManifold version of .toGPU()
+  const ManifoldOnGPU gpuM = keenM.toGPU(false);
+  const ManifoldOnGPU gpuMp = keenMp.toGPU(false);
 
   constexpr bool useAF = true;
   multiThreaded = multiThreaded && !useAF;

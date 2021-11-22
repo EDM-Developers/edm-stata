@@ -41,8 +41,8 @@ static void bm_basic_distances(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  KeenManifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
+  KeenManifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
 
@@ -61,8 +61,8 @@ static void bm_wasserstein_distances(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  KeenManifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
+  KeenManifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
 
@@ -81,8 +81,8 @@ static void bm_nearest_neighbours(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  KeenManifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
+  KeenManifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -120,8 +120,8 @@ static void bm_simplex(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  KeenManifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
+  KeenManifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
@@ -186,8 +186,8 @@ static void bm_smap(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  KeenManifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
+  KeenManifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;

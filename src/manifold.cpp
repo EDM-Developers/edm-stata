@@ -138,7 +138,7 @@ std::vector<int> ManifoldGenerator::get_lagged_indices(int startIndex, int E, in
 }
 
 #if defined(WITH_ARRAYFIRE)
-ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
+ManifoldOnGPU KeenManifold::toGPU(const bool useFloat) const
 {
   using af::array;
 
@@ -168,8 +168,8 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 }
 #endif
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
-                                            bool copredictMode, bool skipMissing) const
+KeenManifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet,
+                                                double dtWeight, bool copredictMode, bool skipMissing) const
 {
   bool takeEveryPoint = filter.size() == 0;
 
