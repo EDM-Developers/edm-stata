@@ -1,7 +1,7 @@
-*! version 1.9.2, 15Nov2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
+*! version 1.9.3, 22Nov2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
 *! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@unimelb.edu.au>
 
-global EDM_VERSION = "1.9.2"
+global EDM_VERSION = "1.9.3"
 /* Empirical dynamic modelling
 
 Version history:
@@ -1421,13 +1421,12 @@ program define edmXmap, eclass
 			mata: construct_manifold("`touse'", "`panel_id'", "`x'", "`timevar'", "`z_vars'", "`y'", ///
 				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
 				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 0)
-		}
 
-		// Select the points which we'll use in the analysis.
-		tempvar usable
+			// Select the points which we'll use in the analysis.
+			tempvar usable
 
-		local missingdistance`direction_num' = `missingdistance'
-		if `mata_mode' {
+			local missingdistance`direction_num' = `missingdistance'
+
 			if `allow_missing_mode' {
 				qui gen byte `usable' = 0
 				foreach v of local max_e_manifold {
@@ -1445,29 +1444,29 @@ program define edmXmap, eclass
 				hasMissingValues `max_e_manifold', out(`any_missing_in_manifold')
 				gen byte `usable' = `touse' & !`any_missing_in_manifold'
 			}
-		}
 
-		if `mata_mode' & ("`copredictvar'" != "") {
-			mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`co_x'", ///
-				`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
-				`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
+			if ("`copredictvar'" != "") {
+				mata: construct_manifold("`touse'", "`panel_id'", "`co_x'", "`timevar'", "`z_vars'", "`co_x'", ///
+					`z_count', `z_e_varying_count', `parsed_dt', `parsed_reldt', `parsed_dtw', ///
+					`max_e', `tau', `predictionhorizon', `allow_missing_mode', 1)
 
-			// Generate the same way as `usable'.
-			tempvar co_usable
-			if `allow_missing_mode' {
-				qui gen byte `co_usable' = 0
-				foreach v of local max_e_co_manifold {
-					qui replace `co_usable' = 1 if `v' !=. & `touse'
+				// Generate the same way as `usable'.
+				tempvar co_usable
+				if `allow_missing_mode' {
+					qui gen byte `co_usable' = 0
+					foreach v of local max_e_co_manifold {
+						qui replace `co_usable' = 1 if `v' !=. & `touse'
+					}
 				}
-			}
-			else {
-				tempvar any_missing_in_co_manifold
-				hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
-				gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold' //& `co_x_f' != .
-			}
+				else {
+					tempvar any_missing_in_co_manifold
+					hasMissingValues `max_e_co_manifold', out(`any_missing_in_co_manifold')
+					gen byte `co_usable' = `touse' & !`any_missing_in_co_manifold'
+				}
 
-			tempvar co_predict_set
-			gen byte `co_predict_set' = `co_usable'
+				tempvar co_predict_set
+				gen byte `co_predict_set' = `co_usable'
+			}
 		}
 
 		if !`mata_mode' {
@@ -1778,7 +1777,7 @@ program define edmXmap, eclass
 					}
 				}
 
-				if `mata_mode' & `replicate' > 1 & `dot' > 0 {
+				if `replicate' > 1 & `dot' > 0 {
 					local ++finished_rep
 					if mod(`finished_rep',50*`dot') == 0 {
 						di as text ". `finished_rep'"
