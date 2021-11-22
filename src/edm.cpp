@@ -238,8 +238,15 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
   // Note, we can't have missing data inside the library set when using the S-Map algorithm
   bool skipMissing = (opts.algorithm == Algorithm::SMap);
 
-  Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
-  Manifold Mp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
+  Manifold keenM, keenMp;
+  Manifold *M = nullptr, *Mp = nullptr;
+  if (true) {
+    keenM = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
+    keenMp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
+  }
+
+  M = &keenM;
+  Mp = &keenMp;
 
   bool multiThreaded = opts.nthreads > 1;
 
@@ -248,22 +255,22 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
 
   // Char is the internal representation of bool in ArrayFire
   std::vector<char> mopts;
-  for (int j = 0; j < M.E_actual(); j++) {
+  for (int j = 0; j < M->E_actual(); j++) {
     mopts.push_back(opts.metrics[j] == Metric::Diff);
   }
 
-  af::array metricOpts(M.E_actual(), mopts.data());
+  af::array metricOpts(M->E_actual(), mopts.data());
 
-  const ManifoldOnGPU gpuM = M.toGPU(false);
-  const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+  const ManifoldOnGPU gpuM = M->toGPU(false);
+  const ManifoldOnGPU gpuMp = Mp->toGPU(false);
 
   constexpr bool useAF = true;
   multiThreaded = multiThreaded && !useAF;
 #endif
 
   int numThetas = (int)opts.thetas.size();
-  int numPredictions = Mp.numPoints();
-  int numCoeffCols = M.E_actual() + 1;
+  int numPredictions = Mp->numPoints();
+  int numCoeffCols = M->E_actual() + 1;
 
   auto predictions = std::make_unique<double[]>(numThetas * numPredictions);
   std::fill_n(predictions.get(), numThetas * numPredictions, MISSING_D);
@@ -295,7 +302,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
 #endif
     for (int i = 0; i < numPredictions; i++) {
       results[i] = workerPool.enqueue(
-        [&, i] { make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
+        [&, i] { make_prediction(i, opts, *M, *Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
     }
     if (opts.numTasks == 1) {
       io->progress_bar(0.0);
@@ -320,7 +327,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
       af::sync(0);
       auto start = std::chrono::high_resolution_clock::now();
 #endif
-      af_make_prediction(numPredictions, opts, M, Mp, gpuM, gpuMp, metricOpts, predictionsView, rcView, coeffsView,
+      af_make_prediction(numPredictions, opts, *M, *Mp, gpuM, gpuMp, metricOpts, predictionsView, rcView, coeffsView,
                          kUsed, keep_going);
 #if WITH_GPU_PROFILING
       af::sync(0);
@@ -337,7 +344,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
         if (keep_going != nullptr && !keep_going()) {
           break;
         }
-        make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going);
+        make_prediction(i, opts, *M, *Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going);
         if (opts.numTasks == 1) {
           io->progress_bar((i + 1) / ((double)numPredictions));
         }
@@ -358,15 +365,15 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
       PredictionStats stats;
 
       stats.library = opts.library; // Could store 'M.numPoints()' here for a more accurate version
-      stats.E = M.E_actual();
+      stats.E = M->E_actual();
       stats.theta = opts.thetas[t];
 
       // POTENTIAL SPEEDUP: if predictions and y exist on GPU this could potentially be faster on GPU
       std::vector<double> y1, y2;
 
-      for (int i = 0; i < Mp.numTargets(); i++) {
-        if (Mp.target(i) != MISSING_D && predictionsView(t, i) != MISSING_D) {
-          y1.push_back(Mp.target(i));
+      for (int i = 0; i < Mp->numTargets(); i++) {
+        if (Mp->target(i) != MISSING_D && predictionsView(t, i) != MISSING_D) {
+          y1.push_back(Mp->target(i));
           y2.push_back(predictionsView(t, i));
         }
       }

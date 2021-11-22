@@ -38,6 +38,8 @@ class Manifold
   int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
 
 public:
+  Manifold() = default;
+
   Manifold(std::shared_ptr<double[]>& flat, std::vector<double> targets, std::vector<int> panelIDs, int numPoints,
            int E_x, int E_dt, int E_extras, int E_lagged_extras, int E_actual)
     : _flat(flat)
