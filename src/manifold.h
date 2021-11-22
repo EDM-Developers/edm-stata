@@ -36,12 +36,7 @@ public:
 
   virtual double operator()(int i, int j) const = 0;
 
-  virtual double dt(int i, int j) const = 0;
-
   virtual int panel(int i) const = 0;
-  // void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
-  //                     double& target) const;
-  virtual double unlagged_extras(int obsNum, int varNum) const = 0;
 
   virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> pointMap(
     int i) const = 0;
@@ -49,14 +44,12 @@ public:
     int obsNum) const = 0;
   virtual Eigen::Map<const Eigen::VectorXd> targetsMap() const = 0;
 
-  virtual double range() const = 0;
   virtual double missing() const = 0;
 
   virtual double target(int i) const = 0;
   virtual int numTargets() const = 0;
   virtual const std::vector<double>& targets() const = 0;
 
-  virtual double* data() const = 0;
   virtual int numPoints() const = 0;
   virtual int E() const = 0;
   virtual int E_dt() const = 0;
@@ -105,72 +98,23 @@ public:
   virtual Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
-  virtual double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
+  double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
   double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
   virtual int panel(int i) const { return _panelIDs[i]; }
 
-  virtual double unlagged_extras(int obsNum, int varNum) const
+  double unlagged_extras(int obsNum, int varNum) const
   {
     int ind = obsNum * _E_actual + _E_x + _E_dt + _E_lagged_extras + varNum;
     return _flat[ind];
   }
 
-  virtual double range() const
-  {
-    double min = std::numeric_limits<double>::max();
-    double max = std::numeric_limits<double>::min();
-
-    for (int i = 0; i < _numPoints * _E_actual; i++) {
-      if (_flat[i] != MISSING_D) {
-        if (_flat[i] < min) {
-          min = _flat[i];
-        }
-        if (_flat[i] > max) {
-          max = _flat[i];
-        }
-      }
-    }
-    return max - min;
-  }
-
   virtual double missing() const { return MISSING_D; }
-
-  bool any_missing(int obsNum) const
-  {
-    for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) == MISSING_D) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool any_not_missing(int obsNum) const
-  {
-    for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != MISSING_D) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  int num_not_missing(int obsNum) const
-  {
-    int count = 0;
-    for (int j = 0; j < _E_actual; j++) {
-      if (operator()(obsNum, j) != MISSING_D) {
-        count += 1;
-      }
-    }
-    return count;
-  }
 
   virtual double target(int i) const { return _targets[i]; }
   virtual int numTargets() const { return (int)_targets.size(); }
   virtual const std::vector<double>& targets() const { return _targets; }
 
-  virtual double* data() const { return _flat.get(); };
+  double* data() const { return _flat.get(); };
   virtual int numPoints() const { return _numPoints; }
   virtual int E() const { return _E_x; }
   virtual int E_dt() const { return _E_dt; }
