@@ -343,7 +343,7 @@ Convergent Cross-mapping result for variables x and y
 Note: Number of neighbours (k) is set to 4
 Note: The embedding dimension E is 2
 
-. assert beta1_b2_rep1 !=. if (_n>1 & _n < _N)
+. assert beta1_b2_rep1 != . if _n > 1
 
 . 
 . edm xmap y x, predict(x2) direction(oneway)
@@ -358,7 +358,7 @@ Convergent Cross-mapping result for variables y and x
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
-. assert x2 !=. if (_n>1 & _n < _N)
+. assert x2 != . if _n > 1
 
 . 
 . edm explore x, copredict(teste) copredictvar(y)
@@ -380,7 +380,7 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: 50/50 split for training and validation data
 
-. assert teste!=. if (_n>1 & _n < _N)
+. assert teste != . if _n > 1
 
 . 
 . edm explore z.x, p(10)
@@ -428,7 +428,7 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
-. assert testx != . if _n >= 3 & _n <= _N - 10
+. assert testx != . if _n >= 3
 
 . 
 . edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
@@ -450,7 +450,7 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
-. assert testx2 != . if _n >= 3 & _n <= _N - 10
+. assert testx2 != . if _n >= 3
 
 . 
 . edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
@@ -473,7 +473,7 @@ Copredictions
 Note: Number of neighbours (k) is set to 4
 Note: The embedding dimension E is 3 (including 1 extra)
 
-. assert testx3 != . if _n >= 3 & _n <= _N - 10
+. assert testx3 != . if _n >= 3
 
 . 
 . * check explore / xmap consistency
@@ -506,7 +506,8 @@ Note: Full sample used for the computation
 
 . mat explore_r =e(b)
 
-. // assert xmap_r[1,1] == explore_r[1,1]
+. assert xmap_r[1,1] == explore_r[1,1]
+
 . 
 . * check xmap reverse consistency
 . 
@@ -538,9 +539,11 @@ Convergent Cross-mapping result for variables y and x
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
-. * TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac).
-. * assert e(b)[1,1] == xmap1[1,2]
-. * assert e(b)[1,2] == xmap1[1,1]
+. 
+. assert e(b)[1,1] == xmap1[1,2]
+
+. assert e(b)[1,2] == xmap1[1,1]
+
 . 
 . * Make sure multiple e's and multiple theta's work together
 . 

@@ -84,26 +84,26 @@ edm explore x, k(5) crossfold(10)
 edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
 
 edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
-assert beta1_b2_rep1 !=. if (_n>1 & _n < _N)
+assert beta1_b2_rep1 != . if _n > 1
 
 edm xmap y x, predict(x2) direction(oneway)
-assert x2 !=. if (_n>1 & _n < _N)
+assert x2 != . if _n > 1
 
 edm explore x, copredict(teste) copredictvar(y)
-assert teste!=. if (_n>1 & _n < _N)
+assert teste != . if _n > 1
 
 edm explore z.x, p(10)
 
 edm xmap y x, p(10) direction(oneway)
 
 edm xmap y x, p(10) copredict(testx) copredictvar(x2) direction(oneway)
-assert testx != . if _n >= 3 & _n <= _N - 10
+assert testx != . if _n >= 3
 
 edm xmap y x, p(10) copredict(testx2) copredictvar(z.x2) direction(oneway)
-assert testx2 != . if _n >= 3 & _n <= _N - 10
+assert testx2 != . if _n >= 3
 
 edm xmap y x, extra(u1) p(10) copredict(testx3) copredictvar(z.x2) direction(oneway)
-assert testx3 != . if _n >= 3 & _n <= _N - 10
+assert testx3 != . if _n >= 3
 
 * check explore / xmap consistency
 
@@ -111,16 +111,16 @@ edm xmap l.x x, direction(oneway)
 mat xmap_r=e(b)
 edm explore x, full
 mat explore_r =e(b)
-// assert xmap_r[1,1] == explore_r[1,1]
+assert xmap_r[1,1] == explore_r[1,1]
 
 * check xmap reverse consistency
 
 edm xmap x y
 mat xmap1 = e(b)
 edm xmap y x
-* TODO: Fix the following asserts, which are considered syntax errors in Stata15 (on Mac).
-* assert e(b)[1,1] == xmap1[1,2]
-* assert e(b)[1,2] == xmap1[1,1]
+
+assert e(b)[1,1] == xmap1[1,2]
+assert e(b)[1,2] == xmap1[1,1]
 
 * Make sure multiple e's and multiple theta's work together
 
