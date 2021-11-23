@@ -70,11 +70,19 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   std::vector<int> inds;
   std::vector<double> dists;
 
+  // We'll store the points we are comparing in the following two arrays.
+  double* x = new double[M.E_actual()];
+  double* y = new double[M.E_actual()];
+
+  Mp.fill_in_point(Mp_i, y);
+
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
   for (int i : inpInds) {
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
+
+    M.fill_in_point(i, x);
 
     // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
     // then add the user-supplied penalty/distance for the mismatch.
@@ -90,7 +98,7 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
       // M[i,j] to Mp[Mp_i, j] is opts.missingdistance.
       // However, if the user doesn't specify this, then the entire
       // M[i] to Mp[Mp_i] distance is set as missing.
-      if ((M(i, j) == MISSING_D) || (Mp(Mp_i, j) == MISSING_D)) {
+      if ((x[j] == MISSING_D) || (y[j] == MISSING_D)) {
         if (opts.missingdistance == 0) {
           dist_i = MISSING_D;
           break;
@@ -101,9 +109,9 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
         // How do we compare them? Do we treat them like continuous values and subtract them,
         // or treat them like unordered categorical variables and just check if they're the same?
         if (opts.metrics[j] == Metric::Diff) {
-          dist_ij = M(i, j) - Mp(Mp_i, j);
+          dist_ij = x[j] - y[j];
         } else { // Metric::CheckSame
-          dist_ij = (M(i, j) != Mp(Mp_i, j));
+          dist_ij = (x[j] != y[j]);
         }
       }
 
@@ -123,6 +131,9 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
       inds.push_back(i);
     }
   }
+
+  delete[] x;
+  delete[] y;
 
   return { inds, dists };
 }
