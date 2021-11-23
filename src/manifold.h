@@ -55,22 +55,9 @@ public:
 
   void fill_in_point(int i, double* out) const
   {
-
     for (int j = 0; j < _E_actual; j++) {
       out[j] = _flat[i * _E_actual + j];
     }
-  }
-
-  Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> map() const
-  {
-    return { _flat.get(), _numPoints, _E_actual };
-  }
-
-  Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(
-    int obsNum) const
-  {
-    int numLaggedExtras = _E_lagged_extras / _E_x;
-    return { &(_flat[obsNum * _E_actual]), 1 + (_E_dt > 0) + numLaggedExtras, _E_x };
   }
 
   Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
@@ -80,62 +67,7 @@ public:
   double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
   int panel(int i) const { return _panelIDs[i]; }
 
-  double unlagged_extras(int obsNum, int varNum) const
-  {
-    int ind = obsNum * _E_actual + _E_x + _E_dt + _E_lagged_extras + varNum;
-    return _flat[ind];
-  }
-
-  //  double range() const
-  //  {
-  //    double min = std::numeric_limits<double>::max();
-  //    double max = std::numeric_limits<double>::min();
-  //
-  //    for (int i = 0; i < _numPoints * _E_actual; i++) {
-  //      if (_flat[i] != MISSING_D) {
-  //        if (_flat[i] < min) {
-  //          min = _flat[i];
-  //        }
-  //        if (_flat[i] > max) {
-  //          max = _flat[i];
-  //        }
-  //      }
-  //    }
-  //    return max - min;
-  //  }
-
   double missing() const { return MISSING_D; }
-
-  //  bool any_missing(int obsNum) const
-  //  {
-  //    for (int j = 0; j < _E_actual; j++) {
-  //      if (operator()(obsNum, j) == MISSING_D) {
-  //        return true;
-  //      }
-  //    }
-  //    return false;
-  //  }
-  //
-  //  bool any_not_missing(int obsNum) const
-  //  {
-  //    for (int j = 0; j < _E_actual; j++) {
-  //      if (operator()(obsNum, j) != MISSING_D) {
-  //        return true;
-  //      }
-  //    }
-  //    return false;
-  //  }
-  //
-  //  int num_not_missing(int obsNum) const
-  //  {
-  //    int count = 0;
-  //    for (int j = 0; j < _E_actual; j++) {
-  //      if (operator()(obsNum, j) != MISSING_D) {
-  //        count += 1;
-  //      }
-  //    }
-  //    return count;
-  //  }
 
   double target(int i) const { return _targets[i]; }
   int numTargets() const { return (int)_targets.size(); }

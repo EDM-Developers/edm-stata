@@ -10,6 +10,8 @@
 #include "library_prediction_split.h"
 #include "manifold.h"
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 const double NA = MISSING_D;
 
 // Function declarations for 'private' functions not listed in the relevant header files.
@@ -487,8 +489,16 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   {
     int i = 2, j = 4;
 
-    auto M_i = M.laggedObsMap(i);
-    auto Mp_j = Mp.laggedObsMap(j);
+    double* x = new double[M.E_actual()];
+    double* y = new double[M.E_actual()];
+
+    M.fill_in_point(i, x);
+    Mp.fill_in_point(j, y);
+
+    int numLaggedExtras = M.E_lagged_extras() / M.E();
+
+    auto M_i = Eigen::Map<MatrixXd>(x, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+    auto Mp_j = Eigen::Map<MatrixXd>(y, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
 
     REQUIRE(M_i.rows() == 2);
     REQUIRE(Mp_j.rows() == 2);
@@ -507,11 +517,13 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     for (int ind = 0; ind < C_true.size(); ind++) {
       REQUIRE(C[ind] == C_true[ind]);
     }
+
+    delete[] x;
+    delete[] y;
   }
 
   SECTION("Multiple Wasserstein distances")
   {
-
     int Mp_j = 2;
 
     std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
@@ -522,8 +534,8 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("Cost matrix M_i={}\n", i);
 
-      auto M_i_map = M.laggedObsMap(i);
-      auto Mp_j_map = Mp.laggedObsMap(Mp_j);
+      // auto M_i_map = M.laggedObsMap(i);
+      // auto Mp_j_map = Mp.laggedObsMap(Mp_j);
 
       // std::cout << "M_i_map={}\n";
       // print_eig_matrix(M_i_map);

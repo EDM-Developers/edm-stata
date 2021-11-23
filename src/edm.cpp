@@ -652,17 +652,12 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.
-#if EIGEN_VERSION_AT_LEAST(3, 4, 0)
-  MatrixXd X_ls_cj(k, M.E_actual() + 1);
-  X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
-#else
   MatrixXd X_ls(k, M.E_actual());
   for (int i = 0; i < k; i++) {
-    X_ls.row(i) = M.map().row(kNNInds[i]);
+    M.fill_in_point(kNNInds[i], &(X_ls(i, 0)));
   }
   MatrixXd X_ls_cj(k, M.E_actual() + 1);
   X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;
-#endif
 
   // Calculate the weight for each neighbour
   Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());

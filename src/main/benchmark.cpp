@@ -24,6 +24,8 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 // Function declarations for 'private' functions not listed in the relevant header files.
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
@@ -224,8 +226,12 @@ static void bm_smap(benchmark::State& state)
 
       // Pull out the nearest neighbours from the manifold, and
       // simultaneously prepend a column of ones in front of the manifold data.
-      Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
-      X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
+      MatrixXd X_ls(k, M.E_actual());
+      for (int i = 0; i < k; i++) {
+        M.fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+      }
+      MatrixXd X_ls_cj(k, M.E_actual() + 1);
+      X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;
 
       // Calculate the weight for each neighbour
       Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());

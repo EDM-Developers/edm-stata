@@ -24,6 +24,8 @@
 using af::array;
 #endif
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 std::vector<Metric> expand_metrics(const ManifoldGenerator& generator, int E, Distance distance,
                                    const std::vector<Metric>& metrics)
 {
@@ -178,8 +180,17 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
 
   bool skipMissing = (opts.missingdistance == 0);
 
-  auto M_i = M.laggedObsMap(i);
-  auto Mp_j = Mp.laggedObsMap(j);
+  // We'll store the points we are comparing in the following two arrays.
+  double* x = new double[M.E_actual()];
+  double* y = new double[M.E_actual()];
+
+  M.fill_in_point(i, x);
+  Mp.fill_in_point(j, y);
+
+  int numLaggedExtras = M.E_lagged_extras() / M.E();
+
+  auto M_i = Eigen::Map<MatrixXd>(x, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+  auto Mp_j = Eigen::Map<MatrixXd>(y, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
 
   auto M_i_missing = (M_i.array() == M.missing()).colwise().any();
   auto Mp_j_missing = (Mp_j.array() == Mp.missing()).colwise().any();
@@ -224,16 +235,18 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   double unlaggedDist = 0.0;
   int numUnlaggedExtras = M.E_extras() - M.E_lagged_extras();
   for (int e = 0; e < numUnlaggedExtras; e++) {
-    double x = M.unlagged_extras(i, e), y = Mp.unlagged_extras(j, e);
-    bool eitherMissing = (x == M.missing()) || (y == M.missing());
+    double x_e = x[M_i.size() + e];
+    double y_e = y[Mp_j.size() + e];
+
+    bool eitherMissing = (x_e == M.missing()) || (y_e == M.missing());
 
     if (eitherMissing) {
       unlaggedDist += opts.missingdistance;
     } else {
       if (opts.metrics[timeSeriesDim + e] == Metric::Diff) {
-        unlaggedDist += abs(x - y);
+        unlaggedDist += abs(x_e - y_e);
       } else {
-        unlaggedDist += x != y;
+        unlaggedDist += (x_e != y_e);
       }
     }
   }
@@ -246,8 +259,8 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
 
   auto flatCostMatrix = std::make_unique<double[]>(len_i * len_j);
   std::fill_n(flatCostMatrix.get(), len_i * len_j, unlaggedDist);
-  Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> costMatrix(flatCostMatrix.get(),
-                                                                                                len_i, len_j);
+  Eigen::Map<MatrixXd> costMatrix(flatCostMatrix.get(), len_i, len_j);
+
   for (int k = 0; k < timeSeriesDim; k++) {
     int n = 0;
     for (int nn = 0; nn < M_i.cols(); nn++) {
@@ -287,6 +300,10 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
       n += 1;
     }
   }
+
+  delete[] x;
+  delete[] y;
+
   return flatCostMatrix;
 }
 
