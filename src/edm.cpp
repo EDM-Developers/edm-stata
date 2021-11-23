@@ -235,10 +235,7 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
   }
 #endif
 
-  // Note, we can't have missing data inside the library set when using the S-Map algorithm
-  bool skipMissing = (opts.algorithm == Algorithm::SMap);
-
-  Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict, skipMissing);
+  Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict);
   Manifold Mp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
 
   bool multiThreaded = opts.nthreads > 1;

@@ -149,7 +149,7 @@ public:
   }
 
   Manifold create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight = 0.0,
-                           bool copredictMode = false, bool skipMissing = false) const;
+                           bool copredictMode = false) const;
 
   std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
 
