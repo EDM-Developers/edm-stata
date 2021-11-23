@@ -211,21 +211,21 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   int timeSeriesDim = M_i.rows();
 
   double unlaggedDist = 0.0;
-  int numUnlaggedExtras = M.E_extras() - M.E_lagged_extras();
-  for (int e = 0; e < numUnlaggedExtras; e++) {
-    double x = M.unlagged_extras(i, e), y = Mp.unlagged_extras(j, e);
-    bool eitherMissing = (x == M.missing()) || (y == M.missing());
-
-    if (eitherMissing) {
-      unlaggedDist += opts.missingdistance;
-    } else {
-      if (opts.metrics[timeSeriesDim + e] == Metric::Diff) {
-        unlaggedDist += abs(x - y);
-      } else {
-        unlaggedDist += x != y;
-      }
-    }
-  }
+  //  int numUnlaggedExtras = M.E_extras() - M.E_lagged_extras();
+  //  for (int e = 0; e < numUnlaggedExtras; e++) {
+  //    double x = M.unlagged_extras(i, e), y = Mp.unlagged_extras(j, e);
+  //    bool eitherMissing = (x == M.missing()) || (y == M.missing());
+  //
+  //    if (eitherMissing) {
+  //      unlaggedDist += opts.missingdistance;
+  //    } else {
+  //      if (opts.metrics[timeSeriesDim + e] == Metric::Diff) {
+  //        unlaggedDist += abs(x - y);
+  //      } else {
+  //        unlaggedDist += x != y;
+  //      }
+  //    }
+  //  }
 
   // If we have panel data and the M[i] / Mp[j] observations come from different panels
   // then add the user-supplied penalty/distance for the mismatch.

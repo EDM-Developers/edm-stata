@@ -203,3 +203,66 @@ public:
 
   const std::vector<int>& panelIDs() const { return _panelIDs; }
 };
+
+class LazyManifold : public Manifold
+{
+  ManifoldGenerator _gen;
+  std::vector<double> _targets;
+  std::vector<int> _panelIDs;
+  int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
+
+public:
+  LazyManifold() = default;
+
+  LazyManifold(const ManifoldGenerator& gen, std::vector<double> targets, std::vector<int> panelIDs, int numPoints,
+               int E_x, int E_dt, int E_extras, int E_lagged_extras, int E_actual)
+    : _gen(gen)
+    , _targets(targets)
+    , _panelIDs(panelIDs)
+    , _numPoints(numPoints)
+    , _E_x(E_x)
+    , _E_dt(E_dt)
+    , _E_extras(E_extras)
+    , _E_lagged_extras(E_lagged_extras)
+    , _E_actual(E_actual)
+  {}
+
+  virtual double operator()(int i, int j) const
+  {
+    double* point; // TODO &(_flat[i * _E_actual])
+    return point[j];
+  }
+
+  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> pointMap(
+    int obsNum) const
+  {
+    double* point; // TODO &(_flat[obsNum * _E_actual])
+    return { point, 1, _E_actual };
+  }
+
+  virtual Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(
+    int obsNum) const
+  {
+    double* point; // TODO &(_flat[obsNum * _E_actual])
+
+    int numLaggedExtras = _E_lagged_extras / _E_x;
+    return { point, 1 + (_E_dt > 0) + numLaggedExtras, _E_x };
+  }
+
+  virtual Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
+
+  virtual int panel(int i) const { return _panelIDs[i]; }
+
+  virtual double missing() const { return MISSING_D; }
+
+  virtual double target(int i) const { return _targets[i]; }
+  virtual int numTargets() const { return (int)_targets.size(); }
+  virtual const std::vector<double>& targets() const { return _targets; }
+
+  virtual int numPoints() const { return _numPoints; }
+  virtual int E() const { return _E_x; }
+  virtual int E_dt() const { return _E_dt; }
+  virtual int E_lagged_extras() const { return _E_lagged_extras; }
+  virtual int E_extras() const { return _E_extras; }
+  virtual int E_actual() const { return _E_actual; }
+};
