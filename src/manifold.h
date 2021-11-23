@@ -112,6 +112,7 @@ private:
   void setup_observation_numbers();
   void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
                      double& target) const;
+  double get_target(int i, bool copredictionMode, bool predictionSet, int& targetIndex) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
   std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
