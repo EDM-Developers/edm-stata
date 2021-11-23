@@ -168,47 +168,6 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 }
 #endif
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
-                                            bool copredictMode) const
-{
-  bool takeEveryPoint = filter.size() == 0;
-
-  int numPoints = 0;
-  std::vector<int> pointNumToStartIndex;
-  std::vector<double> y;
-  std::vector<int> panelIDs;
-
-  for (int i = 0; i < _t.size(); i++) {
-    if (takeEveryPoint || filter[i]) {
-
-      // Throwing away library set points whose targets are missing.
-      int targetIndex = i;
-      double target = get_target(i, copredictMode, predictionSet, targetIndex);
-      if (!predictionSet && (target == MISSING_D)) {
-        continue;
-      }
-
-      y.push_back(target);
-      if (_panel_mode) {
-        panelIDs.push_back(_panelIDs[i]);
-      }
-      pointNumToStartIndex.push_back(i);
-      numPoints += 1;
-    }
-  }
-
-  // Fill in the manifold row-by-row (point-by-point)
-  std::shared_ptr<double[]> flat(new double[numPoints * E_actual(E)], std::default_delete<double[]>());
-
-  for (int i = 0; i < numPoints; i++) {
-    double target;
-    double* point = &(flat[i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredictMode, predictionSet, dtWeight, point, target);
-  }
-
-  return { flat, y, panelIDs, numPoints, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
-}
-
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight,
                                       double* point, double& target) const
 {

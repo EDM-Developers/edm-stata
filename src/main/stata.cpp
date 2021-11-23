@@ -509,10 +509,10 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // If we have to set the default 'dt' weight, then make a manifold with dtweight of 1 then
     // we can rescale this by the appropriate variances in the future.
     // TODO: How would we change this for 'reldt'?
-    const ManifoldGenerator dtgenerator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, false,
-                                        allowMissing);
+    const std::shared_ptr<ManifoldGenerator> dtgenerator = std::make_unique<ManifoldGenerator>(
+      t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, false, allowMissing);
     double DT_WEIGHT = 1.0;
-    Manifold manifold = dtgenerator.create_manifold(maxE, {}, true, DT_WEIGHT);
+    Manifold manifold(dtgenerator, maxE, {}, true, DT_WEIGHT);
     std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
@@ -525,12 +525,12 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   SF_macro_save(DTW_USED, (char*)fmt::format("{}", opts.dtWeight).c_str());
 
-  const ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, reldt,
-                                    allowMissing);
+  const std::shared_ptr<ManifoldGenerator> generator = std::make_unique<ManifoldGenerator>(
+    t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, reldt, allowMissing);
 
   // Save some variables back to Stata, like the manifold (if savemanifold) or the dt (if dtsave).
   // Start by generating the 'usable' variable.
-  std::vector<bool> usable = generator.generate_usable(maxE);
+  std::vector<bool> usable = generator->generate_usable(maxE);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
   SF_macro_save(NUM_USABLE, (char*)fmt::format("{}", numUsable).c_str());
@@ -538,7 +538,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
   if (saveDT) {
     double SAVE_DT_WEIGHT = 1.0;
-    Manifold manifold = generator.create_manifold(maxE, {}, true, SAVE_DT_WEIGHT);
+    Manifold manifold(generator, maxE, {}, true, SAVE_DT_WEIGHT);
 
     std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
@@ -550,7 +550,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 
   // Save the manifold back to Stata if requested.
   if (saveManifold) {
-    Manifold manifold = generator.create_manifold(maxE, {}, true, opts.dtWeight);
+    Manifold manifold(generator, maxE, {}, true, opts.dtWeight);
 
     ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + saveDT + 1;
     write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);
@@ -611,7 +611,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
 
     json taskGroup;
-    taskGroup["generator"] = generator;
+    taskGroup["generator"] = *generator;
     taskGroup["opts"] = opts;
     taskGroup["Es"] = Es;
     taskGroup["libraries"] = libraries;

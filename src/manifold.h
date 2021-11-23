@@ -30,6 +30,77 @@ struct ManifoldOnGPU
 };
 #endif
 
+class ManifoldGenerator
+{
+private:
+  bool _dt;
+  bool _reldt;
+  bool _panel_mode;
+  bool _xmap_mode;
+  bool _allow_missing;
+  int _tau;
+  int _p;
+  int _num_extras, _num_extras_lagged;
+  std::vector<double> _x, _xmap, _co_x;
+  std::vector<std::vector<double>> _extras;
+
+  std::vector<int> _observation_number;
+
+  void setup_observation_numbers();
+
+  bool find_observation_num(int target, int& k, int direction, int panel) const;
+  std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
+
+public:
+  std::vector<double> _t;
+  std::vector<int> _panelIDs;
+  void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
+                     double& target) const;
+  double get_target(int i, bool copredictionMode, bool predictionSet, int& targetIndex) const;
+
+  double calculate_time_increment() const;
+  int get_observation_num(int i) const { return _observation_number[i]; }
+
+  friend void to_json(json& j, const ManifoldGenerator& g);
+  friend void from_json(const json& j, ManifoldGenerator& g);
+
+  ManifoldGenerator() = default;
+
+  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, int tau, int p,
+                    const std::vector<double>& xmap = {}, const std::vector<double>& co_x = {},
+                    const std::vector<int>& panelIDs = {}, const std::vector<std::vector<double>>& extras = {},
+                    int numExtrasLagged = 0, bool dt = false, bool reldt = false, bool allowMissing = false)
+    : _t(t)
+    , _x(x)
+    , _tau(tau)
+    , _p(p)
+    , _xmap(xmap)
+    , _co_x(co_x)
+    , _panelIDs(panelIDs)
+    , _extras(extras)
+    , _num_extras((int)extras.size())
+    , _num_extras_lagged(numExtrasLagged)
+    , _dt(dt)
+    , _reldt(reldt)
+    , _allow_missing(allowMissing)
+  {
+    _panel_mode = (panelIDs.size() > 0);
+    _xmap_mode = (xmap.size() > 0);
+    setup_observation_numbers();
+  }
+
+  std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
+
+  int E_dt(int E) const { return _dt * E; }
+  int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
+  int E_actual(int E) const { return E + E_dt(E) + E_extras(E); }
+
+  int numExtrasLagged() const { return _num_extras_lagged; }
+  int numExtras() const { return _num_extras; }
+
+  const std::vector<int>& panelIDs() const { return _panelIDs; }
+};
+
 class Manifold
 {
   std::shared_ptr<double[]> _flat = nullptr;
@@ -38,25 +109,73 @@ class Manifold
   int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
 
 public:
-  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> targets, std::vector<int> panelIDs, int numPoints,
-           int E_x, int E_dt, int E_extras, int E_lagged_extras, int E_actual)
-    : _flat(flat)
-    , _targets(targets)
-    , _panelIDs(panelIDs)
-    , _numPoints(numPoints)
-    , _E_x(E_x)
-    , _E_dt(E_dt)
-    , _E_extras(E_extras)
-    , _E_lagged_extras(E_lagged_extras)
-    , _E_actual(E_actual)
-  {}
+  Manifold(const std::shared_ptr<ManifoldGenerator> gen, int E, const std::vector<bool>& filter, bool predictionSet,
+           double dtWeight = 0.0, bool copredictMode = false)
+  {
+    _init(*gen, E, filter, predictionSet, dtWeight, copredictMode);
+  }
+
+  Manifold(const ManifoldGenerator& gen, int E, const std::vector<bool>& filter, bool predictionSet,
+           double dtWeight = 0.0, bool copredictMode = false) {
+    _init(gen, E, filter, predictionSet, dtWeight, copredictMode);
+  }
+
+    void _init(const ManifoldGenerator& gen, int E, const std::vector<bool>& filter, bool predictionSet,
+             double dtWeight, bool copredictMode) {
+    _E_x = E;
+    _E_dt = gen.E_dt(E);
+    _E_extras = gen.E_extras(E);
+    _E_lagged_extras = gen.numExtrasLagged() * E;
+    _E_actual = gen.E_actual(E);
+
+    bool takeEveryPoint = filter.size() == 0;
+
+    std::vector<int> pointNumToStartIndex;
+    std::vector<double> targetTimes;
+
+    bool panelMode = gen._panelIDs.size() > 0;
+
+    for (int i = 0; i < gen._t.size(); i++) {
+      if (takeEveryPoint || filter[i]) {
+
+        // Throwing away library set points whose targets are missing.
+        int targetIndex = i;
+        double target = gen.get_target(i, copredictMode, predictionSet, targetIndex);
+        if (!predictionSet && (target == MISSING_D)) {
+          continue;
+        }
+
+        _targets.push_back(target);
+        // targetTimes.push_back(gen._t[targetIndex]);
+
+        if (panelMode) {
+          _panelIDs.push_back(gen._panelIDs[i]);
+        }
+        pointNumToStartIndex.push_back(i);
+      }
+    }
+
+    _numPoints = pointNumToStartIndex.size();
+
+    // Fill in the manifold row-by-row (point-by-point)
+    _flat = std::shared_ptr<double[]>(new double[_numPoints * _E_actual], std::default_delete<double[]>());
+
+    for (int i = 0; i < _numPoints; i++) {
+      double target;
+      double* point = &(_flat[i * _E_actual]);
+      gen.fill_in_point(pointNumToStartIndex[i], E, copredictMode, predictionSet, dtWeight, point, target);
+    }
+  }
 
   double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
 
-  void fill_in_point(int i, double* out) const
+  void fill_in_point(int i, double* point) const
   {
+    //    gen->fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
+    //                       double& target) const;
+
     for (int j = 0; j < _E_actual; j++) {
-      out[j] = _flat[i * _E_actual + j];
+      point[j] = _flat[i * _E_actual + j];
     }
   }
 
@@ -90,76 +209,4 @@ public:
 #if defined(WITH_ARRAYFIRE)
   ManifoldOnGPU toGPU(const bool useFloat = false) const;
 #endif
-};
-
-class ManifoldGenerator
-{
-private:
-  bool _dt;
-  bool _reldt;
-  bool _panel_mode;
-  bool _xmap_mode;
-  bool _allow_missing;
-  int _tau;
-  int _p;
-  int _num_extras, _num_extras_lagged;
-  std::vector<double> _x, _xmap, _co_x, _t;
-  std::vector<std::vector<double>> _extras;
-  std::vector<int> _panelIDs;
-
-  std::vector<int> _observation_number;
-
-  void setup_observation_numbers();
-  void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
-                     double& target) const;
-  double get_target(int i, bool copredictionMode, bool predictionSet, int& targetIndex) const;
-
-  bool find_observation_num(int target, int& k, int direction, int panel) const;
-  std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
-
-public:
-  double calculate_time_increment() const;
-  int get_observation_num(int i) const { return _observation_number[i]; }
-
-  friend void to_json(json& j, const ManifoldGenerator& g);
-  friend void from_json(const json& j, ManifoldGenerator& g);
-
-  ManifoldGenerator() = default;
-
-  ManifoldGenerator(const std::vector<double>& t, const std::vector<double>& x, int tau, int p,
-                    const std::vector<double>& xmap = {}, const std::vector<double>& co_x = {},
-                    const std::vector<int>& panelIDs = {}, const std::vector<std::vector<double>>& extras = {},
-                    int numExtrasLagged = 0, bool dt = false, bool reldt = false, bool allowMissing = false)
-    : _t(t)
-    , _x(x)
-    , _tau(tau)
-    , _p(p)
-    , _xmap(xmap)
-    , _co_x(co_x)
-    , _panelIDs(panelIDs)
-    , _extras(extras)
-    , _num_extras((int)extras.size())
-    , _num_extras_lagged(numExtrasLagged)
-    , _dt(dt)
-    , _reldt(reldt)
-    , _allow_missing(allowMissing)
-  {
-    _panel_mode = (panelIDs.size() > 0);
-    _xmap_mode = (xmap.size() > 0);
-    setup_observation_numbers();
-  }
-
-  Manifold create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight = 0.0,
-                           bool copredictMode = false) const;
-
-  std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
-
-  int E_dt(int E) const { return _dt * E; }
-  int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
-  int E_actual(int E) const { return E + E_dt(E) + E_extras(E); }
-
-  int numExtrasLagged() const { return _num_extras_lagged; }
-  int numExtras() const { return _num_extras; }
-
-  const std::vector<int>& panelIDs() const { return _panelIDs; }
 };

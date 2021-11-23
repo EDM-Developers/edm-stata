@@ -44,8 +44,9 @@
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 using MatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
-PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
-                          const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished());
+PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Options opts, int E,
+                          const std::vector<bool>& libraryRows, const std::vector<bool> predictionRows, IO* io,
+                          bool keep_going(), void all_tasks_finished());
 
 void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
                      Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
@@ -76,10 +77,10 @@ std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
 std::vector<std::future<PredictionResult>> launch_task_group(
-  const ManifoldGenerator& generator, Options opts, const std::vector<int>& Es, const std::vector<int>& libraries,
-  int k, int numReps, int crossfold, bool explore, bool full, bool shuffle, bool saveFinalPredictions,
-  bool saveFinalCoPredictions, bool saveSMAPCoeffs, bool copredictMode, const std::vector<bool>& usable,
-  const std::string& rngState, IO* io, bool keep_going(), void all_tasks_finished())
+  const std::shared_ptr<ManifoldGenerator> generator, Options opts, const std::vector<int>& Es,
+  const std::vector<int>& libraries, int k, int numReps, int crossfold, bool explore, bool full, bool shuffle,
+  bool saveFinalPredictions, bool saveFinalCoPredictions, bool saveSMAPCoeffs, bool copredictMode,
+  const std::vector<bool>& usable, const std::string& rngState, IO* io, bool keep_going(), void all_tasks_finished())
 {
   static bool initOnce = [&]() {
 #if defined(WITH_ARRAYFIRE)
@@ -111,7 +112,7 @@ std::vector<std::future<PredictionResult>> launch_task_group(
 
   if (copredictMode) {
     opts.numTasks *= 2;
-    cousable = generator.generate_usable(maxE, true);
+    cousable = generator->generate_usable(maxE, true);
   }
 
   int E, kAdj, library, librarySize;
@@ -153,7 +154,7 @@ std::vector<std::future<PredictionResult>> launch_task_group(
           kAdj = -1; // Leave a sentinel value so we know to skip the nearest neighbours calculation
         } else if (k == 0) {
           bool isSMap = opts.algorithm == Algorithm::SMap;
-          int defaultK = generator.E_actual(E) + 1 + isSMap;
+          int defaultK = generator->E_actual(E) + 1 + isSMap;
           kAdj = defaultK < library ? defaultK : library;
         }
 
@@ -207,10 +208,11 @@ std::vector<std::future<PredictionResult>> launch_task_group(
   return futures;
 }
 
-PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int E, const std::vector<bool>& libraryRows,
-                          const std::vector<bool> predictionRows, IO* io, bool keep_going(), void all_tasks_finished())
+PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Options opts, int E,
+                          const std::vector<bool>& libraryRows, const std::vector<bool> predictionRows, IO* io,
+                          bool keep_going(), void all_tasks_finished())
 {
-  opts.metrics = expand_metrics(generator, E, opts.distance, opts.metrics);
+  opts.metrics = expand_metrics(*generator, E, opts.distance, opts.metrics);
 
   if (opts.taskNum == 0) {
     numTasksStarted = 0;
@@ -235,8 +237,8 @@ PredictionResult edm_task(const ManifoldGenerator& generator, Options opts, int 
   }
 #endif
 
-  Manifold M = generator.create_manifold(E, libraryRows, false, opts.dtWeight, opts.copredict);
-  Manifold Mp = generator.create_manifold(E, predictionRows, true, opts.dtWeight, opts.copredict);
+  Manifold M(generator, E, libraryRows, false, opts.dtWeight, opts.copredict);
+  Manifold Mp(generator, E, predictionRows, true, opts.dtWeight, opts.copredict);
 
   bool multiThreaded = opts.nthreads > 1;
 
