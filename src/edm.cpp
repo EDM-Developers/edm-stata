@@ -241,8 +241,8 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
   }
 #endif
 
-  Manifold M(generator, E, libraryRows, false, opts.dtWeight, opts.copredict);
-  Manifold Mp(generator, E, predictionRows, true, opts.dtWeight, opts.copredict);
+  Manifold M(generator, E, libraryRows, false, opts.dtWeight, opts.copredict, opts.lowMemoryMode);
+  Manifold Mp(generator, E, predictionRows, true, opts.dtWeight, opts.copredict, opts.lowMemoryMode);
 
   bool multiThreaded = opts.nthreads > 1;
 
@@ -479,7 +479,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, opts, M, Mp);
+    if (opts.lowMemoryMode) {
+      potentialNN = lazy_lp_distances(Mp_i, opts, M, Mp);
+    } else {
+      potentialNN = eager_lp_distances(Mp_i, opts, M, Mp);
+    }
   }
 
   if (keep_going != nullptr && !keep_going()) {
@@ -645,14 +649,24 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // simultaneously prepend a column of ones in front of the manifold data.
   MatrixXd X_ls_cj(k, M.E_actual() + 1);
 
-  for (int i = 0; i < k; i++) {
-    X_ls_cj(i, 0) = w[i];
-    for (int j = 1; j < M.E_actual() + 1; j++) {
-      X_ls_cj(i, j) = w[i] * M(kNNInds[i], j - 1);
+  if (opts.lowMemoryMode) {
+    for (int i = 0; i < k; i++) {
+      X_ls_cj(i, 0) = w[i];
+      M.lazy_fill_in_point(kNNInds[i], &(X_ls_cj(i, 1)));
+      for (int j = 1; j < M.E_actual() + 1; j++) {
+        X_ls_cj(i, j) *= w[i];
+      }
+    }
+  } else {
+    for (int i = 0; i < k; i++) {
+      X_ls_cj(i, 0) = w[i];
+      for (int j = 1; j < M.E_actual() + 1; j++) {
+        X_ls_cj(i, j) = w[i] * M(kNNInds[i], j - 1);
+      }
     }
   }
 
-  // Scale the targets vector by weights
+  // Scale targets by our weights vector
   Eigen::VectorXd y_ls(k);
   for (int i = 0; i < k; i++) {
     y_ls[i] = w[i] * M.target(kNNInds[i]);
@@ -669,11 +683,22 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls);
 
   double r = ics(0);
+
+  double* y = new double[M.E_actual()];
+
+  if (opts.lowMemoryMode) {
+    Mp.lazy_fill_in_point(Mp_i, y);
+  } else {
+    Mp.eager_fill_in_point(Mp_i, y);
+  }
+
   for (int j = 0; j < M.E_actual(); j++) {
-    if (Mp(Mp_i, j) != MISSING_D) {
-      r += Mp(Mp_i, j) * ics(j + 1);
+    if (y[j] != MISSING_D) {
+      r += y[j] * ics(j + 1);
     }
   }
+
+  delete[] y;
 
   // If the 'savesmap' option is given, save the 'ics' coefficients
   // for the largest value of theta.

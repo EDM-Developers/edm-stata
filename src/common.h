@@ -93,6 +93,7 @@ struct Options
   std::vector<Metric> metrics;
   std::string cmdLine;
   bool saveKUsed;
+  bool lowMemoryMode;
 };
 
 void to_json(json& j, const Options& o);

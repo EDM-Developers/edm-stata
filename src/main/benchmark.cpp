@@ -23,6 +23,8 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
+using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 // Function declarations for 'private' functions not listed in the relevant header files.
 std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
@@ -41,13 +43,32 @@ static void bm_eager_manifold_creation(benchmark::State& state)
 
   Inputs vars = read_lowlevel_inputs_file(filename);
 
+  int Mp_i = 0;
+
   for (auto _ : state) {
-    Manifold M(vars.generator, vars.E, vars.libraryRows, false);
-    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, false);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, false);
   }
 }
 
 BENCHMARK(bm_eager_manifold_creation)->DenseRange(0, lowLevelInputDumps.size() - 1)->Unit(benchmark::kMicrosecond);
+
+static void bm_lazy_manifold_creation(benchmark::State& state)
+{
+  std::string filename = lowLevelInputDumps[state.range(0)];
+  state.SetLabel(filename);
+
+  Inputs vars = read_lowlevel_inputs_file(filename);
+
+  int Mp_i = 0;
+
+  for (auto _ : state) {
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, true);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, true);
+  }
+}
+
+BENCHMARK(bm_lazy_manifold_creation)->DenseRange(0, lowLevelInputDumps.size() - 1)->Unit(benchmark::kMicrosecond);
 
 static void bm_basic_distances(benchmark::State& state)
 {
@@ -61,7 +82,7 @@ static void bm_basic_distances(benchmark::State& state)
   int Mp_i = 0;
 
   for (auto _ : state) {
-    DistanceIndexPairs potentialNN = lp_distances(Mp_i, vars.opts, M, Mp);
+    DistanceIndexPairs potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
     Mp_i = (Mp_i + 1) % Mp.numPoints();
   }
 }
@@ -104,7 +125,7 @@ static void bm_nearest_neighbours(benchmark::State& state)
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -142,7 +163,7 @@ static void bm_simplex(benchmark::State& state)
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -207,7 +228,7 @@ static void bm_smap(benchmark::State& state)
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -233,8 +254,12 @@ static void bm_smap(benchmark::State& state)
 
       // Pull out the nearest neighbours from the manifold, and
       // simultaneously prepend a column of ones in front of the manifold data.
-      Eigen::MatrixXd X_ls_cj(k, M.E_actual() + 1);
-      X_ls_cj << Eigen::VectorXd::Ones(k), M.map()(kNNInds, Eigen::all);
+      MatrixXd X_ls(k, M.E_actual());
+      for (int i = 0; i < k; i++) {
+        M.eager_fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+      }
+      MatrixXd X_ls_cj(k, M.E_actual() + 1);
+      X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;
 
       // Calculate the weight for each neighbour
       Eigen::Map<const Eigen::VectorXd> distsMap(&(dists[0]), dists.size());

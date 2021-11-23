@@ -347,7 +347,7 @@ program define edmExplore, eclass
 		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
 		[dt] [reldt] [DTWeight(real 0)] [DTSave(name)] [DETails] [reportrawe] [strict] [Predictionhorizon(string)] ///
 		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
-		[verbosity(integer 1)] [saveinputs(string)] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
+		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -674,6 +674,8 @@ program define edmExplore, eclass
 
 		local rngstate = c(rngstate)
 
+		local low_memory_mode = "`lowmemory'" == "lowmemory"
+
 		if "`parsed_dtsave'" != "" {
 			qui gen double `parsed_dtsave' = .
 		}
@@ -695,7 +697,7 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'" "`low_memory_mode'"
 
 		local missingdistance = `missing_dist_used'
 
@@ -1097,7 +1099,7 @@ program define edmXmap, eclass
 		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
 		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
 		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
-		[verbosity(integer 1)] [saveinputs(string)] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
+		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -1508,6 +1510,8 @@ program define edmXmap, eclass
 
 			local rngstate = c(rngstate)
 
+			local low_memory_mode = "`lowmemory'" == "lowmemory"
+
 			if "`parsed_dtsave'" != "" {
 				qui gen double `parsed_dtsave' = .
 			}
@@ -1528,7 +1532,7 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'" "`low_memory_mode'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 
