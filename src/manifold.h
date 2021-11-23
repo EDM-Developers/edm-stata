@@ -103,7 +103,7 @@ public:
 
 class Manifold
 {
-  const std::shared_ptr<ManifoldGenerator> _gen;
+  std::shared_ptr<const ManifoldGenerator> _gen;
   std::shared_ptr<double[]> _flat = nullptr;
   std::vector<double> _targets;
   std::vector<int> _panelIDs;
@@ -120,36 +120,39 @@ public:
     , _predictionSet(predictionSet)
     , _dtWeight(dtWeight)
   {
-    _init(*gen, E, filter, predictionSet, dtWeight, copredictMode);
+    _init(E, filter, predictionSet, dtWeight, copredictMode);
   }
 
   Manifold(const ManifoldGenerator& gen, int E, const std::vector<bool>& filter, bool predictionSet,
            double dtWeight = 0.0, bool copredictMode = false)
+    : _copredictMode(copredictMode)
+    , _predictionSet(predictionSet)
+    , _dtWeight(dtWeight)
   {
-    _init(gen, E, filter, predictionSet, dtWeight, copredictMode);
+    _gen = std::shared_ptr<const ManifoldGenerator>(&gen, [](const ManifoldGenerator*) {});
+    _init(E, filter, predictionSet, dtWeight, copredictMode);
   }
 
-  void _init(const ManifoldGenerator& gen, int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
-             bool copredictMode)
+  void _init(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight, bool copredictMode)
   {
     _E_x = E;
-    _E_dt = gen.E_dt(E);
-    _E_extras = gen.E_extras(E);
-    _E_lagged_extras = gen.numExtrasLagged() * E;
-    _E_actual = gen.E_actual(E);
+    _E_dt = _gen->E_dt(E);
+    _E_extras = _gen->E_extras(E);
+    _E_lagged_extras = _gen->numExtrasLagged() * E;
+    _E_actual = _gen->E_actual(E);
 
     bool takeEveryPoint = filter.size() == 0;
 
     // std::vector<double> targetTimes;
 
-    bool panelMode = gen._panelIDs.size() > 0;
+    bool panelMode = _gen->_panelIDs.size() > 0;
 
-    for (int i = 0; i < gen._t.size(); i++) {
+    for (int i = 0; i < _gen->_t.size(); i++) {
       if (takeEveryPoint || filter[i]) {
 
         // Throwing away library set points whose targets are missing.
         int targetIndex = i;
-        double target = gen.get_target(i, copredictMode, predictionSet, targetIndex);
+        double target = _gen->get_target(i, copredictMode, predictionSet, targetIndex);
         if (!predictionSet && (target == MISSING_D)) {
           continue;
         }
@@ -158,7 +161,7 @@ public:
         // targetTimes.push_back(gen._t[targetIndex]);
 
         if (panelMode) {
-          _panelIDs.push_back(gen._panelIDs[i]);
+          _panelIDs.push_back(_gen->_panelIDs[i]);
         }
         _pointNumToStartIndex.push_back(i);
       }
@@ -167,11 +170,18 @@ public:
     _numPoints = _pointNumToStartIndex.size();
   }
 
-  double operator()(int i, int j) {
-    if (_flat == nullptr) {
-      _fill_in_flat();
-    }
-    return _flat[i * _E_actual + j];
+  double operator()(int i, int j)
+  {
+    //    if (_flat == nullptr) {
+    //      _fill_in_flat();
+    //    }
+    //    return _flat[i * _E_actual + j];
+    // return -123;
+
+    auto point = std::make_unique<double[]>(_E_actual);
+    double target = i;
+    _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point.get(), target);
+    return point[j];
   }
 
   void fill_in_point(int i, double* point) const
@@ -182,11 +192,12 @@ public:
 
   Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
 
-//  double x(int i, int j) const { return _flat[i * _E_actual + j]; }
-//  double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
-//  double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
+  //  double x(int i, int j) const { return _flat[i * _E_actual + j]; }
+  //  double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
+  //  double extras(int i, int j) const { return _flat[i * _E_actual + _E_x + _E_dt + j]; }
 
-  void _fill_in_flat() {
+  void _fill_in_flat()
+  {
     // Fill in the manifold row-by-row (point-by-point)
     _flat = std::shared_ptr<double[]>(new double[_numPoints * _E_actual], std::default_delete<double[]>());
 
@@ -196,7 +207,8 @@ public:
       _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point, target);
     }
   }
-  double dt(int i, int j) {
+  double dt(int i, int j)
+  {
     if (_flat == nullptr) {
       _fill_in_flat();
     }
@@ -211,7 +223,7 @@ public:
   int numTargets() const { return (int)_targets.size(); }
   const std::vector<double>& targets() const { return _targets; }
 
-//  double* data() const { return _flat.get(); };
+  //  double* data() const { return _flat.get(); };
   int numPoints() const { return _numPoints; }
   int E() const { return _E_x; }
   int E_dt() const { return _E_dt; }
@@ -219,11 +231,11 @@ public:
   int E_extras() const { return _E_extras; }
   int E_actual() const { return _E_actual; }
   const std::vector<int>& panelIDs() const { return _panelIDs; }
-//  std::shared_ptr<double[]> flatf64() const { return _flat; }
-//  std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const
-//  {
-//    return std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual);
-//  }
+  //  std::shared_ptr<double[]> flatf64() const { return _flat; }
+  //  std::shared_ptr<double[]> laggedObsMapf64(int obsNum) const
+  //  {
+  //    return std::shared_ptr<double[]>(_flat, _flat.get() + obsNum * _E_actual);
+  //  }
 
 #if defined(WITH_ARRAYFIRE)
   ManifoldOnGPU toGPU(const bool useFloat = false) const;
