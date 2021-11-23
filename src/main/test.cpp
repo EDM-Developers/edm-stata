@@ -60,7 +60,7 @@ void print_eig_matrix(const Eigen::Map<const Eigen::Matrix<double, Eigen::Dynami
   std::cout << "\n";
 }
 
-void print_manifold(const Manifold& M)
+void print_manifold(Manifold& M)
 {
   auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
 
@@ -85,7 +85,7 @@ void require_vectors_match(const std::vector<T>& u, const std::vector<T>& v)
   }
 }
 
-void require_manifolds_match(const Manifold& M, const std::vector<std::vector<double>>& M_true,
+void require_manifolds_match(Manifold& M, const std::vector<std::vector<double>>& M_true,
                              const std::vector<double>& y_true)
 {
   REQUIRE(M.numPoints() == M_true.size());

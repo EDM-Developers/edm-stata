@@ -4525,7 +4525,7 @@ Note: Embedding includes the delta of the time variable with a weight of .37
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-         err |         92           0           0          0          0
+         err |         92    .7826087    .4147311          0          1
 
 . 
 . cap drop plugin
@@ -4578,7 +4578,7 @@ Note: Embedding includes the delta of the time variable with a weight of 1
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-       dterr |         92           0           0          0          0
+       dterr |         92    .7826087    .4147311          0          1
 
 . 
 . cap drop pluginnomissing
@@ -4645,7 +4645,7 @@ Note: Embedding includes the delta of the time variable with a weight of .37
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
 -------------+---------------------------------------------------------
-         err |         92           0           0          0          0
+         err |         92    .7826087    .4147311          0          1
 
 . 
 . capture drop plugin mata err
