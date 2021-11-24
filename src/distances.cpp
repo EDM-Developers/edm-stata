@@ -66,14 +66,13 @@ std::vector<Metric> expand_metrics(const ManifoldGenerator& generator, int E, Di
   return expandedMetrics;
 }
 
-DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                     std::vector<int> inpInds)
+DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
   std::vector<int> inds;
   std::vector<double> dists;
 
-  inds.reserve(inpInds.size());
-  dists.reserve(inpInds.size());
+  inds.reserve(M.numPoints());
+  dists.reserve(M.numPoints());
 
   // We'll store the points we are comparing in the following two arrays.
   double* x = new double[M.E_actual()];
@@ -81,9 +80,16 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
 
   Mp.lazy_fill_in_point(Mp_i, y);
 
+  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
+
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
-  for (int i : inpInds) {
+  for (int i = 0; i < M.numPoints(); i++) {
+
+    if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
+      continue;
+    }
+
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
@@ -143,18 +149,24 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
   return { inds, dists };
 }
 
-DistanceIndexPairs eager_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                      std::vector<int> inpInds)
+DistanceIndexPairs eager_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
   std::vector<int> inds;
   std::vector<double> dists;
 
-  inds.reserve(inpInds.size());
-  dists.reserve(inpInds.size());
+  inds.reserve(M.numPoints());
+  dists.reserve(M.numPoints());
+
+  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
-  for (int i : inpInds) {
+  for (int i = 0; i < M.numPoints(); i++) {
+
+    if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
+      continue;
+    }
+
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
@@ -430,15 +442,24 @@ double wasserstein(double* C, int len_i, int len_j)
   return cost;
 }
 
-DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                         std::vector<int> inpInds)
+DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
   std::vector<int> inds;
   std::vector<double> dists;
 
+  inds.reserve(M.numPoints());
+  dists.reserve(M.numPoints());
+
+  const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
+
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
-  for (int i : inpInds) {
+  for (int i = 0; i < M.numPoints(); i++) {
+
+    if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
+      continue;
+    }
+
     int len_i, len_j;
     auto C = wasserstein_cost_matrix(M, Mp, i, Mp_i, opts, len_i, len_j);
 

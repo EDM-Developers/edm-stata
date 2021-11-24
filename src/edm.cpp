@@ -467,17 +467,14 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
     return;
   }
 
-  // Create a list of indices which may potentially be the neighbours of Mp(Mp_i,.)
-  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, opts, M, Mp);
-
   DistanceIndexPairs potentialNN;
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
+    potentialNN = wasserstein_distances(Mp_i, opts, M, Mp);
   } else {
     if (opts.lowMemoryMode) {
-      potentialNN = lazy_lp_distances(Mp_i, opts, M, Mp, tryInds);
+      potentialNN = lazy_lp_distances(Mp_i, opts, M, Mp);
     } else {
-      potentialNN = eager_lp_distances(Mp_i, opts, M, Mp, tryInds);
+      potentialNN = eager_lp_distances(Mp_i, opts, M, Mp);
     }
   }
 
@@ -532,23 +529,6 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   } else {
     rcView(0, Mp_i) = INVALID_ALGORITHM;
   }
-}
-
-std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
-{
-  bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
-
-  std::vector<int> inds;
-
-  for (int i = 0; i < M.numPoints(); i++) {
-    if (skipOtherPanels && (M.panel(i) != Mp.panel(Mp_i))) {
-      continue;
-    }
-
-    inds.push_back(i);
-  }
-
-  return inds;
 }
 
 // For a given point, find the k nearest neighbours of this point.
