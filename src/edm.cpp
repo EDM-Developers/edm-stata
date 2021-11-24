@@ -474,7 +474,11 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (opts.distance == Distance::Wasserstein) {
     potentialNN = wasserstein_distances(Mp_i, opts, M, Mp, tryInds);
   } else {
-    potentialNN = lp_distances(Mp_i, opts, M, Mp, tryInds);
+    if (opts.lowMemoryMode) {
+      potentialNN = lazy_lp_distances(Mp_i, opts, M, Mp, tryInds);
+    } else {
+      potentialNN = eager_lp_distances(Mp_i, opts, M, Mp, tryInds);
+    }
   }
 
   if (keep_going != nullptr && !keep_going()) {
@@ -652,9 +656,17 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // Pull out the nearest neighbours from the manifold, and
   // simultaneously prepend a column of ones in front of the manifold data.
   MatrixXd X_ls(k, M.E_actual());
-  for (int i = 0; i < k; i++) {
-    M.fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+
+  if (opts.lowMemoryMode) {
+    for (int i = 0; i < k; i++) {
+      M.lazy_fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+    }
+  } else {
+    for (int i = 0; i < k; i++) {
+      M.eager_fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+    }
   }
+
   MatrixXd X_ls_cj(k, M.E_actual() + 1);
   X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;
 
@@ -686,7 +698,12 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   double r = ics(0);
 
   double* y = new double[M.E_actual()];
-  Mp.fill_in_point(Mp_i, y);
+
+  if (opts.lowMemoryMode) {
+    Mp.lazy_fill_in_point(Mp_i, y);
+  } else {
+    Mp.eager_fill_in_point(Mp_i, y);
+  }
 
   for (int j = 0; j < M.E_actual(); j++) {
     if (y[j] != MISSING_D) {

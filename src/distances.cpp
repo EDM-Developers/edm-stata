@@ -66,8 +66,8 @@ std::vector<Metric> expand_metrics(const ManifoldGenerator& generator, int E, Di
   return expandedMetrics;
 }
 
-DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                std::vector<int> inpInds)
+DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                     std::vector<int> inpInds)
 {
   std::vector<int> inds;
   std::vector<double> dists;
@@ -76,7 +76,7 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   double* x = new double[M.E_actual()];
   double* y = new double[M.E_actual()];
 
-  Mp.fill_in_point(Mp_i, y);
+  Mp.lazy_fill_in_point(Mp_i, y);
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
@@ -84,7 +84,7 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
-    M.fill_in_point(i, x);
+    M.lazy_fill_in_point(i, x);
 
     // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
     // then add the user-supplied penalty/distance for the mismatch.
@@ -140,6 +140,69 @@ DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M
   return { inds, dists };
 }
 
+DistanceIndexPairs eager_lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
+                                      std::vector<int> inpInds)
+{
+  std::vector<int> inds;
+  std::vector<double> dists;
+
+  // Compare every observation in the M manifold to the
+  // Mp_i'th observation in the Mp manifold.
+  for (int i : inpInds) {
+    // Calculate the distance between M[i] and Mp[Mp_i]
+    double dist_i = 0.0;
+
+    // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
+    // then add the user-supplied penalty/distance for the mismatch.
+    if (opts.panelMode && opts.idw > 0) {
+      dist_i += opts.idw * (M.panel(i) != Mp.panel(Mp_i));
+    }
+
+    for (int j = 0; j < M.E_actual(); j++) {
+      // Get the sub-distance between M[i,j] and Mp[Mp_i, j]
+      double dist_ij;
+
+      // If either of these values is missing, the distance from
+      // M[i,j] to Mp[Mp_i, j] is opts.missingdistance.
+      // However, if the user doesn't specify this, then the entire
+      // M[i] to Mp[Mp_i] distance is set as missing.
+      if ((M(i, j) == MISSING_D) || (Mp(Mp_i, j) == MISSING_D)) {
+        if (opts.missingdistance == 0) {
+          dist_i = MISSING_D;
+          break;
+        } else {
+          dist_ij = opts.missingdistance;
+        }
+      } else { // Neither M[i,j] nor Mp[Mp_i, j] is missing.
+        // How do we compare them? Do we treat them like continuous values and subtract them,
+        // or treat them like unordered categorical variables and just check if they're the same?
+        if (opts.metrics[j] == Metric::Diff) {
+          dist_ij = M(i, j) - Mp(Mp_i, j);
+        } else { // Metric::CheckSame
+          dist_ij = (M(i, j) != Mp(Mp_i, j));
+        }
+      }
+
+      if (opts.distance == Distance::MeanAbsoluteError) {
+        dist_i += abs(dist_ij) / M.E_actual();
+      } else { // Distance::Euclidean
+        dist_i += dist_ij * dist_ij;
+      }
+    }
+
+    if (dist_i != 0 && dist_i != MISSING_D) {
+      if (opts.distance == Distance::MeanAbsoluteError) {
+        dists.push_back(dist_i);
+      } else { // Distance::Euclidean
+        dists.push_back(sqrt(dist_i));
+      }
+      inds.push_back(i);
+    }
+  }
+
+  return { inds, dists };
+}
+
 // This function compares the M(i,.) multivariate time series to the Mp(j,.) multivariate time series.
 // The M(i,.) observation has data for E consecutive time points (e.g. time(i), time(i+1), ..., time(i+E-1)) and
 // the Mp(j,.) observation corresponds to E consecutive time points (e.g. time(j), time(j+1), ..., time(j+E-1)).
@@ -184,8 +247,13 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   double* x = new double[M.E_actual()];
   double* y = new double[M.E_actual()];
 
-  M.fill_in_point(i, x);
-  Mp.fill_in_point(j, y);
+  if (opts.lowMemoryMode) {
+    M.lazy_fill_in_point(i, x);
+    Mp.lazy_fill_in_point(j, y);
+  } else {
+    M.eager_fill_in_point(i, x);
+    Mp.eager_fill_in_point(j, y);
+  }
 
   int numLaggedExtras = M.E_lagged_extras() / M.E();
 

@@ -193,28 +193,19 @@ public:
     init(E, filter, predictionSet, copredictMode, lazy);
   }
 
-  double operator()(int i, int j) const
-  {
-    if (_flat != nullptr) {
-      return _flat[i * _E_actual + j];
-    }
+  double operator()(int i, int j) const { return _flat[i * _E_actual + j]; }
 
-    auto point = std::make_unique<double[]>(_E_actual);
-    double target = i;
-    _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point.get(), target);
-    return point[j];
+  void eager_fill_in_point(int i, double* point) const
+  {
+    for (int j = 0; j < _E_actual; j++) {
+      point[j] = _flat[i * _E_actual + j];
+    }
   }
 
-  void fill_in_point(int i, double* point) const
+  void lazy_fill_in_point(int i, double* point) const
   {
-    if (_flat != nullptr) {
-      for (int j = 0; j < _E_actual; j++) {
-        point[j] = _flat[i * _E_actual + j];
-      }
-    } else {
-      double target;
-      _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point, target);
-    }
+    double target;
+    _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point, target);
   }
 
   Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }
