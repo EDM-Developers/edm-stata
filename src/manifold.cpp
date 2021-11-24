@@ -149,8 +149,6 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
   int panel = _panel_mode ? _panelIDs[i] : -1;
   bool use_co_x = copredictionMode && predictionSet;
 
-  std::fill_n(point, E_actual(E), MISSING_D);
-
   double tPred;
   if (_dt) {
     // What is the target of this point in the manifold?
@@ -182,16 +180,20 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
       }
     }
 
-    if (foundLaggedObs) {
-      // Fill in the lagged embedding of x (or co_x) in the first columns
-      if (use_co_x) {
-        point[j] = _co_x[laggedIndex];
-      } else {
-        point[j] = _x[laggedIndex];
-      }
+    // Fill in the lagged embedding of x (or co_x) in the first columns
+    if (!foundLaggedObs) {
+      point[j] = MISSING_D;
+    } else if (use_co_x) {
+      point[j] = _co_x[laggedIndex];
+    } else {
+      point[j] = _x[laggedIndex];
+    }
 
-      // Put the lagged embedding of dt in the next columns
-      if (_dt) {
+    // Put the lagged embedding of dt in the next columns
+    if (_dt) {
+      if (!foundLaggedObs) {
+        point[j + E] = MISSING_D;
+      } else {
         double tNow = _t[laggedIndex];
         if (j == 0 || _reldt) {
           if (tNow != MISSING_D && tPred != MISSING_D) {
@@ -208,16 +210,17 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
           }
         }
       }
+    }
 
-      // Finally put the extras in the last columns
-      for (int k = 0; k < _num_extras; k++) {
-        if (k < _num_extras_lagged) {
-          // Adding the lagged extras
-          point[E + E_dt(E) + k * E + j] = _extras[k][laggedIndex];
-        } else if (j == 0) {
-          // Add in any unlagged extras as the end
-          point[E + E_dt(E) + _num_extras_lagged * E + (k - _num_extras_lagged)] = _extras[k][laggedIndex];
-        }
+    // Finally put the extras in the last columns
+    for (int k = 0; k < _num_extras; k++) {
+      double extra_k = foundLaggedObs ? _extras[k][laggedIndex] : MISSING_D;
+      if (k < _num_extras_lagged) {
+        // Adding the lagged extras
+        point[E + E_dt(E) + k * E + j] = extra_k;
+      } else if (j == 0) {
+        // Add in any unlagged extras as the end
+        point[E + E_dt(E) + _num_extras_lagged * E + (k - _num_extras_lagged)] = extra_k;
       }
     }
 
