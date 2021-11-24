@@ -53,8 +53,7 @@ private:
 public:
   std::vector<double> _t;
   std::vector<int> _panelIDs;
-  void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
-                     double& target) const;
+  void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point) const;
   double get_target(int i, bool copredictionMode, bool predictionSet, int& targetIndex) const;
 
   double calculate_time_increment() const;
@@ -165,10 +164,9 @@ class Manifold
     // Fill in the manifold row-by-row (point-by-point)
     _flat = std::shared_ptr<double[]>(new double[_numPoints * _E_actual], std::default_delete<double[]>());
 
-    double target;
     for (int i = 0; i < _numPoints; i++) {
       double* point = &(_flat[i * _E_actual]);
-      _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point, target);
+      _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point);
     }
   }
 
@@ -204,8 +202,7 @@ public:
 
   void lazy_fill_in_point(int i, double* point) const
   {
-    double target;
-    _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point, target);
+    _gen->fill_in_point(_pointNumToStartIndex[i], _E_x, _copredictMode, _predictionSet, _dtWeight, point);
   }
 
   Eigen::Map<const Eigen::VectorXd> targetsMap() const { return { &(_targets[0]), _numPoints }; }

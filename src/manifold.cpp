@@ -144,20 +144,18 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 #endif
 
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight,
-                                      double* point, double& target) const
+                                      double* point) const
 {
   int panel = _panel_mode ? _panelIDs[i] : -1;
   bool use_co_x = copredictionMode && predictionSet;
 
   std::fill_n(point, E_actual(E), MISSING_D);
 
-  // What is the target of this point in the manifold?
-  int targetIndex = i;
-
-  target = get_target(i, copredictionMode, predictionSet, targetIndex);
-
   double tPred;
   if (_dt) {
+    // What is the target of this point in the manifold?
+    int targetIndex = i;
+    double target = get_target(i, copredictionMode, predictionSet, targetIndex);
     tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
   }
 
@@ -229,15 +227,8 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
 
 double ManifoldGenerator::get_dt(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight) const
 {
-
   int panel = _panel_mode ? _panelIDs[i] : -1;
   bool use_co_x = copredictionMode && predictionSet;
-
-  // What is the target of this point in the manifold?
-  int targetIndex = i;
-
-  double target = get_target(i, copredictionMode, predictionSet, targetIndex);
-  double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
 
   // For obs i, which indices correspond to looking back 0, tau, ..., (E-1)*tau observations.
   int laggedIndex, prevLaggedIndex = i;
@@ -257,6 +248,11 @@ double ManifoldGenerator::get_dt(int i, int E, bool copredictionMode, bool predi
 
   double tNow = _t[laggedIndex];
   if (_reldt) {
+    // What is the target of this point in the manifold?
+    int targetIndex = i;
+    double target = get_target(i, copredictionMode, predictionSet, targetIndex);
+    double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
+
     if (tNow != MISSING_D && tPred != MISSING_D) {
       return dtWeight * (tPred - tNow);
     } else {
@@ -305,12 +301,8 @@ double ManifoldGenerator::get_target(int i, bool copredictionMode, bool predicti
   return target;
 }
 
-bool is_usable(double* point, double target, int E_actual, bool allowMissing, bool targetRequired)
+bool is_usable(double* point, int E_actual, bool allowMissing)
 {
-  if (targetRequired && target == MISSING_D) {
-    return false;
-  }
-
   if (allowMissing) {
     // If we are allowed to have missing values in the points, just
     // need to ensure that we don't allow a 100% missing point.
@@ -342,11 +334,10 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction
 
   int sizeOfPoint = E_actual(maxE);
   auto point = std::make_unique<double[]>(sizeOfPoint);
-  double target;
 
   for (int i = 0; i < _t.size(); i++) {
-    fill_in_point(i, maxE, copredictionMode, copredictionMode, USABLE_DTWEIGHT, point.get(), target);
-    usable[i] = is_usable(point.get(), target, sizeOfPoint, _allow_missing, targetRequired);
+    fill_in_point(i, maxE, copredictionMode, copredictionMode, USABLE_DTWEIGHT, point.get());
+    usable[i] = is_usable(point.get(), sizeOfPoint, _allow_missing);
   }
 
   return usable;
