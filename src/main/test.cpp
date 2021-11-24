@@ -102,6 +102,34 @@ void require_manifolds_match(Manifold& M, const std::vector<std::vector<double>>
   }
 }
 
+void check_lazy_manifold(const ManifoldGenerator& generator, int E, const std::vector<bool>& filter, bool predictionSet,
+                         double dtWeight = 0.0, bool copredictMode = false)
+{
+  Manifold keenM(generator, E, filter, predictionSet, dtWeight, copredictMode, false);
+  Manifold lazyM(generator, E, filter, predictionSet, dtWeight, copredictMode, true);
+
+  REQUIRE(keenM.numPoints() == lazyM.numPoints());
+  REQUIRE(keenM.numTargets() == lazyM.numTargets());
+  REQUIRE(keenM.E_actual() == lazyM.E_actual());
+
+  for (int i = 0; i < keenM.numPoints(); i++) {
+    CAPTURE(i);
+    for (int j = 0; j < keenM.E_actual(); j++) {
+      CAPTURE(j);
+      REQUIRE(keenM(i, j) == lazyM(i, j));
+    }
+    REQUIRE(keenM.target(i) == lazyM.target(i));
+  }
+}
+
+void check_lazy_manifolds(const ManifoldGenerator& generator, int E, const std::vector<bool>& filter,
+                          double dtWeight = 0.0, bool copredictMode = false)
+{
+
+  check_lazy_manifold(generator, E, filter, false, dtWeight, copredictMode);
+  check_lazy_manifold(generator, E, filter, true, dtWeight, copredictMode);
+}
+
 void check_usable_matches_prediction_set(const std::vector<bool>& usable, const Manifold& Mp)
 {
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
@@ -124,6 +152,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
 
     Manifold M(generator, E, usable, false);
     std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
@@ -146,6 +175,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
 
     Manifold M(generator, E, usable, false);
     std::vector<std::vector<double>> M_true = { { 12, 11, 112 }, { 13, 12, 113 } };
@@ -168,6 +198,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
 
     Manifold M(generator, E, usable, false);
     std::vector<std::vector<double>> M_true = { { 12, 11, 112, 111 }, { 13, 12, 113, 112 } };
@@ -190,6 +221,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
 
     Manifold M(generator, E, usable, false);
     std::vector<std::vector<double>> M_true = { { 12, 11, 112, 111, 212 }, { 13, 12, 113, 112, 213 } };
@@ -217,6 +249,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12, 11, 1, 1 }, { 13, 12, 1, 1 } };
@@ -255,6 +288,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, false, false, false, true, false };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
 
     Manifold M(generator, E, usable, false);
     REQUIRE(M.numPoints() == 0);
@@ -284,6 +318,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 2.0, 1.5 },
@@ -314,6 +349,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { true, true, true, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = {
@@ -347,6 +383,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 2.0, 3.5 },
@@ -381,6 +418,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { true, true, true, true, true, true };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = {
@@ -412,6 +450,7 @@ TEST_CASE("Missing data dt manifold creation (tau = 2)", "[missingDataManifold2]
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, false, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable, dtWeight);
 
     Manifold M(generator, E, usable, false, dtWeight);
     std::vector<std::vector<double>> M_true = { { 14.0, 11.0, 0.5, 3.5 }, { 15.0, 12.0, 1.0, 2.5 } };
@@ -655,10 +694,12 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
   std::vector<bool> usable = generator.generate_usable(E);
   std::vector<bool> usableTrue = { false, false, false, true, true, true };
   require_vectors_match<bool>(usable, usableTrue);
+  check_lazy_manifolds(generator, E, usable);
 
   std::vector<bool> cousable = generator.generate_usable(E, true);
   std::vector<bool> cousableTrue = { false, true, true, false, false, true };
   require_vectors_match<bool>(cousable, cousableTrue);
+  check_lazy_manifolds(generator, E, cousable, 0.0, true);
 
   SECTION("Standard predictions")
   {
