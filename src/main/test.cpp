@@ -112,11 +112,16 @@ void check_lazy_manifold(const ManifoldGenerator& generator, int E, const std::v
   REQUIRE(keenM.numTargets() == lazyM.numTargets());
   REQUIRE(keenM.E_actual() == lazyM.E_actual());
 
+  double* x = new double[lazyM.E_actual()];
+
   for (int i = 0; i < keenM.numPoints(); i++) {
     CAPTURE(i);
+
+    lazyM.lazy_fill_in_point(i, x);
+
     for (int j = 0; j < keenM.E_actual(); j++) {
       CAPTURE(j);
-      REQUIRE(keenM(i, j) == lazyM(i, j));
+      REQUIRE(keenM(i, j) == x[j]);
     }
     REQUIRE(keenM.target(i) == lazyM.target(i));
   }
@@ -599,8 +604,8 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     double* x = new double[M.E_actual()];
     double* y = new double[M.E_actual()];
 
-    M.fill_in_point(i, x);
-    Mp.fill_in_point(j, y);
+    M.eager_fill_in_point(i, x);
+    Mp.eager_fill_in_point(j, y);
 
     int numLaggedExtras = M.E_lagged_extras() / M.E();
 

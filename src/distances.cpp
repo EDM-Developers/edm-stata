@@ -72,6 +72,9 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
   std::vector<int> inds;
   std::vector<double> dists;
 
+  inds.reserve(inpInds.size());
+  dists.reserve(inpInds.size());
+
   // We'll store the points we are comparing in the following two arrays.
   double* x = new double[M.E_actual()];
   double* y = new double[M.E_actual()];
@@ -145,6 +148,9 @@ DistanceIndexPairs eager_lp_distances(int Mp_i, const Options& opts, const Manif
 {
   std::vector<int> inds;
   std::vector<double> dists;
+
+  inds.reserve(inpInds.size());
+  dists.reserve(inpInds.size());
 
   // Compare every observation in the M manifold to the
   // Mp_i'th observation in the Mp manifold.
