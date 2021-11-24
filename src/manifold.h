@@ -49,7 +49,6 @@ private:
   void setup_observation_numbers();
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
-  std::vector<int> get_lagged_indices(int startIndex, int E, int panel) const;
 
 public:
   std::vector<double> _t;
@@ -90,6 +89,17 @@ public:
   }
 
   std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
+
+  double get_dt(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight) const;
+
+  std::vector<double> dts(int E, bool copredictionMode, bool predictionSet, double dtWeight) const
+  {
+    std::vector<double> dts;
+    for (int i = 0; i < _t.size(); i++) {
+      dts.push_back(get_dt(i, E, copredictionMode, predictionSet, dtWeight));
+    }
+    return dts;
+  }
 
   int E_dt(int E) const { return _dt * E; }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }
@@ -220,6 +230,8 @@ public:
   double target(int i) const { return _targets[i]; }
   int numTargets() const { return (int)_targets.size(); }
   const std::vector<double>& targets() const { return _targets; }
+
+  double* data() const { return _flat.get(); };
 
   int numPoints() const { return _numPoints; }
   int E() const { return _E_x; }

@@ -156,6 +156,11 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
 
   target = get_target(i, copredictionMode, predictionSet, targetIndex);
 
+  double tPred;
+  if (_dt) {
+    tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
+  }
+
   // For obs i, which indices correspond to looking back 0, tau, ..., (E-1)*tau observations.
   int laggedIndex = i;
   int pointStartObsNum = _observation_number[i];
@@ -189,8 +194,6 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
 
       // Put the lagged embedding of dt in the next columns
       if (_dt) {
-        double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
-
         double tNow = _t[laggedIndex];
         if (j == 0 || _reldt) {
           if (tNow != MISSING_D && tPred != MISSING_D) {
@@ -221,6 +224,51 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
     }
 
     prevLaggedIndex = laggedIndex;
+  }
+}
+
+double ManifoldGenerator::get_dt(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight) const
+{
+
+  int panel = _panel_mode ? _panelIDs[i] : -1;
+  bool use_co_x = copredictionMode && predictionSet;
+
+  // What is the target of this point in the manifold?
+  int targetIndex = i;
+
+  double target = get_target(i, copredictionMode, predictionSet, targetIndex);
+  double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
+
+  // For obs i, which indices correspond to looking back 0, tau, ..., (E-1)*tau observations.
+  int laggedIndex, prevLaggedIndex = i;
+  int pointStartObsNum = _observation_number[i];
+
+  // Start by going back one index
+  int k = i - 1;
+
+  // Find the discrete time we're searching for.
+  int targetObsNum = pointStartObsNum - _tau;
+
+  if (find_observation_num(targetObsNum, k, -1, panel)) {
+    laggedIndex = k;
+  } else {
+    return MISSING_D;
+  }
+
+  double tNow = _t[laggedIndex];
+  if (_reldt) {
+    if (tNow != MISSING_D && tPred != MISSING_D) {
+      return dtWeight * (tPred - tNow);
+    } else {
+      return MISSING_D;
+    }
+  } else {
+    double tNext = _t[prevLaggedIndex];
+    if (tNext != MISSING_D && tNow != MISSING_D) {
+      return dtWeight * (tNext - tNow);
+    } else {
+      return MISSING_D;
+    }
   }
 }
 

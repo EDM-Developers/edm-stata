@@ -512,12 +512,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // TODO: How would we change this for 'reldt'?
     const std::shared_ptr<ManifoldGenerator> dtgenerator = std::make_unique<ManifoldGenerator>(
       t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, false, allowMissing);
+
     double DT_WEIGHT = 1.0;
-    Manifold manifold(dtgenerator, maxE, {}, true, DT_WEIGHT);
-    std::vector<double> dts(manifold.numPoints());
-    for (int i = 0; i < dts.size(); i++) {
-      dts[i] = manifold.dt(i, 1);
-    }
+    std::vector<double> dts = dtgenerator->dts(maxE, false, true, DT_WEIGHT);
 
     opts.dtWeight = default_dt_weight(dts, x);
     if (opts.dtWeight < 0) {
@@ -537,25 +534,19 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   SF_macro_save(NUM_USABLE, (char*)fmt::format("{}", numUsable).c_str());
 
   // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
-  //  if (saveDT) {
-  //    double SAVE_DT_WEIGHT = 1.0;
-  //    Manifold manifold(generator, maxE, {}, true, SAVE_DT_WEIGHT);
-  //
-  //    std::vector<double> dts(manifold.numPoints());
-  //    for (int i = 0; i < dts.size(); i++) {
-  //      dts[i] = manifold.dt(i, 1);
-  //    }
-  //    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + 1;
-  //    write_stata_column(dts.data(), (int)dts.size(), startCol);
-  //  }
+  if (dtMode && saveDT) {
+    double SAVE_DT_WEIGHT = 1.0;
+    std::vector<double> dts = generator->dts(maxE, false, true, SAVE_DT_WEIGHT);
+    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + 1;
+    write_stata_column(dts.data(), (int)dts.size(), startCol);
+  }
 
   // Save the manifold back to Stata if requested.
-  //  if (saveManifold) {
-  //    Manifold manifold(generator, maxE, {}, true, opts.dtWeight);
-  //
-  //    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + saveDT + 1;
-  //    write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);
-  //  }
+  if (saveManifold) {
+    Manifold manifold(generator, maxE, {}, true, opts.dtWeight, false, false);
+    ST_int startCol = 3 + numExtras + copredictMode + opts.panelMode + saveDT + 1;
+    write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);
+  }
 
   if (numUsable == 0) {
     SF_scal_save(FINISHED_SCALAR, 1.0);
