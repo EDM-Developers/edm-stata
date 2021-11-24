@@ -18,8 +18,7 @@ std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, cons
 std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
                                                   const Options& opts, int& len_i, int& len_j);
 
-DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp,
-                                         std::vector<int> inds);
+DistanceIndexPairs wasserstein_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
 
 #if defined(WITH_ARRAYFIRE)
 DistanceIndexPairs afWassersteinDistances(int Mp_i, const Options& opts, const Manifold& hostM, const Manifold& hostMp,
@@ -514,11 +513,6 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
 
     int Mp_j = 2;
 
-    std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
-    for (int i = 0; i < M.numPoints(); i++) {
-      // std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
-    }
-
     for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("Cost matrix M_i={}\n", i);
 
@@ -537,9 +531,8 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
       // std::cout << fmt::format("len_i = {} len_j = {}\n", len_i, len_j) << std::endl;
     }
 
-    DistanceIndexPairs wDistPairCPU = wasserstein_distances(Mp_j, opts, M, Mp, tryInds);
+    DistanceIndexPairs wDistPairCPU = wasserstein_distances(Mp_j, opts, M, Mp);
     // print_raw_matrix(wDistPairCPU.dists.data(), 1, wDistPairCPU.dists.size());
-    assert(wDistPairCPU.dists.size() == tryInds.size());
 
 #if defined(WITH_ARRAYFIRE)
     // Char is the internal representation of bool in ArrayFire
