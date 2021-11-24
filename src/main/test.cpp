@@ -126,14 +126,14 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     require_vectors_match<bool>(usable, usableTrue);
 
     Manifold M(generator, E, usable, false);
-    std::vector<std::vector<double>> M_true = { { 12.0, 11.0 }, { 13.0, 12.0 } };
-    std::vector<double> y_true = { 13.0, 14.0 };
+    std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
+    std::vector<double> y_true = { 13, 14 };
     require_manifolds_match(M, M_true, y_true);
 
     Manifold Mp(generator, E, usable, true);
     check_usable_matches_prediction_set(usable, Mp);
-    std::vector<std::vector<double>> Mp_true = { { 12.0, 11.0 }, { 13.0, 12.0 }, { 14.0, 13.0 } };
-    std::vector<double> yp_true = { 13.0, 14.0, NA };
+    std::vector<std::vector<double>> Mp_true = { { 12, 11 }, { 13, 12 }, { 14, 13 } };
+    std::vector<double> yp_true = { 13, 14, NA };
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
@@ -148,14 +148,60 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     require_vectors_match<bool>(usable, usableTrue);
 
     Manifold M(generator, E, usable, false);
-    std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 112 }, { 13.0, 12.0, 113 } };
-    std::vector<double> y_true = { 13.0, 14.0 };
+    std::vector<std::vector<double>> M_true = { { 12, 11, 112 }, { 13, 12, 113 } };
+    std::vector<double> y_true = { 13, 14 };
     require_manifolds_match(M, M_true, y_true);
 
     Manifold Mp(generator, E, usable, true);
     check_usable_matches_prediction_set(usable, Mp);
-    std::vector<std::vector<double>> Mp_true = { { 12.0, 11.0, 112 }, { 13.0, 12.0, 113 }, { 14.0, 13.0, 114 } };
-    std::vector<double> yp_true = { 13.0, 14.0, NA };
+    std::vector<std::vector<double>> Mp_true = { { 12, 11, 112 }, { 13, 12, 113 }, { 14, 13, 114 } };
+    std::vector<double> yp_true = { 13, 14, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
+  }
+
+  SECTION("Manifold with e-varying extra variable")
+  {
+    std::vector<std::vector<double>> extras = { { 111, 112, 113, 114 } };
+
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, extras, 1);
+
+    std::vector<bool> usable = generator.generate_usable(E);
+    std::vector<bool> usableTrue = { false, true, true, true };
+    require_vectors_match<bool>(usable, usableTrue);
+
+    Manifold M(generator, E, usable, false);
+    std::vector<std::vector<double>> M_true = { { 12, 11, 112, 111 }, { 13, 12, 113, 112 } };
+    std::vector<double> y_true = { 13, 14 };
+    require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp(generator, E, usable, true);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 12, 11, 112, 111 }, { 13, 12, 113, 112 }, { 14, 13, 114, 113 } };
+    std::vector<double> yp_true = { 13, 14, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
+  }
+
+  SECTION("Manifold with extra variable and an e-varying extra variable")
+  {
+    std::vector<std::vector<double>> extras = { { 111, 112, 113, 114 }, { 211, 212, 213, 214 } };
+
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, extras, 1);
+
+    std::vector<bool> usable = generator.generate_usable(E);
+    std::vector<bool> usableTrue = { false, true, true, true };
+    require_vectors_match<bool>(usable, usableTrue);
+
+    Manifold M(generator, E, usable, false);
+    std::vector<std::vector<double>> M_true = { { 12, 11, 112, 111, 212 }, { 13, 12, 113, 112, 213 } };
+    std::vector<double> y_true = { 13, 14 };
+    require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp(generator, E, usable, true);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 12, 11, 112, 111, 212 },
+                                                 { 13, 12, 113, 112, 213 },
+                                                 { 14, 13, 114, 113, 214 } };
+    std::vector<double> yp_true = { 13, 14, NA };
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
@@ -173,8 +219,8 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     require_vectors_match<bool>(usable, usableTrue);
 
     Manifold M(generator, E, usable, false, dtWeight);
-    std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 1.0, 1.0 }, { 13.0, 12.0, 1.0, 1.0 } };
-    std::vector<double> y_true = { 13.0, 14.0 };
+    std::vector<std::vector<double>> M_true = { { 12, 11, 1, 1 }, { 13, 12, 1, 1 } };
+    std::vector<double> y_true = { 13, 14 };
     require_manifolds_match(M, M_true, y_true);
 
     // Here, there's no difference between library and prediction sets
@@ -217,7 +263,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 
     Manifold Mp(generator, E, usable, true);
     check_usable_matches_prediction_set(usable, Mp);
-    std::vector<std::vector<double>> Mp_true = { { 15.0, 14.0 } };
+    std::vector<std::vector<double>> Mp_true = { { 15, 14 } };
     std::vector<double> yp_true = { NA };
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
