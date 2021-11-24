@@ -137,6 +137,28 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
+  SECTION("Manifold with extra variable")
+  {
+    std::vector<std::vector<double>> extras = { { 111, 112, 113, 114 } };
+
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, extras);
+
+    std::vector<bool> usable = generator.generate_usable(E);
+    std::vector<bool> usableTrue = { false, true, true, true };
+    require_vectors_match<bool>(usable, usableTrue);
+
+    Manifold M(generator, E, usable, false);
+    std::vector<std::vector<double>> M_true = { { 12.0, 11.0, 112 }, { 13.0, 12.0, 113 } };
+    std::vector<double> y_true = { 13.0, 14.0 };
+    require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp(generator, E, usable, true);
+    check_usable_matches_prediction_set(usable, Mp);
+    std::vector<std::vector<double>> Mp_true = { { 12.0, 11.0, 112 }, { 13.0, 12.0, 113 }, { 14.0, 13.0, 114 } };
+    std::vector<double> yp_true = { 13.0, 14.0, NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
+  }
+
   SECTION("Manifold with dt (not allowing missing)")
   {
     // TODO: This test is a bit fake; edm.ado would not allow dt to be applied when there's no gaps in the time

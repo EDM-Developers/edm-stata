@@ -174,61 +174,79 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
   int panel = _panel_mode ? _panelIDs[i] : -1;
   bool use_co_x = copredictionMode && predictionSet;
 
-  std::vector<int> laggedIndices = get_lagged_indices(i, E, panel);
-
-  auto lookup_vec = [&laggedIndices](const std::vector<double>& vec, int j) {
-    if (laggedIndices[j] < 0) {
-      return MISSING_D;
-    } else {
-      return vec[laggedIndices[j]];
-    }
-  };
+  std::fill_n(point, E_actual(E), MISSING_D);
 
   // What is the target of this point in the manifold?
   int targetIndex = i;
 
   target = get_target(i, copredictionMode, predictionSet, targetIndex);
 
-  // Fill in the lagged embedding of x (or co_x) in the first columns
+  // For obs i, which indices correspond to looking back 0, tau, ..., (E-1)*tau observations.
+  int laggedIndex = i;
+  int pointStartObsNum = _observation_number[i];
+
+  // Start by going back one index
+  int k = i - 1;
+
+  int prevLaggedIndex = laggedIndex;
+
   for (int j = 0; j < E; j++) {
-    if (use_co_x) {
-      point[j] = lookup_vec(_co_x, j);
-    } else {
-      point[j] = lookup_vec(_x, j);
+
+    bool foundLaggedObs = (j == 0);
+
+    if (!foundLaggedObs) {
+      // Find the discrete time we're searching for.
+      int targetObsNum = pointStartObsNum - j * _tau;
+
+      if (find_observation_num(targetObsNum, k, -1, panel)) {
+        foundLaggedObs = true;
+        laggedIndex = k;
+      }
     }
-  }
 
-  // Put the lagged embedding of dt in the next columns
-  if (_dt) {
-    double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
+    if (foundLaggedObs) {
 
-    for (int j = 0; j < E_dt(E); j++) {
-      double tNow = lookup_vec(_t, j);
-      if (j == 0 || _reldt) {
-        if (tNow != MISSING_D && tPred != MISSING_D) {
-          point[E + j] = dtWeight * (tPred - tNow);
-        } else {
-          point[E + j] = MISSING_D;
-        }
+      // Fill in the lagged embedding of x (or co_x) in the first columns
+      if (use_co_x) {
+        point[j] = _co_x[laggedIndex];
       } else {
-        double tNext = lookup_vec(_t, j - 1);
-        if (tNext != MISSING_D && tNow != MISSING_D) {
-          point[E + j] = dtWeight * (tNext - tNow);
+        point[j] = _x[laggedIndex];
+      }
+
+      // Put the lagged embedding of dt in the next columns
+      if (_dt) {
+        double tPred = (targetIndex >= 0) ? _t[targetIndex] : MISSING_D;
+
+        double tNow = _t[laggedIndex];
+        if (j == 0 || _reldt) {
+          if (tNow != MISSING_D && tPred != MISSING_D) {
+            point[E + j] = dtWeight * (tPred - tNow);
+          } else {
+            point[E + j] = MISSING_D;
+          }
         } else {
-          point[E + j] = MISSING_D;
+          double tNext = _t[prevLaggedIndex];
+          if (tNext != MISSING_D && tNow != MISSING_D) {
+            point[E + j] = dtWeight * (tNext - tNow);
+          } else {
+            point[E + j] = MISSING_D;
+          }
+        }
+      }
+
+      // Finally put the extras in the last columns
+      for (int k = 0; k < _num_extras; k++) {
+        if (k < _num_extras_lagged) {
+          // Adding the lagged extras
+          point[E + E_dt(E) + k * E + j] = _extras[k][laggedIndex];
+        } else if (j == 0) {
+          // Add in any unlagged extras as the end
+          point[E + E_dt(E) + _num_extras_lagged * E + (k - _num_extras_lagged)] = _extras[k][laggedIndex];
         }
       }
     }
-  }
 
-  // Finally put the extras in the last columns
-  int offset = 0;
-  for (int k = 0; k < _num_extras; k++) {
-    int numLags = (k < _num_extras_lagged) ? E : 1;
-    for (int j = 0; j < numLags; j++) {
-      point[E + E_dt(E) + offset + j] = lookup_vec(_extras[k], j);
-    }
-    offset += numLags;
+    prevLaggedIndex = laggedIndex;
   }
 }
 
