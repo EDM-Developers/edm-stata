@@ -306,10 +306,10 @@ void reset_global_state()
 
 ST_retcode launch_edm_tasks(int argc, char* argv[])
 {
-  if (argc < 28) {
+  if (argc < 29) {
     return TOO_FEW_VARIABLES;
   }
-  if (argc > 28) {
+  if (argc > 29) {
     return TOO_MANY_VARIABLES;
   }
 
@@ -357,6 +357,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   bool reldt = atoi(argv[25]);
   bool wassDT = atoi(argv[26]);
   int p = atoi(argv[27]);
+  opts.lowMemoryMode = atoi(argv[28]);
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 

@@ -237,8 +237,8 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
   }
 #endif
 
-  Manifold M(generator, E, libraryRows, false, opts.dtWeight, opts.copredict);
-  Manifold Mp(generator, E, predictionRows, true, opts.dtWeight, opts.copredict);
+  Manifold M(generator, E, libraryRows, false, opts.dtWeight, opts.copredict, opts.lowMemoryMode);
+  Manifold Mp(generator, E, predictionRows, true, opts.dtWeight, opts.copredict, opts.lowMemoryMode);
 
   bool multiThreaded = opts.nthreads > 1;
 

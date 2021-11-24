@@ -76,7 +76,7 @@ jobs:
       working-directory: ${{github.workspace}}/x64
       run: cmake --build build --config Release --target install
 
-  test-linux:
+  int-test-linux:
     runs-on: linux
     needs: build-linux
     steps:
@@ -90,9 +90,9 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log ci-test.log
 
-  test-cli-linux:
+  unit-test-asan-linux:
     runs-on: linux
-    needs: test-linux
+    needs: int-test-linux
     steps:
     - name: Wipe the previous build
       run: rm -rf ${{github.workspace}}/x64/build
@@ -118,7 +118,7 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: ./edm_cli ci-test.json
 
-  test-mac-arm:
+  int-test-mac-arm:
     runs-on: macos
     needs: build-mac-arm
     steps:
@@ -132,9 +132,9 @@ jobs:
       working-directory: ${{github.workspace}}/arm/test
       run: diff -B reference.log ci-test.log
 
-  test-cli-mac-arm:
+  unit-test-asan-mac-arm:
     runs-on: macos
-    needs: test-mac-arm
+    needs: int-test-mac-arm
     steps:
     - name: Wipe the previous build
       working-directory: ${{github.workspace}}/arm
@@ -161,7 +161,7 @@ jobs:
       working-directory: ${{github.workspace}}/arm/test
       run: ./edm_cli ci-test.json
 
-  test-mac-x64:
+  int-test-mac-x64:
     runs-on: macos
     needs: build-mac-x64
     steps:
@@ -175,9 +175,9 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: diff -B reference.log ci-test.log
 
-  test-cli-mac-x64:
+  unit-test-asan-mac-x64:
     runs-on: macos
-    needs: test-mac-x64
+    needs: int-test-mac-x64
     steps:
     - name: Wipe the previous build
       working-directory: ${{github.workspace}}/x64
@@ -204,7 +204,7 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: env /usr/bin/arch -x86_64 ./edm_cli ci-test.json
 
-  test-windows:
+  int-test-windows:
     runs-on: windows
     needs: build-windows
     steps:
@@ -218,9 +218,9 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "fc /W reference.log ci-test.log"
 
-  test-cli-windows:
+  unit-test-asan-windows:
     runs-on: windows
-    needs: test-windows
+    needs: int-test-windows
     steps:
     - name: Build unit tests (todo -- need to get Debug version working here)
       working-directory: ${{github.workspace}}/x64
@@ -243,7 +243,7 @@ jobs:
 
   speed-test-linux:
     runs-on: linux
-    needs: test-cli-linux
+    needs: build-linux
     steps:
     - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test
@@ -251,7 +251,7 @@ jobs:
 
   speed-test-mac-arm:
     runs-on: macos
-    needs: test-cli-mac-arm
+    needs: build-mac-arm
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
@@ -262,7 +262,7 @@ jobs:
 
   speed-test-mac-x64:
     runs-on: macos
-    needs: test-cli-mac-x64
+    needs: build-mac-x64
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
@@ -273,15 +273,53 @@ jobs:
 
   speed-test-windows:
     runs-on: windows
-    needs: test-cli-windows
+    needs: build-windows
     steps:
     - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q speed-test.do
 
+  lazy-speed-test-linux:
+    runs-on: linux
+    needs: build-linux
+    steps:
+    - name: Run integration benchmark
+      working-directory: ${{github.workspace}}/x64/test
+      run: stata -e -q lazy-speed-test.do
+
+  lazy-speed-test-mac-arm:
+    runs-on: macos
+    needs: build-mac-arm
+    steps:
+    - name: Get the correct plugin
+      working-directory: ${{github.workspace}}/arm
+      run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
+    - name: Run integration benchmark
+      working-directory: ${{github.workspace}}/arm/test
+      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q lazy-speed-test.do
+
+  lazy-speed-test-mac-x64:
+    runs-on: macos
+    needs: build-mac-x64
+    steps:
+    - name: Get the correct plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
+    - name: Run integration benchmark
+      working-directory: ${{github.workspace}}/x64/test
+      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q lazy-speed-test.do
+
+  lazy-speed-test-windows:
+    runs-on: windows
+    needs: build-windows
+    steps:
+    - name: Run integration benchmark
+      working-directory: ${{github.workspace}}/x64/test
+      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q lazy-speed-test.do
+
   single-thread-speed-test-linux:
     runs-on: linux
-    needs: speed-test-linux
+    needs: build-linux
     steps:
     - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test
@@ -289,7 +327,7 @@ jobs:
 
   single-thread-speed-test-mac-arm:
     runs-on: macos
-    needs: speed-test-mac-arm
+    needs: build-mac-arm
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/arm
@@ -300,7 +338,7 @@ jobs:
 
   single-thread-speed-test-mac-x64:
     runs-on: macos
-    needs: speed-test-mac-x64
+    needs: build-mac-x64
     steps:
     - name: Get the correct plugin
       working-directory: ${{github.workspace}}/x64
@@ -311,7 +349,7 @@ jobs:
 
   single-thread-speed-test-windows:
     runs-on: windows
-    needs: speed-test-windows
+    needs: build-windows
     steps:
     - name: Run integration benchmark
       working-directory: ${{github.workspace}}/x64/test

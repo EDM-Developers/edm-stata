@@ -112,31 +112,6 @@ bool ManifoldGenerator::find_observation_num(int target, int& k, int direction, 
   return false;
 }
 
-std::vector<int> ManifoldGenerator::get_lagged_indices(int startIndex, int E, int panel) const
-{
-
-  std::vector<int> laggedIndices(E);
-  std::fill_n(laggedIndices.begin(), E, -1);
-
-  // For obs i, which indices correspond to looking back 0, tau, ..., (E-1)*tau observations.
-  laggedIndices[0] = startIndex;
-  int pointStartObsNum = _observation_number[startIndex];
-
-  // Start by going back one index
-  int k = startIndex - 1;
-
-  for (int j = 1; j < E; j++) {
-    // Find the discrete time we're searching for.
-    int targetObsNum = pointStartObsNum - j * _tau;
-
-    if (find_observation_num(targetObsNum, k, -1, panel)) {
-      laggedIndices[j] = k;
-    }
-  }
-
-  return laggedIndices;
-}
-
 #if defined(WITH_ARRAYFIRE)
 ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 {
@@ -205,7 +180,6 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
     }
 
     if (foundLaggedObs) {
-
       // Fill in the lagged embedding of x (or co_x) in the first columns
       if (use_co_x) {
         point[j] = _co_x[laggedIndex];
