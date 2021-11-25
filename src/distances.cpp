@@ -64,7 +64,6 @@ std::vector<Metric> expand_metrics(const ManifoldGenerator& generator, int E, Di
   return expandedMetrics;
 }
 
-
 DistanceIndexPairs lp_distances(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp)
 {
   std::vector<int> inds;
