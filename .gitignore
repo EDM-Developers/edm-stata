@@ -4,6 +4,8 @@ test/edm.ado
 test/*.plugin
 test/edm_cli*
 test/gbench*
+test/edm_test*
+test/ci-test.json
 build
 bin
 .clangd
@@ -13,6 +15,8 @@ vcpkg_installed
 *.DS_Store
 *Icon*
 .vscode*
+.idea*
+junk*
 
 # Prerequisites
 *.d
