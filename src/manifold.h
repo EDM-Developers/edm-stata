@@ -113,7 +113,7 @@ public:
 class Manifold
 {
   std::shared_ptr<const ManifoldGenerator> _gen;
-  std::shared_ptr<double[]> _flat = nullptr;
+  std::unique_ptr<double[]> _flat = nullptr;
   std::vector<double> _targets;
   std::vector<int> _panelIDs;
   std::vector<int> _pointNumToStartIndex;
@@ -162,7 +162,7 @@ class Manifold
   void keenly_generate_manifold()
   {
     // Fill in the manifold row-by-row (point-by-point)
-    _flat = std::shared_ptr<double[]>(new double[_numPoints * _E_actual], std::default_delete<double[]>());
+    _flat = std::unique_ptr<double[]>(new double[_numPoints * _E_actual], std::default_delete<double[]>());
 
     for (int i = 0; i < _numPoints; i++) {
       double* point = &(_flat[i * _E_actual]);
