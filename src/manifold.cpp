@@ -168,51 +168,6 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 }
 #endif
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
-                                            bool copredictMode) const
-{
-  bool takeEveryPoint = filter.size() == 0;
-
-  int numPoints = 0;
-  std::vector<int> pointNumToStartIndex;
-  for (int i = 0; i < _t.size(); i++) {
-    if (takeEveryPoint || filter[i]) {
-      pointNumToStartIndex.push_back(i);
-      numPoints += 1;
-    }
-  }
-
-  std::shared_ptr<double[]> flat(new double[numPoints * E_actual(E)], std::default_delete<double[]>());
-
-  std::vector<double> y;
-  std::vector<int> panelIDs;
-
-  // Fill in the manifold row-by-row (point-by-point)
-  int M_i = 0;
-  double target;
-
-  for (int i = 0; i < numPoints; i++) {
-    double* point = &(flat[M_i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredictMode, predictionSet, dtWeight, point, target);
-
-    // Skip this point if we need the targets values to be observed (e.g. in the library set).
-    if (!predictionSet && target == MISSING_D) {
-      continue;
-    }
-
-    y.push_back(target);
-    if (_panel_mode) {
-      panelIDs.push_back(_panelIDs[pointNumToStartIndex[i]]);
-    }
-
-    M_i += 1;
-  }
-
-  numPoints = M_i;
-
-  return { flat, y, panelIDs, numPoints, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
-}
-
 void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight,
                                       double* point, double& target) const
 {
@@ -294,6 +249,39 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool 
     }
     offset += numLags;
   }
+}
+
+double ManifoldGenerator::get_target(int i, bool copredictionMode, bool predictionSet, int& targetIndex) const
+{
+  int panel = _panel_mode ? _panelIDs[i] : -1;
+  bool use_co_x = copredictionMode && predictionSet;
+
+  // What is the target of this point in the manifold?
+
+  if (_p != 0) {
+    // At what time does the prediction occur?
+    int targetObsNum = _observation_number[targetIndex] + _p;
+    int direction = _p > 0 ? 1 : -1;
+    if (!find_observation_num(targetObsNum, targetIndex, direction, panel)) {
+      targetIndex = -1;
+    }
+  }
+
+  double target;
+
+  if (targetIndex >= 0) {
+    if (use_co_x) {
+      target = _co_x[targetIndex];
+    } else if (_xmap_mode) {
+      target = _xmap[targetIndex];
+    } else {
+      target = _x[targetIndex];
+    }
+  } else {
+    target = MISSING_D;
+  }
+
+  return target;
 }
 
 bool is_usable(double* point, double target, int E_actual, bool allowMissing, bool targetRequired)
