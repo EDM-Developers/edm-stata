@@ -37,6 +37,40 @@ std::vector<std::string> lowLevelInputDumps = { "logmapsmall.json", "logmaplarge
 
 ConsoleIO io(0);
 
+static void bm_eager_manifold_creation(benchmark::State& state)
+{
+  std::string filename = lowLevelInputDumps[state.range(0)];
+  state.SetLabel(filename);
+
+  Inputs vars = read_lowlevel_inputs_file(filename);
+
+  int Mp_i = 0;
+
+  for (auto _ : state) {
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, false);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, false);
+  }
+}
+
+BENCHMARK(bm_eager_manifold_creation)->DenseRange(0, lowLevelInputDumps.size() - 1)->Unit(benchmark::kMicrosecond);
+
+static void bm_lazy_manifold_creation(benchmark::State& state)
+{
+  std::string filename = lowLevelInputDumps[state.range(0)];
+  state.SetLabel(filename);
+
+  Inputs vars = read_lowlevel_inputs_file(filename);
+
+  int Mp_i = 0;
+
+  for (auto _ : state) {
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, true);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, true);
+  }
+}
+
+BENCHMARK(bm_lazy_manifold_creation)->DenseRange(0, lowLevelInputDumps.size() - 1)->Unit(benchmark::kMicrosecond);
+
 static void bm_basic_distances(benchmark::State& state)
 {
   std::string filename = lowLevelInputDumps[state.range(0)];
