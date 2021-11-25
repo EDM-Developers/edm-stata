@@ -43,14 +43,13 @@ static void bm_basic_distances(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  Manifold M(vars.generator, vars.E, vars.libraryRows, false);
+  Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
 
   for (auto _ : state) {
-    std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
-    DistanceIndexPairs potentialNN = lp_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    DistanceIndexPairs potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
     Mp_i = (Mp_i + 1) % Mp.numPoints();
   }
 }
@@ -63,14 +62,13 @@ static void bm_wasserstein_distances(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  Manifold M(vars.generator, vars.E, vars.libraryRows, false);
+  Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
 
   for (auto _ : state) {
-    std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
-    DistanceIndexPairs potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    DistanceIndexPairs potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
     Mp_i = (Mp_i + 1) % Mp.numPoints();
   }
 }
@@ -83,19 +81,18 @@ static void bm_nearest_neighbours(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  Manifold M(vars.generator, vars.E, vars.libraryRows, false);
+  Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
 
-  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
   DistanceIndexPairs potentialNN;
 
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -122,19 +119,18 @@ static void bm_simplex(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  Manifold M(vars.generator, vars.E, vars.libraryRows, false);
+  Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
 
-  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
   DistanceIndexPairs potentialNN;
 
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -188,19 +184,18 @@ static void bm_smap(benchmark::State& state)
   state.SetLabel(filename);
 
   Inputs vars = read_lowlevel_inputs_file(filename);
-  Manifold M = vars.generator.create_manifold(vars.E, vars.libraryRows, false, false);
-  Manifold Mp = vars.generator.create_manifold(vars.E, vars.predictionRows, false, true);
+  Manifold M(vars.generator, vars.E, vars.libraryRows, false);
+  Manifold Mp(vars.generator, vars.E, vars.predictionRows, true);
 
   int Mp_i = 0;
   Options opts = vars.opts;
 
-  std::vector<int> tryInds = potential_neighbour_indices(Mp_i, vars.opts, M, Mp);
   DistanceIndexPairs potentialNN;
 
   if (opts.distance == Distance::Wasserstein) {
-    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = wasserstein_distances(Mp_i, vars.opts, M, Mp);
   } else {
-    potentialNN = lp_distances(Mp_i, vars.opts, M, Mp, tryInds);
+    potentialNN = eager_lp_distances(Mp_i, vars.opts, M, Mp);
   }
 
   int numValidDistances = potentialNN.inds.size();
@@ -228,7 +223,7 @@ static void bm_smap(benchmark::State& state)
       // simultaneously prepend a column of ones in front of the manifold data.
       MatrixXd X_ls(k, M.E_actual());
       for (int i = 0; i < k; i++) {
-        M.fill_in_point(kNNInds[i], &(X_ls(i, 0)));
+        M.eager_fill_in_point(kNNInds[i], &(X_ls(i, 0)));
       }
       MatrixXd X_ls_cj(k, M.E_actual() + 1);
       X_ls_cj << Eigen::VectorXd::Ones(k), X_ls;

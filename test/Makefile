@@ -16,5 +16,8 @@ format:
 test:
 	cd .. && make test && make install
 
+gbench:
+	cd .. && make gbench && make install
+
 install:
 	cd .. && make install
