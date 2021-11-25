@@ -317,44 +317,6 @@ jobs:
       working-directory: ${{github.workspace}}/x64/test
       run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q big-data-speed-test.do
 
-  single-thread-speed-test-linux:
-    runs-on: linux
-    needs: build-linux
-    steps:
-    - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/x64/test
-      run: stata -e -q single-thread-speed-test.do
-
-  single-thread-speed-test-mac-arm:
-    runs-on: macos
-    needs: build-mac-arm
-    steps:
-    - name: Get the correct plugin
-      working-directory: ${{github.workspace}}/arm
-      run: cp bin/edm_MacOSX_arm.plugin test/edm.plugin
-    - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/arm/test
-      run: env /usr/bin/arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do
-
-  single-thread-speed-test-mac-x64:
-    runs-on: macos
-    needs: build-mac-x64
-    steps:
-    - name: Get the correct plugin
-      working-directory: ${{github.workspace}}/x64
-      run: cp bin/edm_MacOSX_x64.plugin test/edm.plugin
-    - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/x64/test
-      run: env /usr/bin/arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/StataMP -e -q single-thread-speed-test.do
-
-  single-thread-speed-test-windows:
-    runs-on: windows
-    needs: build-windows
-    steps:
-    - name: Run integration benchmark
-      working-directory: ${{github.workspace}}/x64/test
-      run: cmd.exe /c "C:\Program Files\Stata17\StataMP-64.exe" -e -q single-thread-speed-test.do
-
   build-gpu-linux:
     runs-on: linux
     steps:
