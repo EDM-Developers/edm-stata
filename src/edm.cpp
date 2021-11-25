@@ -131,6 +131,10 @@ std::vector<std::future<PredictionResult>> launch_task_group(
       librarySize = splitter.next_library_size(iter);
     }
 
+    if (keep_going != nullptr && !keep_going()) {
+      break;
+    }
+
     for (int i = 0; i < Es.size(); i++) {
       E = Es[i];
 
@@ -282,7 +286,7 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
     kUsed.push_back(-1);
   }
 
-  if (opts.numTasks > 1 && opts.taskNum == 0) {
+  if (opts.taskNum == 0) {
     io->progress_bar(0.0);
   }
 
@@ -296,13 +300,15 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
       std::unique_lock<std::mutex> lock(workerPool.queue_mutex);
 
       for (int i = 0; i < numPredictions; i++) {
+        if (keep_going != nullptr && !keep_going()) {
+          break;
+        }
+
         results[i] = workerPool.unsafe_enqueue(
           [&, i] { make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
       }
     }
-    if (opts.numTasks == 1) {
-      io->progress_bar(0.0);
-    }
+
     for (int i = 0; i < numPredictions; i++) {
       results[i].get();
       if (opts.numTasks == 1) {
@@ -333,9 +339,7 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
 #endif
     } else {
 #endif
-      if (opts.numTasks == 1) {
-        io->progress_bar(0.0);
-      }
+
       for (int i = 0; i < numPredictions; i++) {
         if (keep_going != nullptr && !keep_going()) {
           break;
