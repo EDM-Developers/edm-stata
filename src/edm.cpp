@@ -292,9 +292,13 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
     workerPool.sync();
     auto start = std::chrono::high_resolution_clock::now();
 #endif
-    for (int i = 0; i < numPredictions; i++) {
-      results[i] = workerPool.enqueue(
-        [&, i] { make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
+    {
+      std::unique_lock<std::mutex> lock(workerPool.queue_mutex);
+
+      for (int i = 0; i < numPredictions; i++) {
+        results[i] = workerPool.unsafe_enqueue(
+          [&, i] { make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going); });
+      }
     }
     if (opts.numTasks == 1) {
       io->progress_bar(0.0);
