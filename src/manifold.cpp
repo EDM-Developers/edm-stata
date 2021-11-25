@@ -169,7 +169,7 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 #endif
 
 Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool predictionSet, double dtWeight,
-                                            bool copredictMode, bool skipMissing) const
+                                            bool copredictMode) const
 {
   bool takeEveryPoint = filter.size() == 0;
 
@@ -194,21 +194,6 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   for (int i = 0; i < numPoints; i++) {
     double* point = &(flat[M_i * E_actual(E)]);
     fill_in_point(pointNumToStartIndex[i], E, copredictMode, predictionSet, dtWeight, point, target);
-
-    // Skip this point if we don't want missing values in the resulting manifold
-    if (skipMissing) {
-      bool foundMissing = false;
-      for (int j = 0; j < E_actual(E); j++) {
-        if (point[j] == MISSING_D) {
-          foundMissing = true;
-          break;
-        }
-      }
-
-      if (foundMissing) {
-        continue;
-      }
-    }
 
     // Skip this point if we need the targets values to be observed (e.g. in the library set).
     if (!predictionSet && target == MISSING_D) {

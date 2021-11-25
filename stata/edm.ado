@@ -442,6 +442,12 @@ program define edmExplore, eclass
 		local algorithm "simplex"
 	}
 
+	local allow_missing_mode = `missingdistance' != 0 | "`allowmissing'" == "allowmissing"
+	if `allow_missing_mode' & "`algorithm'" == "smap" {
+		dis as error "Can't use 'allowmissing' with S-map algorithm"
+		error 121
+	}
+
 	edmPluginCheck, `mata' `gpu'
 	local mata_mode = r(mata_mode)
 
@@ -484,7 +490,6 @@ program define edmExplore, eclass
 		local saveinputs = "${EDM_SAVE_INPUTS}"
 	}
 
-	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 	local wasserstein_mode = ("`=strlower("`distance'")'" == "wasserstein")
 	local parsed_dt = ("`dt'" == "dt") | ("`reldt'" == "reldt")
 	local parsed_reldt = ("`reldt'" == "reldt")
@@ -1209,6 +1214,13 @@ program define edmXmap, eclass
 		dis as error "savesmap() option should only be specified with S-map"
 		error 119
 	}
+
+	local allow_missing_mode = `missingdistance' != 0 | "`allowmissing'" == "allowmissing"
+	if `allow_missing_mode' & "`algorithm'" == "smap" {
+		dis as error "Can't use 'allowmissing' with S-map algorithm"
+		error 121
+	}
+
 	if "`direction'" == ""  {
 		local direction "both"
 	}
@@ -1277,8 +1289,6 @@ program define edmXmap, eclass
 	if "${EDM_SAVE_INPUTS}" != "" {
 		local saveinputs = "${EDM_SAVE_INPUTS}"
 	}
-
-	local allow_missing_mode = `missingdistance' !=0 | "`allowmissing'"=="allowmissing"
 
 	local wasserstein_mode = ("`=strlower("`distance'")'" == "wasserstein")
 	local parsed_dt = ("`dt'" == "dt") | ("`reldt'" == "reldt")
@@ -2813,44 +2823,39 @@ real scalar mf_smap_single(
 	d = J(1, n, .)
 
 	for(i = 1; i <= n; i++) {
-		if (algorithm =="smap" && (hasmissing(y[i]) | hasmissing(M[i,.]))) {
+		a = M[i,.] - b
+
+		for (j = 1; j <= cols(a); j++) {
+			if (factorVars[j]) {
+				a[j] = M[i,j] != b[j]
+			}
+		}
+
+		if (missingdistance != 0) {
+			a = editvalue(a,. , missingdistance)
+		}
+
+		/* d is (temporarily) the squared Euclidean distance */
+		d[i] = (a*a')
+
+		/* If we have panel data, penalise the points if they
+		 * come from different panels */
+		if (idw != 0) {
+			if (panel_ids[i] != targetPanel) {
+				if (idw < 0) {
+					d[i] = .
+				}
+				else {
+					d[i] = d[i] + idw
+				}
+			}
+		}
+
+		/* Now d is the Euclidean distance */
+		d[i] = d[i]^(1/2)
+
+		if (d[i] == 0) {
 			d[i] = .
-		} else {
-
-			a = M[i,.] - b
-
-			for (j = 1; j <= cols(a); j++) {
-				if (factorVars[j]) {
-					a[j] = M[i,j] != b[j]
-				}
-			}
-			
-			if (missingdistance != 0) {
-				a = editvalue(a,. , missingdistance)
-			}
-
-			/* d is (temporarily) the squared Euclidean distance */
-			d[i] = (a*a')
-
-			/* If we have panel data, penalise the points if they
-			 * come from different panels */
-			if (idw != 0) {
-				if (panel_ids[i] != targetPanel) {
-					if (idw < 0) {
-						d[i] = .
-					}
-					else {
-						d[i] = d[i] + idw
-					}
-				}
-			}
-
-			/* Now d is the Euclidean distance */
-			d[i] = d[i]^(1/2)
-
-			if (d[i] == 0) {
-				d[i] = .
-			}
 		}
 	}
 
