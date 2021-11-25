@@ -13,6 +13,8 @@ vcpkg_installed
 *.DS_Store
 *Icon*
 .vscode*
+.idea*
+junk*
 
 # Prerequisites
 *.d
