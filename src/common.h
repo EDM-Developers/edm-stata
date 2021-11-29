@@ -159,6 +159,7 @@ public:
     std::lock_guard<std::mutex> guard(bufferMutex);
 
     if (progress == 0.0) {
+      finished = false;
       buffer += "Percent complete: 0";
       nextMessage = 1.0 / 40;
       dots = 0;
@@ -178,8 +179,9 @@ public:
       nextMessage += 1.0 / 40;
     }
 
-    if (progress >= 1.0) {
+    if (progress >= 1.0 && !finished) {
       buffer += "\n";
+      finished = true;
     }
   }
 
@@ -192,6 +194,7 @@ private:
   std::string buffer = "";
   std::mutex bufferMutex;
 
+  bool finished;
   int dots, tens;
   double nextMessage;
 };

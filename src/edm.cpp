@@ -72,7 +72,10 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
                         std::vector<int>& kUseds, bool keep_going());
 #endif
 
-std::atomic<int> numTasksStarted = 0;
+std::atomic<int> totalNumPredictions = 0;
+std::atomic<int> estimatedTotalNumPredictions = 0;
+
+std::atomic<int> numPredictionsFinished = 0;
 std::atomic<int> numTasksFinished = 0;
 ThreadPool workerPool(0), taskRunnerPool(0);
 
@@ -219,11 +222,12 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
   opts.metrics = expand_metrics(*generator, E, opts.distance, opts.metrics);
 
   if (opts.taskNum == 0) {
-    numTasksStarted = 0;
+    numPredictionsFinished = 0;
     numTasksFinished = 0;
-  }
 
-  numTasksStarted += 1;
+    totalNumPredictions = 0;
+    estimatedTotalNumPredictions = 0;
+  }
 
 #ifdef DUMP_LOW_LEVEL_INPUTS
   // This hack is simply to dump some really low level data structures
@@ -268,6 +272,9 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
   int numPredictions = Mp.numPoints();
   int numCoeffCols = M.E_actual() + 1;
 
+  totalNumPredictions += numPredictions;
+  estimatedTotalNumPredictions = (opts.numTasks / (1.0 + opts.taskNum)) * totalNumPredictions;
+
   auto predictions = std::make_unique<double[]>(numThetas * numPredictions);
   std::fill_n(predictions.get(), numThetas * numPredictions, MISSING_D);
   Eigen::Map<MatrixXd> predictionsView(predictions.get(), numThetas, numPredictions);
@@ -311,9 +318,8 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
 
     for (int i = 0; i < numPredictions; i++) {
       results[i].get();
-      if (opts.numTasks == 1) {
-        io->progress_bar((i + 1) / ((double)numPredictions));
-      }
+      numPredictionsFinished += 1;
+      io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
     }
 #if WITH_GPU_PROFILING
     workerPool.sync();
@@ -345,9 +351,9 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
           break;
         }
         make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going);
-        if (opts.numTasks == 1) {
-          io->progress_bar((i + 1) / ((double)numPredictions));
-        }
+
+        numPredictionsFinished += 1;
+        io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
       }
 #if defined(WITH_ARRAYFIRE)
     }
@@ -431,15 +437,14 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
     pred.numThetas = numThetas;
     pred.numPredictions = numPredictions;
     pred.numCoeffCols = numCoeffCols;
-
-    if (opts.numTasks > 1) {
-      io->progress_bar((numTasksFinished + 1) / ((double)opts.numTasks));
-    }
   }
 
   numTasksFinished += 1;
 
   if (numTasksFinished == opts.numTasks) {
+
+    io->progress_bar(1.0);
+
     if (all_tasks_finished != nullptr) {
       all_tasks_finished();
     }
