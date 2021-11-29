@@ -6,6 +6,7 @@
 #endif
 #include <fmt/format.h>
 
+#include "cli.h"
 #include "edm.h"
 #include "library_prediction_split.h"
 #include "manifold.h"
@@ -729,5 +730,120 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
     std::vector<std::vector<double>> Mp_co_true = { { 12, 11 }, { 13, 12 }, { 16, 15 } };
     std::vector<double> yp_co_true = { 13, NA, NA };
     require_manifolds_match(Mp_co, Mp_co_true, yp_co_true);
+  }
+}
+
+int basic_edm_explore(int numThreads)
+{
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  ConsoleIO io(1);
+
+  int p = 1;
+  bool shuffle = false;
+  bool saveFinalPredictions = true;
+  bool saveFinalCoPredictions = false;
+  bool saveSMAPCoeffs = true;
+  bool full = true;
+  int numReps = 1;
+  int crossfold = 0;
+  int k = -1;
+  int tau = 1;
+  bool dt = false;
+  bool allowMissing = false;
+
+  Options opts;
+
+  opts.nthreads = numThreads;
+  opts.copredict = false;
+  opts.forceCompute = true;
+  opts.saveSMAPCoeffs = true;
+
+  opts.k = k;
+  opts.missingdistance = 0.0;
+  opts.dtWeight = 0.0;
+  opts.panelMode = false;
+  opts.idw = 0;
+
+  opts.thetas = { 1.0 };
+
+  std::vector<int> Es = { 2 };
+
+  std::vector<int> libraries;
+
+  opts.algorithm = Algorithm::SMap;
+
+  opts.calcRhoMAE = true; // TODO: When is this off?
+
+  opts.aspectRatio = 0;
+  opts.distance = Distance::Euclidean;
+  opts.metrics = {};
+  opts.cmdLine = "";
+  opts.saveKUsed = true; // TODO: Check again
+
+  bool explore = true;
+  std::vector<double> xmap = x;
+
+  std::vector<int> panelIDs = {};
+  opts.panelMode = false;
+
+  std::vector<double> co_x = {};
+  std::vector<std::vector<double>> extrasVecs = {};
+
+  int numExtrasLagged = 0;
+  bool reldt = false;
+
+  ManifoldGenerator generator(t, x, tau, p, xmap, co_x, panelIDs, extrasVecs, numExtrasLagged, dt, reldt, allowMissing);
+
+  int maxE = Es[Es.size() - 1];
+
+  //  if (allowMissing && opts.missingdistance == 0) {
+  //    opts.missingdistance = default_missing_distance(x);
+  //  }
+
+  std::vector<bool> usable = generator.generate_usable(maxE);
+
+  int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
+
+  if (numUsable == 0) {
+    return -1;
+  }
+
+  if (libraries.size() == 0) {
+    libraries = { numUsable };
+  }
+
+  bool copredictMode = co_x.size() > 0;
+  std::string rngState = "";
+
+  const std::shared_ptr<ManifoldGenerator> genPtr =
+    std::shared_ptr<ManifoldGenerator>(&generator, [](ManifoldGenerator*) {});
+
+  opts.lowMemoryMode = false;
+
+  std::vector<std::future<PredictionResult>> futures =
+    launch_task_group(genPtr, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
+                      saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, &io, nullptr, nullptr);
+
+  int rc = 0;
+
+  for (int f = 0; f < futures.size(); f++) {
+    const PredictionResult pred = futures[f].get();
+    if (pred.rc > rc) {
+      rc = pred.rc;
+    }
+  }
+
+  return rc;
+}
+
+TEST_CASE("Calling top-level edm.h functions")
+{
+  SECTION("Make sure decreasing the number of threads doesn't crash everything")
+  {
+    basic_edm_explore(2);
+    basic_edm_explore(1);
   }
 }
