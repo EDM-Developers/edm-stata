@@ -843,7 +843,7 @@ TEST_CASE("Calling top-level edm.h functions")
 {
   SECTION("Make sure decreasing the number of threads doesn't crash everything")
   {
-    basic_edm_explore(2);
-    basic_edm_explore(1);
+    REQUIRE(basic_edm_explore(2) == 0);
+    REQUIRE(basic_edm_explore(1) == 0);
   }
 }
