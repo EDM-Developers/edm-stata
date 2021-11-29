@@ -32,7 +32,10 @@ public:
   auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
   template<class F, class... Args>
   auto unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
-  ~ThreadPool();
+
+  // the destructor joins all threads
+  ~ThreadPool() { kill_all_workers(); }
+
   void set_num_workers(int threads);
   void sync()
   {
@@ -40,6 +43,8 @@ public:
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
   }
+
+  int num_workers() { return (int)workers.size(); }
 
   std::mutex queue_mutex;
 
@@ -52,18 +57,34 @@ private:
   // synchronization
   std::condition_variable condition;
   bool stop;
+
+  void kill_all_workers()
+  {
+    {
+      std::unique_lock<std::mutex> lock(queue_mutex);
+      stop = true;
+    }
+    condition.notify_all();
+    for (std::thread& worker : workers) {
+      worker.join();
+    }
+    workers.clear();
+  }
 };
 
 // the constructor just launches some amount of workers
 inline ThreadPool::ThreadPool(int threads)
   : stop(false)
 {
-
   set_num_workers(threads);
 }
 
 inline void ThreadPool::set_num_workers(int threads)
 {
+  if (threads < workers.size()) {
+    kill_all_workers();
+  }
+
   int numNewThreads = threads - workers.size();
 
   for (int i = 0; i < numNewThreads; ++i)
@@ -126,19 +147,6 @@ auto ThreadPool::unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename s
 
   condition.notify_one();
   return res;
-}
-
-// the destructor joins all threads
-ThreadPool::~ThreadPool()
-{
-  {
-    std::unique_lock<std::mutex> lock(queue_mutex);
-    stop = true;
-  }
-  condition.notify_all();
-  for (std::thread& worker : workers) {
-    worker.join();
-  }
 }
 
 #endif

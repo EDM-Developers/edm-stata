@@ -9,6 +9,7 @@
 #include "edm.h"
 #include "library_prediction_split.h"
 #include "manifold.h"
+#include "thread_pool.h"
 
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
@@ -831,11 +832,15 @@ int basic_edm_explore(int numThreads)
   return rc;
 }
 
+extern ThreadPool workerPool;
+
 TEST_CASE("Calling top-level edm.h functions")
 {
   SECTION("Make sure decreasing the number of threads doesn't crash everything")
   {
     REQUIRE(basic_edm_explore(2) == 0);
+    REQUIRE(workerPool.num_workers() == 2);
     REQUIRE(basic_edm_explore(1) == 0);
+    REQUIRE(workerPool.num_workers() == 1);
   }
 }
