@@ -112,12 +112,12 @@ void check_lazy_manifold(const ManifoldGenerator& generator, int E, const std::v
   REQUIRE(keenM.numTargets() == lazyM.numTargets());
   REQUIRE(keenM.E_actual() == lazyM.E_actual());
 
-  double* x = new double[lazyM.E_actual()];
+  auto x = std::unique_ptr<double[]>(new double[lazyM.E_actual()], std::default_delete<double[]>());
 
   for (int i = 0; i < keenM.numPoints(); i++) {
     CAPTURE(i);
 
-    lazyM.lazy_fill_in_point(i, x);
+    lazyM.lazy_fill_in_point(i, x.get());
 
     for (int j = 0; j < keenM.E_actual(); j++) {
       CAPTURE(j);
@@ -125,8 +125,6 @@ void check_lazy_manifold(const ManifoldGenerator& generator, int E, const std::v
     }
     REQUIRE(keenM.target(i) == lazyM.target(i));
   }
-
-  delete[] x;
 }
 
 void check_lazy_manifolds(const ManifoldGenerator& generator, int E, const std::vector<bool>& filter,
@@ -603,16 +601,16 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   {
     int i = 2, j = 4;
 
-    double* x = new double[M.E_actual()];
-    double* y = new double[M.E_actual()];
+    auto x = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
+    auto y = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
 
-    M.eager_fill_in_point(i, x);
-    Mp.eager_fill_in_point(j, y);
+    M.eager_fill_in_point(i, x.get());
+    Mp.eager_fill_in_point(j, y.get());
 
     int numLaggedExtras = M.E_lagged_extras() / M.E();
 
-    auto M_i = Eigen::Map<MatrixXd>(x, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
-    auto Mp_j = Eigen::Map<MatrixXd>(y, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+    auto M_i = Eigen::Map<MatrixXd>(x.get(), 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+    auto Mp_j = Eigen::Map<MatrixXd>(y.get(), 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
 
     REQUIRE(M_i.rows() == 2);
     REQUIRE(Mp_j.rows() == 2);
@@ -631,9 +629,6 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     for (int ind = 0; ind < C_true.size(); ind++) {
       REQUIRE(C[ind] == C_true[ind]);
     }
-
-    delete[] x;
-    delete[] y;
   }
 
   SECTION("Multiple Wasserstein distances")

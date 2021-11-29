@@ -75,10 +75,10 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
   dists.reserve(M.numPoints());
 
   // We'll store the points we are comparing in the following two arrays.
-  double* x = new double[M.E_actual()];
-  double* y = new double[M.E_actual()];
+  auto x = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
+  auto y = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
 
-  Mp.lazy_fill_in_point(Mp_i, y);
+  Mp.lazy_fill_in_point(Mp_i, y.get());
 
   const bool skipOtherPanels = opts.panelMode && (opts.idw < 0);
 
@@ -93,7 +93,7 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
     // Calculate the distance between M[i] and Mp[Mp_i]
     double dist_i = 0.0;
 
-    M.lazy_fill_in_point(i, x);
+    M.lazy_fill_in_point(i, x.get());
 
     // If we have panel data and the M[i] / Mp[Mp_j] observations come from different panels
     // then add the user-supplied penalty/distance for the mismatch.
@@ -142,9 +142,6 @@ DistanceIndexPairs lazy_lp_distances(int Mp_i, const Options& opts, const Manifo
       inds.push_back(i);
     }
   }
-
-  delete[] x;
-  delete[] y;
 
   return { inds, dists };
 }
@@ -262,21 +259,21 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
   bool skipMissing = (opts.missingdistance == 0);
 
   // We'll store the points we are comparing in the following two arrays.
-  double* x = new double[M.E_actual()];
-  double* y = new double[M.E_actual()];
+  auto x = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
+  auto y = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
 
   if (opts.lowMemoryMode) {
-    M.lazy_fill_in_point(i, x);
-    Mp.lazy_fill_in_point(j, y);
+    M.lazy_fill_in_point(i, x.get());
+    Mp.lazy_fill_in_point(j, y.get());
   } else {
-    M.eager_fill_in_point(i, x);
-    Mp.eager_fill_in_point(j, y);
+    M.eager_fill_in_point(i, x.get());
+    Mp.eager_fill_in_point(j, y.get());
   }
 
   int numLaggedExtras = M.E_lagged_extras() / M.E();
 
-  auto M_i = Eigen::Map<MatrixXd>(x, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
-  auto Mp_j = Eigen::Map<MatrixXd>(y, 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+  auto M_i = Eigen::Map<MatrixXd>(x.get(), 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
+  auto Mp_j = Eigen::Map<MatrixXd>(y.get(), 1 + (M.E_dt() > 0) + numLaggedExtras, M.E());
 
   auto M_i_missing = (M_i.array() == M.missing()).colwise().any();
   auto Mp_j_missing = (Mp_j.array() == Mp.missing()).colwise().any();
@@ -386,9 +383,6 @@ std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manif
       n += 1;
     }
   }
-
-  delete[] x;
-  delete[] y;
 
   return flatCostMatrix;
 }

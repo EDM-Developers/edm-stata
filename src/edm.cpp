@@ -684,12 +684,12 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
 
   double r = ics(0);
 
-  double* y = new double[M.E_actual()];
+  auto y = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
 
   if (opts.lowMemoryMode) {
-    Mp.lazy_fill_in_point(Mp_i, y);
+    Mp.lazy_fill_in_point(Mp_i, y.get());
   } else {
-    Mp.eager_fill_in_point(Mp_i, y);
+    Mp.eager_fill_in_point(Mp_i, y.get());
   }
 
   for (int j = 0; j < M.E_actual(); j++) {
@@ -697,8 +697,6 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
       r += y[j] * ics(j + 1);
     }
   }
-
-  delete[] y;
 
   // If the 'savesmap' option is given, save the 'ics' coefficients
   // for the largest value of theta.
