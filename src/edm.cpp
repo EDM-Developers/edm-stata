@@ -293,7 +293,7 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
     kUsed.push_back(-1);
   }
 
-  if (opts.taskNum == 0) {
+  if (io != nullptr && opts.taskNum == 0) {
     io->progress_bar(0.0);
   }
 
@@ -318,8 +318,10 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
 
     for (int i = 0; i < numPredictions; i++) {
       results[i].get();
-      numPredictionsFinished += 1;
-      io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
+      if (io != nullptr) {
+        numPredictionsFinished += 1;
+        io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
+      }
     }
 #if WITH_GPU_PROFILING
     workerPool.sync();
@@ -352,8 +354,10 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
         }
         make_prediction(i, opts, M, Mp, predictionsView, rcView, coeffsView, &(kUsed[i]), keep_going);
 
-        numPredictionsFinished += 1;
-        io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
+        if (io != nullptr) {
+          numPredictionsFinished += 1;
+          io->progress_bar(numPredictionsFinished / ((double)estimatedTotalNumPredictions));
+        }
       }
 #if defined(WITH_ARRAYFIRE)
     }
@@ -443,7 +447,9 @@ PredictionResult edm_task(const std::shared_ptr<ManifoldGenerator> generator, Op
 
   if (numTasksFinished == opts.numTasks) {
 
-    io->progress_bar(1.0);
+    if (io != nullptr) {
+      io->progress_bar(1.0);
+    }
 
     if (all_tasks_finished != nullptr) {
       all_tasks_finished();

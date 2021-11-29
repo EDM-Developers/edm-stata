@@ -6,7 +6,6 @@
 #endif
 #include <fmt/format.h>
 
-#include "cli.h"
 #include "edm.h"
 #include "library_prediction_split.h"
 #include "manifold.h"
@@ -734,8 +733,6 @@ int basic_edm_explore(int numThreads)
   std::vector<double> t = { 1, 2, 3, 4 };
   std::vector<double> x = { 11, 12, 13, 14 };
 
-  ConsoleIO io(1);
-
   int p = 1;
   bool shuffle = false;
   bool saveFinalPredictions = true;
@@ -818,9 +815,9 @@ int basic_edm_explore(int numThreads)
 
   opts.lowMemoryMode = false;
 
-  std::vector<std::future<PredictionResult>> futures =
-    launch_task_group(genPtr, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
-                      saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, &io, nullptr, nullptr);
+  std::vector<std::future<PredictionResult>> futures = launch_task_group(
+    genPtr, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
+    saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, nullptr, nullptr, nullptr);
 
   int rc = 0;
 
