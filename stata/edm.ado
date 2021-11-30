@@ -341,7 +341,7 @@ program define edmPrintPluginProgress
 end
 
 program define edmExplore, eclass
-	syntax anything [if], [e(numlist ascending >=2)] ///
+	syntax anything [if], [e(numlist ascending >=1)] ///
 		[tau(integer 1)] [theta(numlist ascending)] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 0)] ///
 		[seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
@@ -1179,6 +1179,16 @@ program define edmXmap, eclass
 		local e = "2"
 	}
 
+	if (`e' < 1) {
+		dis as error "The proposed embedding dimension E is too small."
+		error 121
+	}
+
+	if (`e' > 100000) {
+		dis as error "The proposed embedding dimension E is too big."
+		error 121
+	}
+
 	if "`theta'" == ""{
 		local theta = 1
 	}
@@ -1349,16 +1359,6 @@ program define edmXmap, eclass
 		local z_vars = "`z_vars' `z'"
 	}
 	edmPreprocessExtras `z_names' , touse(`touse') z_vars(`z_vars')
-
-	if (`e' < 2) {
-		dis as error "The proposed embedding dimension E is too small."
-		error 121
-	}
-
-	if (`e' > 100000) {
-		dis as error "The proposed embedding dimension E is too big."
-		error 121
-	}
 
 	mat r2 = J(1, 4, .)
 	if "`copredictvar'" != "" {

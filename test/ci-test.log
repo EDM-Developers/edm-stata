@@ -706,7 +706,7 @@ functions:
 . replace x = . if u<0.2
 (22 real changes made, 22 to missing)
 
-. replace t=. if mod(t,19) ==1
+. replace t=. if mod(t,19) == 1
 (11 real changes made, 11 to missing)
 
 . 
