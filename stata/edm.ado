@@ -346,7 +346,7 @@ program define edmExplore, eclass
 		[seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
 		[dt] [reldt] [DTWeight(real 0)] [DTSave(name)] [DETails] [reportrawe] [strict] [Predictionhorizon(string)] ///
-		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
 		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
@@ -1098,7 +1098,7 @@ program define edmXmap, eclass
 		[DIrection(string)] [seed(integer 0)] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
 		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
-		[CODTWeight(real 0)] [dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
 		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	if ("`strict'" != "strict") {
