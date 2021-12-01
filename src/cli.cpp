@@ -59,7 +59,9 @@ json run_tests(json testInputs, int nthreads, IO* io)
 
   int numTaskGroups = testInputs.size();
 
-  io->print(fmt::format("Number of tests in this JSON file is {}\n", numTaskGroups));
+  if (io != nullptr) {
+    io->print(fmt::format("Number of tests in this JSON file is {}\n", numTaskGroups));
+  }
 
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
     json taskGroup = testInputs[taskGroupNum];
@@ -67,7 +69,9 @@ json run_tests(json testInputs, int nthreads, IO* io)
     Options opts = taskGroup["opts"];
     opts.nthreads = nthreads;
 
-    io->print(fmt::format("[{}] Starting the Stata command: {}\n", taskGroupNum, opts.cmdLine));
+    if (io != nullptr) {
+      io->print(fmt::format("[{}] Starting the Stata command: {}\n", taskGroupNum, opts.cmdLine));
+    }
 
     ManifoldGenerator generator = taskGroup["generator"];
     std::vector<int> Es = taskGroup["Es"];
@@ -94,8 +98,10 @@ json run_tests(json testInputs, int nthreads, IO* io)
     // Collect the results of this task group before moving on to the next task group
     for (int f = 0; f < futures.size(); f++) {
       const PredictionResult pred = futures[f].get();
-      io->print(io->get_and_clear_async_buffer());
-      io->flush();
+      if (io != nullptr) {
+        io->print(io->get_and_clear_async_buffer());
+        io->flush();
+      }
 
       results.push_back(pred);
       if (pred.rc > rc) {
@@ -104,7 +110,9 @@ json run_tests(json testInputs, int nthreads, IO* io)
     }
   }
 
-  io->print(fmt::format("Return code is {}\n", rc));
+  if (io != nullptr) {
+    io->print(fmt::format("Return code is {}\n", rc));
+  }
 
   return results;
 }

@@ -23,6 +23,8 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
 
+#include <iostream>
+
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 // Function declarations for 'private' functions not listed in the relevant header files.
@@ -33,8 +35,6 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
 
 std::vector<std::string> lowLevelInputDumps = { "logmapsmall.json", "logmaplarge.json", "affectsmall.json",
                                                 "affectbige.json" };
-
-ConsoleIO io(0);
 
 static void bm_eager_manifold_creation(benchmark::State& state)
 {
@@ -311,10 +311,8 @@ static void bm_run_tests(benchmark::State& state)
   bool verbose = false;
   int nthreads = 80;
 
-  ConsoleIO io(verbose);
-
   for (auto _ : state) {
-    auto results = run_tests(testInputs, nthreads, &io);
+    auto results = run_tests(testInputs, nthreads);
   }
 }
 

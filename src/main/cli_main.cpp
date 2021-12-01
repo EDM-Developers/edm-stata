@@ -4,6 +4,18 @@
 #include <arrayfire.h>
 #endif
 
+#include <iostream>
+
+class ConsoleIO : public IO
+{
+public:
+  ConsoleIO() { this->verbosity = 1; }
+  ConsoleIO(int v) { this->verbosity = v; }
+  virtual void out(const char* s) const { std::cout << s; }
+  virtual void error(const char* s) const { std::cerr << s; }
+  virtual void flush() const { fflush(stdout); }
+};
+
 std::atomic<bool> going = true;
 
 bool keep_going()
