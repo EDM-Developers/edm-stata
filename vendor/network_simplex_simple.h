@@ -230,10 +230,10 @@ public:
     : _graph(graph)
     , //_arc_id(graph),
     _arc_mixing(arc_mixing)
-    , _init_nb_nodes(nbnodes)
-    , _init_nb_arcs(nb_arcs)
     , MAX(std::numeric_limits<Value>::max())
     , INF(std::numeric_limits<Value>::has_infinity ? std::numeric_limits<Value>::infinity() : MAX)
+    , _init_nb_nodes(nbnodes)
+    , _init_nb_arcs(nb_arcs)
   {
     // Reset data structures
     reset();
@@ -293,7 +293,7 @@ private:
   typedef std::vector<NodesType> UHalfIntVector;
   typedef std::vector<Value> ValueVector;
   typedef std::vector<Cost> CostVector;
-  //	typedef SparseValueVector<Cost> CostVector;
+  //  typedef SparseValueVector<Cost> CostVector;
   typedef std::vector<char> BoolVector;
   // Note: vector<char> is used instead of vector<bool> for efficiency reasons
 
