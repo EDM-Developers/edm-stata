@@ -669,7 +669,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     const ManifoldOnGPU gpuMp = Mp.toGPU(false);
 
     // The next line currently crashes:
-    //DistanceIndexPairs wDistPairGPU = afWassersteinDistances(Mp_j, opts, M, Mp, gpuM, gpuMp, {}, metricOpts);
+    // DistanceIndexPairs wDistPairGPU = afWassersteinDistances(Mp_j, opts, M, Mp, gpuM, gpuMp, {}, metricOpts);
 #endif
   }
 }
