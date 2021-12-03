@@ -22,10 +22,10 @@ using json = nlohmann::json;
 #if defined(WITH_ARRAYFIRE)
 struct ManifoldOnGPU
 {
-  af::array mdata; // shape [_E_actual _nobs 1 1] - manifold
-  af::array yvec;  // Shape [_nobs 1 1 1]
-  af::array panel; // Shape [_nobs 1 1 1] - panel ids
-  int nobs, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
+  af::array mdata; // shape [_E_actual _numPoints 1 1] - manifold
+  af::array yvec;  // Shape [_numPoints 1 1 1]
+  af::array panel; // Shape [_numPoints 1 1 1] - panel ids
+  int numPoints, E_x, E_dt, E_extras, E_lagged_extras, E_actual;
   double missing;
 };
 #endif
@@ -35,15 +35,15 @@ class Manifold
   std::shared_ptr<double[]> _flat = nullptr;
   std::vector<double> _y;
   std::vector<int> _panelIDs;
-  int _nobs, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
+  int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
 
 public:
-  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> y, std::vector<int> panelIDs, int nobs, int E_x,
+  Manifold(std::shared_ptr<double[]>& flat, std::vector<double> y, std::vector<int> panelIDs, int numPoints, int E_x,
            int E_dt, int E_extras, int E_lagged_extras, int E_actual)
     : _flat(std::move(flat))
     , _y(y)
     , _panelIDs(panelIDs)
-    , _nobs(nobs)
+    , _numPoints(numPoints)
     , _E_x(E_x)
     , _E_dt(E_dt)
     , _E_extras(E_extras)
@@ -55,7 +55,7 @@ public:
 
   Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> map() const
   {
-    return { _flat.get(), _nobs, _E_actual };
+    return { _flat.get(), _numPoints, _E_actual };
   }
 
   Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> laggedObsMap(
@@ -65,7 +65,7 @@ public:
     return { &(_flat[obsNum * _E_actual]), 1 + (_E_dt > 0) + numLaggedExtras, _E_x };
   }
 
-  Eigen::Map<const Eigen::VectorXd> yMap() const { return { &(_y[0]), _nobs }; }
+  Eigen::Map<const Eigen::VectorXd> yMap() const { return { &(_y[0]), _numPoints }; }
 
   double x(int i, int j) const { return _flat[i * _E_actual + j]; }
   double dt(int i, int j) const { return _flat[i * _E_actual + _E_x + j]; }
@@ -83,7 +83,7 @@ public:
     double min = std::numeric_limits<double>::max();
     double max = std::numeric_limits<double>::min();
 
-    for (int i = 0; i < _nobs * _E_actual; i++) {
+    for (int i = 0; i < _numPoints * _E_actual; i++) {
       if (_flat[i] != MISSING_D) {
         if (_flat[i] < min) {
           min = _flat[i];
@@ -133,7 +133,7 @@ public:
   int ySize() const { return (int)_y.size(); }
 
   double* data() const { return _flat.get(); };
-  int nobs() const { return _nobs; }
+  int numPoints() const { return _numPoints; }
   int E() const { return _E_x; }
   int E_dt() const { return _E_dt; }
   int E_lagged_extras() const { return _E_lagged_extras; }
@@ -170,7 +170,7 @@ private:
   std::vector<int> _observation_number;
 
   void setup_observation_numbers();
-  void fill_in_point(int i, int E, bool copredict, bool prediction, double dtWeight, double* point,
+  void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point,
                      double& target) const;
 
   bool find_observation_num(int target, int& k, int direction, int panel) const;
@@ -208,10 +208,10 @@ public:
     setup_observation_numbers();
   }
 
-  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
+  Manifold create_manifold(int E, const std::vector<bool>& filter, bool copredictMode, bool predictionSet,
                            double dtWeight = 0.0, bool skipMissing = false) const;
 
-  std::vector<bool> generate_usable(int maxE, bool coprediction = false) const;
+  std::vector<bool> generate_usable(int maxE, bool copredictionMode = false) const;
 
   int E_dt(int E) const { return _dt * E; }
   int E_extras(int E) const { return _num_extras + _num_extras_lagged * (E - 1); }

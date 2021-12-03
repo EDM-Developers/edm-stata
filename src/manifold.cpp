@@ -143,10 +143,10 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
   using af::array;
 
   if (useFloat) {
-    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()).as(f32),
-                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()).as(f32),
-                          (_panelIDs.size() > 0 ? array(_nobs, _panelIDs.data()) : array()),
-                          _nobs,
+    return ManifoldOnGPU{ array(_E_actual, _numPoints, _flat.get()).as(f32),
+                          (_y.size() > 0 ? array(_numPoints, _y.data()) : array()).as(f32),
+                          (_panelIDs.size() > 0 ? array(_numPoints, _panelIDs.data()) : array()),
+                          _numPoints,
                           _E_x,
                           _E_dt,
                           _E_extras,
@@ -154,10 +154,10 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
                           _E_actual,
                           MISSING_F };
   } else {
-    return ManifoldOnGPU{ array(_E_actual, _nobs, _flat.get()),
-                          (_y.size() > 0 ? array(_nobs, _y.data()) : array()),
-                          (_panelIDs.size() > 0 ? array(_nobs, _panelIDs.data()) : array()),
-                          _nobs,
+    return ManifoldOnGPU{ array(_E_actual, _numPoints, _flat.get()),
+                          (_y.size() > 0 ? array(_numPoints, _y.data()) : array()),
+                          (_panelIDs.size() > 0 ? array(_numPoints, _panelIDs.data()) : array()),
+                          _numPoints,
                           _E_x,
                           _E_dt,
                           _E_extras,
@@ -168,21 +168,21 @@ ManifoldOnGPU Manifold::toGPU(const bool useFloat) const
 }
 #endif
 
-Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredict, bool prediction,
-                                            double dtWeight, bool skipMissing) const
+Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filter, bool copredictMode,
+                                            bool predictionSet, double dtWeight, bool skipMissing) const
 {
   bool takeEveryPoint = filter.size() == 0;
 
-  int nobs = 0;
+  int numPoints = 0;
   std::vector<int> pointNumToStartIndex;
   for (int i = 0; i < _t.size(); i++) {
     if (takeEveryPoint || filter[i]) {
       pointNumToStartIndex.push_back(i);
-      nobs += 1;
+      numPoints += 1;
     }
   }
 
-  std::shared_ptr<double[]> flat(new double[nobs * E_actual(E)], std::default_delete<double[]>());
+  std::shared_ptr<double[]> flat(new double[numPoints * E_actual(E)], std::default_delete<double[]>());
 
   std::vector<double> y;
   std::vector<int> panelIDs;
@@ -191,11 +191,11 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
   int M_i = 0;
   double target;
 
-  for (int i = 0; i < nobs; i++) {
+  for (int i = 0; i < numPoints; i++) {
     double* point = &(flat[M_i * E_actual(E)]);
-    fill_in_point(pointNumToStartIndex[i], E, copredict, prediction, dtWeight, point, target);
+    fill_in_point(pointNumToStartIndex[i], E, copredictMode, predictionSet, dtWeight, point, target);
 
-    // Erase this point if we don't want missing values in the resulting manifold
+    // Skip this point if we don't want missing values in the resulting manifold
     if (skipMissing) {
       bool foundMissing = false;
       for (int j = 0; j < E_actual(E); j++) {
@@ -218,16 +218,16 @@ Manifold ManifoldGenerator::create_manifold(int E, const std::vector<bool>& filt
     M_i += 1;
   }
 
-  nobs = M_i;
+  numPoints = M_i;
 
-  return { flat, y, panelIDs, nobs, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
+  return { flat, y, panelIDs, numPoints, E, E_dt(E), E_extras(E), E * numExtrasLagged(), E_actual(E) };
 }
 
-void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool prediction, double dtWeight, double* point,
-                                      double& target) const
+void ManifoldGenerator::fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight,
+                                      double* point, double& target) const
 {
   int panel = _panel_mode ? _panelIDs[i] : -1;
-  bool use_co_x = copredict && prediction;
+  bool use_co_x = copredictionMode && predictionSet;
 
   std::vector<int> laggedIndices = get_lagged_indices(i, E, panel);
 
@@ -243,7 +243,7 @@ void ManifoldGenerator::fill_in_point(int i, int E, bool copredict, bool predict
   int targetIndex = i;
 
   if (_p != 0) {
-    // At what time does the prediction occur?
+    // At what time does the predictionSet occur?
     int targetObsNum = _observation_number[targetIndex] + _p;
     int direction = _p > 0 ? 1 : -1;
     if (!find_observation_num(targetObsNum, targetIndex, direction, panel)) {
@@ -333,7 +333,7 @@ bool is_usable(double* point, double target, int E_actual, bool allowMissing, bo
   }
 }
 
-std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction) const
+std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool copredictionMode) const
 {
   const double USABLE_DTWEIGHT = 1.0;
 
@@ -341,13 +341,13 @@ std::vector<bool> ManifoldGenerator::generate_usable(int maxE, bool coprediction
 
   std::vector<bool> usable(_t.size());
 
-  int E = E_actual(maxE);
-  auto point = std::make_unique<double[]>(E);
+  int sizeOfPoint = E_actual(maxE);
+  auto point = std::make_unique<double[]>(sizeOfPoint);
   double target;
 
   for (int i = 0; i < _t.size(); i++) {
-    fill_in_point(i, maxE, coprediction, coprediction, USABLE_DTWEIGHT, point.get(), target);
-    usable[i] = is_usable(point.get(), target, E, _allow_missing, targetRequired);
+    fill_in_point(i, maxE, copredictionMode, copredictionMode, USABLE_DTWEIGHT, point.get(), target);
+    usable[i] = is_usable(point.get(), target, sizeOfPoint, _allow_missing, targetRequired);
   }
 
   return usable;

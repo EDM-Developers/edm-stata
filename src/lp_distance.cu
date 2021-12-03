@@ -53,9 +53,9 @@ __device__ T reduceEacts(int tid, T* smem)
 template<typename T, bool isDMAE, int BLOCK_DIM_X, int BLOCK_DIM_Y>
 __global__
 void lpDistances(char * const valids, T * const distances,
-                 const int npreds, const bool isPanelMode,
+                 const int numPredictions, const bool isPanelMode,
                  const double idw, const double missingDistance,
-                 const int eacts, const int mnobs,
+                 const int eacts, const int numLibraryPoints,
                  const T* mData, const int* mPanelIds,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts)
@@ -64,7 +64,7 @@ void lpDistances(char * const valids, T * const distances,
 
   const int p = blockIdx.y; //nth prediction
 
-  if (p < npreds)
+  if (p < numPredictions)
   {
     __shared__ T dists[BLOCK_DIM_X * BLOCK_DIM_Y];
     __shared__ bool markers[BLOCK_DIM_X * BLOCK_DIM_Y];
@@ -75,7 +75,7 @@ void lpDistances(char * const valids, T * const distances,
     const int tid = BLOCK_DIM_X * threadIdx.y + threadIdx.x;
     const int nob = BLOCK_DIM_X * blockIdx.x + threadIdx.x;
 
-    if (nob < mnobs)
+    if (nob < numLibraryPoints)
     {
       const T* predsM   = mData + nob * eacts;
       bool anyEAmissing = false;
@@ -112,7 +112,7 @@ void lpDistances(char * const valids, T * const distances,
       __syncthreads();
       anyEAmissing = reduceEacts<bool, BLOCK_DIM_X, BLOCK_DIM_Y>(tid, markers) > 0;
 
-      // Only first warp writes nobs results
+      // Only first warp writes numLibraryPoints results
       if (tid < BLOCK_DIM_X) {
         anyEAmissing = anyEAmissing && isZero;
 
@@ -122,8 +122,8 @@ void lpDistances(char * const valids, T * const distances,
 
         dist_i = (isDMAE * dist_i + (1 - isDMAE) * sqrt(dist_i));
 
-        valids[nob + p * mnobs] = (char)isValid;
-        distances[nob + p * mnobs] = dist_i;
+        valids[nob + p * numLibraryPoints] = (char)isValid;
+        distances[nob + p * numLibraryPoints] = dist_i;
       }
     }
   }
@@ -131,9 +131,9 @@ void lpDistances(char * const valids, T * const distances,
 
 template<typename T, int BLOCK_DIM_Y>
 void lpDistances(char * const valids, T * const distances,
-                 const int npreds, const bool isDMAE, const bool isPanelMode,
+                 const int numPredictions, const bool isDMAE, const bool isPanelMode,
                  const double idw, const double missingDistance,
-                 const int eacts, const int mnobs,
+                 const int eacts, const int numLibraryPoints,
                  const T* mData, const int* mPanelIds,
                  const T* mpData, const int* mpPanelIds,
                  const char* mopts, const cudaStream_t stream,
@@ -141,11 +141,11 @@ void lpDistances(char * const valids, T * const distances,
 {
   if (isDMAE) {
     lpDistances<T, true, 32, BLOCK_DIM_Y> <<<blocks, threads, 0, stream>>>(
-            valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
+            valids, distances, numPredictions, isPanelMode, idw, missingDistance, eacts, numLibraryPoints,
             mData, mPanelIds, mpData, mpPanelIds, mopts);
   } else {
     lpDistances<T, false, 32, BLOCK_DIM_Y> <<<blocks, threads, 0, stream>>>(
-            valids, distances, npreds, isPanelMode, idw, missingDistance, eacts, mnobs,
+            valids, distances, numPredictions, isPanelMode, idw, missingDistance, eacts, numLibraryPoints,
             mData, mPanelIds, mpData, mpPanelIds, mopts);
   }
 }
@@ -163,9 +163,9 @@ inline unsigned int powerOf2LE(unsigned int value)
 
 template<typename T>
 void cuLPDistances(char * const valids, T * const distances,
-                   const int npreds, const bool isDMAE, const bool isPanelMode,
+                   const int numPredictions, const bool isDMAE, const bool isPanelMode,
                    const double idw, const double missingDistance,
-                   const int eacts, const int mnobs,
+                   const int eacts, const int numLibraryPoints,
                    const T* mData, const int* mPanelIds,
                    const T* mpData, const int* mpPanelIds,
                    const char* mopts, const cudaStream_t stream)
@@ -174,20 +174,20 @@ void cuLPDistances(char * const valids, T * const distances,
 
   threads.y = (threads.y > 8 ? 8 : threads.y);
 
-  dim3 blocks(divup(mnobs, threads.x), npreds);
+  dim3 blocks(divup(numLibraryPoints, threads.x), numPredictions);
 
   switch(threads.y) {
     case 8:
-      lpDistances<T, 8>(valids, distances, npreds, isDMAE, isPanelMode, idw, missingDistance,
-              eacts, mnobs, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
+      lpDistances<T, 8>(valids, distances, numPredictions, isDMAE, isPanelMode, idw, missingDistance,
+              eacts, numLibraryPoints, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
       break;
     case 4:
-      lpDistances<T, 4>(valids, distances, npreds, isDMAE, isPanelMode, idw, missingDistance,
-              eacts, mnobs, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
+      lpDistances<T, 4>(valids, distances, numPredictions, isDMAE, isPanelMode, idw, missingDistance,
+              eacts, numLibraryPoints, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
       break;
     default:
-      lpDistances<T, 2>(valids, distances, npreds, isDMAE, isPanelMode, idw, missingDistance,
-              eacts, mnobs, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
+      lpDistances<T, 2>(valids, distances, numPredictions, isDMAE, isPanelMode, idw, missingDistance,
+              eacts, numLibraryPoints, mData, mPanelIds, mpData, mpPanelIds, mopts, stream, blocks, threads);
       break;
   }
 }

@@ -510,7 +510,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
                                         allowMissing);
     double DT_WEIGHT = 1.0;
     Manifold manifold = dtgenerator.create_manifold(maxE, {}, false, false, DT_WEIGHT);
-    std::vector<double> dts(manifold.nobs());
+    std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
     }
@@ -540,7 +540,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     double SAVE_DT_WEIGHT = 1.0;
     Manifold manifold = generator.create_manifold(maxE, {}, false, false, SAVE_DT_WEIGHT);
 
-    std::vector<double> dts(manifold.nobs());
+    std::vector<double> dts(manifold.numPoints());
     for (int i = 0; i < dts.size(); i++) {
       dts[i] = manifold.dt(i, 1);
     }
@@ -553,7 +553,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     Manifold manifold = generator.create_manifold(maxE, {}, false, false, opts.dtWeight);
 
     ST_int startCol = 3 + numExtras + 1 + copredictMode + opts.panelMode + saveDT + 1;
-    write_stata_columns(manifold.data(), manifold.nobs(), manifold.E_actual(), startCol);
+    write_stata_columns(manifold.data(), manifold.numPoints(), manifold.E_actual(), startCol);
   }
 
   if (numUsable == 0) {

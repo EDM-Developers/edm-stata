@@ -63,7 +63,7 @@ void print_manifold(const Manifold& M)
   auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
 
   std::cout << "\n";
-  for (int i = 0; i < M.nobs(); i++) {
+  for (int i = 0; i < M.numPoints(); i++) {
     for (int j = 0; j < M.E_actual(); j++) {
       std::cout << stringVersion(M(i, j)) << "\t";
     }
@@ -86,11 +86,11 @@ void require_vectors_match(const std::vector<T>& u, const std::vector<T>& v)
 void require_manifolds_match(const Manifold& M, const std::vector<std::vector<double>>& M_true,
                              const std::vector<double>& y_true)
 {
-  REQUIRE(M.nobs() == M_true.size());  // TODO: Rename this to numPoints
-  REQUIRE(M.ySize() == y_true.size()); // Shouldn't this always be the same as M.nobs()?
+  REQUIRE(M.numPoints() == M_true.size());
+  REQUIRE(M.ySize() == y_true.size()); // Shouldn't this always be the same as M.numPoints()?
   REQUIRE(M.E_actual() == M_true[0].size());
 
-  for (int i = 0; i < M.nobs(); i++) {
+  for (int i = 0; i < M.numPoints(); i++) {
     CAPTURE(i);
     for (int j = 0; j < M.E_actual(); j++) {
       CAPTURE(j);
@@ -170,7 +170,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     require_vectors_match<bool>(usable, usableTrue);
 
     Manifold M = generator.create_manifold(E, usable, false, false, false);
-    REQUIRE(M.nobs() == 0);
+    REQUIRE(M.numPoints() == 0);
     REQUIRE(M.ySize() == 0);
     REQUIRE(M.E_actual() == 2);
   }
@@ -484,11 +484,11 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     int Mp_j = 2;
 
     std::vector<int> tryInds = potential_neighbour_indices(Mp_j, opts, M, Mp);
-    for (int i = 0; i < M.nobs(); i++) {
+    for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("potential_neighbour_indices[{}] = {}\n", i, tryInds[i]);
     }
 
-    for (int i = 0; i < M.nobs(); i++) {
+    for (int i = 0; i < M.numPoints(); i++) {
       // std::cout << fmt::format("Cost matrix M_i={}\n", i);
 
       auto M_i_map = M.laggedObsMap(i);
