@@ -67,7 +67,7 @@ struct DistanceIndexPairs
 #if defined(WITH_ARRAYFIRE)
 struct DistanceIndexPairsOnGPU
 {
-  af::array inds;
+  af::array valids;
   af::array dists;
 };
 #endif

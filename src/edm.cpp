@@ -829,7 +829,7 @@ void afSimplexPrediction(af::array& retcodes, af::array& ystar, const int numPre
   auto range = nvtxRangeStartA(__FUNCTION__);
 #endif
 
-  const array& valids = pair.inds;
+  const array& valids = pair.valids;
   const array& dists = pair.dists;
   const int k = valids.dims(0);
   const int tcount = opts.thetas.size();
@@ -880,7 +880,7 @@ void afSMapPrediction(af::array& retcodes, af::array& ystar, af::array& coeffs, 
   auto range = nvtxRangeStartA(__FUNCTION__);
 #endif
 
-  const array& valids = pair.inds;
+  const array& valids = pair.valids;
   const array& dists = pair.dists;
   const int k = valids.dims(0);
   const int tcount = opts.thetas.size();
@@ -1007,13 +1007,13 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
     auto kisRange = nvtxRangeStartA("kNearestSelection");
 #endif
     // TODO add code path for wasserstein later
-    pValids = pValids && validDistPair.inds;
+    pValids = pValids && validDistPair.valids;
 
     // smData is set only if algo is SMap
     array retcodes, kUsed, sDists, yvecs, smData;
 
     const int k = opts.k;
-    const bool isKNeg = k < 0;
+    bool isKNeg = k < 0;
 
     if (k == 0) {
       af::array retcodes = af::constant(SUCCESS, numPredictions, opts.thetas.size(), s32);
@@ -1021,9 +1021,18 @@ void af_make_prediction(const int numPredictions, const Options& opts, const Man
       return;
     }
 
-    if (!isKNeg) {
-      afNearestNeighbours(pValids, sDists, yvecs, smData, validDistPair.dists, M.targets, M.mdata, opts.algorithm,
-                          M.E_actual, M.numPoints, numPredictions, k);
+    if (k > 0) {
+      try {
+        afNearestNeighbours(pValids, sDists, yvecs, smData, validDistPair.dists, M.targets, M.mdata, opts.algorithm,
+                            M.E_actual, M.numPoints, numPredictions, k);
+      } catch (const af::exception& e) {
+        // When 'k' is too large, afNearestNeighbours will crash.
+        // For now, just continue as if k=-1 was specified.
+        isKNeg = true;
+        sDists = af::select(pValids, validDistPair.dists, MISSING_D);
+        yvecs = M.targets;
+        smData = M.mdata;
+      }
     } else {
       sDists = af::select(pValids, validDistPair.dists, MISSING_D);
       yvecs = M.targets;
