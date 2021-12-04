@@ -458,6 +458,11 @@ program define edmExplore, eclass
 		else {
 			local plugin_name = "edm_plugin"
 		}
+
+		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
+			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
+			local lowmemory = ""
+		}
 	}
 
 	if "`distance'" == "" {
@@ -1250,6 +1255,11 @@ program define edmXmap, eclass
 		}
 		else {
 			local plugin_name = "edm_plugin"
+		}
+
+		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
+			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
+			local lowmemory = ""
 		}
 	}
 

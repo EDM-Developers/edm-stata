@@ -144,6 +144,9 @@ forvalues i = 1/`=rowsof(e(explore_result))' {
     }
 }
 
+* Check that lowmemory flag is working
+edm explore x, e(2) lowmemory
+
 tempfile basedata
 qui compress
 qui save `basedata', replace
