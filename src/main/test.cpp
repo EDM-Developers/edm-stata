@@ -6,6 +6,7 @@
 #endif
 #include <fmt/format.h>
 
+#include "distances.h"
 #include "edm.h"
 #include "library_prediction_split.h"
 #include "manifold.h"
@@ -85,6 +86,57 @@ void require_vectors_match(const std::vector<T>& u, const std::vector<T>& v)
   }
 }
 
+#ifdef WITH_ARRAYFIRE
+template<typename T>
+void require_af_distances_match(const DistanceIndexPairsOnGPU& pairs, const std::vector<std::vector<double>>& trueDists)
+{
+  REQUIRE(pairs.dists.dims(1) == trueDists.size());
+  REQUIRE(pairs.dists.dims(0) == trueDists[0].size());
+
+  char afValid;
+  T afDist;
+
+  for (int i = 0; i < trueDists.size(); i++) {
+    for (int j = 0; j < trueDists[0].size(); j++) {
+      pairs.valids(j, i).host(&afValid);
+      pairs.dists(j, i).host(&afDist);
+
+      if (trueDists[i][j] != NA) {
+        REQUIRE(afValid == true);
+        REQUIRE(afDist == (T)trueDists[i][j]);
+      } else {
+        REQUIRE(afValid == false);
+      }
+    }
+  }
+}
+
+void test_af_distances(const Manifold& M, const Manifold& Mp, const Options& opts,
+                       const std::vector<std::vector<double>>& trueDists)
+{
+  // Converting enum vector to char (AF's bool) vector for ArrayFire
+  std::vector<char> mopts;
+  for (int j = 0; j < M.E_actual(); j++) {
+    mopts.push_back(opts.metrics[j] == Metric::Diff);
+  }
+  af::array metricOpts(M.E_actual(), mopts.data());
+
+  for (int singlePrecision = 0; singlePrecision <= 1; singlePrecision++) {
+
+    const ManifoldOnGPU gpuM = M.toGPU(singlePrecision);
+    const ManifoldOnGPU gpuMp = Mp.toGPU(singlePrecision);
+
+    DistanceIndexPairsOnGPU pairs = afLPDistances(Mp.numPoints(), opts, gpuM, gpuMp, metricOpts);
+
+    if (singlePrecision) {
+      require_af_distances_match<float>(pairs, trueDists);
+    } else {
+      require_af_distances_match<double>(pairs, trueDists);
+    }
+  }
+}
+#endif
+
 void require_manifolds_match(Manifold& M, const std::vector<std::vector<double>>& M_true,
                              const std::vector<double>& y_true)
 {
@@ -97,6 +149,27 @@ void require_manifolds_match(Manifold& M, const std::vector<std::vector<double>>
     for (int j = 0; j < M.E_actual(); j++) {
       CAPTURE(j);
       REQUIRE(M(i, j) == M_true[i][j]);
+    }
+    REQUIRE(M.target(i) == y_true[i]);
+  }
+}
+
+void require_lazy_manifolds_match(Manifold& M, const std::vector<std::vector<double>>& M_true,
+                                  const std::vector<double>& y_true)
+{
+  REQUIRE(M.numPoints() == M_true.size());
+  REQUIRE(M.numTargets() == y_true.size()); // Shouldn't this always be the same as M.numPoints()?
+  REQUIRE(M.E_actual() == M_true[0].size());
+
+  auto x = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
+
+  for (int i = 0; i < M.numPoints(); i++) {
+    CAPTURE(i);
+    M.lazy_fill_in_point(i, x.get());
+
+    for (int j = 0; j < M.E_actual(); j++) {
+      CAPTURE(j);
+      REQUIRE(x[j] == M_true[i][j]);
     }
     REQUIRE(M.target(i) == y_true[i]);
   }
@@ -304,6 +377,40 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     check_usable_matches_prediction_set(usable, Mp);
     std::vector<std::vector<double>> Mp_true = { { 15, 14 } };
     std::vector<double> yp_true = { NA };
+    require_manifolds_match(Mp, Mp_true, yp_true);
+  }
+
+  SECTION("Allow missing")
+  {
+    bool allowMissing = true;
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, false, false, allowMissing);
+
+    REQUIRE(generator.calculate_time_increment() == 0.5);
+
+    std::vector<int> obsNums = { 0, 3, 4, 7, 8, 10 };
+    for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
+      REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+    }
+
+    std::vector<bool> usable = generator.generate_usable(E);
+    std::vector<bool> usableTrue = { true, true, true, true, true, true };
+    require_vectors_match<bool>(usable, usableTrue);
+    check_lazy_manifolds(generator, E, usable);
+
+    Manifold M(generator, E, usable, false);
+    std::vector<std::vector<double>> M_true = {
+      { 14, NA },
+    };
+    std::vector<double> y_true = { 15.0 };
+    require_manifolds_match(M, M_true, y_true);
+
+    Manifold Mp(generator, E, usable, true);
+    std::vector<std::vector<double>> Mp_true = {
+      { 11, NA }, { 12, NA }, { NA, 12 }, { 14, NA }, { 15, 14 }, { 16, NA },
+    };
+    std::vector<double> yp_true = { NA, NA, NA, 15.0, NA, NA };
+    check_usable_matches_prediction_set(usable, Mp);
     require_manifolds_match(Mp, Mp_true, yp_true);
   }
 
@@ -543,6 +650,307 @@ TEST_CASE("Library prediction splits", "[splitting]")
     std::vector<Set> splitTrue4 = { Set::Both,    Set::Both, Set::Both,      Set::Neither,
                                     Set::Neither, Set::Both, Set::Prediction };
     require_vectors_match<Set>(splitter.setMemberships(), splitTrue4);
+  }
+}
+
+TEST_CASE("Eager L^p distances", "[lp_distances]")
+{
+  int E = 2;
+  int tau = 1;
+  int p = 1;
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  ManifoldGenerator generator(t, x, tau, p);
+
+  std::vector<bool> usable = generator.generate_usable(E);
+
+  Manifold M(generator, E, usable, false);
+  Manifold Mp(generator, E, usable, true);
+
+  std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
+  std::vector<double> y_true = { 13, 14 };
+  require_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = { { 12, 11 }, { 13, 12 }, { 14, 13 } };
+  std::vector<double> yp_true = { 13, 14, NA };
+  require_manifolds_match(Mp, Mp_true, yp_true);
+
+  Options opts;
+
+  opts.panelMode = false;
+  opts.missingdistance = 0;
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+
+  SECTION("Euclidean distances")
+  {
+    opts.distance = Distance::Euclidean;
+
+    std::vector<int> inds_0 = { 1 };
+    std::vector<double> dists_0 = { sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) };
+
+    DistanceIndexPairs euclidean_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(euclidean_0.inds, inds_0);
+    require_vectors_match<double>(euclidean_0.dists, dists_0);
+
+    DistanceIndexPairs euclidean_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(euclidean_1.inds, inds_1);
+    require_vectors_match<double>(euclidean_1.dists, dists_1);
+
+    DistanceIndexPairs euclidean_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(euclidean_2.inds, inds_2);
+    require_vectors_match<double>(euclidean_2.dists, dists_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = { { NA, sqrt(1 * 1 + 1 * 1) },
+                                                   { sqrt(1 * 1 + 1 * 1), NA },
+                                                   { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) } };
+    test_af_distances(M, Mp, opts, trueDists);
+#endif
+  }
+
+  SECTION("MAE distances")
+  {
+    opts.distance = Distance::MeanAbsoluteError;
+
+    std::vector<int> inds_0 = { 1 };
+    std::vector<double> dists_0 = { (1 + 1) / 2 };
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { (1 + 1) / 2 };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { (2 + 2) / 2, (1 + 1) / 2 };
+
+    DistanceIndexPairs mae_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(mae_0.inds, inds_0);
+    require_vectors_match<double>(mae_0.dists, dists_0);
+
+    DistanceIndexPairs mae_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(mae_1.inds, inds_1);
+    require_vectors_match<double>(mae_1.dists, dists_1);
+
+    DistanceIndexPairs mae_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(mae_2.inds, inds_2);
+    require_vectors_match<double>(mae_2.dists, dists_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = { { NA, (1 + 1) / 2 },
+                                                   { (1 + 1) / 2, NA },
+                                                   { (2 + 2) / 2, (1 + 1) / 2 } };
+    test_af_distances(M, Mp, opts, trueDists);
+#endif
+  }
+}
+
+TEST_CASE("Eager L^p distances with missingdistance", "[lp_distances+allowmissing]")
+{
+  int E = 2;
+  int tau = 1;
+  int p = 1;
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  bool allowMissing = true;
+  ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, false, false, allowMissing);
+
+  std::vector<bool> usable = generator.generate_usable(E);
+
+  Manifold M(generator, E, usable, false);
+  Manifold Mp(generator, E, usable, true);
+
+  std::vector<std::vector<double>> M_true = { { 11, NA }, { 12, 11 }, { 13, 12 } };
+  std::vector<double> y_true = { 12, 13, 14 };
+  require_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = { { 11, NA }, { 12, 11 }, { 13, 12 }, { 14, 13 } };
+  std::vector<double> yp_true = { 12, 13, 14, NA };
+  require_manifolds_match(Mp, Mp_true, yp_true);
+
+  Options opts;
+
+  opts.panelMode = false;
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+
+  const double md = 10;
+  opts.missingdistance = md;
+
+  SECTION("Euclidean distances")
+  {
+    opts.distance = Distance::Euclidean;
+
+    std::vector<int> inds_0 = { 0, 1, 2 };
+    std::vector<double> dists_0 = { sqrt(0 * 0 + md * md), sqrt(1 * 1 + md * md), sqrt(2 * 2 + md * md) };
+
+    std::vector<int> inds_1 = { 0, 2 };
+    std::vector<double> dists_1 = { sqrt(1 * 1 + md * md), sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { sqrt(2 * 2 + md * md), sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_3 = { 0, 1, 2 };
+    std::vector<double> dists_3 = { sqrt(3 * 3 + md * md), sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) };
+
+    DistanceIndexPairs euclidean_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(euclidean_0.inds, inds_0);
+    require_vectors_match<double>(euclidean_0.dists, dists_0);
+
+    DistanceIndexPairs euclidean_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(euclidean_1.inds, inds_1);
+    require_vectors_match<double>(euclidean_1.dists, dists_1);
+
+    DistanceIndexPairs euclidean_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(euclidean_2.inds, inds_2);
+    require_vectors_match<double>(euclidean_2.dists, dists_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = {
+      { sqrt(0 * 0 + md * md), sqrt(1 * 1 + md * md), sqrt(2 * 2 + md * md) },
+      { sqrt(1 * 1 + md * md), NA, sqrt(1 * 1 + 1 * 1) },
+      { sqrt(2 * 2 + md * md), sqrt(1 * 1 + 1 * 1), NA },
+      { sqrt(3 * 3 + md * md), sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) }
+    };
+
+    test_af_distances(M, Mp, opts, trueDists);
+#endif
+  }
+
+  SECTION("MAE distances")
+  {
+    opts.distance = Distance::MeanAbsoluteError;
+
+    std::vector<std::vector<double>> M_true = { { 11, NA }, { 12, 11 }, { 13, 12 } };
+    std::vector<std::vector<double>> Mp_true = { { 11, NA }, { 12, 11 }, { 13, 12 }, { 14, 13 } };
+
+    std::vector<int> inds_0 = { 0, 1, 2 };
+    std::vector<double> dists_0 = { (0 + md) / 2, (1 + md) / 2, (2 + md) / 2 };
+
+    std::vector<int> inds_1 = { 0, 2 };
+    std::vector<double> dists_1 = { (1 + md) / 2, (1 + 1) / 2 };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { (2 + md) / 2, (1 + 1) / 2 };
+
+    std::vector<int> inds_3 = { 0, 1, 2 };
+    std::vector<double> dists_3 = { (3 + md) / 2, (2 + 2) / 2, (1 + 1) / 2 };
+
+    DistanceIndexPairs mae_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(mae_0.inds, inds_0);
+    require_vectors_match<double>(mae_0.dists, dists_0);
+
+    DistanceIndexPairs mae_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(mae_1.inds, inds_1);
+    require_vectors_match<double>(mae_1.dists, dists_1);
+
+    DistanceIndexPairs mae_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(mae_2.inds, inds_2);
+    require_vectors_match<double>(mae_2.dists, dists_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = { { (0 + md) / 2, (1 + md) / 2, (2 + md) / 2 },
+                                                   { (1 + md) / 2, NA, (1 + 1) / 2 },
+                                                   { (2 + md) / 2, (1 + 1) / 2, NA },
+                                                   { (3 + md) / 2, (2 + 2) / 2, (1 + 1) / 2 } };
+    test_af_distances(M, Mp, opts, trueDists);
+#endif
+  }
+}
+
+TEST_CASE("Lazy L^p distances", "[lazy_lp_distances]")
+{
+  int E = 2;
+  int tau = 1;
+  int p = 1;
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  ManifoldGenerator generator(t, x, tau, p);
+
+  std::vector<bool> usable = generator.generate_usable(E);
+
+  bool lazy = true;
+  Manifold M(generator, E, usable, false, 0.0, false, lazy);
+  Manifold Mp(generator, E, usable, true, 0.0, false, lazy);
+
+  std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
+  std::vector<double> y_true = { 13, 14 };
+  require_lazy_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = { { 12, 11 }, { 13, 12 }, { 14, 13 } };
+  std::vector<double> yp_true = { 13, 14, NA };
+  require_lazy_manifolds_match(Mp, Mp_true, yp_true);
+
+  Options opts;
+
+  opts.panelMode = false;
+  opts.missingdistance = 0;
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+
+  SECTION("Euclidean distances")
+  {
+    opts.distance = Distance::Euclidean;
+
+    std::vector<int> inds_0 = { 1 };
+    std::vector<double> dists_0 = { sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) };
+
+    DistanceIndexPairs euclidean_0 = lazy_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(euclidean_0.inds, inds_0);
+    require_vectors_match<double>(euclidean_0.dists, dists_0);
+
+    DistanceIndexPairs euclidean_1 = lazy_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(euclidean_1.inds, inds_1);
+    require_vectors_match<double>(euclidean_1.dists, dists_1);
+
+    DistanceIndexPairs euclidean_2 = lazy_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(euclidean_2.inds, inds_2);
+    require_vectors_match<double>(euclidean_2.dists, dists_2);
+  }
+
+  SECTION("MAE distances")
+  {
+    opts.distance = Distance::MeanAbsoluteError;
+
+    std::vector<int> inds_0 = { 1 };
+    std::vector<double> dists_0 = { (1 + 1) / 2 };
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { (1 + 1) / 2 };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { (2 + 2) / 2, (1 + 1) / 2 };
+
+    DistanceIndexPairs mae_0 = lazy_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(mae_0.inds, inds_0);
+    require_vectors_match<double>(mae_0.dists, dists_0);
+
+    DistanceIndexPairs mae_1 = lazy_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(mae_1.inds, inds_1);
+    require_vectors_match<double>(mae_1.dists, dists_1);
+
+    DistanceIndexPairs mae_2 = lazy_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(mae_2.inds, inds_2);
+    require_vectors_match<double>(mae_2.dists, dists_2);
   }
 }
 
