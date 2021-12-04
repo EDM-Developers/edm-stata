@@ -28,8 +28,7 @@
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 // Function declarations for 'private' functions not listed in the relevant header files.
-std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
-DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
+DistanceIndexPairs k_nearest_neighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 
 // Compiler flags tried on Windows: "/GL" and "/GL /LTCG", both slightly worse. "/O2" is the default.
 
@@ -140,7 +139,7 @@ static void bm_nearest_neighbours(benchmark::State& state)
   }
 
   for (auto _ : state) {
-    DistanceIndexPairs kNNs = kNearestNeighbours(potentialNN, k);
+    DistanceIndexPairs kNNs = k_nearest_neighbours(potentialNN, k);
   }
 }
 
@@ -177,7 +176,7 @@ static void bm_simplex(benchmark::State& state)
   if (k < 0 || k == potentialNN.inds.size()) {
     kNNs = potentialNN;
   } else {
-    kNNs = kNearestNeighbours(potentialNN, k);
+    kNNs = k_nearest_neighbours(potentialNN, k);
   }
 
   auto dists = kNNs.dists;
@@ -242,7 +241,7 @@ static void bm_smap(benchmark::State& state)
   if (k < 0 || k == potentialNN.inds.size()) {
     kNNs = potentialNN;
   } else {
-    kNNs = kNearestNeighbours(potentialNN, k);
+    kNNs = k_nearest_neighbours(potentialNN, k);
   }
 
   auto dists = kNNs.dists;

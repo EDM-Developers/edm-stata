@@ -52,9 +52,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
                      Eigen::Map<MatrixXd> predictionsView, Eigen::Map<MatrixXi> rcView, Eigen::Map<MatrixXd> coeffsView,
                      int* kUsed, bool keep_going());
 
-std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
-
-DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k);
+DistanceIndexPairs k_nearest_neighbours(const DistanceIndexPairs& potentialNeighbours, int k);
 
 void simplex_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, const std::vector<double>& dists,
                         const std::vector<int>& kNNInds, Eigen::Map<MatrixXd> predictionsView,
@@ -527,7 +525,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
   if (k < 0 || k == potentialNN.inds.size()) {
     kNNs = potentialNN;
   } else {
-    kNNs = kNearestNeighbours(potentialNN, k);
+    kNNs = k_nearest_neighbours(potentialNN, k);
   }
 
   *kUsed = kNNs.inds.size();
@@ -561,7 +559,7 @@ void make_prediction(int Mp_i, const Options& opts, const Manifold& M, const Man
 // If 'k' is small, the partial_sort is efficient as it only finds the 'k' smallest
 // distances. If 'k' is larger, then it is faster to simply sort the entire distance
 // vector.
-DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbours, int k)
+DistanceIndexPairs k_nearest_neighbours(const DistanceIndexPairs& potentialNeighbours, int k)
 {
   std::vector<int> idx(potentialNeighbours.inds.size());
   std::iota(idx.begin(), idx.end(), 0);
@@ -592,10 +590,10 @@ DistanceIndexPairs kNearestNeighbours(const DistanceIndexPairs& potentialNeighbo
   return { kNNInds, kNNDists };
 }
 
-// An alternative version of 'kNearestNeighbours' which doesn't sort the neighbours.
+// An alternative version of 'k_nearest_neighbours' which doesn't sort the neighbours.
 // This version splits ties differently on different OS's, so it can't be used directly,
 // though perhaps a platform-independent implementation of std::nth_element would solve this problem.
-DistanceIndexPairs kNearestNeighboursUnstable(const DistanceIndexPairs& potentialNeighbours, int k)
+DistanceIndexPairs k_nearest_neighbours_unstable(const DistanceIndexPairs& potentialNeighbours, int k)
 {
   std::vector<int> indsToPartition(potentialNeighbours.inds.size());
   std::iota(indsToPartition.begin(), indsToPartition.end(), 0);

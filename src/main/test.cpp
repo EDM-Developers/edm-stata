@@ -17,7 +17,16 @@ using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::Ro
 const double NA = MISSING_D;
 
 // Function declarations for 'private' functions not listed in the relevant header files.
-std::vector<int> potential_neighbour_indices(int Mp_i, const Options& opts, const Manifold& M, const Manifold& Mp);
+DistanceIndexPairs k_nearest_neighbours(const DistanceIndexPairs& potentialNeighbours, int k);
+
+#ifdef WITH_ARRAYFIRE
+af::array afPotentialNeighbourIndices(const int& numPredictions, const bool& skipOtherPanels,
+                                      const bool& skipMissingData, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp);
+
+void afNearestNeighbours(af::array& pValids, af::array& sDists, af::array& yvecs, af::array& smData,
+                         const af::array& vDists, const af::array& yvec, const af::array& mdata, const Algorithm algo,
+                         const int eacts, const int numLibraryPoints, const int numPredictions, const int k);
+#endif
 
 std::unique_ptr<double[]> wasserstein_cost_matrix(const Manifold& M, const Manifold& Mp, int i, int j,
                                                   const Options& opts, int& len_i, int& len_j);
@@ -136,6 +145,56 @@ void test_af_distances(const Manifold& M, const Manifold& Mp, const Options& opt
   }
 }
 #endif
+
+DistanceIndexPairs get_kNNs(const DistanceIndexPairs& potentialNN, int requested_k)
+{
+  // Assumes 'force' mode is on
+  int numValidDistances = potentialNN.inds.size();
+  int k = requested_k > numValidDistances ? numValidDistances : requested_k;
+
+  if (k < 0 || k == potentialNN.inds.size()) {
+    return potentialNN;
+  } else {
+    return k_nearest_neighbours(potentialNN, k);
+  }
+}
+
+#ifdef WITH_ARRAYFIRE
+DistanceIndexPairsOnGPU get_af_kNNs(const Options& opts, const ManifoldOnGPU& M, const ManifoldOnGPU& Mp,
+                                    const DistanceIndexPairsOnGPU& potentialNN, int requested_k)
+{
+  int numPredictions = Mp.numPoints;
+
+  // af::array pValids = afPotentialNeighbourIndices(numPredictions, false, opts.missingdistance == 0, M, Mp);
+  // af_print(pValids);
+  af::array pValids = potentialNN.valids;
+
+  // Assumes 'force' mode is on
+  // int numValidDistances = potentialNN.inds.size();
+  // int k = requested_k > numValidDistances ? numValidDistances : requested_k;
+  int k = requested_k;
+
+  // smData is set only if algo is SMap
+  af::array retcodes, kUsed, sDists, yvecs, smData;
+
+  if (k > 0) {
+    afNearestNeighbours(pValids, sDists, yvecs, smData, potentialNN.dists, M.targets, M.mdata, opts.algorithm,
+                        M.E_actual, M.numPoints, numPredictions, k);
+  } else {
+    sDists = af::select(pValids, potentialNN.dists, MISSING_D);
+    yvecs = M.targets;
+    smData = M.mdata;
+  }
+
+  return { pValids, sDists };
+}
+#endif
+
+void require_distance_index_pairs_match(const DistanceIndexPairs& pairs1, const DistanceIndexPairs& pairs2)
+{
+  require_vectors_match<int>(pairs1.inds, pairs2.inds);
+  require_vectors_match<double>(pairs1.dists, pairs2.dists);
+}
 
 void require_manifolds_match(Manifold& M, const std::vector<std::vector<double>>& M_true,
                              const std::vector<double>& y_true)
@@ -653,7 +712,7 @@ TEST_CASE("Library prediction splits", "[splitting]")
   }
 }
 
-TEST_CASE("Eager L^p distances", "[lp_distances]")
+TEST_CASE("Eager L^p distances and neighbours", "[lp_distances]")
 {
   int E = 2;
   int tau = 1;
@@ -710,11 +769,41 @@ TEST_CASE("Eager L^p distances", "[lp_distances]")
     require_vectors_match<int>(euclidean_2.inds, inds_2);
     require_vectors_match<double>(euclidean_2.dists, dists_2);
 
+    int k = 1;
+    DistanceIndexPairs trueKNNs_0 = { inds_0, dists_0 };
+    DistanceIndexPairs trueKNNs_1 = { inds_1, dists_1 };
+    DistanceIndexPairs trueKNNs_2 = { { 1 }, { sqrt(1 * 1 + 1 * 1) } };
+
+    DistanceIndexPairs kNNs_0 = get_kNNs(euclidean_0, k);
+    DistanceIndexPairs kNNs_1 = get_kNNs(euclidean_1, k);
+    DistanceIndexPairs kNNs_2 = get_kNNs(euclidean_2, k);
+
+    require_distance_index_pairs_match(kNNs_0, trueKNNs_0);
+    require_distance_index_pairs_match(kNNs_1, trueKNNs_1);
+    require_distance_index_pairs_match(kNNs_2, trueKNNs_2);
+
 #if defined(WITH_ARRAYFIRE)
     std::vector<std::vector<double>> trueDists = { { NA, sqrt(1 * 1 + 1 * 1) },
                                                    { sqrt(1 * 1 + 1 * 1), NA },
                                                    { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) } };
     test_af_distances(M, Mp, opts, trueDists);
+
+    // Converting enum vector to char (AF's bool) vector for ArrayFire
+    std::vector<char> mopts;
+    for (int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+    }
+    af::array metricOpts(M.E_actual(), mopts.data());
+
+    const ManifoldOnGPU gpuM = M.toGPU(false);
+    const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+
+    DistanceIndexPairsOnGPU af_potentialNN = afLPDistances(Mp.numPoints(), opts, gpuM, gpuMp, metricOpts);
+    DistanceIndexPairsOnGPU af_kNNs = get_af_kNNs(opts, gpuM, gpuMp, af_potentialNN, k);
+
+    af_print(af_kNNs.valids);
+    af_print(af_kNNs.dists);
+
 #endif
   }
 
@@ -824,6 +913,24 @@ TEST_CASE("Eager L^p distances with missingdistance", "[lp_distances+allowmissin
     };
 
     test_af_distances(M, Mp, opts, trueDists);
+
+    int k = 3;
+
+    // Converting enum vector to char (AF's bool) vector for ArrayFire
+    std::vector<char> mopts;
+    for (int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+    }
+    af::array metricOpts(M.E_actual(), mopts.data());
+
+    const ManifoldOnGPU gpuM = M.toGPU(false);
+    const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+
+    DistanceIndexPairsOnGPU af_potentialNN = afLPDistances(Mp.numPoints(), opts, gpuM, gpuMp, metricOpts);
+    DistanceIndexPairsOnGPU af_kNNs = get_af_kNNs(opts, gpuM, gpuMp, af_potentialNN, k);
+
+    af_print(af_kNNs.valids);
+    af_print(af_kNNs.dists);
 #endif
   }
 
