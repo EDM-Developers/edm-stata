@@ -7,8 +7,9 @@
 #endif
 #include <fmt/format.h>
 
-#include <nlohmann/json.hpp>
+#ifdef JSON
 
+#include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 struct Inputs
@@ -24,3 +25,5 @@ Inputs read_lowlevel_inputs_file(std::string fName);
 void append_to_dumpfile(std::string fName, const json& taskGroup);
 std::vector<bool> int_to_bool(std::vector<int> iv);
 json run_tests(json testInputs, int nthreads, IO* io = nullptr);
+
+#endif

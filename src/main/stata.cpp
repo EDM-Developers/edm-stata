@@ -11,7 +11,7 @@
 
 #include <algorithm>
 #include <future>
-#include <numeric> // for std::accumulate
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -595,6 +595,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
+#ifdef JSON
   // If requested, save the inputs to a local file for testing
   if (!saveInputsFilename.empty()) {
     if (io.verbosity > 1) {
@@ -627,6 +628,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     // SF_scal_save(FINISHED_SCALAR, 1.0);
     // return SUCCESS; // Let Stata give the error here.
   }
+#endif
 
   futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle,
                               saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable,

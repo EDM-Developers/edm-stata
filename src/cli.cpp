@@ -3,6 +3,8 @@
 #include <iostream>
 #include <queue>
 
+#ifdef JSON
+
 /*! \brief Read in a dump file.
  *
  * Read in a dump file created with the Stata `saveinputs' option.
@@ -116,3 +118,5 @@ json run_tests(json testInputs, int nthreads, IO* io)
 
   return results;
 }
+
+#endif

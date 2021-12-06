@@ -180,6 +180,7 @@ endif()
 # Grab vendored files (e.g. the Stata/C interface files)
 target_include_directories(edm_plugin PRIVATE src vendor vendor/eigen-3.4.0)
 
+target_compile_definitions(edm_plugin PRIVATE JSON)
 target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
 target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
@@ -206,6 +207,7 @@ set_target_properties(edm_cli
     OSX_ARCHITECTURES "arm64;x86_64"
 )
 
+target_compile_definitions(edm_cli PRIVATE JSON)
 target_compile_definitions(edm_cli PRIVATE NOMINMAX)
 target_include_directories(edm_cli PRIVATE src vendor vendor/eigen-3.4.0)
 target_link_libraries(edm_cli PRIVATE
@@ -234,6 +236,7 @@ if(WIN32)
 endif()
 
 find_package(benchmark CONFIG REQUIRED)
+target_compile_definitions(gbench PRIVATE JSON)
 target_compile_definitions(gbench PRIVATE NOMINMAX)
 target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
 target_include_directories(gbench PRIVATE src vendor vendor/eigen-3.4.0)
