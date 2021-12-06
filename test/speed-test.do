@@ -7,8 +7,6 @@ tsset t
 
 global EDM_VERBOSITY = 1
 global EDM_NTHREADS = 4
-global EDM_SAVE_INPUTS = "speed-test"
-cap rm speed-test.json
 
 timer on 2
 
