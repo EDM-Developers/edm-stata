@@ -6,16 +6,23 @@ test/edm_cli*
 test/gbench*
 test/edm_test*
 test/ci-test.json
+test/ci-test-out.json
 build
 bin
+vcpkg_installed
+*compile.bat
+*compile.sh
+
 .clangd
 *.h5
-vcpkg_installed
 *desktop.ini
 *.DS_Store
 *Icon*
 .vscode*
 .idea*
+cmake-build-debug
+cmake-build-release
+
 junk*
 
 # Prerequisites
