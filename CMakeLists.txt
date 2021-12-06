@@ -48,7 +48,7 @@ if (EDM_WITH_ARRAYFIRE)
 
   find_package(ArrayFire CONFIG REQUIRED)
 
-  set(CUDA_architecture_build_targets "Common" CACHE
+  set(CUDA_architecture_build_targets "Pascal Volta Turing" CACHE
     STRING "The compute architectures targeted by this build. (Options: Auto;3.0;Maxwell;All;Common)")
 
   CUDA_SELECT_NVCC_ARCH_FLAGS(cuda_architecture_flags ${CUDA_architecture_build_targets})
