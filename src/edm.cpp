@@ -688,7 +688,7 @@ void smap_prediction(int Mp_i, int t, const Options& opts, const Manifold& M, co
   // The pseudo-inverse of X can be calculated as (X^T * X)^(-1) * X^T
   // see https://scicomp.stackexchange.com/a/33375
   const int svdOpts = Eigen::ComputeThinU | Eigen::ComputeThinV; // 'ComputeFull*' would probably work identically here.
-  Eigen::BDCSVD<MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, svdOpts);
+  Eigen::JacobiSVD<MatrixXd> svd(X_ls_cj.transpose() * X_ls_cj, svdOpts);
   Eigen::VectorXd ics = svd.solve(X_ls_cj.transpose() * y_ls);
 
   double r = ics(0);
