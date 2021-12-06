@@ -1242,6 +1242,172 @@ TEST_CASE("Coprediction and usable/library set/prediction sets", "[copredSets]")
   }
 }
 
+inline Eigen::MatrixXd AtA(const Eigen::MatrixXd& A)
+{
+  int n(A.cols());
+  return Eigen::MatrixXd(n, n).setZero().selfadjointView<Eigen::Lower>().rankUpdate(A.adjoint());
+}
+
+TEST_CASE("S-map SVD details", "[svd]")
+{
+  int E = 2;
+  int tau = 1;
+  int p = 1;
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  ManifoldGenerator generator(t, x, tau, p);
+  std::vector<bool> usable = generator.generate_usable(E);
+
+  Manifold M(generator, E, usable, false);
+  Manifold Mp(generator, E, usable, true);
+
+  std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
+  std::vector<double> y_true = { 13, 14 };
+  require_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = { { 12, 11 }, { 13, 12 }, { 14, 13 } };
+  std::vector<double> yp_true = { 13, 14, NA };
+  require_manifolds_match(Mp, Mp_true, yp_true);
+
+  Options opts;
+
+  opts.panelMode = false;
+  opts.missingdistance = 0;
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+
+  opts.distance = Distance::MeanAbsoluteError;
+
+  //  std::vector<int> inds_0 = { 1 };
+  //  std::vector<double> dists_0 = { (1 + 1) / 2 };
+  //
+  //  std::vector<int> inds_1 = { 0 };
+  //  std::vector<double> dists_1 = { (1 + 1) / 2 };
+
+  std::vector<int> inds_2 = { 0, 1 };
+  std::vector<double> dists_2 = { 2, 1 };
+
+  DistanceIndexPairs mae_2 = eager_lp_distances(2, opts, M, Mp);
+  require_vectors_match<int>(mae_2.inds, inds_2);
+  require_vectors_match<double>(mae_2.dists, dists_2);
+
+  int k = 2;
+  int Mp_i = 2;
+  double theta = 1;
+
+  std::vector<double> weights = {
+    exp(-2) / (exp(-2) + exp(-1)), // 0.2689414213699951
+    exp(-1) / (exp(-2) + exp(-1)), // 0.7310585786300049
+  };
+
+  // Calculate the weight for each neighbour
+  Eigen::Map<const Eigen::VectorXd> distsMap(&(dists_2[0]), dists_2.size());
+  Eigen::VectorXd w = Eigen::exp(-theta * (distsMap.array() / distsMap.mean()));
+
+  // Pull out the nearest neighbours from the manifold, and
+  // simultaneously prepend a column of ones in front of the manifold data.
+  MatrixXd X_ls_cj(k, M.E_actual() + 1);
+
+  for (int i = 0; i < k; i++) {
+    X_ls_cj(i, 0) = w[i];
+    for (int j = 1; j < M.E_actual() + 1; j++) {
+      X_ls_cj(i, j) = w[i] * M(inds_2[i], j - 1);
+    }
+  }
+
+  std::vector<std::vector<double>> X_ls_true = { { 0.2689414, 0.2689414 * 12, 0.2689414 * 11 },
+                                                 { 0.7310585, 0.7310585 * 13, 0.7310585 * 12 } };
+
+  Eigen::VectorXd y_ls(k);
+  for (int i = 0; i < k; i++) {
+    y_ls[i] = w[i] * M.target(inds_2[i]);
+  }
+
+  std::vector<double> y_ls_true = { 0.2689414 * 13, 0.7310585 * 14 };
+
+  auto y = std::unique_ptr<double[]>(new double[M.E_actual()], std::default_delete<double[]>());
+  Mp.eager_fill_in_point(Mp_i, y.get());
+
+  double r;
+
+  // The old way to solve this:
+  Eigen::BDCSVD<MatrixXd> svd_old(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::VectorXd ics_old = svd_old.solve(y_ls);
+
+  for (int i = 0; i < ics_old.size(); i++) {
+    std::cout << ics_old[i] << " ";
+  }
+  std::cout << "\n";
+
+  r = ics_old(0);
+  for (int j = 0; j < M.E_actual(); j++) {
+    if (y[j] != MISSING_D) {
+      r += y[j] * ics_old(j + 1);
+    }
+  }
+  std::cout << r << "\n\n";
+
+  // The new way to solve this:
+  const int svdOpts = Eigen::ComputeThinU | Eigen::ComputeThinV; // 'ComputeFull*' would probably work identically here.
+  Eigen::BDCSVD<MatrixXd> svd_new(X_ls_cj.transpose() * X_ls_cj, svdOpts);
+  Eigen::VectorXd ics_new = svd_new.solve(X_ls_cj.transpose() * y_ls);
+
+  for (int i = 0; i < ics_new.size(); i++) {
+    std::cout << ics_new[i] << " ";
+  }
+  std::cout << "\n";
+
+  r = ics_new(0);
+  for (int j = 0; j < M.E_actual(); j++) {
+    if (y[j] != MISSING_D) {
+      r += y[j] * ics_new(j + 1);
+    }
+  }
+  std::cout << r << "\n\n";
+
+  REQUIRE(ics_old.size() == ics_new.size());
+  for (int i = 0; i < ics_new.size(); i++) {
+    CAPTURE(i);
+    // REQUIRE(ics_old[i] == Approx(ics_new[i]));
+    REQUIRE(std::abs(ics_old[i] - ics_new[i]) < 1e-4);
+  }
+
+  Eigen::JacobiSVD<MatrixXd> svd_jac(X_ls_cj, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::VectorXd ics_jac = svd_jac.solve(y_ls);
+
+  for (int i = 0; i < ics_jac.size(); i++) {
+    std::cout << ics_jac[i] << " ";
+  }
+  std::cout << "\n";
+
+  r = ics_jac(0);
+  for (int j = 0; j < M.E_actual(); j++) {
+    if (y[j] != MISSING_D) {
+      r += y[j] * ics_jac(j + 1);
+    }
+  }
+  std::cout << r << "\n\n";
+
+  const Eigen::LLT<Eigen::MatrixXd> llt(AtA(X_ls_cj));
+  const Eigen::VectorXd betahat = llt.solve(X_ls_cj.adjoint() * y_ls);
+
+  for (int i = 0; i < betahat.size(); i++) {
+    std::cout << betahat[i] << " ";
+  }
+  std::cout << "\n";
+
+  r = betahat(0);
+  for (int j = 0; j < M.E_actual(); j++) {
+    if (y[j] != MISSING_D) {
+      r += y[j] * betahat(j + 1);
+    }
+  }
+  std::cout << r << "\n\n";
+}
+
 int basic_edm_explore(int numThreads)
 {
 
