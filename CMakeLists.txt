@@ -231,24 +231,30 @@ set_target_properties(gbench
     PREFIX ""
     POSITION_INDEPENDENT_CODE ON
 )
-if(WIN32)
-  target_compile_options(gbench PRIVATE "/MD")
-endif()
 
-find_package(benchmark CONFIG REQUIRED)
-target_compile_definitions(gbench PRIVATE JSON)
-target_compile_definitions(gbench PRIVATE NOMINMAX)
-target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-target_include_directories(gbench PRIVATE src vendor vendor/eigen-3.4.0)
-target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
-target_link_libraries(gbench PRIVATE Threads::Threads)
-target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
-if (EDM_WITH_ARRAYFIRE)
-  target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
-  target_include_directories(gbench PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
-endif ()
-install(TARGETS gbench DESTINATION test OPTIONAL)
+if (NOT (EDM_WITH_ARRAYFIRE AND WIN32))
+  # The google benchmarks currently won't build with
+  # the GPU version due to some static/dynamic incompatibility.
+  if(WIN32)
+    target_compile_options(gbench PRIVATE "/MD")
+  endif()
+
+  find_package(benchmark CONFIG REQUIRED)
+  target_compile_definitions(gbench PRIVATE JSON)
+  target_compile_definitions(gbench PRIVATE NOMINMAX)
+  target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+  target_include_directories(gbench PRIVATE src vendor vendor/eigen-3.4.0)
+  target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
+  target_link_libraries(gbench PRIVATE Threads::Threads)
+  target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+  if (EDM_WITH_ARRAYFIRE)
+    target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
+    target_include_directories(gbench PRIVATE ${CUDA_INCLUDE_DIRS})
+    target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
+  endif ()
+  install(TARGETS gbench DESTINATION test OPTIONAL)
+
+endif()
 
 find_package(Catch2 REQUIRED)
 
