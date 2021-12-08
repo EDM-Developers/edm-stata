@@ -1512,15 +1512,15 @@ int basic_edm_explore(int numThreads)
   return rc;
 }
 
-extern ThreadPool workerPool;
+extern ThreadPool* workerPoolPtr;
 
 TEST_CASE("Calling top-level edm.h functions")
 {
   SECTION("Make sure decreasing the number of threads doesn't crash everything")
   {
     REQUIRE(basic_edm_explore(2) == 0);
-    REQUIRE(workerPool.num_workers() == 2);
+    REQUIRE(workerPoolPtr->num_workers() == 2);
     REQUIRE(basic_edm_explore(1) == 0);
-    REQUIRE(workerPool.num_workers() == 1);
+    REQUIRE(workerPoolPtr->num_workers() == 1);
   }
 }
