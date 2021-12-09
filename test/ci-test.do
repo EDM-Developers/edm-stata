@@ -27,8 +27,8 @@ if c(MP) {
 
 // Test that we don't crash when the RNG seed hasn't yet been set
 set obs 10
-gen t = _n
-gen x = _n
+qui gen t = _n
+qui gen x = _n
 tsset t
 
 di c(rngstate)
@@ -36,6 +36,26 @@ di c(rngstate)
 edm explore x , rand
 
 di c(rngstate)
+
+// Test that missing panel id is ignored
+set seed 1
+drop t x
+set obs 100
+qui gen t = _n
+qui gen x = 0
+qui replace x = 1 if mod(t, 2) == 1
+qui replace x = x + 0.25 * rnormal()
+
+qui gen id = _n > _N / 3
+qui replace id = . if mod(t, 7) == 1
+qui replace id = . if mod(t+1, 7) == 1
+qui replace id = . if mod(t+2, 7) == 1
+
+xtset id t
+
+edm explore x , savemanifold(mani)
+
+ereturn list
 
 drop *
 discard
@@ -543,20 +563,7 @@ qui {
 gen id = _n > _N / 3
 xtset id t
 
-
 // Check that panel data options are working
-
-// The following idea won't work, as the 'usable' is different;
-// the points which cross the boundary of panel ids are now thrown out
-//
-// // First run a couple of commands before adding panel data
-// // and compare them against the idw(0) versions
-// set seed 2
-// edm explore x
-//
-// set seed 2
-// edm xmap x y
-
 
 // Run some commands with multispatial mode on & off, with & without missing values
 set seed 1

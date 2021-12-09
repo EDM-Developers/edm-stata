@@ -136,7 +136,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
           if (std::is_floating_point<T>::value) {
             value = MISSING_D;
           } else {
-            value = 0;
+            value = MISSING_I;
           }
         }
         M[ind] = (T)value;

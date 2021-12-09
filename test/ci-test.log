@@ -46,9 +46,9 @@ Running tests using the Euclidean distance
 . set obs 10
 Number of observations (_N) was 0, now 10.
 
-. gen t = _n
+. qui gen t = _n
 
-. gen x = _n
+. qui gen x = _n
 
 . tsset t
 
@@ -114,6 +114,88 @@ XAA3b8ba9cd046ba5ba4fb08a4cdddb806275fbf6adf94193b2a4be96d8ed674e75b0165bdfff6f9
 > 94e4c27c0ba6377d445ed670fbde94eca0d6ef54ad57a9ddf95e4afac9fbc5ab834078a5a09a7a95fc36dd89c46150db12805bbf3e45c3b0cfb8428912bd0bb1eb98232c048f97fba1587b438bc906a819d60f6cd9d27b5a2a0d3f6146115cbb06f6bbdf9e432067e2b56fbef71c8d24e5f351735b493066dd526449a6d4a
 > adc16971551173bebb85d349978b73261780b6986656c9b1fae186aaee5344b59569c0a04a9784014174fe9925e9807b0a057f98842e189a687ff7ca5d423402f7e6476e64588582daf9ff765660919892f302a19b12f5bd123f322da862d7ac0d0e3dbfe547a605ab0d14bf349f6ac33f1a184b13b19694a9730c687ef78
 > 2148b556db60005c71aabd6c49fdd5025ec3e7e2f3b8edf648eb19446317a103a6b7f7197396c845fa58b9a53a8367990ef951b5bc682ab9d4fa4827d64f53f404acb88bbba7120a860aa94786cf15638043a7c2516c49dc1798e00e230001000000092ed4
+
+. 
+. // Test that missing panel id is ignored
+. set seed 1
+
+. drop t x
+
+. set obs 100
+Number of observations (_N) was 0, now 100.
+
+. qui gen t = _n
+
+. qui gen x = 0
+
+. qui replace x = 1 if mod(t, 2) == 1
+
+. qui replace x = x + 0.25 * rnormal()
+
+. 
+. qui gen id = _n > _N / 3
+
+. qui replace id = . if mod(t, 7) == 1
+
+. qui replace id = . if mod(t+1, 7) == 1
+
+. qui replace id = . if mod(t+2, 7) == 1
+
+. 
+. xtset id t
+
+Panel variable: id (unbalanced)
+ Time variable: t, 2 to 100, but with gaps
+         Delta: 1 unit
+
+. 
+. edm explore x , savemanifold(mani)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .79589          .31135 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to 3
+Note: 50/50 split for training and validation data
+
+. 
+. ereturn list
+
+scalars:
+                  e(N) =  57
+           e(e_offset) =  0
+     e(report_actuale) =  1
+                e(tau) =  1
+          e(replicate) =  1
+          e(crossfold) =  0
+        e(rep_details) =  0
+                 e(ci) =  0
+      e(force_compute) =  1
+              e(panel) =  1
+                 e(dt) =  0
+
+macros:
+            e(cmdline) : "edm explore x , savemanifold(mani)"
+                e(cmd) : "edm"
+               e(mode) : "edm_plugin"
+          e(algorithm) : "simplex"
+        e(cmdfootnote) : "Note: Number of neighbours (k) is set to 3
+Note: 50/50 split for training and validation data"
+                  e(x) : "x"
+          e(direction) : "oneway"
+         e(subcommand) : "explore"
+         e(properties) : "b"
+
+matrices:
+                  e(b) :  1 x 1
+     e(explore_result) :  1 x 4
+
+functions:
+             e(sample)   
 
 . 
 . drop *
@@ -5545,20 +5627,7 @@ Panel variable: id (unbalanced)
          Delta: 1 unit
 
 . 
-. 
 . // Check that panel data options are working
-. 
-. // The following idea won't work, as the 'usable' is different;
-. // the points which cross the boundary of panel ids are now thrown out
-. //
-. // // First run a couple of commands before adding panel data
-. // // and compare them against the idw(0) versions
-. // set seed 2
-. // edm explore x
-. //
-. // set seed 2
-. // edm xmap x y
-. 
 . 
 . // Run some commands with multispatial mode on & off, with & without missing values
 . set seed 1
