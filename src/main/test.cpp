@@ -15,6 +15,7 @@
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 const double NA = MISSING_D;
+const int NA_I = MISSING_I;
 
 // Function declarations for 'private' functions not listed in the relevant header files.
 DistanceIndexPairs k_nearest_neighbours(const DistanceIndexPairs& potentialNeighbours, int k);
@@ -480,7 +481,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     bool allowMissing = false;
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
 
-    std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
+    std::vector<int> obsNums = { 0, 1, NA_I, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
       CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
@@ -545,7 +546,7 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
     bool allowMissing = false;
     ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, reldtMode, allowMissing);
 
-    std::vector<int> obsNums = { 0, 1, -1, 2, 3, 4 };
+    std::vector<int> obsNums = { 0, 1, NA_I, 2, 3, 4 };
     for (int i = 0; i < obsNums.size(); i++) {
       CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
@@ -651,6 +652,42 @@ TEST_CASE("Check negative times work", "[negativeTimes]")
   for (int i = 0; i < obsNums.size(); i++) {
     CAPTURE(i);
     REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+  }
+}
+
+TEST_CASE("Check missing times work", "[missingTimes]")
+{
+  std::vector<double> t = { 1.0, 2.5, 3.0, NA, 5.0, 6.0 };
+  std::vector<double> x = { 11, 12, NA, 14, 15, 16 };
+
+  int tau = 1;
+  int p = 1;
+
+  SECTION("Non-dt")
+  {
+    ManifoldGenerator generator(t, x, tau, p);
+
+    REQUIRE(generator.calculate_time_increment() == 0.5);
+
+    std::vector<int> obsNums = { 0, 3, 4, NA_I, 8, 10 };
+    for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
+      REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+    }
+  }
+
+  SECTION("dt")
+  {
+    bool dtMode = true;
+    double dtWeight = 1.0;
+    bool allowMissing = false;
+    ManifoldGenerator generator(t, x, tau, p, {}, {}, {}, {}, 0, dtMode, false, allowMissing);
+
+    std::vector<int> obsNums = { 0, 1, NA_I, NA_I, 2, 3 };
+    for (int i = 0; i < obsNums.size(); i++) {
+      CAPTURE(i);
+      REQUIRE(generator.get_observation_num(i) == obsNums[i]);
+    }
   }
 }
 
