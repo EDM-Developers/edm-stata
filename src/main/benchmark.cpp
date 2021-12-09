@@ -45,8 +45,8 @@ static void bm_eager_manifold_creation(benchmark::State& state)
   int Mp_i = 0;
 
   for (auto _ : state) {
-    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, false);
-    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, false);
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, false, false);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, false, false);
   }
 }
 
@@ -62,8 +62,8 @@ static void bm_lazy_manifold_creation(benchmark::State& state)
   int Mp_i = 0;
 
   for (auto _ : state) {
-    Manifold M(vars.generator, vars.E, vars.libraryRows, false, 0.0, false, true);
-    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, 0.0, false, true);
+    Manifold M(vars.generator, vars.E, vars.libraryRows, false, false, true);
+    Manifold Mp(vars.generator, vars.E, vars.predictionRows, true, false, true);
   }
 }
 
