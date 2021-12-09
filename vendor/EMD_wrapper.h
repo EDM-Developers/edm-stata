@@ -16,8 +16,8 @@
 #ifndef EMD_H
 #define EMD_H
 
-#include "network_simplex_simple.h"
 #include <iostream>
+#include <network_simplex_simple.h>
 #include <vector>
 
 using namespace lemon;
