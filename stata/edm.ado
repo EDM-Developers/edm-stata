@@ -698,7 +698,7 @@ program define edmExplore, eclass
 			}
 		}
 
-		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+		plugin call `plugin_name' `timevar' `x' `x' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars', "launch_edm_tasks" ///
 				"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
@@ -1007,7 +1007,7 @@ program define edmExplore, eclass
 		local result_matrix = "r"
 		local save_predict_mode = ("`predictionsave'" != "")
 		local save_copredict_mode = ("`copredictvar'" != "")
-		plugin call `plugin_name' `predictionsave' `copredictionsave' if `touse', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
+		plugin call `plugin_name' `predictionsave' `copredictionsave', "collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 	}
 
 	if `k' <= 0 | `k_min' != `k_max' {
@@ -1538,7 +1538,7 @@ program define edmXmap, eclass
 				}
 			}
 
-			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars' if `touse', "launch_edm_tasks" ///
+			plugin call `plugin_name' `timevar' `x' `y' `z_vars' `co_xvar' `panel_id' `parsed_dtsave' `manifold_vars', "launch_edm_tasks" ///
 					"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
@@ -1823,7 +1823,7 @@ program define edmXmap, eclass
 			local result_matrix = "r`direction_num'"
 			local save_predict_mode = ("`predictionsave'" != "")
 			local save_copredict_mode = ("`copredictvar'" != "")
-			plugin call `plugin_name' `predictionsave' `copredictionsave' `all_savesmap_vars`direction_num'' if `touse', ///
+			plugin call `plugin_name' `predictionsave' `copredictionsave' `all_savesmap_vars`direction_num'', ///
 					"collect_results" "`result_matrix'" "`save_predict_mode'" "`save_copredict_mode'"
 		}
 
