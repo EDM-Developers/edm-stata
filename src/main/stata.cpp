@@ -316,9 +316,11 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   reset_global_state();
 
   Options opts;
-  opts.copredict = false;
 
+  opts.copredict = false;
   opts.calcRhoMAE = true;
+  opts.saveManifolds = false;
+
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
   opts.dtWeight = dtMode ? atof(argv[2]) : 0.0;
