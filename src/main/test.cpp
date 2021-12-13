@@ -1556,9 +1556,12 @@ TEST_CASE("Calling top-level edm.h functions")
 {
   SECTION("Make sure decreasing the number of threads doesn't crash everything")
   {
+    REQUIRE(workerPoolPtr->is_stopped() == false);
     REQUIRE(basic_edm_explore(2) == 0);
     REQUIRE(workerPoolPtr->num_workers() == 2);
+    REQUIRE(workerPoolPtr->is_stopped() == false);
     REQUIRE(basic_edm_explore(1) == 0);
     REQUIRE(workerPoolPtr->num_workers() == 1);
+    REQUIRE(workerPoolPtr->is_stopped() == false);
   }
 }
