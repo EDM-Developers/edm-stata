@@ -187,8 +187,8 @@ ereturn list
 edm explore x, allowmissing
 
 edm explore x, missingdistance(1)
+
 edm xmap x l.x, allowmissing
-edm xmap x l.x, missingdistance(2)
 
 edm xmap x l.x, extraembed(u) dt alg(smap) savesmap(newb) e(5)
 

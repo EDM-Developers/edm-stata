@@ -917,6 +917,7 @@ Missing values are assumed to have a distance of 1 with all values.
 Note: Number of neighbours (k) is set to 3
 Note: 50/50 split for training and validation data
 
+. 
 . edm xmap x l.x, allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -929,22 +930,6 @@ Missing values are assumed to have a distance of .25 and .24
 -------------------------------------------------------------------
    l.x ~ l.x|M(x)             166          .99983        .0025703 
      x ~ x|M(l.x)             136          .99864        .0080844 
--------------------------------------------------------------------
-Note: Number of neighbours (k) is set to 3
-Note: The embedding dimension E is 2
-
-. edm xmap x l.x, missingdistance(2)
-Percent complete: 0...10...20...30...40...50...60...70...80...90...
-Percent complete: 0...10...20...30...40...50...60...70...80...90...
-
-Empirical Dynamic Modelling
-Convergent Cross-mapping result for variables x and l.x
-Missing values are assumed to have a distance of 2 with all values.
--------------------------------------------------------------------
-          Mapping    Library size             rho             MAE
--------------------------------------------------------------------
-   l.x ~ l.x|M(x)             166          .99983        .0025704 
-     x ~ x|M(l.x)             136          .99864        .0080846 
 -------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
