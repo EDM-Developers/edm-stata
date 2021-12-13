@@ -144,7 +144,6 @@ assert e(b)[1,2] == xmap1[1,1]
 
 * Make sure multiple e's and multiple theta's work together
 
-set seed 1
 edm explore x, e(2 3) theta(0 1) mata
 ereturn list
 
@@ -154,7 +153,6 @@ forvalues i = 1/`=rowsof(e(explore_result))' {
     }
 }
 
-set seed 1
 edm explore x, e(2 3) theta(0 1)
 ereturn list
 
@@ -170,6 +168,7 @@ edm explore x, e(2) lowmemory
 tempfile basedata
 qui compress
 qui save `basedata', replace
+
 * test missing data
 set seed 12345678
 gen double u = runiform()
@@ -177,22 +176,15 @@ drop if u<0.1
 replace x = . if u<0.2
 replace t=. if mod(t,19) == 1
 
-
-set seed 1
 edm explore x
-set seed 1
+
 edm explore x, dt savemanifold(plugin) dtweight(1)
 
-set seed 1
 edm explore x, dt savemanifold(mata) mata dtweight(1)
 
 ereturn list
 
-di c(rngstate)
-
 edm explore x, allowmissing
-
-di c(rngstate)
 
 edm explore x, missingdistance(1)
 edm xmap x l.x, allowmissing
@@ -200,43 +192,53 @@ edm xmap x l.x, missingdistance(2)
 
 edm xmap x l.x, extraembed(u) dt alg(smap) savesmap(newb) e(5)
 
-set seed 1
 edm xmap x l3.x, extraembed(u) dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
 
 edm explore x, extraembed(u) allowmissing dt crossfold(5)
 
 edm explore d.x, dt
 
-edm explore x, rep(20) ci(95)
+set seed 1
 
+edm explore x, rep(20) ci(95)
 edm xmap x y, lib(50) rep(20) ci(95)
 
 use `basedata', clear
 cap drop x_copy
 cap drop x_p
 cap drop xc_p
+
 clonevar x_copy = x
+
 edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full
-assert x_p!=. if _n!=1 & _n!=_N
-assert xc_p!=. if _n!=1 & _n!=_N
-assert x_p ==xc_p if x_p!=.
+
+assert x_p != . if _n != 1 & _n != _N
+assert xc_p != . if _n != 1 & _n != _N
+assert x_p == xc_p if x_p != .
+
 cor x_p f.x
 cor xc_p f.x
 
 cap drop x_p xc_p
+
 edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full p(2)
+
 sum x_p xc_p
-assert xc_p!=. if x_p!=.
+assert xc_p != . if x_p != .
 
 gen y_copy = y
+
 edm xmap x y, p(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
+
 assert xmap_y_p != . if _n >= 2 & _n <= _N - 10
-assert xmap_y_p == xmap_y if xmap_y !=.
+assert xmap_y_p == xmap_y if xmap_y != .
 
 preserve
 drop if mod(t,17)==1
-//copredict with dt
+
+// Copredict with dt
 edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy) direction(oneway) predict(xmap_y_dt)
+
 assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
 //assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
 
@@ -250,13 +252,16 @@ edm explore x, copredict(dx2) copredictvar(d.x)
 
 edm explore x, predict(predicted_x) copredict(predicted_y_from_mx) copredictvar(y) full
 edm explore y, predict(predicted_y) full
+
 cor f.x f.y predicted_x predicted_y predicted_y_from_mx
 cor f.x predicted_x
-assert r(rho)>0.95
+assert r(rho) > 0.95
+
 cor f.y predicted_y
-assert r(rho)>0.85
+assert r(rho) > 0.85
+
 cor f.y predicted_y_from_mx
-assert r(rho)>0.3
+assert r(rho) > 0.3
 
 global EDM_SAVE_INPUTS = ""
 
@@ -336,10 +341,10 @@ drop beta*
 // Introduce missing data and test all the dt variations
 set seed 12345678
 gen double u = runiform()
-drop if u<0.1
-replace x = . if u<0.2
-replace t = . if mod(t,19) ==1
-replace u1 = . if mod(t,7) ==1
+drop if u < 0.1
+replace x = . if u < 0.2
+replace t = . if mod(t, 19) == 1
+replace u1 = . if mod(t, 7) == 1
 
 edm explore x, copredict(predicted_y_from_mx) copredictvar(y) full
 edm explore x, copredict(predicted_y_from_mx_mata) copredictvar(y) full mata
@@ -446,9 +451,9 @@ cap drop mata
 cap drop err
 
 cap drop err
-set seed 1
+
 edm explore x, e(3) extra(u1) dt alg(smap) dtsave(pluginnomissing) dtweight(1) predict(predplugin)
-set seed 1
+
 edm explore x, e(3) extra(u1) dt alg(smap) dtsave(matanomissing) mata dtweight(1) predict(predmata)
 
 gen dterr = pluginnomissing != matanomissing
@@ -496,6 +501,7 @@ edm xmap y i.x
 edm xmap x y, allowmissing dt library(10(5)70)
 
 // Check that the manifold is reordered so that e-varying extras are first
+set seed 1
 gen v = runiform()
 edm xmap x y, extra(u v(e)) algorithm(smap) savesmap(beta) 
 
@@ -505,17 +511,13 @@ list beta*
 drop beta*
 
 // See if the negative values of p are allowed
-set seed 1
 edm explore x, p(-1)
 edm xmap x y, p(-1)
 
-set seed 1
 edm explore x, p(-1) mata
 edm xmap x y, p(-1) mata
 
 // Try out copredict and copredictvar combinations with multiple reps etc.
-set seed 1
-
 edm explore x, copredictvar(y)
 
 edm explore x, copredictvar(y) full
@@ -528,6 +530,7 @@ edm explore x, e(2/5) theta(0 1) copredictvar(y)
 
 edm xmap x y, library(5 10 20 40) copredictvar(u1)
 
+set seed 1
 edm explore x, copredictvar(y) rep(20)
 
 edm xmap x y, library(5 10 20 40) copredictvar(u1) rep(20)
@@ -566,88 +569,54 @@ xtset id t
 // Check that panel data options are working
 
 // Run some commands with multispatial mode on & off, with & without missing values
-set seed 1
+
 edm explore x, e(40)
-set seed 1
 edm explore x, e(40) mata
-set seed 1
 edm explore x, e(40) allowmissing
-set seed 1
 edm explore x, e(40) allowmissing mata
 
-set seed 2
 edm explore x, e(40) idw(-1)
-set seed 2
 edm explore x, e(40) idw(-1) mata
-set seed 2
 edm explore x, e(40) idw(-1) allowmissing
-set seed 2
 edm explore x, e(40) idw(-1) allowmissing mata
 
-set seed 3
 edm xmap x y, e(40)
-set seed 3
 edm xmap x y, e(40) mata
-set seed 3
 edm xmap x y, e(40) allowmissing
-set seed 3
 edm xmap x y, e(40) allowmissing mata
 
-set seed 4
 edm xmap x y, e(40) idw(-1)
-set seed 4
 edm xmap x y, e(40) idw(-1) mata
-set seed 4
 edm xmap x y, e(40) idw(-1) allowmissing
-set seed 4
 edm xmap x y, e(40) idw(-1) allowmissing mata
 
 // Drop some rows of the dataset & make sure the plugin can handle this
 // (i.e. can it replicate a kind of 'tsfill' hehaviour).
 drop if mod(t,7) == 0
 
-set seed 1
 edm explore x, e(5)
-set seed 1
 edm explore x, e(5) mata
-set seed 1
 edm explore x, e(5) allowmissing
-set seed 1
 edm explore x, e(5) allowmissing mata
 
-set seed 2
 edm explore x, e(5) idw(-1)
-set seed 2
 edm explore x, e(5) idw(-1) mata
-set seed 2
 edm explore x, e(5) idw(-1) allowmissing
-set seed 2
 edm explore x, e(5) idw(-1) allowmissing mata
 
-set seed 3
 edm explore x, e(5) idw(-1) k(-1)
-set seed 3
 edm explore x, e(5) idw(-1) k(-1) mata
 
 // See if the relative dt flags work
-set seed 1
 edm explore x, e(5) reldt
-set seed 1
 edm explore x, e(5) reldt mata
-set seed 1
 edm explore x, e(5) reldt allowmissing
-set seed 1
 edm explore x, e(5) reldt allowmissing mata
 
-set seed 2
 edm explore x, e(5) idw(-1) reldt
-set seed 2
 edm explore x, e(5) idw(-1) reldt mata
-set seed 2
 edm explore x, e(5) idw(-1) reldt allowmissing
-set seed 2
 edm explore x, e(5) idw(-1) reldt allowmissing mata
-
 
 // Make sure the plugin doesn't crash if the user has a different random number generator selected.
 set rng mt64

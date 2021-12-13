@@ -652,8 +652,6 @@ Note: The embedding dimension E is 2
 . 
 . * Make sure multiple e's and multiple theta's work together
 . 
-. set seed 1
-
 . edm explore x, e(2 3) theta(0 1) mata
 
 Empirical Dynamic Modelling
@@ -711,8 +709,6 @@ functions:
   5. }
 
 . 
-. set seed 1
-
 . edm explore x, e(2 3) theta(0 1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -792,6 +788,7 @@ Note: 50/50 split for training and validation data
 
 . qui save `basedata', replace
 
+. 
 . * test missing data
 . set seed 12345678
 
@@ -807,9 +804,6 @@ Note: 50/50 split for training and validation data
 (11 real changes made, 11 to missing)
 
 . 
-. 
-. set seed 1
-
 . edm explore x
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -823,8 +817,7 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to 3
 Note: 50/50 split for training and validation data
 
-. set seed 1
-
+. 
 . edm explore x, dt savemanifold(plugin) dtweight(1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -842,8 +835,6 @@ Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
 . 
-. set seed 1
-
 . edm explore x, dt savemanifold(mata) mata dtweight(1)
 
 Empirical Dynamic Modelling
@@ -897,29 +888,6 @@ functions:
              e(sample)   
 
 . 
-. di c(rngstate)
-XAA00000000000000015851f42d4c957f2e190380fc9abaac458c6783158e6f83249baf03f7f8c7e7b230925614008409f57b70d1a51fbf4b17ef853445b6ae1ce59314163a96cf2e76b3d3fbe1c3fab66db0e0a380f62e228d520a120bba7c042edd91e142b13b0d4ffeed2452c0360a6930e53714205c6ab05e8e70fde19c
-> 10ff84d5891460b2feb62f49f5fd7a9611b5d57c84ca0982e7e360123aa3126ae2736b5d1e46e77a5c1edb7f4a50364092880709d88920f3b785bb96a629ff4b3d78de920e8533bb548a0f9ccb49e69ad32e85ef8b48e9c0f13095aa0a7908ac33e52cef59d1bd77b8b7f2f58c8c893141488d08dbffd1b3af4ded8517837
-> d890202212b68e77fa8d94dbf784d588a4c65aaae95b05940a436aa020d621783c2f3abed704a5d76adaa33352fbc5851e4ba9587bb4ddcb27db7570ab99fe1ae8565181581e31ed191ad6019e36984847e1a09ef9cfebaac520abf30e91c490d2b273726cd00cce00d2dd72a3a133c6e31b7f89630f86fbc595ec61cdaba
-> aec9cce4a343365b9e95500dd7ac9ad9448b7d98cf02e3ebbf9f328f3b73e194faf2487292e9ff7453db22110b973a52bdb517f69d5b0f124c771a3b293d3dc863413d3e3fb46f9b02c850324bc8ba714cef880e0e424abfffa373eb83ccae6c42e7dfe41544dbb5af1d50021a30fdba4315d2c3fc2b1beec546f2778ace7
-> 7a8be4d3e79819f5dd70ee2ecda1a0d50cb0373cc3e79fe08bdbef6520287c1850e72a27ded770fadabf0ad7349a8de06dfda6d964acd90d29aa7846d587c7dfd7a346f75106d1430f1814995774447f89195b004b33de4f0632067aa45d6a3f3ad66928bf1bc0730cb594b1cc0b219c3d33077402d977250901c29c8ecd9
-> 56dac7e7ff88ca476381d8854a22489ed760d2ab8298a54492f42b53f52646cd3dc60f0fbf5623b62705246b2ec99152f02158ed254039bf91dd5cbbd35a6a622da388f26b8a5337cebd0ad8499bea033ac977c07b7e22598395ba5ab20330ff99b50f207f1e1fd4fc55466059a4c2fa4e2cdbf4e59ccd2278ddc445efb36
-> c851ef3dd0e7e338f93abda27a0f7d92a3769727b7e99f5b6b263becb597002ead91e6b54acf2bc705b539a63d98fd3e56380e2d4400114f09ff86ed8013b6d2effbfb6077dc52c46b3c59dbecb50df3c859a0d1a4ff8421df7fd4c33a89c14cf7b9ddd97de236d0083a48eeae3e47e1619cfe6631b98d8482cb8cac44021
-> 2f01b10ab27d10484a19e6a4d6e7f8d2bda7de052e5f2d24a8a61d6dac5eb166ee968b232c63100af0ecb54ac3638ff32067456d5601631a80e36952aa3260d50091bec9f3b3dd4192600a4a6c75b5b59c590d964a0b94e0a49b959b1cc82789024305a189aa5d4bb941b617a369efe4ecd920c992daac9cf90b1d993aeab
-> d84c0d6c434c744f9c9affb4d9a533d87e16b6009b60faba80eec5770521e6c809c46ed8c90ec09b9c761b54cbd4c23f93384913a93003179f7f04f5d57205a9232e915398dbd61c28e17835f71f91db8b56e3ae15645077c57f579e96f14a05711a88652b100689e8791ca2202e4409b4c86682c181e1726d2ea2449fbd3
-> 8e5705a59863efd7ec975493696fc2141ea36b121c8cb84977ffe194f6b4e84363d32d81a89080c4080c13fa8f6a9b0bc0b927b7cddcd800325ee4a6529ba82fc827e6aded4e2432067d82876af39a70fd19834b5a4f06ed32d1e0dc1322cd7f0830eef73b94d8d998482ae863263f973a2a8491c91d8907bfe54a46bdb61
-> 2439f49004fa54214e1ff015865cb390fe236b03de300a55491d5ffda41f8a2aba93a1d32d092496a7c6559d0e3ecd281fc5b79455c4ebbf5b52e57b9f49e2a10d26635445324dbd6030e16b95d2026507f333379da0229f9edaf0eb3ac39b1471b9160727f72f49d959a20ff07c0bcefdd2c73439124127257f3f3eb4cc6
-> aa50438a54d894c1bd1876de8070ae52bb5225f15ef486508f3d973c0ca8389ba7bdd41530d35e360d9ecabcf5cf1bf2560964a8ed40054578d9b2ce3fed3bbecdd2edaa8e8d0ebcec59862eb7066cc7ba1dda62d6dc0be19730af245cb3e39144fd28fd1140a545aea72edf64444f1324ecdfd3e6a984386a404696cd655
-> 70232096136a36611b0b51e66e6ee4d1edb907c80b49a68290910d33ef360fd9b07be91f9079d1a181ffb903c92dd16072688d660bea6d1b23d06f001ba16488335a677849e300bb649c7573c430f35e23295b881cd170ffe50cca0a1d93529b066ffbfbe6ebee45a9e433ba4bffd804511384b1a12597546cfa4e622a6c4
-> 957e5bce4c31e38d4111d6d77fccf9e3dc44ee6d398c7b36bf417dccbe6c20d3e3a751ad9ed7379484ca2d958109b1bc010aed5e13dfc59011385e00c1cf7a94b38a86d54eb59c7b4acbde74ad67590b7f4b2668962f89f27bf6577ac55d938f8889e8f1f39128edd7a8016425bc0019a62d58f6b6f507fe8448ae1acabfb
-> 791c31c831560719dcb44d8f5bc1e286556df0cf618ca95b6beff552b18ed8b155b3d11f9a027f2238f56dfbf899fa898776c16a2f8fa499b1e4e56acd61426066398f30d5604e005ecc1650304546d62f30c94849b83bb78d7c985b5fa3fbca4584b1f058182e58b271843f7971568b129517e711c556d2dc932a2c6d81d
-> d77067cf8f9c124c5e4a4ce9255e183e946042b5ccf254493554e89c2245b42ff823cdc0f40cc2b4dc45d302247d0ce2d85bfa6b99ee699731aa6783077f968c284873f1bfd9f9d12e77cf0ef3d715ae62a675505eb9d56cddf2971cfb54c37343e57cb42425139139747e84387324ef7a6a8d8c2a18a9de12651f5894acd
-> e43c30c278c8506d60cfb28e980e9ddc9d8b80e4a701fb454b70abbfe3aacdd4b93ef1cef89a71dd65f8df4c866906b4636938b7e30ee157e1450278ea0d94a2afba6e7bcb46ee067b4b40a6903030e9aa05e06c8aa3ef9bf4b2190bfa1f7aa4164623bfa6d3eae49791f3b181c625bb29e97cc414bf6ec82fbe36397803b
-> 138c37e59292af5162308691beb696f4137e2007099fc5bdf1dbc2e8af08c5d6298f581d9647c3bdc2adeef57031ea0a8d4e423b108179c50a9c86820299f147c1ad99f667c8b18dddd8d9b00b1d6ee12668d48eab704fe9d6e6e79ad38a1cff625936437752c110f0eb1e7ec3045445ef695a4566ce062d2d90b4327f971
-> 0f0f29982c22477baec8b5cca8deb5a3a6e22a464cb1997a7bff17a834908e7c62078bf3f8fddff519bfd5aac9fcf30e87d2ff4a8eb1046eafa79614f7add429ade748b09f321de613cf367b422ec2b9369e34128d92caa9b5a30ee218c20ea2fa6acfe61f5aed227f46bcf26fd193d2e58266092d32d51b668600b3c0b1d
-> b2693a59c12ca30718fb1d871a3d7417d52458a6c03057b6596c0e90ef9553e7d787910c3394137ccb6e1074ced62cc5790d91bd0e4f3d8d3e93f8af7cc8c4d038a186dd2da9e17854b034b44b3d20a354b930e90bd7407f59b89c6d2600010000013830cb
-
-. 
 . edm explore x, allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -933,29 +901,6 @@ Missing values are assumed to have a distance of .25 with all values.
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 3
 Note: 50/50 split for training and validation data
-
-. 
-. di c(rngstate)
-XAA00000000000000015851f42d4c957f2e190380fc9abaac458c6783158e6f83249baf03f7f8c7e7b230925614008409f57b70d1a51fbf4b17ef853445b6ae1ce59314163a96cf2e76b3d3fbe1c3fab66db0e0a380f62e228d520a120bba7c042edd91e142b13b0d4ffeed2452c0360a6930e53714205c6ab05e8e70fde19c
-> 10ff84d5891460b2feb62f49f5fd7a9611b5d57c84ca0982e7e360123aa3126ae2736b5d1e46e77a5c1edb7f4a50364092880709d88920f3b785bb96a629ff4b3d78de920e8533bb548a0f9ccb49e69ad32e85ef8b48e9c0f13095aa0a7908ac33e52cef59d1bd77b8b7f2f58c8c893141488d08dbffd1b3af4ded8517837
-> d890202212b68e77fa8d94dbf784d588a4c65aaae95b05940a436aa020d621783c2f3abed704a5d76adaa33352fbc5851e4ba9587bb4ddcb27db7570ab99fe1ae8565181581e31ed191ad6019e36984847e1a09ef9cfebaac520abf30e91c490d2b273726cd00cce00d2dd72a3a133c6e31b7f89630f86fbc595ec61cdaba
-> aec9cce4a343365b9e95500dd7ac9ad9448b7d98cf02e3ebbf9f328f3b73e194faf2487292e9ff7453db22110b973a52bdb517f69d5b0f124c771a3b293d3dc863413d3e3fb46f9b02c850324bc8ba714cef880e0e424abfffa373eb83ccae6c42e7dfe41544dbb5af1d50021a30fdba4315d2c3fc2b1beec546f2778ace7
-> 7a8be4d3e79819f5dd70ee2ecda1a0d50cb0373cc3e79fe08bdbef6520287c1850e72a27ded770fadabf0ad7349a8de06dfda6d964acd90d29aa7846d587c7dfd7a346f75106d1430f1814995774447f89195b004b33de4f0632067aa45d6a3f3ad66928bf1bc0730cb594b1cc0b219c3d33077402d977250901c29c8ecd9
-> 56dac7e7ff88ca476381d8854a22489ed760d2ab8298a54492f42b53f52646cd3dc60f0fbf5623b62705246b2ec99152f02158ed254039bf91dd5cbbd35a6a622da388f26b8a5337cebd0ad8499bea033ac977c07b7e22598395ba5ab20330ff99b50f207f1e1fd4fc55466059a4c2fa4e2cdbf4e59ccd2278ddc445efb36
-> c851ef3dd0e7e338f93abda27a0f7d92a3769727b7e99f5b6b263becb597002ead91e6b54acf2bc705b539a63d98fd3e56380e2d4400114f09ff86ed8013b6d2effbfb6077dc52c46b3c59dbecb50df3c859a0d1a4ff8421df7fd4c33a89c14cf7b9ddd97de236d0083a48eeae3e47e1619cfe6631b98d8482cb8cac44021
-> 2f01b10ab27d10484a19e6a4d6e7f8d2bda7de052e5f2d24a8a61d6dac5eb166ee968b232c63100af0ecb54ac3638ff32067456d5601631a80e36952aa3260d50091bec9f3b3dd4192600a4a6c75b5b59c590d964a0b94e0a49b959b1cc82789024305a189aa5d4bb941b617a369efe4ecd920c992daac9cf90b1d993aeab
-> d84c0d6c434c744f9c9affb4d9a533d87e16b6009b60faba80eec5770521e6c809c46ed8c90ec09b9c761b54cbd4c23f93384913a93003179f7f04f5d57205a9232e915398dbd61c28e17835f71f91db8b56e3ae15645077c57f579e96f14a05711a88652b100689e8791ca2202e4409b4c86682c181e1726d2ea2449fbd3
-> 8e5705a59863efd7ec975493696fc2141ea36b121c8cb84977ffe194f6b4e84363d32d81a89080c4080c13fa8f6a9b0bc0b927b7cddcd800325ee4a6529ba82fc827e6aded4e2432067d82876af39a70fd19834b5a4f06ed32d1e0dc1322cd7f0830eef73b94d8d998482ae863263f973a2a8491c91d8907bfe54a46bdb61
-> 2439f49004fa54214e1ff015865cb390fe236b03de300a55491d5ffda41f8a2aba93a1d32d092496a7c6559d0e3ecd281fc5b79455c4ebbf5b52e57b9f49e2a10d26635445324dbd6030e16b95d2026507f333379da0229f9edaf0eb3ac39b1471b9160727f72f49d959a20ff07c0bcefdd2c73439124127257f3f3eb4cc6
-> aa50438a54d894c1bd1876de8070ae52bb5225f15ef486508f3d973c0ca8389ba7bdd41530d35e360d9ecabcf5cf1bf2560964a8ed40054578d9b2ce3fed3bbecdd2edaa8e8d0ebcec59862eb7066cc7ba1dda62d6dc0be19730af245cb3e39144fd28fd1140a545aea72edf64444f1324ecdfd3e6a984386a404696cd655
-> 70232096136a36611b0b51e66e6ee4d1edb907c80b49a68290910d33ef360fd9b07be91f9079d1a181ffb903c92dd16072688d660bea6d1b23d06f001ba16488335a677849e300bb649c7573c430f35e23295b881cd170ffe50cca0a1d93529b066ffbfbe6ebee45a9e433ba4bffd804511384b1a12597546cfa4e622a6c4
-> 957e5bce4c31e38d4111d6d77fccf9e3dc44ee6d398c7b36bf417dccbe6c20d3e3a751ad9ed7379484ca2d958109b1bc010aed5e13dfc59011385e00c1cf7a94b38a86d54eb59c7b4acbde74ad67590b7f4b2668962f89f27bf6577ac55d938f8889e8f1f39128edd7a8016425bc0019a62d58f6b6f507fe8448ae1acabfb
-> 791c31c831560719dcb44d8f5bc1e286556df0cf618ca95b6beff552b18ed8b155b3d11f9a027f2238f56dfbf899fa898776c16a2f8fa499b1e4e56acd61426066398f30d5604e005ecc1650304546d62f30c94849b83bb78d7c985b5fa3fbca4584b1f058182e58b271843f7971568b129517e711c556d2dc932a2c6d81d
-> d77067cf8f9c124c5e4a4ce9255e183e946042b5ccf254493554e89c2245b42ff823cdc0f40cc2b4dc45d302247d0ce2d85bfa6b99ee699731aa6783077f968c284873f1bfd9f9d12e77cf0ef3d715ae62a675505eb9d56cddf2971cfb54c37343e57cb42425139139747e84387324ef7a6a8d8c2a18a9de12651f5894acd
-> e43c30c278c8506d60cfb28e980e9ddc9d8b80e4a701fb454b70abbfe3aacdd4b93ef1cef89a71dd65f8df4c866906b4636938b7e30ee157e1450278ea0d94a2afba6e7bcb46ee067b4b40a6903030e9aa05e06c8aa3ef9bf4b2190bfa1f7aa4164623bfa6d3eae49791f3b181c625bb29e97cc414bf6ec82fbe36397803b
-> 138c37e59292af5162308691beb696f4137e2007099fc5bdf1dbc2e8af08c5d6298f581d9647c3bdc2adeef57031ea0a8d4e423b108179c50a9c86820299f147c1ad99f667c8b18dddd8d9b00b1d6ee12668d48eab704fe9d6e6e79ad38a1cff625936437752c110f0eb1e7ec3045445ef695a4566ce062d2d90b4327f971
-> 0f0f29982c22477baec8b5cca8deb5a3a6e22a464cb1997a7bff17a834908e7c62078bf3f8fddff519bfd5aac9fcf30e87d2ff4a8eb1046eafa79614f7add429ade748b09f321de613cf367b422ec2b9369e34128d92caa9b5a30ee218c20ea2fa6acfe61f5aed227f46bcf26fd193d2e58266092d32d51b668600b3c0b1d
-> b2693a59c12ca30718fb1d871a3d7417d52458a6c03057b6596c0e90ef9553e7d787910c3394137ccb6e1074ced62cc5790d91bd0e4f3d8d3e93f8af7cc8c4d038a186dd2da9e17854b034b44b3d20a354b930e90bd7407f59b89c6d2600010000013830cb
 
 . 
 . edm explore x, missingdistance(1)
@@ -1023,8 +968,6 @@ Note: The embedding dimension E is 11 (including 6 extras)
 Note: Embedding includes the delta of the time variable with a weight of .36 and .17
 
 . 
-. set seed 1
-
 . edm xmap x l3.x, extraembed(u) dt alg(smap) savesmap(newc) e(5) oneway dtsave(testdt)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -1079,6 +1022,9 @@ Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .27
 
 . 
+. set seed 1
+
+. 
 . edm explore x, rep(20) ci(95)
 Replication progress (20 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -1098,7 +1044,6 @@ Note: Results from 20 runs
 Note: Number of neighbours (k) is set to 3
 Note: Random 50/50 split for training and validation data
 
-. 
 . edm xmap x y, lib(50) rep(20) ci(95)
 Replication progress (40 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -1131,8 +1076,10 @@ Note: The embedding dimension E is 2
 
 . cap drop xc_p
 
+. 
 . clonevar x_copy = x
 
+. 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -1153,12 +1100,14 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: Full sample used for the computation
 
-. assert x_p!=. if _n!=1 & _n!=_N
+. 
+. assert x_p != . if _n != 1 & _n != _N
 
-. assert xc_p!=. if _n!=1 & _n!=_N
+. assert xc_p != . if _n != 1 & _n != _N
 
-. assert x_p ==xc_p if x_p!=.
+. assert x_p == xc_p if x_p != .
 
+. 
 . cor x_p f.x
 (obs=199)
 
@@ -1184,6 +1133,7 @@ Note: Full sample used for the computation
 . 
 . cap drop x_p xc_p
 
+. 
 . edm explore x, predict(x_p) copredict(xc_p) copredictvar(x_copy) full p(2)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -1204,6 +1154,7 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: Full sample used for the computation
 
+. 
 . sum x_p xc_p
 
     Variable |        Obs        Mean    Std. dev.       Min        Max
@@ -1211,11 +1162,12 @@ Note: Full sample used for the computation
          x_p |        200    .6436226    .2154685   .3039276   .8967989
         xc_p |        200    .6436226    .2154685   .3039276   .8967989
 
-. assert xc_p!=. if x_p!=.
+. assert xc_p != . if x_p != .
 
 . 
 . gen y_copy = y
 
+. 
 . edm xmap x y, p(10) copredict(xmap_y_p) copredictvar(x_copy) direction(oneway) predict(xmap_y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -1236,9 +1188,10 @@ Copredictions
 Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
+. 
 . assert xmap_y_p != . if _n >= 2 & _n <= _N - 10
 
-. assert xmap_y_p == xmap_y if xmap_y !=.
+. assert xmap_y_p == xmap_y if xmap_y != .
 
 . 
 . preserve
@@ -1246,7 +1199,8 @@ Note: The embedding dimension E is 2
 . drop if mod(t,17)==1
 (12 observations deleted)
 
-. //copredict with dt
+. 
+. // Copredict with dt
 . edm xmap x y, dt copredict(xmap_y_p_dt) copredictvar(x_copy) direction(oneway) predict(xmap_y_dt)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -1269,6 +1223,7 @@ Note: Number of neighbours (k) is set to 5
 Note: The embedding dimension E is 4 (including 2 extras)
 Note: Embedding includes the delta of the time variable with a weight of .88
 
+. 
 . assert xmap_y_p_dt !=. if (_n>1 & _n < _N)
 
 . //assert xmap_y_p_dt == xmap_y_dt if xmap_y_dt !=. & xmap_y_p_dt != .
@@ -1354,6 +1309,7 @@ Univariate mapping with y and its lag values
 Note: Number of neighbours (k) is set to 3
 Note: Full sample used for the computation
 
+. 
 . cor f.x f.y predicted_x predicted_y predicted_y_from_mx
 (obs=199)
 
@@ -1380,8 +1336,9 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
  predicted_x |   0.9994   1.0000
 
 
-. assert r(rho)>0.95
+. assert r(rho) > 0.95
 
+. 
 . cor f.y predicted_y
 (obs=199)
 
@@ -1393,8 +1350,9 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
  predicted_y |   0.9928   1.0000
 
 
-. assert r(rho)>0.85
+. assert r(rho) > 0.85
 
+. 
 . cor f.y predicted_y_from_mx
 (obs=199)
 
@@ -1406,7 +1364,7 @@ predicted~mx |   0.1334   0.7831   0.1217   0.7850   1.0000
 predicted~mx |   0.7831   1.0000
 
 
-. assert r(rho)>0.3
+. assert r(rho) > 0.3
 
 . 
 . global EDM_SAVE_INPUTS = ""
@@ -2060,16 +2018,16 @@ Note: The embedding dimension E is 2
 
 . gen double u = runiform()
 
-. drop if u<0.1
+. drop if u < 0.1
 (8 observations deleted)
 
-. replace x = . if u<0.2
+. replace x = . if u < 0.2
 (14 real changes made, 14 to missing)
 
-. replace t = . if mod(t,19) ==1
+. replace t = . if mod(t, 19) == 1
 (5 real changes made, 5 to missing)
 
-. replace u1 = . if mod(t,7) ==1
+. replace u1 = . if mod(t, 7) == 1
 (14 real changes made, 14 to missing)
 
 . 
@@ -4722,8 +4680,7 @@ Note: Embedding includes the delta of the time variable with a weight of .37
 . 
 . cap drop err
 
-. set seed 1
-
+. 
 . edm explore x, e(3) extra(u1) dt alg(smap) dtsave(pluginnomissing) dtweight(1) predict(predplugin)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -4740,8 +4697,7 @@ Note: Number of neighbours (k) is set to 9
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of 1
 
-. set seed 1
-
+. 
 . edm explore x, e(3) extra(u1) dt alg(smap) dtsave(matanomissing) mata dtweight(1) predict(predmata)
 
 Empirical Dynamic Modelling
@@ -5031,6 +4987,8 @@ Note: Embedding includes the delta of the time variable with a weight of .65 and
 
 . 
 . // Check that the manifold is reordered so that e-varying extras are first
+. set seed 1
+
 . gen v = runiform()
 
 . edm xmap x y, extra(u v(e)) algorithm(smap) savesmap(beta) 
@@ -5199,8 +5157,6 @@ beta2_b5_rep1   double  %10.0g                u predicting x or x|M(y) S-map coe
 
 . 
 . // See if the negative values of p are allowed
-. set seed 1
-
 . edm explore x, p(-1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5230,8 +5186,6 @@ Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
 . 
-. set seed 1
-
 . edm explore x, p(-1) mata
 
 Empirical Dynamic Modelling
@@ -5259,9 +5213,6 @@ Note: The embedding dimension E is 2
 
 . 
 . // Try out copredict and copredictvar combinations with multiple reps etc.
-. set seed 1
-
-. 
 . edm explore x, copredictvar(y)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5401,6 +5352,8 @@ Note: Number of neighbours (k) is set to 3
 Note: The embedding dimension E is 2
 
 . 
+. set seed 1
+
 . edm explore x, copredictvar(y) rep(20)
 Replication progress (20 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5630,8 +5583,7 @@ Panel variable: id (unbalanced)
 . // Check that panel data options are working
 . 
 . // Run some commands with multispatial mode on & off, with & without missing values
-. set seed 1
-
+. 
 . edm explore x, e(40)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5645,8 +5597,6 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to 14
 Note: 50/50 split for training and validation data
 
-. set seed 1
-
 . edm explore x, e(40) mata
 
 Empirical Dynamic Modelling
@@ -5658,8 +5608,6 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 14
 Note: 50/50 split for training and validation data
-
-. set seed 1
 
 . edm explore x, e(40) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5675,8 +5623,6 @@ Missing values are assumed to have a distance of .25 with all values.
 Note: Number of neighbours (k) is set to 41
 Note: 50/50 split for training and validation data
 
-. set seed 1
-
 . edm explore x, e(40) allowmissing mata
 
 Empirical Dynamic Modelling
@@ -5691,8 +5637,6 @@ Note: Number of neighbours (k) is set to 41
 Note: 50/50 split for training and validation data
 
 . 
-. set seed 2
-
 . edm explore x, e(40) idw(-1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5706,8 +5650,6 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to 14
 Note: 50/50 split for training and validation data
 
-. set seed 2
-
 . edm explore x, e(40) idw(-1) mata
 
 Empirical Dynamic Modelling
@@ -5719,8 +5661,6 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 14
 Note: 50/50 split for training and validation data
-
-. set seed 2
 
 . edm explore x, e(40) idw(-1) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5736,8 +5676,6 @@ Missing values are assumed to have a distance of .25 with all values.
 Note: Number of neighbours (k) is set to 17
 Note: 50/50 split for training and validation data
 
-. set seed 2
-
 . edm explore x, e(40) idw(-1) allowmissing mata
 
 Empirical Dynamic Modelling
@@ -5752,8 +5690,6 @@ Note: Number of neighbours (k) is set to 17
 Note: 50/50 split for training and validation data
 
 . 
-. set seed 3
-
 . edm xmap x y, e(40)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Warning: library size is quite small relative to the chosen E
@@ -5770,8 +5706,6 @@ Convergent Cross-mapping result for variables x and y
 Note: Number of neighbours (k) is set to 27
 Note: The embedding dimension E is 40
 
-. set seed 3
-
 . edm xmap x y, e(40) mata
 Warning: library size is quite small relative to the chosen E
 
@@ -5785,8 +5719,6 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
 Note: Number of neighbours (k) is set to 27
 Note: The embedding dimension E is 40
-
-. set seed 3
 
 . edm xmap x y, e(40) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5804,8 +5736,6 @@ Missing values are assumed to have a distance of .25 and .23
 Note: Number of neighbours (k) is set to 41
 Note: The embedding dimension E is 40
 
-. set seed 3
-
 . edm xmap x y, e(40) allowmissing mata
 
 Empirical Dynamic Modelling
@@ -5821,8 +5751,6 @@ Note: Number of neighbours (k) is set to 41
 Note: The embedding dimension E is 40
 
 . 
-. set seed 4
-
 . edm xmap x y, e(40) idw(-1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 Warning: library size is quite small relative to the chosen E
@@ -5839,8 +5767,6 @@ Convergent Cross-mapping result for variables x and y
 Note: Number of neighbours (k) is set to 27
 Note: The embedding dimension E is 40
 
-. set seed 4
-
 . edm xmap x y, e(40) idw(-1) mata
 Warning: library size is quite small relative to the chosen E
 
@@ -5854,8 +5780,6 @@ Convergent Cross-mapping result for variables x and y
 ---------------------------------------------------------------
 Note: Number of neighbours (k) is set to 27
 Note: The embedding dimension E is 40
-
-. set seed 4
 
 . edm xmap x y, e(40) idw(-1) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5872,8 +5796,6 @@ Missing values are assumed to have a distance of .25 and .23
 ---------------------------------------------------------------
 Note: Number of neighbours (k) is set to between 33 and 41
 Note: The embedding dimension E is 40
-
-. set seed 4
 
 . edm xmap x y, e(40) idw(-1) allowmissing mata
 
@@ -5896,8 +5818,6 @@ Note: The embedding dimension E is 40
 (14 observations deleted)
 
 . 
-. set seed 1
-
 . edm explore x, e(5)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5911,8 +5831,6 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
 
-. set seed 1
-
 . edm explore x, e(5) mata
 
 Empirical Dynamic Modelling
@@ -5924,8 +5842,6 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
-
-. set seed 1
 
 . edm explore x, e(5) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -5941,8 +5857,6 @@ Missing values are assumed to have a distance of .24 with all values.
 Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
 
-. set seed 1
-
 . edm explore x, e(5) allowmissing mata
 
 Empirical Dynamic Modelling
@@ -5957,8 +5871,6 @@ Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
 
 . 
-. set seed 2
-
 . edm explore x, e(5) idw(-1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -5972,8 +5884,6 @@ Univariate mapping with x and its lag values
 Note: Number of neighbours (k) is set to 2
 Note: 50/50 split for training and validation data
 
-. set seed 2
-
 . edm explore x, e(5) idw(-1) mata
 
 Empirical Dynamic Modelling
@@ -5985,8 +5895,6 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 2
 Note: 50/50 split for training and validation data
-
-. set seed 2
 
 . edm explore x, e(5) idw(-1) allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -6002,8 +5910,6 @@ Missing values are assumed to have a distance of .24 with all values.
 Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
 
-. set seed 2
-
 . edm explore x, e(5) idw(-1) allowmissing mata
 
 Empirical Dynamic Modelling
@@ -6018,8 +5924,6 @@ Note: Number of neighbours (k) is set to 6
 Note: 50/50 split for training and validation data
 
 . 
-. set seed 3
-
 . edm explore x, e(5) idw(-1) k(-1)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -6032,8 +5936,6 @@ Univariate mapping with x and its lag values
 --------------------------------------------------------------------
 Note: Number of neighbours (k) is set to 2
 Note: 50/50 split for training and validation data
-
-. set seed 3
 
 . edm explore x, e(5) idw(-1) k(-1) mata
 
@@ -6049,8 +5951,6 @@ Note: 50/50 split for training and validation data
 
 . 
 . // See if the relative dt flags work
-. set seed 1
-
 . edm explore x, e(5) reldt
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -6067,8 +5967,6 @@ Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
-. set seed 1
-
 . edm explore x, e(5) reldt mata
 
 Empirical Dynamic Modelling
@@ -6083,8 +5981,6 @@ Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
-
-. set seed 1
 
 . edm explore x, e(5) reldt allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -6103,8 +5999,6 @@ Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
-. set seed 1
-
 . edm explore x, e(5) reldt allowmissing mata
 
 Empirical Dynamic Modelling
@@ -6122,8 +6016,6 @@ Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
 . 
-. set seed 2
-
 . edm explore x, e(5) idw(-1) reldt
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
@@ -6140,8 +6032,6 @@ Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
-. set seed 2
-
 . edm explore x, e(5) idw(-1) reldt mata
 
 Empirical Dynamic Modelling
@@ -6156,8 +6046,6 @@ Note: Actual E is higher than the specified E due to extras
 Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
-
-. set seed 2
 
 . edm explore x, e(5) idw(-1) reldt allowmissing
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
@@ -6176,8 +6064,6 @@ Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
-. set seed 2
-
 . edm explore x, e(5) idw(-1) reldt allowmissing mata
 
 Empirical Dynamic Modelling
@@ -6194,7 +6080,6 @@ Note: Number of neighbours (k) is set to 11
 Note: 50/50 split for training and validation data
 Note: Embedding includes the delta of the time variable with a weight of .58
 
-. 
 . 
 . // Make sure the plugin doesn't crash if the user has a different random number generator selected.
 . set rng mt64
