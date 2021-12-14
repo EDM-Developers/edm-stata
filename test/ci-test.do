@@ -343,8 +343,8 @@ set seed 12345678
 gen double u = runiform()
 drop if u < 0.1
 replace x = . if u < 0.2
-replace t = . if mod(t, 19) == 1
 replace u1 = . if mod(t, 7) == 1
+replace t = . if mod(t, 19) == 1
 
 edm explore x, copredict(predicted_y_from_mx) copredictvar(y) full
 edm explore x, copredict(predicted_y_from_mx_mata) copredictvar(y) full mata
@@ -531,9 +531,9 @@ edm explore x, e(2/5) theta(0 1) copredictvar(y)
 edm xmap x y, library(5 10 20 40) copredictvar(u1)
 
 set seed 1
-edm explore x, copredictvar(y) rep(20)
+edm explore x, copredictvar(y) rep(20) ci(95)
 
-edm xmap x y, library(5 10 20 40) copredictvar(u1) rep(20)
+edm xmap x y, library(5 10 20 40) copredictvar(u1) rep(100) ci(95)
 
 edm explore x, copredictvar(y) rep(100) ci(10)
 
