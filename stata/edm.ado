@@ -1,5 +1,5 @@
 *! version 1.9.7, 07Dec2021, Jinjing Li, Michael Zyphur, Patrick J. Laub, George Sugihara, Edoardo Tescari
-*! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@unimelb.edu.au>
+*! contact: <jinjing.li@canberra.edu.au> or <patrick.laub@gmail.com>
 
 global EDM_VERSION = "1.9.7"
 /* Empirical dynamic modelling
@@ -151,7 +151,7 @@ program define edmPluginCheck, rclass
 			if _rc == 199 {
 				di as text "Warning: GPU-powered plugin failed to load, falling back to CPU version"
 				local gpu_mode = 0
-			}	
+			}
 		}
 
 		if !`gpu_mode' {
@@ -349,6 +349,23 @@ program define edmExplore, eclass
 		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
 		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
+	edmPluginCheck, `mata' `gpu'
+	local mata_mode = r(mata_mode)
+
+	if !`mata_mode' {
+		if `r(gpu_mode)' {
+			local plugin_name = "edm_plugin_gpu"
+		}
+		else {
+			local plugin_name = "edm_plugin"
+		}
+
+		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
+			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
+			local lowmemory = ""
+		}
+	}
+
 	if ("`strict'" != "strict") {
 		local force = "force"
 	}
@@ -446,23 +463,6 @@ program define edmExplore, eclass
 	if `allow_missing_mode' & "`algorithm'" == "smap" {
 		dis as error "Can't use 'allowmissing' with S-map algorithm"
 		error 121
-	}
-
-	edmPluginCheck, `mata' `gpu'
-	local mata_mode = r(mata_mode)
-
-	if !`mata_mode' {
-		if `r(gpu_mode)' {
-			local plugin_name = "edm_plugin_gpu"
-		}
-		else {
-			local plugin_name = "edm_plugin"
-		}
-
-		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
-			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
-			local lowmemory = ""
-		}
 	}
 
 	if "`distance'" == "" {
@@ -906,7 +906,7 @@ program define edmExplore, eclass
 
 					local savesmap_vars ""
 					break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", `j', ///
-						`lib_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance', `idw', "`panel_id'", ///
+						`lib_size', "`algorithm'", "`savesmap_vars'", "", "`force'", `missingdistance', `idw', "`panel_id'", ///
 						`i', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 					if `k_min' == . | k_min_scalar < `k_min' {
@@ -934,7 +934,7 @@ program define edmExplore, eclass
 
 					if "`copredictvar'" != "" {
 						break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", ///
-							"`train_set'", "`co_predict_set'", `j', `lib_size', "`algorithm'", "", ///
+							"`train_set'", "`co_predict_set'", `j', `lib_size', "`algorithm'", "", "", ///
 							"`force'", `missingdistance', `idw', "`panel_id'", `current_e', ///
 							`total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
@@ -1104,7 +1104,25 @@ program define edmXmap, eclass
 		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
 		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
 		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
-		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
+		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] ///
+		[aspectratio(real 1)] [wassdt(integer 1)] [savesmapdetails(string)]
+
+	edmPluginCheck, `mata' `gpu'
+	local mata_mode = r(mata_mode)
+
+	if !`mata_mode' {
+		if `r(gpu_mode)' {
+			local plugin_name = "edm_plugin_gpu"
+		}
+		else {
+			local plugin_name = "edm_plugin"
+		}
+
+		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
+			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
+			local lowmemory = ""
+		}
+	}
 
 	if ("`strict'" != "strict") {
 		local force = "force"
@@ -1150,6 +1168,23 @@ program define edmXmap, eclass
 			dis as error "direction() option must be set to oneway if copredicted values are to be saved."
 			error 197
 		}
+	}
+
+	if "`savesmapdetails'" != "" {
+		if "`direction'" != "oneway" {
+			di as error "savesmapdetails() option can only be used together with oneway"
+			error 9
+		}
+		if !`mata_mode' {
+			di as error "savesmapdetails() option can only be used together with mata"
+			error 9
+		}
+
+		confirm new variable `savesmapdetails'_trace
+		confirm new variable `savesmapdetails'_min_eig_re
+		confirm new variable `savesmapdetails'_min_eig_im
+		confirm new variable `savesmapdetails'_max_eig_re
+		confirm new variable `savesmapdetails'_max_eig_im
 	}
 
 	if "`dtsave'" != ""{
@@ -1244,23 +1279,6 @@ program define edmXmap, eclass
 	if !inlist("`direction'","both","oneway") {
 		dis as error "direction() option should be either both or oneway"
 		error 197
-	}
-
-	edmPluginCheck, `mata' `gpu'
-	local mata_mode = r(mata_mode)
-
-	if !`mata_mode' {
-		if `r(gpu_mode)' {
-			local plugin_name = "edm_plugin_gpu"
-		}
-		else {
-			local plugin_name = "edm_plugin"
-		}
-
-		if `r(gpu_mode)' & "`lowmemory'" == "lowmemory" {
-			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
-			local lowmemory = ""
-		}
 	}
 
 	if "`distance'" == "" {
@@ -1382,6 +1400,19 @@ program define edmXmap, eclass
 	if "`copredictionsave'" != "" {
 		qui gen double `copredictionsave' = .
 		qui label variable `copredictionsave' "edm copredicted `copredictvar' using manifold `ori_x' `ori_y'"
+	}
+
+	if "`savesmapdetails'" != "" {
+		cap gen double `savesmapdetails'_trace = .
+		cap gen double `savesmapdetails'_min_eig_re = .
+		cap gen double `savesmapdetails'_min_eig_im = .
+		cap gen double `savesmapdetails'_max_eig_re = .
+		cap gen double `savesmapdetails'_max_eig_im = .
+		qui label variable `savesmapdetails'_trace "Trace of S-map least-squared matrix"
+		qui label variable `savesmapdetails'_min_eig_re "Smallest eigenvalue of S-map least-squared matrix (real part)"
+		qui label variable `savesmapdetails'_min_eig_im "Smallest eigenvalue of S-map least-squared matrix (imaginary part)"
+		qui label variable `savesmapdetails'_max_eig_re "Largest eigenvalue of S-map least-squared matrix (real part)"
+		qui label variable `savesmapdetails'_max_eig_im "Largest eigenvalue of S-map least-squared matrix (imaginary part)"
 	}
 
 	local num_directions = 1 + ("`direction'" == "both")
@@ -1736,7 +1767,7 @@ program define edmXmap, eclass
 							}
 
 							break mata: smap_block("``manifold''", "", "`x_f'", "`x_p'", "`train_set'", "`predict_set'", ///
-								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`force'", `missingdistance`direction_num'', ///
+								`j', `k_size', "`algorithm'", "`savesmap_vars'", "`savesmapdetails'", "`force'", `missingdistance`direction_num'', ///
 								`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 							if `k_min' == . | k_min_scalar < `k_min' {
@@ -1768,8 +1799,9 @@ program define edmXmap, eclass
 							}
 
 							if "`copredictvar'" != "" {
+
 								break mata: smap_block("``manifold''", "``co_manifold''", "`x_f'", "`co_x_p'", "`train_set'", ///
-									"`co_predict_set'", `j', `k_size', "`algorithm'", "", "`force'", `missingdistance`direction_num'', ///
+									"`co_predict_set'", `j', `k_size', "`algorithm'", "", "", "`force'", `missingdistance`direction_num'', ///
 									`idw', "`panel_id'", `max_e', `total_num_extras', `z_e_varying_count', "`z_factor_var'")
 
 								if `k_min' == . | k_min_scalar < `k_min' {
@@ -2070,8 +2102,7 @@ program define edmDisplayCI, rclass
 		}
 		noi qui count
 		local datasize = r(N)
-		/* mat list `buffer' */
-		/* set trace on */
+
 		noi di ""
 		noi di as result %18s "`=(100-`ci')/2'/`=100 - (100-`ci')/2' Pc (Est.)" _c
 		forvalues j=1/`maxr' {
@@ -2203,7 +2234,6 @@ program define edmDisplayTable, eclass
 
 				di ""
 				if `=e(ci)'>0 & `=e(ci)'<100 {
-					/* set trace on */
 					edmDisplayCI , mat(`buffer') ci(`=e(ci)')
 					local type1 "rho"
 					local type2 "mae"
@@ -2705,11 +2735,14 @@ capture mata mata drop smap_block()
 mata:
 mata set matastrict on
 void smap_block(
-		string scalar manifold, string scalar p_manifold, string scalar prediction, string scalar result,
-		string scalar train_use, string scalar predict_use, real scalar theta, real scalar l, string scalar algorithm,
-		string scalar savesmap_vars, string scalar force, real scalar missingdistance,
-		real scalar idw, string scalar panel_id,
-		real scalar E, real scalar total_num_extras, real scalar z_e_varying_count, string scalar z_factor_var)
+		string scalar manifold, string scalar p_manifold,
+		string scalar prediction, string scalar result,
+		string scalar train_use, string scalar predict_use,
+		real scalar theta, real scalar l, string scalar algorithm,
+		string scalar saveSMAPCoeffs, string scalar saveSMAPDetails,
+		string scalar force, real scalar missingdistance, real scalar idw,
+		string scalar panel_id, real scalar E, real scalar total_num_extras,
+		real scalar z_e_varying_count, string scalar z_factor_var)
 {
 	real scalar force_compute, k, i
 	force_compute = force == "force" /* check whether we need to force the computation if k is too high */
@@ -2762,21 +2795,30 @@ void smap_block(
 		else {
 			numLags = 1
 		}
-		
+
 		for (j = 1; j <= numLags; j++) {
 			factorVars[ind] = (zFactors[i] == "1")
 			ind = ind + 1
 		}
 	}
 
-	real matrix B
-	real scalar save_mode
-	if (savesmap_vars != "") {
-		st_view(B, ., tokens(savesmap_vars), predict_use)
-		save_mode = 1
+	real scalar savingSMAPCoeffs, savingSMAPDetails
+	savingSMAPCoeffs = (saveSMAPCoeffs != "")
+	savingSMAPDetails = (saveSMAPDetails != "")
+
+	real matrix smapCoeffs, smapTrace
+	real matrix smapMinEigRe, smapMinEigIm, smapMaxEigRe, smapMaxEigIm
+
+	if (savingSMAPCoeffs) {
+		st_view(smapCoeffs, ., tokens(saveSMAPCoeffs), predict_use)
 	}
-	else {
-		save_mode = 0
+
+	if (savingSMAPDetails) {
+		st_view(smapTrace, ., saveSMAPDetails + "_trace", predict_use)
+		st_view(smapMinEigRe, ., saveSMAPDetails + "_min_eig_re", predict_use)
+		st_view(smapMinEigIm, ., saveSMAPDetails + "_min_eig_im", predict_use)
+		st_view(smapMaxEigRe, ., saveSMAPDetails + "_max_eig_re", predict_use)
+		st_view(smapMaxEigIm, ., saveSMAPDetails + "_max_eig_im", predict_use)
 	}
 
 	real scalar n
@@ -2795,7 +2837,9 @@ void smap_block(
 		else {
 			targetPanel = .
 		}
-		ystar[i] = mf_smap_single(M, b, y, l, theta, algorithm, save_mode*i, B,
+		ystar[i] = make_prediction(i, M, b, y, l, theta, algorithm,
+				savingSMAPCoeffs, savingSMAPDetails, smapCoeffs, smapTrace,
+				smapMinEigRe, smapMinEigIm, smapMaxEigRe, smapMaxEigIm,
 				force_compute, missingdistance, idw, train_panel_ids,
 				targetPanel, factorVars, k)
 
@@ -2813,15 +2857,19 @@ void smap_block(
 end
 
 
-capture mata mata drop mf_smap_single()
+capture mata mata drop make_prediction()
 mata:
 mata set matastrict on
-real scalar mf_smap_single(
-		real matrix M, real rowvector b, real colvector y, real scalar l,
-		real scalar theta, string scalar algorithm, real scalar save_index,
-		real matrix Beta_smap, real scalar force_compute, real scalar missingdistance,
-		real scalar idw, real matrix panel_ids, real scalar targetPanel,
-		real matrix factorVars, real scalar k)
+real scalar make_prediction(
+		real scalar Mp_i, real matrix M, real rowvector b, real colvector y,
+		real scalar l, real scalar theta, string scalar algorithm,
+		real scalar savingSMAPCoeffs, real scalar savingSMAPDetails,
+		real matrix smapCoeffs, real matrix smapTrace,
+		real matrix smapMinEigRe, real matrix smapMinEigIm,
+		real matrix smapMaxEigRe, real matrix smapMaxEigIm,
+		real scalar force, real scalar missingdistance, real scalar idw,
+		real matrix panel_ids, real scalar targetPanel, real matrix factorVars,
+		real scalar k)
 {
 	/* M : manifold matrix
 	 * b : the vector used for prediction
@@ -2880,20 +2928,20 @@ real scalar mf_smap_single(
 	minindex(d, k, ind, v)
 
 	if (rows(ind) < k) {
-		if (force_compute) {
+		if (force) {
 			k = rows(ind) /* Force k to use fewer neighbours */
 		}
 		else {
-			sprintf("Insufficient number of unique observations, consider tweaking the values of E, k or use -force- option")
+			sprintf("Insufficient number of unique observations, consider tweaking the values of E or k")
 			exit(error(503))
 		}
 	}
 
-	/* We need at least k=1 to continue. 
+	/* We need at least k=1 to continue.
 	 * For example, 'force' may reduce k to 0. */
 	if (k < 1) {
 		/* Normally we just let the prediction be '.' and silently keep going. */
-		if (force_compute) {
+		if (force) {
 			return(.)
 		}
 		else {
@@ -2915,15 +2963,15 @@ real scalar mf_smap_single(
 		for(j = 1; j <= k; j++) {
 			w[j] = exp(-theta*(d[ind[j]] / d_base))
 		}
-		w = w/sum(w)
+		w = w / sum(w)
 
 		for(j = 1; j <= k; j++) {
-			r = r +  y[ind[j]] * w[j]
+			r = r + y[ind[j]] * w[j]
 		}
 
 		return(r)
 	}
-	else if (algorithm =="smap" | algorithm =="llr") {
+	else if (algorithm == "smap" | algorithm == "llr") {
 
 		real colvector y_ls, b_ls, w_ls
 		real matrix X_ls, XpXi
@@ -2971,19 +3019,30 @@ real scalar mf_smap_single(
 		n_ls = rows(X_ls)
 
 		/* Add a (weighted) column of ones to represent the constant */
-		X_ls = w_ls,X_ls
+		X_ls = w_ls, X_ls
 
 		if (algorithm == "llr") {
 			XpXi = quadcross(X_ls, w_ls, X_ls)
 			XpXi = invsym(XpXi)
-			b_ls = XpXi*quadcross(X_ls, w_ls, y_ls)
+			b_ls = XpXi * quadcross(X_ls, w_ls, y_ls)
 		}
 		else {
 			b_ls = svsolve(X_ls' * X_ls, X_ls' * y_ls)
 		}
 
-		if (save_index>0) {
-			Beta_smap[save_index, .] = editvalue(b_ls', 0, .)
+		if (savingSMAPCoeffs) {
+			smapCoeffs[Mp_i, .] = editvalue(b_ls', 0, .)
+		}
+
+		if (savingSMAPDetails) {
+			smapTrace[Mp_i] = trace(X_ls' * X_ls)
+
+			complex rowvector eigenVals
+			eigenVals = eigenvalues(X_ls' * X_ls)
+			smapMaxEigRe[Mp_i] = Re(eigenVals[1])
+			smapMaxEigIm[Mp_i] = Im(eigenVals[1])
+			smapMinEigRe[Mp_i] = Re(eigenVals[length(eigenVals)])
+			smapMinEigIm[Mp_i] = Im(eigenVals[length(eigenVals)])
 		}
 
 		x_pred = 1, editvalue(b, ., 0)

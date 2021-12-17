@@ -106,6 +106,13 @@ edm explore x, theta(0.2(0.1)2.0) algorithm(smap)
 edm xmap x y, theta(0.2) algorithm(smap) savesmap(beta)
 assert beta1_b2_rep1 != . if _n > 1
 
+edm xmap x y, oneway algorithm(smap) savesmapdetails(smap) mata
+assert smap_trace != . if _n > 1
+assert smap_min_eig_re != . if _n > 1
+assert smap_min_eig_im != . if _n > 1
+assert smap_max_eig_re != . if _n > 1
+assert smap_max_eig_im != . if _n > 1
+
 edm xmap y x, predict(x2) direction(oneway)
 assert x2 != . if _n > 1
 
