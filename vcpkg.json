@@ -1,6 +1,6 @@
 {
     "name": "edm",
-    "version-string": "1.9.6",
+    "version-string": "1.9.8",
     "dependencies": [
         "benchmark",
         "catch2",
