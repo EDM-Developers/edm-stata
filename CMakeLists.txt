@@ -10,9 +10,9 @@ cmake_minimum_required(VERSION 3.12)
 
 # As we use vcpkg for package management, we need to run CMake will
 # the vcpkg toolchain file. As such, we require the environment variable
-# VCPKG_ROOT to be set before running cmake. This contains.
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+# VCPKG_INSTALLATION_ROOT to be set before running cmake. This contains.
+if(DEFINED ENV{VCPKG_INSTALLATION_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
@@ -25,6 +25,14 @@ if(DEFINED ENV{ARMMODE})
   set(ARMMODE TRUE CACHE BOOL "Compiling to ARM")
 else()
   set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
+endif()
+
+# Optionally build the Google Benchmarks binary, though remember
+# to add the "benchmark" dependency to vcpkg.json.
+if(DEFINED ENV{GBENCH})
+  set(GBENCH TRUE CACHE BOOL "Building the Google Benchmarks target")
+else()
+  set(GBENCH FALSE CACHE BOOL "Building the Google Benchmarks target")
 endif()
 
 # The default behaviour of the 'install' target is to build everything first.
@@ -140,14 +148,29 @@ if (EDM_WITH_ARRAYFIRE)
 endif()
 
 set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plugin")
-set_target_properties(edm_plugin
-  PROPERTIES
-    CXX_STANDARD 17
-    PREFIX ""
-    POSITION_INDEPENDENT_CODE ON
-    OUTPUT_NAME "edm"
-    SUFFIX ${BUILD_SUFFIX}.plugin
-)
+
+if (ARMMODE)
+  set_target_properties(edm_plugin
+    PROPERTIES
+      CXX_STANDARD 17
+      PREFIX ""
+      POSITION_INDEPENDENT_CODE ON
+      OUTPUT_NAME "edm"
+      OSX_ARCHITECTURES "arm64"
+      SUFFIX ${BUILD_SUFFIX}.plugin
+  )
+else()
+  set_target_properties(edm_plugin
+    PROPERTIES
+      CXX_STANDARD 17
+      PREFIX ""
+      POSITION_INDEPENDENT_CODE ON
+      OUTPUT_NAME "edm"
+      OSX_ARCHITECTURES "x86_64"
+      SUFFIX ${BUILD_SUFFIX}.plugin
+  )
+endif()
+
 
 # Store output as both bin/edm_OS_ARCH.plugin and test/edm.plugin
 install(TARGETS edm_plugin DESTINATION bin)
@@ -234,29 +257,31 @@ set_target_properties(gbench
     POSITION_INDEPENDENT_CODE ON
 )
 
-if (NOT (EDM_WITH_ARRAYFIRE AND WIN32))
+if (GBENCH)
   # The google benchmarks currently won't build with
   # the GPU version due to some static/dynamic incompatibility.
-  if(WIN32)
-    target_compile_options(gbench PRIVATE "/MD")
+  if (NOT (EDM_WITH_ARRAYFIRE AND WIN32))
+    if(WIN32)
+      target_compile_options(gbench PRIVATE "/MD")
+    endif()
+
+    find_package(benchmark CONFIG REQUIRED)
+    target_compile_definitions(gbench PRIVATE JSON)
+    target_compile_definitions(gbench PRIVATE NOMINMAX)
+    target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+    target_include_directories(gbench PRIVATE src)
+    target_include_directories(gbench SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
+    target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
+    target_link_libraries(gbench PRIVATE Threads::Threads)
+    target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+    if (EDM_WITH_ARRAYFIRE)
+      target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
+      target_include_directories(gbench SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+      target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
+    endif ()
+    install(TARGETS gbench DESTINATION test OPTIONAL)
+
   endif()
-
-  find_package(benchmark CONFIG REQUIRED)
-  target_compile_definitions(gbench PRIVATE JSON)
-  target_compile_definitions(gbench PRIVATE NOMINMAX)
-  target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-  target_include_directories(gbench PRIVATE src)
-  target_include_directories(gbench SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
-  target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
-  target_link_libraries(gbench PRIVATE Threads::Threads)
-  target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
-  if (EDM_WITH_ARRAYFIRE)
-    target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
-    target_include_directories(gbench SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
-    target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
-  endif ()
-  install(TARGETS gbench DESTINATION test OPTIONAL)
-
 endif()
 
 find_package(Catch2 REQUIRED)

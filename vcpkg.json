@@ -2,7 +2,6 @@
     "name": "edm",
     "version-string": "1.9.8",
     "dependencies": [
-        "benchmark",
         "catch2",
         "fmt",
         "nlohmann-json"
