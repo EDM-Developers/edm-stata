@@ -120,7 +120,30 @@ program define edmUpdate
 	syntax , [DEVELOPment] [replace]
 	if "`development'" == "development" {
 		di "Updating edm from the development channel"
-		net install edm, from("https://raw.githubusercontent.com/EDM-Developers/edm-releases/master/") `replace'
+
+		local updateFolder = "updating-edm-stata-package"
+		capture cd "`updateFolder'"
+		if _rc != 0 {
+			cap mkdir "`updateFolder'"
+			if _rc == 693 {
+				di as error "Failed to make the '`updateFolder'' directory."
+				di as error "Perhaps check you have write permissions."
+				error 693
+			}
+			cd "`updateFolder'"
+		}
+
+		local path "https://github.com/EDM-Developers/EDM/releases/latest/download/edm-stata-package.zip"
+		quietly copy "`path'" "edm-stata-package.zip", replace
+		quietly unzipfile "edm-stata-package.zip", replace
+
+		local updatePath : pwd
+
+		capture quietly ado uninstall "edm"
+		net install "edm", from("`updatePath'") `replace' `force'
+
+		cd ..
+		cap qui rmdir "`updateFolder'"
 	}
 	else {
 		di "Updating edm from SSC"
