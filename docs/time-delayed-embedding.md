@@ -1,0 +1,92 @@
+
+### Creating a time-delayed embedding
+
+Imagine that we observe a time series $x$.
+
+
+<div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
+Number of observations is <span id="numObs_choice"></span>
+
+In tabular form, the data looks like:
+
+So each one of $x_i$ is an *observation* of the $x$ time series.
+
+To create a time-delayed embedding based on any of these time series, we first need to choose the size of the embedding $E$.
+
+The data may be too finely sampled in time.
+So we select a $\tau$ which means we only look at every $\tau$th observation for each time series.
+
+Choose a value for $E$:
+
+<div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
+The value of $E$ is <span id="E_choice"></span>
+
+Choose a value for $\tau$:
+
+<div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
+The value of $\tau$ is <span id="tau_choice"></span>
+
+The time-delayed embedding of the $x$ time series with the given size E = $E and τ = $τ, is the manifold:
+
+The manifold is a collection of these time-delayed *embedding vectors*.
+For short, we just refer to each vector as a *point* on the manifold.
+While the manifold notation above is the most accurate (a set of vectors) we will henceforward use the more convenient matrix notation:
+
+<p id="manifold"></p>
+
+Note that the manifold has $E$ columns, and the number of rows depends on the number of observations in the $x$ time series.
+
+
+<!-- Allow Missing: <input type="checkbox" id="allowMissing" value="Allow missing">
+<div class="slidecontainer">
+	<input type="range" min="-5" max="5" value="1" class="slider" id="p">
+	<div id="p_choice"></div>
+</div> -->
+
+
+<script src="../assets/manifold.js"></script>
+
+<script defer>
+	update_manifold = function(refresh=true) {
+		// Read in the manifold specifications from the sliders
+		let numObs = parseInt(document.getElementById("numObs").value)
+		let E = parseInt(document.getElementById("E").value)
+		let tau = parseInt(document.getElementById("tau").value)
+		// let allowMissing = document.getElementById("allowMissing").checked
+		// let p = parseInt(document.getElementById("p").value)
+		let allowMissing = false
+		let p = 1
+
+		// Construct the manifold and targets
+		let M = manifold('x', numObs, E, tau, allowMissing, p)
+
+		// Turn these into latex arrays
+		let maniTex = latexify(M.manifold)
+		let targetsTex = latexify(M.targets)
+		
+		// Save the result to the page
+		document.getElementById("manifold").innerHTML = `\\[ M_x = ${maniTex}, \\quad y = ${targetsTex} \\]`;
+		
+		if (refresh) {
+			MathJax.typeset()
+		}
+	} 
+
+	const sliderIDs = ["numObs", "E", "tau"] //, "p"]
+	for (let sliderID of sliderIDs) {
+		let slider = document.getElementById(sliderID);
+
+		// Display the default slider value
+		document.getElementById(`${sliderID}_choice`).innerHTML = `${slider.value}`;
+
+		// Update the current slider value (each time you drag the slider handle)
+		slider.oninput = function(refresh=true) {
+			document.getElementById(`${this.id}_choice`).innerHTML = `${this.value}`;
+			update_manifold()
+		}
+	}
+
+	// document.getElementById("allowMissing").oninput = update_manifold
+
+	update_manifold(refresh=false)
+</script>

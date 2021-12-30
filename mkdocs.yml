@@ -1,13 +1,19 @@
-site_name: EDM MDAP collaboration
+site_name: EDM Stata Package
 
 nav:
-    - Home: index.md
-    - Stata EDM plugin: plugin.md
-    - Other EDM implementations: other_edm.md
-    - Infrastructure: infrastructure.md
+  - Home: index.md
+  - Time-delayed embedding: time-delayed-embedding.md
+  - Stata Help File: api.md
 
 theme:
-  name: readthedocs
+  name: material
   hljs_languages:
-        - stata
+    - stata
 
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
