@@ -9,6 +9,7 @@ test/ci-test.json
 test/ci-test-out.json
 build
 bin
+site
 vcpkg_installed
 *compile.bat
 *compile.sh

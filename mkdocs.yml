@@ -1,4 +1,4 @@
-site_name: EDM Stata Package
+site_name: Empirical Dynamic Modeling (edm) Stata Package
 
 nav:
   - Home: index.md
