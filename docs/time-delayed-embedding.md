@@ -1,11 +1,9 @@
+# Creating a time-delayed embedding
 
 <script src="../assets/manifold.js" defer></script>
 <script src="../assets/time-delayed-embedding.js" defer></script>
 
-### Creating a time-delayed embedding
-
 Imagine that we observe a time series $x$.
-
 
 <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 Number of observations is <span class="numObs_choice"></span>
@@ -38,7 +36,6 @@ While the manifold notation above is the most accurate (a set of vectors) we wil
 <p id="manifold"></p>
 
 Note that the manifold has $E$ columns, and the number of rows depends on the number of observations in the $x$ time series.
-
 
 <!-- Allow Missing: <input type="checkbox" id="allowMissing" value="Allow missing">
 <div class="slidecontainer">

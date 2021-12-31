@@ -8,15 +8,15 @@
 
 To install the stable version directly through Stata:
 
-~~~
+```stata
 ssc install edm, replace
-~~~
+```
 
 To install the latest development version, first install the stable version from SSC then inside Stata run:
 
-~~~
+```stata
 edm update, development replace
-~~~
+```
 
 The source code for the package is available [here](https://github.com/EDM-Developers/EDM).
 
@@ -28,7 +28,7 @@ The Chicago crime dataset used in the edm paper can be downloaded [here](https:/
 
 This [do file](https://jinjingli.github.io/edm/sj-edm.do) contains the a series of examples of the edm command using both a synthetic dataset and the Chicago crime dataset.
 
-## Plugins
+## Example workflows
 
 The `edm` command will support a plugin system which facilities some automated common analyses. This feature is under development and the files below provide some selected early stage prototypes allowing automated Simplex Projections, S-maps, Coprediction, and Convergent Cross Mapping as well as relevant hypothesis tests:
 
