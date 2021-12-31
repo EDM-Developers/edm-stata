@@ -3,6 +3,8 @@ site_name: Empirical Dynamic Modeling (edm) Stata Package
 nav:
   - Home: index.md
   - Time-delayed embedding: time-delayed-embedding.md
+  - The explore subcommand: explore.md
+  - The xmap subcommand: xmap.md
   - Stata Help File: api.md
 
 theme:
