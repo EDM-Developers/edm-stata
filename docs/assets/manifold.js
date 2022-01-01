@@ -20,6 +20,41 @@ function latexify(M) {
   return tex;
 }
 
+function latexify_set_of_sets(M) {
+  if (M.length == 0) {
+    return "\\emptyset";
+  }
+
+  const ncols = M[0].length;
+  let tex = "\\Big\\{";
+
+  const skipSome = M.length * ncols > 15;
+
+  for (let i = 0; i < M.length; i++) {
+    if (skipSome && i > 1 && i < M.length - 2) {
+      if (i == 2) {
+        tex += "\\dots,";
+      }
+      continue;
+    }
+
+    tex += "(";
+    for (let j = 0; j < ncols; j++) {
+      tex += M[i][j];
+      if (j < ncols - 1) {
+        tex += ", ";
+      }
+    }
+    tex += ")";
+
+    if (i < M.length - 1) {
+      tex += ", ";
+    }
+  }
+  tex += "\\Big\\}";
+  return tex;
+}
+
 function manifold(x, numObs, E, tau, allowMissing = false, p = 1) {
   let M = [];
   if (E == 0) {

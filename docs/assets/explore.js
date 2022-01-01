@@ -12,7 +12,7 @@ update_manifold = function () {
 
   // Turn these into latex arrays
   const maniTex = latexify(M.manifold);
-  const targetsTex = latexify(M.targets);
+  // const targetsTex = latexify(M.targets);
 
   // Split the manifolds into library and prediction sets
   const library = Math.floor(M.manifold.length / 2);

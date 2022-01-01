@@ -32,11 +32,13 @@ The time-delayed embedding of the $x$ time series with
 
 is the manifold:
 
+<span class="dynamic-equation" data-equation="\[ M_x = ${M_x_sets} \]" />
+
 The manifold is a collection of these time-delayed *embedding vectors*.
 For short, we just refer to each vector as a *point* on the manifold.
 While the manifold notation above is the most accurate (a set of vectors) we will henceforward use the more convenient matrix notation:
 
-<span class="dynamic-equation" data-equation="\[ M_x = ${M_x}, \quad y = ${y} \]" />
+<span class="dynamic-equation" data-equation="\[ M_x = ${M_x} \]" />
 
 Note that the manifold has $E$ columns, and the number of rows depends on the number of observations in the $x$ time series.
 

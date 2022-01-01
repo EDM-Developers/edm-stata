@@ -23,14 +23,15 @@ update_manifold = function () {
   const M = manifold("x", numObs, E, tau, allowMissing, p);
 
   // Turn these into latex arrays
+  const maniSetFormTex = latexify_set_of_sets(M.manifold);
   const maniTex = latexify(M.manifold);
-  const targetsTex = latexify(M.targets);
+  // const targetsTex = latexify(M.targets);
 
   // Save the result to the page
   document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
-    let tex = eqn.dataset.equation;
-    tex = tex.replace(/\${M_x}/, maniTex).replace(/\${y}/, targetsTex);
-    eqn.innerHTML = tex;
+    eqn.innerHTML = eqn.dataset.equation
+      .replace(/\${M_x_sets}/, maniSetFormTex)
+      .replace(/\${M_x}/, maniTex);
   });
 
   MathJax.typeset();
