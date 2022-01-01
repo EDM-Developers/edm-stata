@@ -26,15 +26,16 @@ update_manifold = function () {
   const libSetTex = latexify(libSet);
   const predSetTex = latexify(predSet);
 
-  const libFirstTex = latexify([libSet[0]]);
-  const predFirstTex = latexify([predSet[0]]);
-  const predFirstTargetTex = latexify([predTargets[0]]);
+  const libFirstTex = latexify(libSet.slice(0, 1));
+  const predFirstTex = latexify(predSet.slice(0, 1));
+  const predFirstTargetTex = latexify(predTargets.slice(0, 1));
 
   const libTargetsTex = latexify(libTargets);
   const predTargetsTex = latexify(predTargets);
-  const weightedSum = predSet[0]
-    .map((v, i) => `w_{1,${i}} \\times ${v}`)
-    .join(" + ");
+  const weightedSum =
+    predSet.length > 0
+      ? predSet[0].map((v, i) => `w_{1,${i}} \\times ${v}`).join(" + ")
+      : "\\text{NA}";
 
   // Save the result to the page
   document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
