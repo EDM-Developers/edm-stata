@@ -1,6 +1,6 @@
 # Empirical Dynamic Modeling (edm) Stata Package
 
-## edm Description
+## Package Description
 
 `edm` implements a series of tools that can be used for empirical dynamic modeling in Stata. The command keyword is `edm`, and should be immediately followed by the subcommand `explore` or `xmap`. A dataset must be declared as time-series or panel data by the tsset or xtset command prior to using the edm command, and time-series operators including `l.`, `f.`, `d.`, and `s.` can be used (the last for seasonal differencing).
 

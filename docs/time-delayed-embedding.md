@@ -35,6 +35,8 @@ While the manifold notation above is the most accurate (a set of vectors) we wil
 
 <p id="manifold"></p>
 
+<span class="dynamic-equation" data-equation="\\[ M_x = ${M_x}, \\quad y = ${y} \\]"></span>
+
 Note that the manifold has $E$ columns, and the number of rows depends on the number of observations in the $x$ time series.
 
 <!-- Allow Missing: <input type="checkbox" id="allowMissing" value="Allow missing">

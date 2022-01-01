@@ -20,6 +20,13 @@ update_manifold = function (refresh = true) {
     "manifold"
   ).innerHTML = `\\[ M_x = ${maniTex}, \\quad y = ${targetsTex} \\]`;
 
+  document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
+    const tex = eqn.dataset.equation;
+    if (tex.contains("${M_x}") || tex.contains("${y}")) {
+      eqn.innerHTML = tex.replace(/\${M_x}/, maniTex).replace(/\${y}/, y);
+    }
+  });
+
   if (refresh) {
     MathJax.typeset();
   }
