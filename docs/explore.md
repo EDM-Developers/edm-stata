@@ -1,52 +1,46 @@
 # What does `edm explore x` do?
 
+<script src="../assets/manifold.js" defer></script>
+<script src="../assets/explore.js" defer></script>
+
 ## First split into library and prediction sets
 
 Firstly, the manifold $M_x$ is split into two separate parts, called the *library set* denoted $\mathscr{L}$ and the *prediction set* denoted $\mathscr{P}$.
-By default, it takes the points of the $M_x$ and randomly assigns half of them to $\mathscr{L}$ and the other half to $\mathscr{P}$.
+By default, it takes the points of the $M_x$ and assigns the first half of them to $\mathscr{L}$ and the other half to $\mathscr{P}$.
 In this case we create a partition of the manifold, though if Stata is given other options then the same point may appear in both sets.
 
-Starting with the time-delayed embedding of $x$:
+Starting with the time-delayed embedding of $x$.
+
+Choose the number of observations: 
+
+<div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
+Number of observations is <span class="numObs_choice" />
 
 Choose a value for $E$:
 
 <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
-The value of $E$ is <span class="E_choice"></span>
+The value of $E$ is <span class="E_choice" />
 
 Choose a value for $\tau$:
 
 <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
-The value of $\tau$ is <span class="tau_choice"></span>
+The value of $\tau$ is <span class="tau_choice" />
 
-The time-delayed embedding of the $x$ time series with the given size $E =$ <span class="E_choice"></span> and $\tau =$ <span class="tau_choice"></span>, is the manifold:
+The time-delayed embedding of the $x$ time series with the given size $E =$ <span class="E_choice" /> and $\tau =$ <span class="tau_choice" />, is the manifold:
 
-<p id="manifold"></p>
-<!-- 
-begin
-	rng = MersenneTwister(1234);
-	unifs = rand(rng, size(M_x, 1));
-	med = median(unifs);
-	
-	libraryPoints = findall(unifs .<= med)
-	predictionPoints = findall(unifs .> med)
-	
-	L = M_x[libraryPoints,:];
-	P = M_x[predictionPoints,:];
-	
-end
--->
+<span class="dynamic-equation" data-equation="\[ M_x = ${M_x} \]" />
 
-Then we may take the points $(Base.string(libraryPoints)) to create the library set, which leaves the remaining $(Base.string(predictionPoints)) points to create the prediction set.
+Then we may take the first half of the points to create the library set, which leaves the remaining points to create the prediction set.
 
 In that case, the *library set* is
-<!-- 
-```latexalign([LaTeXString(raw"\mathscr{L}")], [L])```
- -->
+
+<span class="dynamic-equation" data-equation="\[ \mathscr{L} = ${L} \]" />
+
 
 and the *prediction set* is
-<!-- 
-```latexalign([LaTeXString(raw"\mathscr{P}")], [P])```
--->
+
+<span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \]" />
+
 
 It will help to introduce a notation to refer to a specific point in these sets based on its row number.
 E.g. in the example above, the first point in the library set takes the value:
@@ -64,7 +58,7 @@ Each point on the manifold refers to a small trajectory of a time series, and fo
 Choose a value for $p$:
 
 <div class="slidecontainer"><input type="range" min="-5" max="5" value="1" class="slider" id="p"></div>
-The value of $p$ is <span class="E_choice"></span>
+The value of $p$ is <span class="E_choice" />
 
 So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say that $y_1^{\mathscr{P}}$ is the value it takes $p$ observations in the future, we get:
 
@@ -80,7 +74,7 @@ So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say th
     L"\mathscr{P}_{1} = %$first_P_point \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1^{\mathscr{P}} = %$first_y_P"
 -->
 
-This $p$ may be thought of as the *prediction horizon*, and in `explore` mode is defaults to τ and in `xmap` mode it defaults to 0.
+This $p$ may be thought of as the *prediction horizon*, and in `explore` mode is defaults to $\tau$ and in `xmap` mode it defaults to 0.
 
 In the literature, instead of measuring the number of observations $p$ ahead, authors normally use the value $T_p$ to denote the amount of time this corresponds to.
 When data is regularly sampled (e.g. $t_i = i$) then there is no difference (e.g. $T_p = p$), however for irregularly sampled data the actual time difference may be different for each prediction.

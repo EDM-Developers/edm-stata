@@ -6,7 +6,7 @@
 Imagine that we observe a time series $x$.
 
 <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
-Number of observations is <span class="numObs_choice"></span>
+Number of observations is  <span class="numObs_choice" />
 
 In tabular form, the data looks like:
 
@@ -20,22 +20,23 @@ So we select a $\tau$ which means we only look at every $\tau$th observation for
 Choose a value for $E$:
 
 <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
-The value of $E$ is <span class="E_choice"></span>
+The value of $E$ is <span class="E_choice" />
 
 Choose a value for $\tau$:
 
 <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
-The value of $\tau$ is <span class="tau_choice"></span>
+The value of $\tau$ is <span class="tau_choice" />
 
-The time-delayed embedding of the $x$ time series with the given size $E =$ <span class="E_choice"></span> and $\tau =$ <span class="tau_choice"></span>, is the manifold:
+The time-delayed embedding of the $x$ time series with
+<span class="dynamic-inline" data-equation="E = ${E}, \tau = ${tau}" />
+
+is the manifold:
 
 The manifold is a collection of these time-delayed *embedding vectors*.
 For short, we just refer to each vector as a *point* on the manifold.
 While the manifold notation above is the most accurate (a set of vectors) we will henceforward use the more convenient matrix notation:
 
-<p id="manifold"></p>
-
-<span class="dynamic-equation" data-equation="\\[ M_x = ${M_x}, \\quad y = ${y} \\]"></span>
+<span class="dynamic-equation" data-equation="\[ M_x = ${M_x}, \quad y = ${y} \]" />
 
 Note that the manifold has $E$ columns, and the number of rows depends on the number of observations in the $x$ time series.
 
