@@ -38,8 +38,12 @@ update_manifold = function () {
       : "\\text{NA}";
 
   // Save the result to the page
-  document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
-    eqn.innerHTML = eqn.dataset.equation
+  let eqnsToTypeset = [];
+
+  const equations = document.querySelectorAll(".dynamic-equation");
+  equations.forEach((eqn) => {
+    const prevRenderedEquation = eqn.dataset.renderedEquation;
+    const renderedEquation = eqn.dataset.equation
       .replace(/\${M_x}/, maniTex)
       .replace(/\${L}/, libSetTex)
       .replace(/\${P}/, predSetTex)
@@ -49,9 +53,19 @@ update_manifold = function () {
       .replace(/\${y_L}/, libTargetsTex)
       .replace(/\${y_P}/, predTargetsTex)
       .replace(/\${yhat_P_1}/, weightedSum);
+
+    if (prevRenderedEquation != renderedEquation) {
+      eqnsToTypeset.push(eqn);
+      MathJax.typesetClear([eqn]);
+      eqn.innerHTML = renderedEquation;
+      eqn.dataset.renderedEquation = renderedEquation;
+    }
   });
 
-  MathJax.typeset();
+  MathJax.typesetPromise(eqnsToTypeset);
+  // console.log(
+  //   `Typesetting ${eqnsToTypeset.length} of ${equations.length} equations`
+  // );
 };
 
 const sliderIDs = ["numObs", "E", "tau", "p"];
