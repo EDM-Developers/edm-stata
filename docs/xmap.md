@@ -43,7 +43,6 @@ The library size parameter $L$ is set by the Stata parameter `library`.
 
 Choose a value for $L$:
 
-
 <div class="slidecontainer"><input type="range" min="3" max="10" value="3" class="slider" id="library"></div>
 The value of $L$ is <span class="library_choice"></span>
 <!-- Technically, max of this slider should be size(M_u, 1) -->
@@ -98,7 +97,7 @@ The value of $p$ is <span class="E_choice"></span>
     L"\mathscr{P} = %$(latexify(P_xmap, env=:raw)) \quad %$matchStr \quad y^{\mathscr{P}} = %$y_P_str_xmap"
     end
  -->
- 
+
 The prediction procedure is then the same as previous times, though the library and prediction sets all contain values from the $u$ time series whereas the $y$ projection vectors contain (usually contemporaneous) values from the $v$ time series.
 
 \[
@@ -108,7 +107,7 @@ The prediction procedure is then the same as previous times, though the library 
         \underbrace{ \mathscr{P}_{i} }_{\text{Based on } u}
         \underset{\small \text{Find neighbours in}}{\Rightarrow}
         \underbrace{ \mathscr{L} }_{\text{Based on } u} \\
-        &\,\,\,\,\underset{\small \text{Matches}}{\Rightarrow} 
+        &\,\,\,\,\underset{\small \text{Matches}}{\Rightarrow}
         \underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
         \underset{\small \text{Make prediction}}{\Rightarrow}
         \underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v}
