@@ -2,15 +2,21 @@
 
 ## Package Description
 
-`edm` implements a series of tools that can be used for _Empirical Dynamic Modeling_ in Stata.
+The `edm` Stata package implements a series of  _Empirical Dynamic Modeling_ tools that can be used for causal analysis of time series data.
 
 Key features of the package:
 
-- fast (written in C++) and multithreaded,
-- able to handle missing data,
-- able to process panel data,
-- multiple distance functions available (Euclidean, Mean Absolute Error, Wasserstein)
-- GPU acceleration
+- powered by a fast multithreaded _C++ backend_,
+- able to process panel data, a.k.a. _multispatial EDM_,
+- able to handle _missing data_ using new `dt` algorithms or by dropping points,
+- _factor variables_ can be added to the analysis,
+- _multiple distance functions_ available (Euclidean, Mean Absolute Error, Wasserstein),
+- _GPU acceleration_ possible.
+<!-- 
+- so-called _coprediction_ is also available,
+- forecasting methods will soon be added (WIP).
+- training/testing splits can be made in a variety of ways including _cross-validation_,
+-->
 
 ## R language version
 
@@ -33,8 +39,9 @@ edm update, development replace
 
 The source code for the package is available on [Github](https://github.com/EDM-Developers/EDM).
 
-## Resources
+## Other Resources
 
-- This site serves as the primary source of documentation for the package.
-- Our [Stata Journal paper](https://jinjingli.github.io/edm/edm-wp.pdf) is also a good starting place to understand the package and the overall causal framework.
-- A QMNET seminar on the package is another good starting place, the recording of which ison [YouTube](https://youtu.be/kZv85k1YUVE) and the [slides are here](pdfs/EDM-talk-QMNET.pdf).
+This site serves as the primary source of documentation for the package, though there is also:
+
+- our [Stata Journal paper](https://jinjingli.github.io/edm/edm-wp.pdf) which explains the package and the overall causal framework, and
+- Jinjing's QMNET seminar on the package, the recording is on [YouTube](https://youtu.be/kZv85k1YUVE) and the [slides are here](pdfs/EDM-talk-QMNET.pdf).
