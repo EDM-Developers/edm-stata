@@ -2,36 +2,39 @@
 
 ## Package Description
 
-`edm` implements a series of tools that can be used for empirical dynamic modeling in Stata. The command keyword is `edm`, and should be immediately followed by the subcommand `explore` or `xmap`. A dataset must be declared as time-series or panel data by the tsset or xtset command prior to using the edm command, and time-series operators including `l.`, `f.`, `d.`, and `s.` can be used (the last for seasonal differencing).
+`edm` implements a series of tools that can be used for _Empirical Dynamic Modeling_ in Stata.
+
+Key features of the package:
+
+- fast (written in C++) and multithreaded,
+- able to handle missing data,
+- able to process panel data,
+- multiple distance functions available (Euclidean, Mean Absolute Error, Wasserstein)
+- GPU acceleration
+
+## R language version
+
+We are currently creating the [fastEDM R package](https://edm-developers.github.io/fastEDM/) which is a direct port of this Stata package to R.
+As both packages share the same underlying C++ code, their behaviour will be identical.
 
 ## Installation
 
 To install the stable version directly through Stata:
 
-```stata
+``` stata
 ssc install edm, replace
 ```
 
 To install the latest development version, first install the stable version from SSC then inside Stata run:
 
-```stata
+``` stata
 edm update, development replace
 ```
 
-The source code for the package is available [here](https://github.com/EDM-Developers/EDM).
+The source code for the package is available on [Github](https://github.com/EDM-Developers/EDM).
 
-## Example Data and Do File
+## Resources
 
-[This paper](https://jinjingli.github.io/edm/edm-wp.pdf) describes the use of edm in Stata. The slides for the talk given at the QMNET seminar series is available [here](pdfs/EDM-talk-QMNET.pdf).
-
-The Chicago crime dataset used in the edm paper can be downloaded [here](https://jinjingli.github.io/edm/chicago.dta).
-
-This [do file](https://jinjingli.github.io/edm/sj-edm.do) contains the a series of examples of the edm command using both a synthetic dataset and the Chicago crime dataset.
-
-## Example workflows
-
-The `edm` command will support a plugin system which facilities some automated common analyses. This feature is under development and the files below provide some selected early stage prototypes allowing automated Simplex Projections, S-maps, Coprediction, and Convergent Cross Mapping as well as relevant hypothesis tests:
-
-- [edm Plugin - Automated time-series analysis (N=1 case)](workflows/1._EDM_for_N_of_1-traditional_time-series_case.do)
-- [edm Plugin - Automated multi-spatial analysis (N>1 panel data case)](workflows/2._Multispatial_edm-pooling_panel_IDs_together.do)
-- [edm Plugin - Automated multiple-edm analysis (N>1 panel data case)](workflows/3._Multiple_EDM-analyze_each_panel_ID_separately.do)
+- This site serves as the primary source of documentation for the package.
+- Our [Stata Journal paper](https://jinjingli.github.io/edm/edm-wp.pdf) is also a good starting place to understand the package and the overall causal framework.
+- A QMNET seminar on the package is another good starting place, the recording of which ison [YouTube](https://youtu.be/kZv85k1YUVE) and the [slides are here](pdfs/EDM-talk-QMNET.pdf).

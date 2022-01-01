@@ -2,10 +2,16 @@ site_name: Empirical Dynamic Modeling (edm) Stata Package
 
 nav:
   - Home: index.md
+  - Annoted Examples (WIP): examples.md
   - How does it work?:
     - Time-delayed embedding: time-delayed-embedding.md
     - The explore subcommand: explore.md
-    - The xmap subcommand: xmap.md
+    - The xmap subcommand (WIP): xmap.md
+    - Adding variables to manifold (WIP): adding-to-manifold.md
+    - Missing data (WIP): missing-data.md
+    - Coprediction (WIP): coprediction.md
+  - GPU Acceleration (WIP): gpu.md
+  - Automated workflows: automated-workflows.md
   - Stata Help File: api.md
 
 theme:
@@ -16,6 +22,11 @@ theme:
 markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 
 extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6
