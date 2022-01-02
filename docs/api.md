@@ -1,5 +1,7 @@
+# Stata package help file
 
-# edm package help file
+!!! note
+    This page simply reproduces, for convenience, the output of typing `help edm` into the Stata console.
 
 The command **edm** implements a series of tools that can be used for empirical dynamic
 modeling in Stata. The core algorithm is written in C++ (with a Mata backup) to achieve reasonable execution speed. The
@@ -8,13 +10,12 @@ xmap. A dataset must be declared as time-series or panel data by the tsset or xt
 using the edm command, and time-series operators including l., f., d., and s. can be used (the last
 for seasonal differencing).
 
-
 ## Syntax
 
 The **explore** subcommand follows the syntax below and supports one
 variable for exploration using simplex projection or S-mapping.
 
-```stata
+``` stata
 edm explore variable [if exp], [e(numlist ascending >=2)]
 [tau(integer 1)] [theta(numlist ascending)] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 0)]
 [seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)]
@@ -29,7 +30,7 @@ follows the syntax below and requires two variables to follow immediately after 
 of the same options with the explore subcommand although there are some differences given the
 different purpose of the analysis.
 
-```stata
+``` stata
 edm xmap variables [if exp], [e(integer 2)] [tau(integer 1)] [theta(real 1)]
 [Library(numlist)] [RANDomize] [k(integer 0)] [ALGorithm(string)] [REPlicate(integer 0)] [strict]
 [DIrection(string)] [seed(integer 0)] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)]
@@ -41,11 +42,15 @@ edm xmap variables [if exp], [e(integer 2)] [tau(integer 1)] [theta(real 1)]
 
 The third subcommand **update** updates the plugin to its latest version
 
-	edm update, [develop] [replace]
+``` stata
+edm update, [develop] [replace]
+```
 
 The fourth subcommand **version** displays the current version number
 
-	edm version
+``` stata
+edm version
+```
 
 ## Options
 
@@ -77,21 +82,20 @@ check performance by examining ρ and MAE at different values of τ.
 **theta(numlist ascending)**: Theta (or θ) is the distance weighting parameter for the
 local neighbours in the manifold. It is used to detect the nonlinearity of the system in the explore
 subcommand for S-mapping. Of course, as noted above, for simplex projection and CCM a weight of
-theta(1) is applied to neighbours based on their distance, which is reflected in the fact that the
+`theta(1)` is applied to neighbours based on their distance, which is reflected in the fact that the
 default value of θ is 1. However, this can be altered even for simplex projection or CCM (two cases
 that we do not cover here). Particularly, values for S-mapping to test for improved predictions as
-they become more local may include the following command: theta(0 .00001 .0001 .001 .005 .01 .05 .1
-.5 1 1.5 2 3 4 6 8 10).
+they become more local may include the following command: `theta(0 .00001 .0001 .001 .005 .01 .05 .1 .5 1 1.5 2 3 4 6 8 10)`.
 
 **k(integer)**: This option specifies the number of neighbours used for prediction. When
 set to 1, only the nearest neighbour is used, but as k increases the next-closest nearest neighbours
 are included for making predictions. In the case that k is set 0, the number of neighbours used is
 calculated automatically (typically as k = E + 1 to form a simplex around a target), which is the
-default value. When k < 0 (e.g., k(-1)), all possible points in the prediction set are used (i.e.,
+default value. When k < 0 (e.g., `k(-1)`), all possible points in the prediction set are used (i.e.,
 all points in the library are used to reconstruct the manifold and predict target vectors). This
 latter setting is useful and typically recommended for S-mapping because it allows all points in the
 library to be used for predictions with the weightings in theta. However, with large datasets this
-may be computationally burdensome and therefore k(100) or perhaps k(500) may be preferred if T or NT
+may be computationally burdensome and therefore `k(100)` or perhaps `k(500)` may be preferred if T or NT
 is large.
 
 **ALGorithm(string)**: This option specifies the algorithm used for prediction. If not
@@ -170,7 +174,7 @@ values of the CIs. These return values can be used for further post-processing.
 **seed(integer)**: This option specifies the seed used for the random number. In some
 special cases users may wish to use this in order to keep library and prediction sets the same
 across simplex projection and S-mapping with a single variable, or across multiple CCM runs with
-different variables. Note: if "set rng" has been used to change Stata's random number generation
+different variables. Note: if `set rng` has been used to change Stata's random number generation
 algorithm, then edm will temporarily change it the default 64 bit Mersenne twister internally.
 
 **strict**: When this option is specified, the computation will fail if the requested
@@ -188,9 +192,9 @@ default, the distance is set to the expected distance of two random draws in a n
 which equals to 2/sqrt(pi) * standard deviation of the mapping variable.
 
 **EXTRAembed(variables)**: This option allows incorporating additional variables into the
-embedding (multivariate embedding), e.g. extra(z l.z). Time series lists are unabbreviated here,
-e.g. extra(L(1/3).z) will be equivalent to extra(L1.z L2.z L3.z). Normally, lagged versions of the
-extra variables are not included in the embedding, however the syntax extra(z(e)) includes e lags
+embedding (multivariate embedding), e.g. `extra(z l.z)`. Time series lists are unabbreviated here,
+e.g. `extra(L(1/3).z)` will be equivalent to `extra(L1.z L2.z L3.z)`. Normally, lagged versions of the
+extra variables are not included in the embedding, however the syntax `extra(z(e))` includes E lags
 of z in the embedding.
 
 **dt**: This option allows automatic inclusion of the timestamp differencing in the
@@ -242,31 +246,31 @@ the same as leave-one-out cross-validation as the observation itself is not used
 this option, the program will only report the number of dimensions constructed from the main
 variable.
 
-**Library(numlist ascending)**: 	This option specifies the total library size L used for
+**Library(numlist ascending)**: This option specifies the total library size L used for
 the manifold reconstruction. Varying the library size is used to estimate the convergence property
 of the cross-mapping, with a minimum value Lmin = E + 2 and the maximum equal to the total number of
 observations minus sufficient lags (e.g., in the time-series case without missing data this is Lmax
 = T + 1 – E). An error message is given if the L value is beyond the allowed range. To assess the
 rate of convergence (i.e., the rate at which ρ increases as L grows), the full range of library
 sizes at small values of L can be used, such as if E = 2 and T = 100, with the setting then perhaps
-being library(4(1)25 30(5)50 54(15)99). This option is only available with the `xmap` subcommand.
+being `library(4(1)25 30(5)50 54(15)99)`. This option is only available with the `xmap` subcommand.
 
 **SAVEsmap(string)**: This option allows smap coefficients to be stored in variables with
-a specified prefix. For example, specifying “edm xmap x y, algorithm(smap) savesmap(beta) k(-1)”will
-create a set of new variables such as beta1_b0_rep1. The string prefix (e.g., ‘beta’) must not be
+a specified prefix. For example, specifying `edm xmap x y, algorithm(smap) savesmap(beta) k(-1)` will
+create a set of new variables such as beta1_b0_rep1. The string prefix (e.g., 'beta') must not be
 shared with any variables in the dataset, and the option is only valid if the algorithm(smap) is
 specified. In terms of the saved variables such as beta1_b0_rep1, the first number immediately after
 the prefix ‘beta’ is 1 or 2 and indicates which of the two listed variables is treated as the
-dependent variable in the cross-mapping (i.e., the direction of the mapping). For the “edm xmap x y”
-case, variables starting with beta1_ contain coefficients derived from the manifold M_X created
+dependent variable in the cross-mapping (i.e., the direction of the mapping). For the `edm xmap x y`
+case, variables starting with `beta1_` contain coefficients derived from the manifold M_X created
 using the lags of the first variable ‘x’ to predict Y, or Y|M_X. This set of variables therefore
 store the coefficients related to ‘x’ as an outcome rather than a predictor in CCM. Keep in mind
-that any Y→X effect associated with the beta1_ prefix is shown as Y|M_X, because the outcome is used
+that any Y→X effect associated with the `beta1_` prefix is shown as Y|M_X, because the outcome is used
 to cross-map the predictor, and thus the reported coefficients will be scaled in the opposite
 direction of a typical regression (because in CCM the outcome variable predicts the cause). To get
 more familiar regression coefficients (which will be locally weighted), variables starting with
-beta2_ store the coefficients estimated in the other direction, where the second listed variable‘y’
-is used for the manifold reconstruction M_Y for the mapping X|M_Y in the “edm xmap x y”case, testing
+beta2_ store the coefficients estimated in the other direction, where the second listed variable ‘y’
+is used for the manifold reconstruction M_Y for the mapping X|M_Y in the “edm xmap x y” case, testing
 the opposite X→Y effect in CCM, but with reported S-map coefficients that map to a Y→X regression.
 We appreciate that this may be unintuitive, but because CCM causation is tested by predicting the
 causal variable with the outcome, to get more familiar regression coefficients requires reversing
@@ -288,17 +292,15 @@ calculated bidirectionally or unidirectionally, the latter of which reduces comp
 bidirectional mappings are not required. Valid options include “oneway” and “both”, the latter of
 which is the default and computes both possible cross-mappings. When oneway is chosen, the first
 variable listed after the xmap subcommand is treated as the potential dependent variable following
-the conventions in the regression syntax of Stata such as the‘reg’ command, so “edm xmap x y,
-direction(oneway)” produces the cross-mapping Y|M_X, which pertains to a Y→X effect. This is
+the conventions in the regression syntax of Stata such as the‘reg’ command, so `edm xmap x y, direction(oneway)` produces the cross-mapping Y|M_X, which pertains to a Y→X effect. This is
 consistent with the beta1_ coefficients from the previous savesmap(beta) option. On this point, the
 direction(oneway) option may be especially useful when an initial “edm xmap x y”procedure shows
 convergence only for a cross-mapping Y|M_X, which pertains to a Y→X effect. To save time with large
-datasets, any follow-up analyses with the algorithm(smap) option can then be conducted with “edm
-xmap x y, algorithm(smap) savesmap(beta) direction(oneway)”.  To make this easier there is also a
+datasets, any follow-up analyses with the algorithm(smap) option can then be conducted with `edm xmap x y, algorithm(smap) savesmap(beta) direction(oneway)`.  To make this easier there is also a
 simplified oneway option that implies direction(oneway). This option is only available with the
 `xmap` subcommand.
 
-**oneway**: This option is equivalent to "direction(oneway)"
+**oneway**: This option is equivalent to `direction(oneway)`
 
 ### Options for update subcommand
 
@@ -306,15 +308,14 @@ The update subcommand supports the following options:
 
 **develop**: This option updates the command to its latest development version. The
 development version usually contains more features but may be less tested compared with the older
-version distributed on SSC. 
+version distributed on SSC.
 
 **replace**: This option specifies whether you allow the update to override your local ado
 files.
 
-
 ## Examples
 
-Chicago crime dataset example (included in the auxiliary file) 
+Chicago crime dataset example (included in the auxiliary file)
 
 ```stata
 use chicago,clear
@@ -323,15 +324,14 @@ use chicago,clear
 ```stata
 edm explore temp, e(2/30)
 ```
-    
+
 ```stata
 edm xmap temp crime
 ```
-    
+
 ```stata
 edm xmap temp crime, alg(smap) savesmap(beta) e(6) k(-1)
 ```
-
 
 ## Updates
 
@@ -346,20 +346,3 @@ To install the development version directly through Stata:
 ```stata
 edm update, develop replace
 ```
-
-
-## Suggested Citation
-
-Li, J, Zyphur, M & Sugihara, G. Beyond linearity, stability, and
-equilibrium: The edm package for empirical dynamic modeling and convergent cross-mapping, Stata
-Journal
-
-
-## Contact
-
-Jinjing Li, National Centre for Social and Economic Modelling, University of Canberra,
-Australia <jinjing.li@canberra.edu.au>
-
-
-
-

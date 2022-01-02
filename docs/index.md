@@ -11,17 +11,12 @@ Key features of the package:
 - able to handle _missing data_ using new `dt` algorithms or by dropping points,
 - _factor variables_ can be added to the analysis,
 - _multiple distance functions_ available (Euclidean, Mean Absolute Error, Wasserstein),
-- _GPU acceleration_ possible.
+- [_GPU acceleration_](/gpu) available.
 <!-- 
 - so-called _coprediction_ is also available,
 - forecasting methods will soon be added (WIP).
 - training/testing splits can be made in a variety of ways including _cross-validation_,
 -->
-
-## R language version
-
-We are currently creating the [fastEDM R package](https://edm-developers.github.io/fastEDM/) which is a direct port of this Stata package to R.
-As both packages share the same underlying C++ code, their behaviour will be identical.
 
 ## Installation
 
@@ -39,9 +34,39 @@ edm update, development replace
 
 The source code for the package is available on [Github](https://github.com/EDM-Developers/EDM).
 
+## R package
+
+We are currently creating the [fastEDM R package](https://edm-developers.github.io/fastEDM/) which is a direct port of this Stata package to R.
+As both packages share the same underlying C++ code, their behaviour will be identical.
+
 ## Other Resources
 
 This site serves as the primary source of documentation for the package, though there is also:
 
 - our [Stata Journal paper](https://jinjingli.github.io/edm/edm-wp.pdf) which explains the package and the overall causal framework, and
 - Jinjing's QMNET seminar on the package, the recording is on [YouTube](https://youtu.be/kZv85k1YUVE) and the [slides are here](pdfs/EDM-talk-QMNET.pdf).
+
+## Authors
+
+- [Jinjing Li](https://www.jinjingli.com/) (author),
+- [Michael Zyphur](https://findanexpert.unimelb.edu.au/profile/238494-michael-zyphur) (author),
+- [Patrick Laub](https://pat-laub.github.io/) (author, maintainer),
+- Edoardo Tescari (contributor),
+- Simon Mutch (contributor),
+- George Sugihara (originator)
+
+## Citation
+
+Jinjing Li, Michael J. Zyphur, George Sugihara, Patrick J. Laub (2021), _Beyond Linearity, Stability, and Equilibrium: The edm Package for Empirical Dynamic Modeling and Convergent Cross Mapping in Stata_, Stata Journal, 21(1), pp. 220-258
+
+``` bibtex
+@article{edm-stata,
+  title={Beyond linearity, stability, and equilibrium: The edm package for empirical dynamic modeling and convergent cross-mapping in {S}tata},
+  author={Li, Jinjing and Zyphur, Michael J and Sugihara, George and Laub, Patrick J},
+  journal={The Stata Journal},
+  volume={21},
+  number={1},
+  pages={220--258},
+  year={2021},
+}
+```
