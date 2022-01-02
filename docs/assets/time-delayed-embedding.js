@@ -1,4 +1,4 @@
-update_manifold_specs = function () {
+const update_manifold_specs = function () {
   document.querySelectorAll(".dynamic-inline").forEach((eqn) => {
     const E = parseInt(document.getElementById("E").value);
     const tau = parseInt(document.getElementById("tau").value);
@@ -10,7 +10,7 @@ update_manifold_specs = function () {
   });
 };
 
-update_manifold = function () {
+const update_manifold = function () {
   // Read in the manifold specifications from the sliders
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
@@ -18,7 +18,7 @@ update_manifold = function () {
   // let allowMissing = document.getElementById("allowMissing").checked
   const allowMissing = false;
   const p = 1;
-  
+
   const x_time_series = latexify_time_series("x", numObs);
 
   // Construct the manifold and targets

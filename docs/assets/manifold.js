@@ -1,4 +1,4 @@
-function latexify(M) {
+const latexify = function (M) {
   if (M.length == 0) {
     return "\\emptyset";
   }
@@ -18,9 +18,9 @@ function latexify(M) {
   }
   tex += "\\end{array} \\right)";
   return tex;
-}
+};
 
-function latexify_set_of_sets(M) {
+const latexify_set_of_sets = function (M) {
   if (M.length == 0) {
     return "\\emptyset";
   }
@@ -53,24 +53,24 @@ function latexify_set_of_sets(M) {
   }
   tex += "\\Big\\}";
   return tex;
-}
+};
 
-function latexify_time_series(x, numObs) {
+const latexify_time_series = function (x, numObs) {
   if (numObs == 0) {
-    return "\\emptyset"
+    return "\\emptyset";
   }
-  
+
   let tex = `\\begin{array}{c|c}\n`;
   tex += "\\text{Time} & \\text{Value} \\\\ \n \\hline ";
   for (let i = 1; i <= numObs; i++) {
     tex += `t_{${i}} & ${x}_{${i}} \\\\ \n`;
   }
-  tex += "\\end{array}"
-  
-  return tex;
-}
+  tex += "\\end{array}";
 
-function manifold(x, numObs, E, tau, allowMissing = false, p = 1) {
+  return tex;
+};
+
+const manifold = function (x, numObs, E, tau, allowMissing = false, p = 1) {
   let M = [];
   if (E == 0) {
     return M;
@@ -103,4 +103,4 @@ function manifold(x, numObs, E, tau, allowMissing = false, p = 1) {
     targets.push([target]);
   }
   return { manifold: M, targets: targets };
-}
+};

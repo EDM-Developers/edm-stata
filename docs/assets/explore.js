@@ -1,4 +1,4 @@
-update_manifold = function () {
+const update_manifold = function () {
   // Read in the manifold specifications from the sliders
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
