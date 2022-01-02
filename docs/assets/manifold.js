@@ -55,6 +55,21 @@ function latexify_set_of_sets(M) {
   return tex;
 }
 
+function latexify_time_series(x, numObs) {
+  if (numObs == 0) {
+    return "\\emptyset"
+  }
+  
+  let tex = `\\begin{array}{c|c}\n`;
+  tex += "\\text{Time} & \\text{Value} \\\\ \n \\hline ";
+  for (let i = 1; i <= numObs; i++) {
+    tex += `t_{${i}} & ${x}_{${i}} \\\\ \n`;
+  }
+  tex += "\\end{array}"
+  
+  return tex;
+}
+
 function manifold(x, numObs, E, tau, allowMissing = false, p = 1) {
   let M = [];
   if (E == 0) {

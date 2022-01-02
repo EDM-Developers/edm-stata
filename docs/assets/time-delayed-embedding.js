@@ -18,6 +18,8 @@ update_manifold = function () {
   // let allowMissing = document.getElementById("allowMissing").checked
   const allowMissing = false;
   const p = 1;
+  
+  const x_time_series = latexify_time_series("x", numObs);
 
   // Construct the manifold and targets
   const M = manifold("x", numObs, E, tau, allowMissing, p);
@@ -30,6 +32,7 @@ update_manifold = function () {
   // Save the result to the page
   document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
     eqn.innerHTML = eqn.dataset.equation
+      .replace(/\${x_time_series}/, x_time_series)
       .replace(/\${M_x_sets}/, maniSetFormTex)
       .replace(/\${M_x}/, maniTex);
   });

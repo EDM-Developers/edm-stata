@@ -5,10 +5,14 @@
 
 Imagine that we observe a time series $x$.
 
+Choose the number of observations:
+
 <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 Number of observations is  <span class="numObs_choice" />
 
 In tabular form, the data looks like:
+
+<span class="dynamic-equation" data-equation="\[ ${x_time_series} \]" />
 
 So each one of $x_i$ is an *observation* of the $x$ time series.
 
