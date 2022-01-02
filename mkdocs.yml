@@ -2,7 +2,9 @@ site_name: Empirical Dynamic Modeling (edm) Stata Package
 
 nav:
   - Home: index.md
-  - Annoted Examples (WIP): examples.md
+  - Examples:
+    - Chicago crime/temperature (WIP): chicago.md
+    - Logistic map (WIP): logistic-map.md 
   - How does it work?:
     - Time-delayed embedding: time-delayed-embedding.md
     - The explore subcommand: explore.md

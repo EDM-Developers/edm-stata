@@ -6,7 +6,7 @@ The `edm` Stata package implements a series of  _Empirical Dynamic Modeling_ too
 
 Key features of the package:
 
-- powered by a fast multithreaded _C++ backend_,
+- powered by a fast multi-threaded _C++ backend_,
 - able to process panel data, a.k.a. _multispatial EDM_,
 - able to handle _missing data_ using new `dt` algorithms or by dropping points,
 - _factor variables_ can be added to the analysis,
