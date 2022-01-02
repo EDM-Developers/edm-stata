@@ -7,15 +7,15 @@ As an example, consider the Stata command
 
 `edm explore x, extra(y)`
 
-??? tip "Choose the number of observations"
+???+ tip "Choose the number of observations"
     <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
     Number of observations is <span class="numObs_choice" />
 
-??? tip "Choose a value for $E$"
+???+ tip "Choose a value for $E$"
     <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
     The value of $E$ is <span class="E_choice" />
 
-??? tip "Choose a value for $\tau$"
+???+ tip "Choose a value for $\tau$"
     <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
     The value of $\tau$ is <span class="tau_choice" />
 

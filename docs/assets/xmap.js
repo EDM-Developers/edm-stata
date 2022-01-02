@@ -3,9 +3,9 @@ const update_manifold = function () {
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
   const tau = parseInt(document.getElementById("tau").value);
-  // const allowMissing = document.getElementById("allowMissing").checked
   const p = parseInt(document.getElementById("p").value);
   const allowMissing = false;
+  const library = parseInt(document.getElementById("library").value);
 
   // Construct the manifold and targets
   const M = manifold("u", numObs, E, tau, allowMissing, p).manifold;
@@ -18,8 +18,6 @@ const update_manifold = function () {
   const maniTex = latexify(M);
 
   // Split the manifolds into library and prediction sets
-  const library = Math.floor(M.length / 2);
-
   const libSet = M.slice(0, library);
   const libTargets = targets.slice(0, library);
 
@@ -73,7 +71,7 @@ const update_manifold = function () {
   // );
 };
 
-const sliderIDs = ["numObs", "E", "tau", "p"];
+const sliderIDs = ["numObs", "E", "tau", "p", "library"];
 for (let sliderID of sliderIDs) {
   let slider = document.getElementById(sliderID);
 

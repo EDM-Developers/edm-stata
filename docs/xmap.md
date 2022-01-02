@@ -11,15 +11,15 @@ edm xmap u v, oneway
 
 This will consider two different time series, here labelled $u$ and $v$.
 
-??? tip "Choose the number of observations"
+???+ tip "Choose the number of observations"
     <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
     Number of observations is <span class="numObs_choice" />
 
-??? tip "Choose a value for $E$"
+???+ tip "Choose a value for $E$"
     <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
     The value of $E$ is <span class="E_choice" />
 
-??? tip "Choose a value for $\tau$"
+???+ tip "Choose a value for $\tau$"
     <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
     The value of $\tau$ is <span class="tau_choice" />
 
@@ -30,7 +30,7 @@ The lagged embedding $M_u$ is constructed:
 The library set is (by default) the first $L$ points of $M_u$.
 The library size parameter $L$ is set by the Stata parameter `library`.
 
-??? tip "Choose a value for $L$"
+???+ tip "Choose a value for $L$"
     <div class="slidecontainer"><input type="range" min="3" max="10" value="3" class="slider" id="library"></div>
     The value of $L$ is <span class="library_choice" />
 
@@ -47,7 +47,7 @@ Here we are trying to predict $p$ observations ahead, where the default case is 
 The $p = 0$ case means we are using the $u$ time series to try to predict the contemporaneous value of $v$.
 A negative $p$ may be chosen, though this is a bit abnormal.
 
-??? tip "Choose a value for $p$"
+???+ tip "Choose a value for $p$"
     <div class="slidecontainer"><input type="range" min="-5" max="5" value="0" class="slider" id="p"></div>
     The value of $p$ is <span class="p_choice" />
 
