@@ -11,20 +11,17 @@ In this case we create a partition of the manifold, though if Stata is given oth
 
 Starting with the time-delayed embedding of $x$.
 
-Choose the number of observations:
+???+ tip "Choose the number of observations"
+    <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
+    Number of observations is <span class="numObs_choice" />
 
-<div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
-Number of observations is <span class="numObs_choice" />
+???+ tip "Choose a value for $E$"
+    <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
+    The value of $E$ is <span class="E_choice" />
 
-Choose a value for $E$:
-
-<div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
-The value of $E$ is <span class="E_choice" />
-
-Choose a value for $\tau$:
-
-<div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
-The value of $\tau$ is <span class="tau_choice" />
+???+ tip "Choose a value for $\tau$"
+    <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
+    The value of $\tau$ is <span class="tau_choice" />
 
 The time-delayed embedding of the $x$ time series with the given size $E =$ <span class="E_choice" /> and $\tau =$ <span class="tau_choice" />, is the manifold:
 
@@ -52,10 +49,9 @@ and similarly $\mathscr{P}_{j}$ refers to the $j$th point in $\mathscr{P}$.
 
 Each point on the manifold refers to a small trajectory of a time series, and for each point we look $p$ observations into the future of the time series.
 
-Choose a value for $p$:
-
-<div class="slidecontainer"><input type="range" min="-5" max="5" value="1" class="slider" id="p"></div>
-The value of $p$ is <span class="p_choice" />
+???+ tip "Choose a value for $p$"
+    <div class="slidecontainer"><input type="range" min="-5" max="5" value="1" class="slider" id="p"></div>
+    The value of $p$ is <span class="p_choice" />
 
 So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say that $y_1^{\mathscr{P}}$ is the value it takes $p$ observations in the future, we get:
 

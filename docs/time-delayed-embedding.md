@@ -5,10 +5,9 @@
 
 Imagine that we observe a time series $x$.
 
-Choose the number of observations:
-
-<div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
-Number of observations is  <span class="numObs_choice" />
+???+ tip "Choose the number of observations"
+    <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
+    Number of observations is <span class="numObs_choice" />
 
 In tabular form, the data looks like:
 
@@ -21,15 +20,13 @@ To create a time-delayed embedding based on any of these time series, we first n
 The data may be too finely sampled in time.
 So we select a $\tau$ which means we only look at every $\tau$th observation for each time series.
 
-Choose a value for $E$:
+???+ tip "Choose a value for $E$"
+    <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
+    The value of $E$ is <span class="E_choice" />
 
-<div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
-The value of $E$ is <span class="E_choice" />
-
-Choose a value for $\tau$:
-
-<div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
-The value of $\tau$ is <span class="tau_choice" />
+???+ tip "Choose a value for $\tau$"
+    <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
+    The value of $\tau$ is <span class="tau_choice" />
 
 The time-delayed embedding of the $x$ time series with
 <span class="dynamic-inline" data-equation="E = ${E}, \tau = ${tau}" />

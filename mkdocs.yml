@@ -22,10 +22,12 @@ theme:
     - stata
 
 markdown_extensions:
+  - admonition
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.details
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
