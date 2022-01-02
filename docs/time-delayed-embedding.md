@@ -7,7 +7,7 @@ Imagine that we observe a time series $x$.
 
 ???+ tip "Choose the number of observations"
     <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
-    Number of observations is <span class="numObs_choice" />
+    The number of observations is <span class="numObs_choice" />
 
 In tabular form, the data looks like:
 

@@ -8,7 +8,7 @@ nav:
   - How does it work?:
     - Time-delayed embedding: time-delayed-embedding.md
     - The explore subcommand: explore.md
-    - The xmap subcommand (WIP): xmap.md
+    - The xmap subcommand: xmap.md
     - Adding variables to manifold (WIP): adding-to-manifold.md
     - Missing data (WIP): missing-data.md
     - Coprediction (WIP): coprediction.md
