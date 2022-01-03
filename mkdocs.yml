@@ -10,7 +10,7 @@ nav:
     - The explore subcommand: explore.md
     - The xmap subcommand: xmap.md
     - Adding variables to manifold: adding-to-manifold.md
-    - Missing data (WIP): missing-data.md
+    - Missing data: missing-data.md
     - Coprediction (WIP): coprediction.md
   - GPU Acceleration (WIP): gpu.md
   - Automated workflows: automated-workflows.md
@@ -32,6 +32,7 @@ theme:
 
 markdown_extensions:
   - admonition
+  - tables
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.highlight:
