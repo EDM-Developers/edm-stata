@@ -3,7 +3,7 @@ const update_centered_equations = function () {
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
   const tau = parseInt(document.getElementById("tau").value);
-  const p = parseInt(document.getElementById("p").value);
+  const p = 1;
   const allowMissing = false;
 
   // Construct the manifold and targets
@@ -25,17 +25,6 @@ const update_centered_equations = function () {
   const libSetTex = latexify(libSet);
   const predSetTex = latexify(predSet);
 
-  const libFirstTex = latexify(libSet.slice(0, 1));
-  const predFirstTex = latexify(predSet.slice(0, 1));
-  const predFirstTargetTex = latexify(predTargets.slice(0, 1));
-
-  const libTargetsTex = latexify(libTargets);
-  const predTargetsTex = latexify(predTargets);
-  const weightedSum =
-    predSet.length > 0
-      ? predSet[0].map((v, i) => `w_{1,${i}} \\times ${v}`).join(" + ")
-      : "\\text{NA}";
-
   // Save the result to the page
   let eqnsToTypeset = [];
 
@@ -45,13 +34,7 @@ const update_centered_equations = function () {
     const renderedEquation = eqn.dataset.equation
       .replace(/\${M_x}/, maniTex)
       .replace(/\${L}/, libSetTex)
-      .replace(/\${P}/, predSetTex)
-      .replace(/\${L_1}/, libFirstTex)
-      .replace(/\${P_1}/, predFirstTex)
-      .replace(/\${y_P_1}/, predFirstTargetTex)
-      .replace(/\${y_L}/, libTargetsTex)
-      .replace(/\${y_P}/, predTargetsTex)
-      .replace(/\${yhat_P_1}/, weightedSum);
+      .replace(/\${P}/, predSetTex);
 
     if (prevRenderedEquation != renderedEquation) {
       eqnsToTypeset.push(eqn);

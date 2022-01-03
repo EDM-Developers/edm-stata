@@ -104,3 +104,26 @@ const manifold = function (x, numObs, E, tau, allowMissing = false, p = 1) {
   }
   return { manifold: M, targets: targets };
 };
+
+const add_slider_outputs = function () {
+  const sliderContainers = Array.from(
+    document.querySelectorAll(".slider-container")
+  );
+  const sliders = document.querySelectorAll(".slider-container input");
+
+  const sliderDisplays = sliderContainers.map((container) =>
+    container.appendChild(document.createElement("span"))
+  );
+
+  // Update the slider ouputs
+  sliders.forEach(function (slider, i) {
+    slider.addEventListener("input", function () {
+      sliderDisplays[i].innerHTML = `${this.value}`;
+    });
+  });
+
+  // Trigger event right away to display default values of sliders
+  sliders.forEach((slider) => slider.dispatchEvent(new Event("input")));
+};
+
+add_slider_outputs();

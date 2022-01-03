@@ -1,4 +1,4 @@
-const update_manifold_specs = function () {
+const update_inline_equations = function () {
   document.querySelectorAll(".dynamic-inline").forEach((eqn) => {
     const E = parseInt(document.getElementById("E").value);
     const tau = parseInt(document.getElementById("tau").value);
@@ -10,12 +10,11 @@ const update_manifold_specs = function () {
   });
 };
 
-const update_manifold = function () {
+const update_centered_equations = function () {
   // Read in the manifold specifications from the sliders
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
   const tau = parseInt(document.getElementById("tau").value);
-  // let allowMissing = document.getElementById("allowMissing").checked
   const allowMissing = false;
   const p = 1;
 
@@ -27,7 +26,6 @@ const update_manifold = function () {
   // Turn these into latex arrays
   const maniSetFormTex = latexify_set_of_sets(M.manifold);
   const maniTex = latexify(M.manifold);
-  // const targetsTex = latexify(M.targets);
 
   // Save the result to the page
   document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
@@ -40,26 +38,14 @@ const update_manifold = function () {
   MathJax.typeset();
 };
 
-const sliderIDs = ["numObs", "E", "tau"];
-for (let sliderID of sliderIDs) {
-  let slider = document.getElementById(sliderID);
+const sliders = document.querySelectorAll(".slider-container input");
 
-  // Display the default slider value
-  document
-    .querySelectorAll(`.${sliderID}_choice`)
-    .forEach((elem) => (elem.innerHTML = `${slider.value}`));
+sliders.forEach((slider) =>
+  slider.addEventListener("input", function () {
+    update_inline_equations();
+    update_centered_equations();
+  })
+);
 
-  // Update the current slider value (each time you drag the slider handle)
-  slider.oninput = function () {
-    document
-      .querySelectorAll(`.${this.id}_choice`)
-      .forEach((elem) => (elem.innerHTML = `${this.value}`));
-
-    update_manifold_specs();
-    update_manifold();
-  };
-}
-
-// document.getElementById("allowMissing").oninput = update_manifold
-update_manifold_specs();
-update_manifold();
+update_inline_equations();
+update_centered_equations();

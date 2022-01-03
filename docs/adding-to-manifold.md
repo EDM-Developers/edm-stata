@@ -1,5 +1,8 @@
 # Adding extra variables to the manifold
 
+<script src="../assets/manifold.js" defer></script>
+<script src="../assets/adding-to-manifold.js" defer></script>
+
 It can be advantageous to combine data from multiple sources into a single EDM analysis.
 
 The `extra` command will incorporate additional pieces of data into the manifold.
@@ -8,20 +11,18 @@ As an example, consider the Stata command
 `edm explore x, extra(y)`
 
 ???+ tip "Choose the number of observations"
-    <div class="slidecontainer"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
-    Number of observations is <span class="numObs_choice" />
+    <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 
 ???+ tip "Choose a value for $E$"
-    <div class="slidecontainer"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
-    The value of $E$ is <span class="E_choice" />
+    <div class="slider-container"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
 
 ???+ tip "Choose a value for $\tau$"
-    <div class="slidecontainer"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
-    The value of $\tau$ is <span class="tau_choice" />
+    <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
-The time-delayed embedding of the $x$ time series with the given size E = $E and τ = $τ, is the manifold:
+The time-delayed embedding of the $x$ time series with the given $E$ and $\tau$ is the manifold:
 
 <span class="dynamic-equation" data-equation="\[ M_x := \text{Manifold}(x, E,\tau) = ${M_x} \]" />
+
 <!-- 
 # ╔═╡ 982d9067-da5b-4cbf-bcba-5c94ed2479b9
 begin

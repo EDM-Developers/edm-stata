@@ -1,4 +1,4 @@
-const update_manifold = function () {
+const update_centered_equations = function () {
   // Read in the manifold specifications from the sliders
   const numObs = parseInt(document.getElementById("numObs").value);
   const E = parseInt(document.getElementById("E").value);
@@ -66,28 +66,12 @@ const update_manifold = function () {
   });
 
   MathJax.typesetPromise(eqnsToTypeset);
-  // console.log(
-  //   `Typesetting ${eqnsToTypeset.length} of ${equations.length} equations`
-  // );
 };
 
-const sliderIDs = ["numObs", "E", "tau", "p", "library"];
-for (let sliderID of sliderIDs) {
-  let slider = document.getElementById(sliderID);
+const sliders = document.querySelectorAll(".slider-container input");
 
-  // Display the default slider value
-  document
-    .querySelectorAll(`.${sliderID}_choice`)
-    .forEach((elem) => (elem.innerHTML = `${slider.value}`));
+sliders.forEach((slider) =>
+  slider.addEventListener("input", () => update_centered_equations())
+);
 
-  // Update the current slider value (each time you drag the slider handle)
-  slider.oninput = function (refresh = true) {
-    document
-      .querySelectorAll(`.${this.id}_choice`)
-      .forEach((elem) => (elem.innerHTML = `${this.value}`));
-    update_manifold();
-  };
-}
-
-// document.getElementById("allowMissing").oninput = update_manifold
-update_manifold();
+update_centered_equations();
