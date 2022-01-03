@@ -26,7 +26,7 @@ The time-delayed embedding of the $x$ time series with the selected $E$ and $\ta
 
 <span class="dynamic-equation" data-equation="\[ M_x = ${M_x} \]" />
 
-Then we may take the first half of the points to create the library set, which leaves the remaining points to create the prediction set.
+Then we take the first half of the points to create the library set, which leaves the remaining points to create the prediction set.
 
 In that case, the *library set* is
 
@@ -57,8 +57,9 @@ So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say th
 
 This $p$ may be thought of as the *prediction horizon*, and in `explore` mode is defaults to $\tau$ and in `xmap` mode it defaults to 0.
 
-In the literature, instead of measuring the number of observations $p$ ahead, authors normally use the value $T_p$ to denote the amount of time this corresponds to.
-When data is regularly sampled (e.g. $t_i = i$) then there is no difference (e.g. $T_p = p$), however for irregularly sampled data the actual time difference may be different for each prediction.
+!!! note "Our $p$ versus the $T_p$ which is common in the literature"
+    In the literature, instead of measuring the number of observations $p$ ahead, authors normally use the value $T_p$ to denote the amount of time this corresponds to.
+    When data is regularly sampled (e.g. $t_i = i$) then there is no difference (e.g. $T_p = p$), however for irregularly sampled data the actual time difference may be different for each prediction.
 
 In the training set, this means each point of $\mathscr{L}$ matches the corresponding value in $y^{\,\mathscr{L}}$:
 
@@ -153,7 +154,8 @@ To summarise the whole S-map procedure:
 
 We calculate the $\hat{y}_i^{\mathscr{P}}$ predictions for each target in the prediction set (so $i = 1, \dots, |\mathscr{P}|$), and store the predictions in a vector $\hat{y}^{\mathscr{P}}$.
 
-As we have the true value of $y_i^{\mathscr{P}}$ for each target in the prediction set, we can compare our $\hat{y}_i^{\mathscr{P}}$ predictions and assess their quality using their correlation
+As we observe the true value of $y_i^{\mathscr{P}}$ for most (if not all) of the targets in the prediction set, we can compare our $\hat{y}_i^{\mathscr{P}}$ predictions to the observed values.
+We assess the quality of the predictions using either the correlation
 
 \[ \rho := \text{Correlation}(y^{\mathscr{P}} , \hat{y}^{\mathscr{P}}) \]
 

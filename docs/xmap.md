@@ -14,6 +14,10 @@ This will consider two different time series, here labelled $u$ and $v$.
 !!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 
+In tabular form, the data looks like:
+
+<span class="dynamic-equation" data-equation="\[ u = ${u_time_series} \quad \text{and} \quad v = ${v_time_series} \]" />
+
 !!! tip "Choose a value for $E$"
     <div class="slider-container"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
 
@@ -22,15 +26,13 @@ This will consider two different time series, here labelled $u$ and $v$.
 
 The lagged embedding $M_u$ is constructed:
 
-<span class="dynamic-equation" data-equation="\[ u = ${u_time_series} \Rightarrow M_u = ${M_u} \]" />
+<span class="dynamic-equation" data-equation="\[ M_u = ${M_u} \]" />
 
 The library set is (by default) the first $L$ points of $M_u$.
 The library size parameter $L$ is set by the Stata parameter `library`.
 
 !!! tip "Choose a value for $L$"
-    <div class="slider-container"><input type="range" min="3" max="10" value="3" class="slider" id="library"></div>
-
-<!-- Technically, max of this slider should be size(M_u, 1) -->
+    <div class="slider-container"><input type="range" min="0" max="10" value="3" class="slider" id="library"></div>
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{L} = ${L} \]" />
 
