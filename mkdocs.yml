@@ -18,6 +18,15 @@ nav:
 
 theme:
   name: material
+  
+  # These are the default colours
+  palette:
+    primary: indigo
+    accent: indigo
+    
+  font:
+    text: Alegreya Sans
+  
   hljs_languages:
     - stata
 
