@@ -5,7 +5,7 @@
 
 Imagine that we observe a time series $x$.
 
-???+ tip "Choose the number of observations"
+!!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 
 In tabular form, the data looks like:
@@ -16,13 +16,13 @@ So each one of $x_i$ is an *observation* of the $x$ time series.
 
 To create a time-delayed embedding based on any of these time series, we first need to choose the size of the embedding $E$.
 
-???+ tip "Choose a value for $E$"
+!!! tip "Choose a value for $E$"
     <div class="slider-container"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
 
 The data may be too finely sampled in time.
 So we select a $\tau$ which means we only look at every $\tau$th observation for each time series.
 
-???+ tip "Choose a value for $\tau$"
+!!! tip "Choose a value for $\tau$"
     <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
 The time-delayed embedding of the $x$ time series with

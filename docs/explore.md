@@ -13,13 +13,13 @@ By default, we take the points of the $M_x$ manifold and assign the first half o
 
 Starting with the time-delayed embedding of $x$.
 
-???+ tip "Choose the number of observations"
+!!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
 
-???+ tip "Choose a value for $E$"
+!!! tip "Choose a value for $E$"
     <div class="slider-container"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div>
 
-???+ tip "Choose a value for $\tau$"
+!!! tip "Choose a value for $\tau$"
     <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
 The time-delayed embedding of the $x$ time series with the selected $E$ and $\tau$ is the manifold:
@@ -48,7 +48,7 @@ and similarly $\mathscr{P}_{j}$ refers to the $j$th point in $\mathscr{P}$.
 
 Each point on the manifold refers to a small trajectory of a time series, and for each point we look $p$ observations into the future of the time series.
 
-???+ tip "Choose a value for $p$"
+!!! tip "Choose a value for $p$"
     <div class="slider-container"><input type="range" min="-5" max="5" value="1" class="slider" id="p"></div>
 
 So if we take the first point of the prediction set $\mathscr{P}_{1}$ and say that $y_1^{\mathscr{P}}$ is the value it takes $p$ observations in the future, we get:
