@@ -4,7 +4,7 @@ const latexify = function (M) {
   }
 
   const ncols = M[0].length;
-  let tex = `\\left( \\begin{array}{${"c".repeat(ncols)}}\n`;
+  let tex = `\\left[ \\begin{array}{${"c".repeat(ncols)}}\n`;
 
   for (let i = 0; i < M.length; i++) {
     tex += "\t";
@@ -16,7 +16,7 @@ const latexify = function (M) {
     }
     tex += " \\\\ \n";
   }
-  tex += "\\end{array} \\right)";
+  tex += "\\end{array} \\right]";
   return tex;
 };
 
