@@ -12,7 +12,7 @@ nav:
     - Adding variables to manifold: adding-to-manifold.md
     - Missing data: missing-data.md
     - Coprediction (WIP): coprediction.md
-  - GPU Acceleration (WIP): gpu.md
+  - GPU Acceleration: gpu.md
   - Automated workflows: automated-workflows.md
   - Stata Help File: api.md
 
