@@ -175,7 +175,7 @@ graph export time-delayed.pdf, replace
 /* Example with a Real-World Dataset */
 /* Visualising coupling strength using the Chicago crime dataset*/
 
-use chicago,clear
+use chicago, clear
 
 /* Explore the system dimension */
 edm explore temp, e(2/20) crossfold(5) seed(1234567)
