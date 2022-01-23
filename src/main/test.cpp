@@ -86,13 +86,13 @@ void print_manifold(Manifold& M)
 }
 
 template<typename T>
-void require_vectors_match(const std::vector<T>& u, const std::vector<T>& v)
+void require_vectors_match(const std::vector<T>& vecObserved, const std::vector<T>& vecExpected)
 {
-  REQUIRE(u.size() == v.size());
+  REQUIRE(vecObserved.size() == vecExpected.size());
 
-  for (int i = 0; i < u.size(); i++) {
+  for (int i = 0; i < vecObserved.size(); i++) {
     CAPTURE(i);
-    REQUIRE(u[i] == v[i]);
+    REQUIRE(vecObserved[i] == vecExpected[i]);
   }
 }
 
@@ -401,7 +401,7 @@ TEST_CASE("Basic manifold creation", "[basicManifold]")
   }
 }
 
-// These tests are used as examples in the Julia docs
+// These tests are used as examples in the documentation website
 TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
 {
   int E = 2;
@@ -487,6 +487,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
 
+    std::vector<double> dts = generator.dts();
+    std::vector<double> dtsTrue = { NA, 1.5, NA, 2.0, 0.5, 1.0 };
+    require_vectors_match<double>(dts, dtsTrue);
+
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
     require_vectors_match<bool>(usable, usableTrue);
@@ -551,6 +555,10 @@ TEST_CASE("Missing data manifold creation (tau = 1)", "[missingDataManifold]")
       CAPTURE(i);
       REQUIRE(generator.get_observation_num(i) == obsNums[i]);
     }
+
+    std::vector<double> dts = generator.dts();
+    std::vector<double> dtsTrue = { NA, 3.5, NA, 2.5, 1.5, NA };
+    require_vectors_match<double>(dts, dtsTrue);
 
     std::vector<bool> usable = generator.generate_usable(E);
     std::vector<bool> usableTrue = { false, true, false, true, true, false };
@@ -1331,6 +1339,7 @@ TEST_CASE("S-map SVD details", "[svd]")
   require_vectors_match<int>(mae_2.inds, inds_2);
   require_vectors_match<double>(mae_2.dists, dists_2);
 
+#ifdef SVG_DETAILS_TO_TEST_LATER
   int k = 2;
   int Mp_i = 2;
   double theta = 1;
@@ -1443,6 +1452,8 @@ TEST_CASE("S-map SVD details", "[svd]")
     }
   }
   std::cout << r << "\n\n";
+
+#endif
 }
 
 int basic_edm_explore(int numThreads)

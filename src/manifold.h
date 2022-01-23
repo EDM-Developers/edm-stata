@@ -66,7 +66,7 @@ private:
     }
   }
 
-  double get_dt(int i, bool copredictionMode, bool predictionSet, double dtWeight) const;
+  double get_dt(int i) const;
 
 public:
   void fill_in_point(int i, int E, bool copredictionMode, bool predictionSet, double dtWeight, double* point) const;
@@ -136,9 +136,13 @@ public:
 
   std::vector<double> dts() const
   {
+    // If the user turns on dt mode but doesn't specify a weight for the time differenced variables, then
+    // this method is used to generate all the time differences for the dataset so that they can be normalised.
+    // Alternatively, when the user requests to save the vector of the time differences for the dataset, this is called.
+    // As the first dt column is a bit special, this function returns the second dt column in the manifold.
     std::vector<double> dts;
     for (int i = 0; i < _t.size(); i++) {
-      dts.push_back(get_dt(i, false, true, 1.0));
+      dts.push_back(get_dt(i));
     }
     return dts;
   }
