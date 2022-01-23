@@ -482,29 +482,6 @@ Note: The embedding dimension E is 2
 . assert beta1_b2_rep1 != . if _n > 1
 
 . 
-. edm xmap x y, oneway algorithm(smap) savesmapdetails(smap) mata
-
-Empirical Dynamic Modelling
-Convergent Cross-mapping result for variables x and y
----------------------------------------------------------------
-      Mapping    Library size             rho             MAE
----------------------------------------------------------------
-   y ~ y|M(x)             200          .66829          .10818 
----------------------------------------------------------------
-Note: Number of neighbours (k) is set to 4
-Note: The embedding dimension E is 2
-
-. assert smap_trace != . if _n > 1
-
-. assert smap_min_eig_re != . if _n > 1
-
-. assert smap_min_eig_im != . if _n > 1
-
-. assert smap_max_eig_re != . if _n > 1
-
-. assert smap_max_eig_im != . if _n > 1
-
-. 
 . edm xmap y x, predict(x2) direction(oneway)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
