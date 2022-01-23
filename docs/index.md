@@ -1,8 +1,11 @@
-# Empirical Dynamic Modeling (edm) Stata Package
+# Empirical Dynamic Modeling Stata Package
 
 ## Package Description
 
-The `edm` Stata package implements a series of  _Empirical Dynamic Modeling_ tools that can be used for causal analysis of time series data.
+<img src="assets/logo-lorenz.svg" align="right" height="200px" width="200px" alt="logo" />
+
+_Empirical Dynamic Modeling (EDM)_ is a way to perform _causal analysis on time series data_. 
+The `edm` Stata package implements a series of EDM tools, including the convergent cross-mapping algorithm. 
 
 Key features of the package:
 

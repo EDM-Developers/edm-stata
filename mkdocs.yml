@@ -1,4 +1,4 @@
-site_name: Empirical Dynamic Modeling (edm) Stata Package
+site_name: EDM Stata Package
 
 nav:
   - Home: index.md
@@ -18,7 +18,10 @@ nav:
 
 theme:
   name: material
-  
+
+  icon:
+    logo: fontawesome/solid/wave-square
+
   # These are the default colours
   palette:
     primary: indigo
