@@ -788,6 +788,7 @@ TEST_CASE("Eager L^p distances and neighbours", "[lp_distances]")
   for (int i = 0; i < M.E_actual(); i++) {
     opts.metrics.push_back(Metric::Diff);
   }
+  opts.useOnlyPastToPredictFuture = false;
 
   SECTION("Euclidean distances")
   {
@@ -917,6 +918,7 @@ TEST_CASE("Eager L^p distances with missingdistance", "[lp_distances+allowmissin
   for (int i = 0; i < M.E_actual(); i++) {
     opts.metrics.push_back(Metric::Diff);
   }
+  opts.useOnlyPastToPredictFuture = false;
 
   const double md = 10;
   opts.missingdistance = md;
@@ -1052,6 +1054,7 @@ TEST_CASE("Lazy L^p distances", "[lazy_lp_distances]")
   for (int i = 0; i < M.E_actual(); i++) {
     opts.metrics.push_back(Metric::Diff);
   }
+  opts.useOnlyPastToPredictFuture = false;
 
   SECTION("Euclidean distances")
   {
@@ -1106,6 +1109,150 @@ TEST_CASE("Lazy L^p distances", "[lazy_lp_distances]")
   }
 }
 
+TEST_CASE("Eager L^p distances and neighbours using only past to predict the future", "[lp_distances_predictable]")
+{
+  int E = 2;
+  int tau = 1;
+  int p = 1;
+
+  std::vector<double> t = { 1, 2, 3, 4 };
+  std::vector<double> x = { 11, 12, 13, 14 };
+
+  ManifoldGenerator generator(t, x, tau, p);
+
+  std::vector<bool> usable = generator.generate_usable(E);
+
+  Manifold M(generator, E, usable, false);
+  Manifold Mp(generator, E, usable, true);
+
+  std::vector<std::vector<double>> M_true = { { 12, 11 }, { 13, 12 } };
+  std::vector<double> y_true = { 13, 14 };
+  require_manifolds_match(M, M_true, y_true);
+
+  std::vector<std::vector<double>> Mp_true = { { 12, 11 }, { 13, 12 }, { 14, 13 } };
+  std::vector<double> yp_true = { 13, 14, NA };
+  require_manifolds_match(Mp, Mp_true, yp_true);
+
+  std::vector<double> pointTimesMTrue = { 2, 3 };
+  std::vector<double> targetTimesMTrue = { 3, 4 };
+  for (int i = 0; i < pointTimesMTrue.size(); i++) {
+    REQUIRE(M.pointTime(i) == pointTimesMTrue[i]);
+    REQUIRE(M.targetTime(i) == targetTimesMTrue[i]);
+  }
+
+  std::vector<double> pointTimesMpTrue = { 2, 3, 4 };
+  std::vector<double> targetTimesMpTrue = { 3, 4, NA };
+  for (int i = 0; i < pointTimesMpTrue.size(); i++) {
+    REQUIRE(Mp.pointTime(i) == pointTimesMpTrue[i]);
+    REQUIRE(Mp.targetTime(i) == targetTimesMpTrue[i]);
+  }
+
+  Options opts;
+
+  opts.panelMode = false;
+  opts.missingdistance = 0;
+  for (int i = 0; i < M.E_actual(); i++) {
+    opts.metrics.push_back(Metric::Diff);
+  }
+  opts.useOnlyPastToPredictFuture = true;
+
+  SECTION("Euclidean distances")
+  {
+    opts.distance = Distance::Euclidean;
+
+    std::vector<int> inds_0 = {};
+    std::vector<double> dists_0 = {};
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { sqrt(1 * 1 + 1 * 1) };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) };
+
+    DistanceIndexPairs euclidean_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(euclidean_0.inds, inds_0);
+    require_vectors_match<double>(euclidean_0.dists, dists_0);
+
+    DistanceIndexPairs euclidean_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(euclidean_1.inds, inds_1);
+    require_vectors_match<double>(euclidean_1.dists, dists_1);
+
+    DistanceIndexPairs euclidean_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(euclidean_2.inds, inds_2);
+    require_vectors_match<double>(euclidean_2.dists, dists_2);
+
+    int k = 1;
+    DistanceIndexPairs trueKNNs_0 = { inds_0, dists_0 };
+    DistanceIndexPairs trueKNNs_1 = { inds_1, dists_1 };
+    DistanceIndexPairs trueKNNs_2 = { { 1 }, { sqrt(1 * 1 + 1 * 1) } };
+
+    DistanceIndexPairs kNNs_0 = get_kNNs(euclidean_0, k);
+    DistanceIndexPairs kNNs_1 = get_kNNs(euclidean_1, k);
+    DistanceIndexPairs kNNs_2 = get_kNNs(euclidean_2, k);
+
+    require_distance_index_pairs_match(kNNs_0, trueKNNs_0);
+    require_distance_index_pairs_match(kNNs_1, trueKNNs_1);
+    require_distance_index_pairs_match(kNNs_2, trueKNNs_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = { { NA, sqrt(1 * 1 + 1 * 1) },
+                                                   { sqrt(1 * 1 + 1 * 1), NA },
+                                                   { sqrt(2 * 2 + 2 * 2), sqrt(1 * 1 + 1 * 1) } };
+    test_af_distances(M, Mp, opts, trueDists);
+
+    // Converting enum vector to char (AF's bool) vector for ArrayFire
+    std::vector<char> mopts;
+    for (int j = 0; j < M.E_actual(); j++) {
+      mopts.push_back(opts.metrics[j] == Metric::Diff);
+    }
+    af::array metricOpts(M.E_actual(), mopts.data());
+
+    const ManifoldOnGPU gpuM = M.toGPU(false);
+    const ManifoldOnGPU gpuMp = Mp.toGPU(false);
+
+    DistanceIndexPairsOnGPU af_potentialNN = afLPDistances(Mp.numPoints(), opts, gpuM, gpuMp, metricOpts);
+    DistanceIndexPairsOnGPU af_kNNs = get_af_kNNs(opts, gpuM, gpuMp, af_potentialNN, k);
+
+    af_print(af_kNNs.valids);
+    af_print(af_kNNs.dists);
+
+#endif
+  }
+
+  SECTION("MAE distances")
+  {
+    opts.distance = Distance::MeanAbsoluteError;
+
+    std::vector<int> inds_0 = {};
+    std::vector<double> dists_0 = {};
+
+    std::vector<int> inds_1 = { 0 };
+    std::vector<double> dists_1 = { (1 + 1) / 2 };
+
+    std::vector<int> inds_2 = { 0, 1 };
+    std::vector<double> dists_2 = { (2 + 2) / 2, (1 + 1) / 2 };
+
+    DistanceIndexPairs mae_0 = eager_lp_distances(0, opts, M, Mp);
+    require_vectors_match<int>(mae_0.inds, inds_0);
+    require_vectors_match<double>(mae_0.dists, dists_0);
+
+    DistanceIndexPairs mae_1 = eager_lp_distances(1, opts, M, Mp);
+    require_vectors_match<int>(mae_1.inds, inds_1);
+    require_vectors_match<double>(mae_1.dists, dists_1);
+
+    DistanceIndexPairs mae_2 = eager_lp_distances(2, opts, M, Mp);
+    require_vectors_match<int>(mae_2.inds, inds_2);
+    require_vectors_match<double>(mae_2.dists, dists_2);
+
+#if defined(WITH_ARRAYFIRE)
+    std::vector<std::vector<double>> trueDists = { { NA, (1 + 1) / 2 },
+                                                   { (1 + 1) / 2, NA },
+                                                   { (2 + 2) / 2, (1 + 1) / 2 } };
+    test_af_distances(M, Mp, opts, trueDists);
+#endif
+  }
+}
+
 TEST_CASE("Wasserstein distance", "[wasserstein]")
 {
   int E = 5;
@@ -1156,6 +1303,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
   for (int i = 0; i < M.E_actual(); i++) {
     opts.metrics.push_back(Metric::Diff);
   }
+  opts.useOnlyPastToPredictFuture = false;
 
   SECTION("Cost matrix")
   {
@@ -1323,6 +1471,7 @@ TEST_CASE("S-map SVD details", "[svd]")
   for (int i = 0; i < M.E_actual(); i++) {
     opts.metrics.push_back(Metric::Diff);
   }
+  opts.useOnlyPastToPredictFuture = false;
 
   opts.distance = Distance::MeanAbsoluteError;
 
@@ -1502,6 +1651,8 @@ int basic_edm_explore(int numThreads)
   opts.metrics = {};
   opts.cmdLine = "";
   opts.saveKUsed = true; // TODO: Check again
+
+  opts.useOnlyPastToPredictFuture = false;
 
   bool explore = true;
   std::vector<double> xmap = x;

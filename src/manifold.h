@@ -128,6 +128,7 @@ public:
 
   double dtWeight() const { return _dtWeight; }
   int numObs() const { return _t.size(); }
+  double time(int i) const { return _t[i]; }
   bool panelMode() const { return _panel_mode; }
   int panel(int i) const { return _panelIDs[i]; }
   const std::vector<int>& panelIDs() const { return _panelIDs; }
@@ -160,6 +161,8 @@ class Manifold
   std::shared_ptr<const ManifoldGenerator> _gen;
   std::unique_ptr<double[]> _flat = nullptr;
   std::vector<double> _targets;
+  std::vector<double> _targetTimes;
+  std::vector<double> _pointTimes;
   std::vector<int> _panelIDs;
   std::vector<int> _pointNumToStartIndex;
   int _numPoints, _E_x, _E_dt, _E_extras, _E_lagged_extras, _E_actual;
@@ -186,12 +189,15 @@ class Manifold
           continue;
         }
 
+        _pointNumToStartIndex.push_back(i);
+        _pointTimes.push_back(_gen->time(i));
+
         _targets.push_back(target);
+        _targetTimes.push_back(target != MISSING_D ? _gen->time(targetIndex) : MISSING_D);
 
         if (_gen->panelMode()) {
           _panelIDs.push_back(_gen->panel(i));
         }
-        _pointNumToStartIndex.push_back(i);
       }
     }
 
@@ -254,6 +260,8 @@ public:
   double dt(int i, int j) const { return this->operator()(i, _E_x + j); }
   double extras(int i, int j) const { return this->operator()(i, _E_x + _E_dt + j); }
 
+  double targetTime(int i) const { return _targetTimes[i]; }
+  double pointTime(int i) const { return _pointTimes[i]; }
   int panel(int i) const { return _panelIDs[i]; }
 
   double missing() const { return MISSING_D; }

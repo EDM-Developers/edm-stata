@@ -360,6 +360,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   bool wassDT = atoi(argv[26]);
   int p = atoi(argv[27]);
   opts.lowMemoryMode = atoi(argv[28]);
+  opts.useOnlyPastToPredictFuture = false;
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
