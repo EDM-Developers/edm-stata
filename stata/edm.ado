@@ -369,7 +369,7 @@ program define edmExplore, eclass
 		[seed(integer 0)] [full] [RANDomize] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CROSSfold(integer 0)] [CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] ///
 		[dt] [reldt] [DTWeight(real 0)] [DTSave(name)] [DETails] [reportrawe] [strict] [Predictionhorizon(string)] ///
-		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] [predictwithpast] ///
 		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] [aspectratio(real 1)] [wassdt(integer 1)]
 
 	edmPluginCheck, `mata' `gpu'
@@ -387,6 +387,12 @@ program define edmExplore, eclass
 			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
 			local lowmemory = ""
 		}
+	}
+
+	local predictWithPast = ("`predictwithpast'" == "predictwithpast")
+	if (`predictWithPast' & "`strict'" == "strict") {
+		di as text "Warning: 'strict' is ignored when 'predictwithpast' is specified."
+		local strict = ""
 	}
 
 	if ("`strict'" != "strict") {
@@ -444,6 +450,9 @@ program define edmExplore, eclass
 
 	// If we say 'use all neighbours', then this is implicitly using 'force' mode
 	if `k' < 0 {
+		if "`strict'" == "strict" {
+			di as text "Warning: 'strict' is ignored when a negative 'k' is specified."
+		}
 		local force = "force"
 	}
 
@@ -725,7 +734,8 @@ program define edmExplore, eclass
 				"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 				"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 				"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'"  "`distance'" "`metrics'" ///
-				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'" "`low_memory_mode'"
+				"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" ///
+				"`predictionhorizon'" "`low_memory_mode'" "`predictWithPast'"
 
 		local missingdistance = `missing_dist_used'
 
@@ -1126,7 +1136,7 @@ program define edmXmap, eclass
 		[DIrection(string)] [seed(integer 0)] [PREDICTionsave(name)] [COPREDICTionsave(name)] [copredictvar(string)] ///
 		[CI(integer 0)] [EXTRAembed(string)] [ALLOWMISSing] [MISSINGdistance(real 0)] [dt] [reldt] ///
 		[DTWeight(real 0)] [DTSave(name)] [oneway] [DETails] [SAVEsmap(string)] [Predictionhorizon(string)] ///
-		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] ///
+		[dot(integer 1)] [mata] [gpu] [nthreads(integer 0)] [savemanifold(name)] [idw(real 0)] [predictwithpast] ///
 		[verbosity(integer 1)] [saveinputs(string)] [lowmemory] [metrics(string)] [distance(string)] ///
 		[aspectratio(real 1)] [wassdt(integer 1)] [savesmapdetails(string)]
 
@@ -1145,6 +1155,12 @@ program define edmXmap, eclass
 			di as text "Warning: Lowmemory mode currently not working with the GPU implementation."
 			local lowmemory = ""
 		}
+	}
+
+	local predictWithPast = ("`predictwithpast'" == "predictwithpast")
+	if (`predictWithPast' & "`strict'" == "strict") {
+		di as text "Warning: 'strict' is ignored when 'predictwithpast' is specified."
+		local strict = ""
 	}
 
 	if ("`strict'" != "strict") {
@@ -1233,6 +1249,9 @@ program define edmXmap, eclass
 
 	// If we say 'use all neighbours', then this is implicitly using 'force' mode
 	if `k' < 0 {
+		if "`strict'" == "strict" {
+			di as text "Warning: 'strict' is ignored when a negative 'k' is specified."
+		}
 		local force = "force"
 	}
 
@@ -1596,7 +1615,8 @@ program define edmXmap, eclass
 					"`z_count'" "`parsed_dt'" "`dtweight'" "`algorithm'" "`force'" "`missingdistance'" ///
 					"`nthreads'" "`verbosity'" "`num_tasks'" "`explore_mode'" "`full_mode'" "`shuffle'" "`crossfold'" "`tau'" ///
 					"`max_e'" "`allow_missing_mode'" "`theta'" "`aspectratio'" "`distance'" "`metrics'" ///
-					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" "`predictionhorizon'" "`low_memory_mode'"
+					"`copredict_mode'" "`cmdline'" "`z_e_varying_count'" "`idw'" "`ispanel'" "`parsed_reldt'" "`wassdt'" ///
+					"`predictionhorizon'" "`low_memory_mode'" "`predictWithPast'"
 
 			local missingdistance`direction_num' = `missing_dist_used'
 

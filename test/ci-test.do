@@ -35,9 +35,21 @@ edm explore x , rand
 
 di c(rngstate)
 
+
+// Make sure the plugin doesn't crash if 'predictwithpast' is given
+tsset t
+
+edm explore x, full predict(oldpredictions)
+edm explore x, full predictwithpast predict(newpredictions)
+
+gen diff = newpredictions - oldpredictions
+sum diff
+
+drop *
+discard
+
 // Test that missing panel id is ignored
 set seed 1
-drop t x
 set obs 100
 qui gen t = _n
 qui gen x = 0

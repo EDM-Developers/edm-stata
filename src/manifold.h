@@ -52,11 +52,11 @@ private:
 
   double default_dt_weight()
   {
-    auto xObserved = remove_value(_x, MISSING_D);
+    auto xObserved = remove_value<double>(_x, MISSING_D);
     double xSD = standard_deviation(xObserved);
 
     std::vector<double> dts = this->dts();
-    auto dtObserved = remove_value(dts, MISSING_D);
+    auto dtObserved = remove_value<double>(dts, MISSING_D);
     double dtSD = standard_deviation(dtObserved);
 
     if (dtSD == 0.0) {

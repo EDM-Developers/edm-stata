@@ -112,10 +112,58 @@ XAA3b8ba9cd046ba5ba4fb08a4cdddb806275fbf6adf94193b2a4be96d8ed674e75b0165bdfff6f9
 > 2148b556db60005c71aabd6c49fdd5025ec3e7e2f3b8edf648eb19446317a103a6b7f7197396c845fa58b9a53a8367990ef951b5bc682ab9d4fa4827d64f53f404acb88bbba7120a860aa94786cf15638043a7c2516c49dc1798e00e230001000000092ed4
 
 . 
+. 
+. // Make sure the plugin doesn't crash if 'predictwithpast' is given
+. tsset t
+
+Time variable: t, 1 to 10
+        Delta: 1 unit
+
+. 
+. edm explore x, full predict(oldpredictions)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1           .9722          .58924 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to 3
+Note: Full sample used for the computation
+
+. edm explore x, full predictwithpast predict(newpredictions)
+Percent complete: 0...10...20...30...40...50...60...70...80...90...
+
+Empirical Dynamic Modelling
+Univariate mapping with x and its lag values
+--------------------------------------------------------------------
+          Actual E           theta             rho             MAE
+--------------------------------------------------------------------
+                 2               1          .99866          1.3418 
+--------------------------------------------------------------------
+Note: Number of neighbours (k) is set to between 1 and 3
+Note: Full sample used for the computation
+
+. 
+. gen diff = newpredictions - oldpredictions
+(2 missing values generated)
+
+. sum diff
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        diff |          8   -.8406501    .5274196  -1.310725          0
+
+. 
+. drop *
+
+. discard
+
+. 
 . // Test that missing panel id is ignored
 . set seed 1
-
-. drop t x
 
 . set obs 100
 Number of observations (_N) was 0, now 100.
