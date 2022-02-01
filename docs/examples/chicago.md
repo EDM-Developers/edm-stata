@@ -1,6 +1,9 @@
+# Chicago crime/temperature example
 
+To demonstrate the usefulness of EDM in estimating the impact of causal variables, we use a real-world dataset that reflects
+daily temperature and crime levels in Chicago, which we make available in the [chicago.dta](chicago.dta) file.
 
-# The data
+## The data
 
 To demonstrate the usefulness of EDM in estimating the impact of causal variables, we use a real-world dataset that reflects
 daily temperature and crime levels in Chicago, which we make available in the [chicago.dta](chicago.dta) file.
