@@ -3,8 +3,7 @@
 # The data
 
 To demonstrate the usefulness of EDM in estimating the impact of causal variables, we use a real-world dataset that reflects
-daily temperature and crime levels in Chicago (from [crime.static-eric.com](http://crime.static-eric.com/)), which we
-make available in the [chicago.dta](chicago.dta) file.
+daily temperature and crime levels in Chicago, which we make available in the [chicago.dta](chicago.dta) file.
 
 
 First, we load the time series from the `chicago.dta` file:
@@ -45,7 +44,7 @@ We check the values of $E = 2, \dots 20$.
 The `crossfold(5)` option means that, for each $E$ value we run 5 sets of predictions, and for each set we take four fifths of the data for training and predict the remaining one fifth.
 
 ```` stata
-. edm explore temp, e(2/20) crossfold(5) seed(1234567)
+. edm explore temp, e(2/20) crossfold(5)
 5-fold cross-validation progress (5 in total)
 Percent complete: 0...10...20...30...40...50...60...70...80...90...
 
