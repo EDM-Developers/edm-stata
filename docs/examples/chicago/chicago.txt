@@ -1,14 +1,17 @@
 
 
-## Loading the data
+# The data
+
+To demonstrate the usefulness of EDM in estimating the impact of causal variables, we use a real-world dataset that reflects
+daily temperature and crime levels in Chicago (from [crime.static-eric.com](http://crime.static-eric.com/)), which we
+make available in the [chicago.dta](chicago.dta) file.
 
 <<dd_do: quietly>>
 clear
 discard
 <</dd_do>>
 
-First, we load the time series from the `chicago.dta` file.
-To get a copy of this [data](chicago.dta) directly, or alternatively use `ssc install edm, all` when installing the `edm` plugin.
+First, we load the time series from the `chicago.dta` file:
 
 ```` stata
 <<dd_do>>
@@ -37,7 +40,7 @@ shows a mild correlation, however the causal structure (if any) and its directio
 
 ## Find the optimal embedding dimension
 
-Now we use `edm explore` to find the optimal embedding dimension of the $y$ time series.
+Now we use `edm explore` to find the optimal embedding dimension of the $\texttt{Temperature}$ time series.
 We check the values of $E = 2, \dots 20$.
 The `crossfold(5)` option means that, for each $E$ value we run 5 sets of predictions, and for each set we take four fifths of the data for training and predict the remaining one fifth.
 

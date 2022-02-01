@@ -8770,11 +8770,11 @@
 	<line x1="3701.73" y1="2233.63" x2="3701.73" y2="2273.73" style="stroke:#000000;stroke-width:5.76"/>
 	<text x="3701.73" y="2363.59" style="font-family:'Helvetica';font-size:99.99px;fill:#000000" text-anchor="middle">100</text>
 	<text x="2124.91" y="2473.60" style="font-family:'Helvetica';font-size:99.99px;fill:#000000" text-anchor="middle">Temperature (Fahrenheit)</text>
-	<rect x="741.88" y="2558.24" width="2766.06" height="186.37" style="fill:#FFFFFF"/>
-	<rect x="744.76" y="2561.12" width="2760.30" height="180.61" style="fill:none;stroke:#000000;stroke-width:5.76"/>
-	<circle cx="800.04" cy="2651.43" r="19.29" style="fill:#1A476F"/>
-	<circle cx="800.04" cy="2651.43" r="14.97" style="fill:none;stroke:#1A476F;stroke-width:8.64"/>
-	<line x1="1755.89" y1="2651.43" x2="2130.23" y2="2651.43" style="stroke:#90353B;stroke-width:8.64"/>
-	<text x="875.04" y="2686.46" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">Local coefficient</text>
-	<text x="2190.25" y="2686.46" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">Local polynomial smoothing</text>
+	<rect x="744.23" y="2558.24" width="2761.48" height="186.37" style="fill:#FFFFFF"/>
+	<rect x="747.11" y="2561.12" width="2755.72" height="180.61" style="fill:none;stroke:#000000;stroke-width:5.76"/>
+	<circle cx="802.40" cy="2651.43" r="19.29" style="fill:#1A476F"/>
+	<circle cx="802.40" cy="2651.43" r="14.97" style="fill:none;stroke:#1A476F;stroke-width:8.64"/>
+	<line x1="1758.61" y1="2651.43" x2="2133.08" y2="2651.43" style="stroke:#90353B;stroke-width:8.64"/>
+	<text x="877.39" y="2686.46" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">Local coefficient</text>
+	<text x="2193.10" y="2686.46" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">Local polynomial smoothing</text>
 </svg>

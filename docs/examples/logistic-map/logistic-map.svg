@@ -199,14 +199,14 @@
 	<line x1="3795.66" y1="2489.19" x2="3795.66" y2="2529.16" style="stroke:#000000;stroke-width:5.76"/>
 	<text x="3795.66" y="2619.14" style="font-family:'Helvetica';font-size:99.99px;fill:#000000" text-anchor="middle">340</text>
 	<text x="2124.91" y="2729.16" style="font-family:'Helvetica';font-size:99.99px;fill:#000000" text-anchor="middle">t</text>
-	<rect x="425.33" y="2268.28" width="1191.47" height="186.37" style="fill:#FFFFFF"/>
-	<rect x="428.21" y="2271.16" width="1185.71" height="180.61" style="fill:none;stroke:#000000;stroke-width:5.76"/>
+	<rect x="425.33" y="2268.28" width="1197.03" height="186.37" style="fill:#FFFFFF"/>
+	<rect x="428.21" y="2271.16" width="1191.27" height="180.61" style="fill:none;stroke:#000000;stroke-width:5.76"/>
 	<line x1="468.52" y1="2361.47" x2="842.99" y2="2361.47" style="stroke:#1A476F;stroke-width:8.64"/>
 	<circle cx="655.75" cy="2361.47" r="26.35" style="fill:#1A476F"/>
 	<circle cx="655.75" cy="2361.47" r="22.03" style="fill:none;stroke:#1A476F;stroke-width:8.64"/>
-	<line x1="1089.62" y1="2361.47" x2="1463.96" y2="2361.47" style="stroke:#90353B;stroke-width:8.64"/>
-	<circle cx="1276.73" cy="2361.47" r="26.35" style="fill:#90353B"/>
-	<circle cx="1276.73" cy="2361.47" r="22.03" style="fill:none;stroke:#90353B;stroke-width:8.64"/>
+	<line x1="1092.22" y1="2361.47" x2="1466.69" y2="2361.47" style="stroke:#90353B;stroke-width:8.64"/>
+	<circle cx="1279.45" cy="2361.47" r="26.35" style="fill:#90353B"/>
+	<circle cx="1279.45" cy="2361.47" r="22.03" style="fill:none;stroke:#90353B;stroke-width:8.64"/>
 	<text x="902.88" y="2396.50" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">x</text>
-	<text x="1523.98" y="2396.50" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">y</text>
+	<text x="1526.70" y="2396.50" style="font-family:'Helvetica';font-size:99.99px;fill:#000000">y</text>
 </svg>
