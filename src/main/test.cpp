@@ -42,7 +42,6 @@ DistanceIndexPairs afWassersteinDistances(int Mp_i, const Options& opts, const M
 
 void print_raw_matrix(const double* M, int rows, int cols)
 {
-
   auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
 
   std::cout << "\n";
