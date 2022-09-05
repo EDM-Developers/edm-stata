@@ -292,7 +292,7 @@ target_compile_definitions(edm_test PRIVATE NOMINMAX)
 target_include_directories(edm_test PRIVATE src)
 target_include_directories(edm_test SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
 
-target_link_libraries(edm_test PRIVATE Catch2::Catch2)
+target_link_libraries(edm_test PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
 target_link_libraries(edm_test PRIVATE Threads::Threads)
 target_link_libraries(edm_test PRIVATE nlohmann_json::nlohmann_json)
