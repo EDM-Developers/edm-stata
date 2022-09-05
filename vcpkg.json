@@ -1,9 +1,9 @@
 {
-    "name": "edm",
-    "version-string": "1.9.8",
-    "dependencies": [
-        "catch2",
-        "fmt",
-        "nlohmann-json"
-    ]
+  "name": "edm",
+  "version-string": "1.9.8",
+  "dependencies": [
+    "catch2",
+    "fmt",
+    "nlohmann-json"
+  ]
 }
