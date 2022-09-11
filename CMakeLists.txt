@@ -152,7 +152,7 @@ set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plug
 if (ARMMODE)
   set_target_properties(edm_plugin
     PROPERTIES
-      CXX_STANDARD 17
+      CXX_STANDARD 20
       PREFIX ""
       POSITION_INDEPENDENT_CODE ON
       OUTPUT_NAME "edm"
@@ -162,7 +162,7 @@ if (ARMMODE)
 else()
   set_target_properties(edm_plugin
     PROPERTIES
-      CXX_STANDARD 17
+      CXX_STANDARD 20
       PREFIX ""
       POSITION_INDEPENDENT_CODE ON
       OUTPUT_NAME "edm"
