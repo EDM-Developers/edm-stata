@@ -790,6 +790,8 @@ TEST_CASE("Eager L^p distances and neighbours", "[lp_distances]")
     opts.metrics.push_back(Metric::Diff);
   }
   opts.useOnlyPastToPredictFuture = false;
+  opts.hasMissing = false;
+  opts.hasCategorical = false;
 
   SECTION("Euclidean distances")
   {
@@ -920,6 +922,8 @@ TEST_CASE("Eager L^p distances with missingdistance", "[lp_distances+allowmissin
     opts.metrics.push_back(Metric::Diff);
   }
   opts.useOnlyPastToPredictFuture = false;
+  opts.hasMissing = true;
+  opts.hasCategorical = false;
 
   const double md = 10;
   opts.missingdistance = md;
@@ -1056,6 +1060,8 @@ TEST_CASE("Lazy L^p distances", "[lazy_lp_distances]")
     opts.metrics.push_back(Metric::Diff);
   }
   opts.useOnlyPastToPredictFuture = false;
+  opts.hasMissing = false;
+  opts.hasCategorical = false;
 
   SECTION("Euclidean distances")
   {
@@ -1156,6 +1162,8 @@ TEST_CASE("Eager L^p distances and neighbours using only past to predict the fut
     opts.metrics.push_back(Metric::Diff);
   }
   opts.useOnlyPastToPredictFuture = true;
+  opts.hasMissing = false;
+  opts.hasCategorical = false;
 
   SECTION("Euclidean distances")
   {
@@ -1305,6 +1313,8 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     opts.metrics.push_back(Metric::Diff);
   }
   opts.useOnlyPastToPredictFuture = false;
+  opts.hasMissing = true;
+  opts.hasCategorical = false;
 
   SECTION("Cost matrix")
   {

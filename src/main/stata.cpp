@@ -484,6 +484,14 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
   opts.metrics = metrics;
 
+  opts.hasCategorical = false;
+  for (auto metric : opts.metrics) {
+    if (metric == Metric::CheckSame) {
+      opts.hasCategorical = true;
+      break;
+    }
+  }
+
   std::vector<ST_double> t = stata_columns<ST_double>(1);
   print_vector<ST_double>("t", t);
 
@@ -504,6 +512,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
     }
   }
 
+  opts.hasMissing = allowMissing;
   if (allowMissing && opts.missingdistance == 0) {
     opts.missingdistance = default_missing_distance(x);
   }
