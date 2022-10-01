@@ -290,14 +290,14 @@ jobs:
     # - name: Build CLI with address sanitizer
       # working-directory: ${{github.workspace}}/x64
       # run: cmake --build build --config Debug --target edm_cli
-    - name: Install unit tests
-      working-directory: ${{github.workspace}}/x64
-      run: cp build/Release/edm_test.exe test
+    # - name: Install unit tests
+    #   working-directory: ${{github.workspace}}/x64
+    #   run: cp build/Release/edm_test.exe test
     # - name: Install CLI
     #   working-directory: ${{github.workspace}}/x64
     #   run: cp build/Debug/edm_cli.exe test
-    - name: Run unit tests
-      working-directory: ${{github.workspace}}/x64/test
+    - name: Run unit tests (from Release dir, as Catch2 now has .dlls)
+      working-directory: ${{github.workspace}}/x64/build/Release
       run: .\edm_test.exe
     # - name: Run CLI test with address sanitizer
     #   working-directory: ${{github.workspace}}/x64/test

@@ -1,9 +1,13 @@
 {
   "name": "edm",
-  "version-string": "1.9.8",
+  "version-string": "1.9.9",
   "dependencies": [
-    "catch2",
+    {
+      "name": "catch2",
+      "version>=": "3.1.0"
+    },
     "fmt",
     "nlohmann-json"
-  ]
+  ],
+  "builtin-baseline": "d52632d9a0c4a5b57de285b1e03722a067dd80eb"
 }

@@ -284,7 +284,7 @@ if (GBENCH)
   endif()
 endif()
 
-find_package(Catch2 REQUIRED)
+find_package(Catch2 3 REQUIRED)
 
 add_executable(edm_test ${COMMON_SRC} src/main/test.cpp)
 set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
@@ -292,6 +292,7 @@ target_compile_definitions(edm_test PRIVATE NOMINMAX)
 target_include_directories(edm_test PRIVATE src)
 target_include_directories(edm_test SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
 if(WIN32)
+  # Needs "/MDd" to compile in debug mode, however it still won't run in that mode..
   target_compile_options(edm_test PRIVATE "/MD")
 endif()
 
