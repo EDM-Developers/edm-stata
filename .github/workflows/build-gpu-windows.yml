@@ -1,0 +1,39 @@
+name: Build GPU-powered package
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+
+  build-gpu-windows:
+    runs-on: windows-2019
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        path: gpu
+    - uses: Jimver/cuda-toolkit@v0.2.5
+      id: cuda-toolkit
+      with:
+        cuda: '11.5.1'
+    - name: Get ArrayFire
+      run: curl https://arrayfire.s3.amazonaws.com/3.8.0/ArrayFire-v3.8.0-CUDA-11.2.exe --output ArrayFire-v3.8.0-CUDA-11.2.exe
+    - name: Unpack ArrayFire
+      run:  7z x .\ArrayFire-v3.8.0-CUDA-11.2.exe -oarrayfire
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DEDM_WITH_ARRAYFIRE=ON -DArrayFire_DIR=${{github.workspace}}/arrayfire/cmake
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build build --config Release --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/gpu
+      run: cmake --build build --config Release --target install
+    - name: Archive plugin
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm_Windows_x64_gpu.plugin
+        path: ${{github.workspace}}/gpu/bin/edm_Windows_x64_gpu.plugin

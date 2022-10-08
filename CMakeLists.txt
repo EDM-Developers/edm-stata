@@ -18,7 +18,7 @@ if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
   set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
 endif()
 
-# Optionally, the ARM_MODE environment variable specifies whether we are
+# Optionally, the ARMMODE environment variable specifies whether we are
 # compiling for ARM or x86, though it defaults to x86 and can normally
 # be ignored.
 if(DEFINED ENV{ARMMODE})

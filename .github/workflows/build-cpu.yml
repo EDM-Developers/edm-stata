@@ -1,0 +1,108 @@
+name: Build CPU-powered package
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+
+  build-linux:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        path: x64
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/x64
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --target install
+    - name: Archive plugin
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm_Unix_x64.plugin
+        path: ${{github.workspace}}/x64/bin/edm_Unix_x64.plugin
+    - name: Archive ado file
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm.ado
+        path: ${{github.workspace}}/x64/stata/edm.ado
+
+  build-mac-arm:
+    runs-on: macos-11
+    steps:
+    - name: Checkout a copy to compile for ARM
+      uses: actions/checkout@v2
+      with:
+        path: arm
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/arm
+      run: ARMMODE=1 VCPKG_TARGET_TRIPLET=arm64-osx cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/arm
+      run: cmake --build build --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/arm
+      run: cmake --build build --target install
+    - name: Check binary is the right type
+      working-directory: ${{github.workspace}}/arm/test
+      run: lipo -archs ./edm.plugin
+    - name: Archive plugin
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm_MacOSX_arm.plugin
+        path: ${{github.workspace}}/arm/bin/edm_MacOSX_arm.plugin
+
+  build-mac-x64:
+    runs-on: macos-11
+    steps:
+    - name: Checkout a copy to compile for x86
+      uses: actions/checkout@v2
+      with:
+        path: x64
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/x64
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --target install
+    - name: Check binary is the right type
+      working-directory: ${{github.workspace}}/x64/test
+      run: lipo -archs ./edm.plugin
+    - name: Archive plugin
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm_MacOSX_x64.plugin
+        path: ${{github.workspace}}/x64/bin/edm_MacOSX_x64.plugin
+
+  build-windows:
+    runs-on: windows-2019
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        path: x64
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/x64
+      run: cmake -B build
+    - name: Build plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --config Release --target edm_plugin
+    - name: Install plugin
+      working-directory: ${{github.workspace}}/x64
+      run: cmake --build build --config Release --target install
+    - name: Archive plugin
+      uses: actions/upload-artifact@v2
+      with:
+        name: edm_Windows_x64.plugin
+        path: ${{github.workspace}}/x64/bin/edm_Windows_x64.plugin
