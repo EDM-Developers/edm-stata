@@ -626,9 +626,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   }
 #endif
 
-  futures = launch_task_group(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle,
-                              saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable,
-                              rngState, &io, keep_going, all_tasks_finished);
+  futures = launch_tasks(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle,
+                         saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState,
+                         &io, keep_going, all_tasks_finished);
 
   return SUCCESS;
 }
