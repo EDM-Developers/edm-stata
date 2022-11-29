@@ -1,4 +1,4 @@
 v 3
 d 'EDM': Empirical Dynamic Modelling in Stata
-d Website: https://edm-developers.github.io/EDM/
+d Website: https://edm-developers.github.io/edm-stata
 p edm Package for Empirical Dynamic Modelling and Convergent Cross Mapping in Stata

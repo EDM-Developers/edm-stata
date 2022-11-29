@@ -6,7 +6,7 @@ The `edm` commands normally run C++ code which run on multiple threads of a CPU,
 
 To use this GPU acceleration, first make sure you are using a *Windows* or *Linux* machine which has an *NVIDIA graphics card* attached (preferably one of either Pascal, Volta, or Turing generations, though others may work if compiled locally).
 Make sure your graphics drivers are installed (& relatively up-to-date), and *install* [*CUDA*](https://developer.nvidia.com/cuda-downloads) version 11 or above.
-Next, *install* [*ArrayFire*](https://arrayfire.com/download/).
+Next, *install* [*ArrayFire*](https://arrayfire.com/download/), making sure to select the 'Add to PATH' option.
 Finally, make sure the latest development version of the `edm` package is installed by running
 
 ``` stata

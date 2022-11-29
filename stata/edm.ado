@@ -133,7 +133,7 @@ program define edmUpdate
 			cd "`updateFolder'"
 		}
 
-		local path "https://github.com/EDM-Developers/EDM/releases/latest/download/edm-stata-package.zip"
+		local path "https://github.com/EDM-Developers/edm-stata/releases/latest/download/edm-stata-package.zip"
 		quietly copy "`path'" "edm-stata-package.zip", replace
 		quietly unzipfile "edm-stata-package.zip", replace
 

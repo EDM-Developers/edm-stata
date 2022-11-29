@@ -15,6 +15,7 @@ Key features of the package:
 - _factor variables_ can be added to the analysis,
 - _multiple distance functions_ available (Euclidean, Mean Absolute Error, Wasserstein),
 - [_GPU acceleration_](/gpu) available.
+
 <!-- 
 - so-called _coprediction_ is also available,
 - forecasting methods will soon be added (WIP).
@@ -35,12 +36,12 @@ To install the latest development version, first install the stable version from
 edm update, development replace
 ```
 
-The source code for the package is available on [Github](https://github.com/EDM-Developers/EDM).
+The source code for the package is available on [Github](https://github.com/EDM-Developers/edm-stata).
 
-## R package
+## R & Python packages
 
-We are currently creating the [fastEDM R package](https://edm-developers.github.io/fastEDM/) which is a direct port of this Stata package to R.
-As both packages share the same underlying C++ code, their behaviour will be identical.
+We are currently creating the [fastEDM R package](https://edm-developers.github.io/fastEDM-r/) and the [fastEDM Python package](https://edm-developers.github.io/fastEDM-python/) which are direct ports of this Stata package to R & Python.
+As all the packages share the same underlying C++ code, their behaviour will be identical.
 
 ## Other Resources
 
@@ -52,7 +53,7 @@ This site serves as the primary source of documentation for the package, though 
 ## Authors
 
 - [Jinjing Li](https://www.jinjingli.com/) (author),
-- [Michael Zyphur](https://findanexpert.unimelb.edu.au/profile/238494-michael-zyphur) (author),
+- [Michael Zyphur](https://business.uq.edu.au/profile/14074/michael-zyphur) (author),
 - [Patrick Laub](https://pat-laub.github.io/) (author, maintainer),
 - Edoardo Tescari (contributor),
 - Simon Mutch (contributor),

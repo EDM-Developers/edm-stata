@@ -2,7 +2,7 @@
 
 !!! bug
 		There are currently known bugs in the following do scripts.
-		Until we can fix them, we suggest that you either: i) directly use the `edm` commands as per the examples on this site, ii) use the scripts as an inspiration for your do files, or iii) help us track down the bugs with a pull request to [https://github.com/EDM-Developers/EDM/](https://github.com/EDM-Developers/EDM/).
+		Until we can fix them, we suggest that you either: i) directly use the `edm` commands as per the examples on this site, ii) use the scripts as an inspiration for your do files, or iii) help us track down the bugs with a pull request to [https://github.com/EDM-Developers/edm-stata/](https://github.com/EDM-Developers/edm-stata/), or iv) try out the `easy_edm` commands in the `fastEDM` packages.
 
 Linked below are some Stata scripts using `edm` which automate some common analyses.
 They provide some early stage prototypes allowing automated Simplex Projections, S-maps, Coprediction, and Convergent Cross Mapping as well as relevant hypothesis tests:

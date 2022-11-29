@@ -1,6 +1,6 @@
 # Empirical Dynamic Modelling (edm) Stata package
 
-Please visit the package's [homepage](https://jinjingli.github.io/edm/) for a description of this plugin, documentation, and examples.
+Please visit the package's [homepage](https://edm-developers.github.io/edm-stata) for a description of this plugin, documentation, and examples.
 
 This repository stores the source code (Stata ado and C++) for the plugin.
 
