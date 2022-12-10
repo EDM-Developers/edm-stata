@@ -70,8 +70,14 @@ jobs:
             -v $(pwd)/data:/data \
             -v $(pwd)/results:/results \
             dataeditors/stata17:2021-12-16 -e -q ci-test.do
+      - name: Archive CI test output
+        uses: actions/upload-artifact@v2
+        with:
+          name: ci-test.log
+          path: ${{github.workspace}}/code/ci-test.log
       - name: Check test results
         run: diff -B EDM/test/ci-test.log code/ci-test.log
+
 
 #  build-mac-arm:
 #    runs-on: macos-11
