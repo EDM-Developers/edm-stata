@@ -69,7 +69,7 @@ jobs:
             -v $(pwd)/code:/code \
             -v $(pwd)/data:/data \
             -v $(pwd)/results:/results \
-            dataeditors/stata17:2021-12-16 -e -q ci-test.do
+            dataeditors/stata17:2022-11-15 -e -q ci-test.do
       - name: Archive CI test output
         uses: actions/upload-artifact@v2
         with:
