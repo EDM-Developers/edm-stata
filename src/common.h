@@ -17,6 +17,7 @@
 typedef int retcode;
 
 #include <future>
+#include <map>
 #include <memory> // For unique_ptr
 #include <queue>
 #include <string>
@@ -71,6 +72,7 @@ struct Options
   double missingdistance;
   bool panelMode;
   double idw;
+  std::map<std::pair<int, int>, float> idWeights;
   std::vector<double> thetas;
   Algorithm algorithm;
   int taskNum, numTasks, configNum;
