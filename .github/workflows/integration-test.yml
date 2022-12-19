@@ -56,19 +56,16 @@ jobs:
       - name: Prepare for Stata docker
         run: |
           mkdir code
-          mkdir results
           mv edm.ado code
           mv edm_Unix_x64.plugin code/edm.plugin
           mv EDM/test/ci-test.do code
           chmod 777 code
-          echo ${{ secrets.STATA_LICENSE }} > stata.lic
+          echo '${{ secrets.STATA_LICENSE }}' > stata.lic
       - name: Try the Stata docker image
         run: |
           docker run --rm \
             -v $(pwd)/stata.lic:/usr/local/stata/stata.lic \
             -v $(pwd)/code:/code \
-            -v $(pwd)/data:/data \
-            -v $(pwd)/results:/results \
             dataeditors/stata17:2022-11-15 -e -q ci-test.do
       - name: Archive CI test output
         uses: actions/upload-artifact@v2
