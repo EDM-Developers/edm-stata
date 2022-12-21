@@ -46,7 +46,7 @@
 
 // if your compiler has troubles with stdext or hashmaps, just comment the following line to use a slower std::map
 // instead
-//#define HASHMAP
+// #define HASHMAP
 
 #include <algorithm>
 #include <cstdio>
@@ -58,10 +58,10 @@
 #include <map>
 #endif
 #include <cmath>
-//#include "core.h"
-//#include "lmath.h"
+// #include "core.h"
+// #include "lmath.h"
 
-//#include "sparse_array_n.h"
+// #include "sparse_array_n.h"
 #include "full_bipartitegraph.h"
 
 #define INVALIDNODE -1
