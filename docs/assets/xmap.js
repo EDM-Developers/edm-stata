@@ -8,16 +8,16 @@ const update_centered_equations = function () {
   let library = parseInt(document.getElementById("library").value);
 
   // Construct the manifold and targets
-  const M = manifold("u", numObs, E, tau, allowMissing, p).manifold;
-  const targets = manifold("v", numObs, E, tau, allowMissing, p).targets;
+  const M = manifold("a", numObs, E, tau, allowMissing, p).manifold;
+  const targets = manifold("b", numObs, E, tau, allowMissing, p).targets;
 
   // Turn these into latex arrays
-  const u_time_series = latexify_time_series("u", numObs);
-  const v_time_series = latexify_time_series("v", numObs);
+  const a_time_series = latexify_time_series("a", numObs);
+  const b_time_series = latexify_time_series("b", numObs);
 
   const maniTex = latexify(M);
 
-  // Update the library slider so it can't be larger than M_u
+  // Update the library slider so it can't be larger than M_a
   const librarySlider = document.getElementById("library");
 
   if (library > M.length) {
@@ -57,9 +57,9 @@ const update_centered_equations = function () {
   equations.forEach((eqn) => {
     const prevRenderedEquation = eqn.dataset.renderedEquation;
     const renderedEquation = eqn.dataset.equation
-      .replace(/\${u_time_series}/, u_time_series)
-      .replace(/\${v_time_series}/, v_time_series)
-      .replace(/\${M_u}/, maniTex)
+      .replace(/\${a_time_series}/, a_time_series)
+      .replace(/\${b_time_series}/, b_time_series)
+      .replace(/\${M_a}/, maniTex)
       .replace(/\${L}/, libSetTex)
       .replace(/\${P}/, predSetTex)
       .replace(/\${L_1}/, libFirstTex)

@@ -7,7 +7,7 @@ const update_centered_equations = function () {
   const allowMissing = false;
 
   // Construct the manifold and targets
-  const M = manifold("x", numObs, E, tau, allowMissing, p);
+  const M = manifold("a", numObs, E, tau, allowMissing, p);
 
   // Turn these into latex arrays
   const maniTex = latexify(M.manifold);
@@ -43,7 +43,7 @@ const update_centered_equations = function () {
   equations.forEach((eqn) => {
     const prevRenderedEquation = eqn.dataset.renderedEquation;
     const renderedEquation = eqn.dataset.equation
-      .replace(/\${M_x}/, maniTex)
+      .replace(/\${M_a}/, maniTex)
       .replace(/\${L}/, libSetTex)
       .replace(/\${P}/, predSetTex)
       .replace(/\${L_1}/, libFirstTex)

@@ -18,10 +18,10 @@ const update_centered_equations = function () {
   const allowMissing = false;
   const p = 1;
 
-  const x_time_series = latexify_time_series("x", numObs);
+  const a_time_series = latexify_time_series("a", numObs);
 
   // Construct the manifold and targets
-  const M = manifold("x", numObs, E, tau, allowMissing, p);
+  const M = manifold("a", numObs, E, tau, allowMissing, p);
 
   // Turn these into latex arrays
   const maniSetFormTex = latexify_set_of_sets(M.manifold);
@@ -30,9 +30,9 @@ const update_centered_equations = function () {
   // Save the result to the page
   document.querySelectorAll(".dynamic-equation").forEach((eqn) => {
     eqn.innerHTML = eqn.dataset.equation
-      .replace(/\${x_time_series}/, x_time_series)
-      .replace(/\${M_x_sets}/, maniSetFormTex)
-      .replace(/\${M_x}/, maniTex);
+      .replace(/\${a_time_series}/, a_time_series)
+      .replace(/\${M_a_sets}/, maniSetFormTex)
+      .replace(/\${M_a}/, maniTex);
   });
 
   MathJax.typeset();

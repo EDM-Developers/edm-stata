@@ -6,7 +6,7 @@ Let's say we have the following time series and NA represents a missing value:
 
 <center>
 
-| $t$ | $x_t$ |
+| $t$ | $a_t$ |
 | :-: | :---: |
 | 1.0 |  11   |
 | 2.5 |  12   |
@@ -19,7 +19,7 @@ Let's say we have the following time series and NA represents a missing value:
 
 Let's also fix $E = 2$, $\tau = 1$ and $p = 1$ for these examples.
 
-Here we have one obviously missing value for $x$ at time 3.
+Here we have one obviously missing value for $a$ at time 3.
 However, there are some hidden missing values also.
 
 By default, the package will assume that your data was measured at a regular time interval and will insert missing values as necessary to create a regular grid.
@@ -29,7 +29,7 @@ So, when creating the $E=2$ manifold it will
 <!-- 
 <center>
 
-| $t$ | $t - \frac12$ | $t + \frac12$ | $x_t$ | $x_{t-\frac12}$ | $x_{t+\frac12}$ |
+| $t$ | $t - \frac12$ | $t + \frac12$ | $a_t$ | $a_{t-\frac12}$ | $a_{t+\frac12}$ |
 | :-: | :-----------: | :-----------: | :---: | :-------------: | :-------------: |
 | 1.0 |      0.5      |      1.5      |  11   |       NA        |       NA        |
 | 2.5 |      2.0      |      3.0      |  12   |       NA        |       NA        |
@@ -42,7 +42,7 @@ So, when creating the $E=2$ manifold it will
 
 <center>
 
-| $t$ | $x_t$ |
+| $t$ | $a_t$ |
 | :-: | :---: |
 | 1.0 |  11   |
 | 1.5 |  NA   |
@@ -58,10 +58,10 @@ So, when creating the $E=2$ manifold it will
 
 </center>
 
-The manifold of $x$ and it's projections $y$ will have missing values in them:
+The manifold of $a$ and it's projections $b$ will have missing values in them:
 
 \[
-  M_x = \left[\begin{array}{cc}
+  M_a = \left[\begin{array}{cc}
     11 & \text{NA} \\
     %\text{NA} & 11 \\
     %\text{NA} & \text{NA} \\
@@ -113,7 +113,7 @@ For example, if we let the library and prediction sets be as big as possible the
 \]
 
 Here we see that the library set is totally empty!
-This is because for a point to be in the library (with default options) it must be fully observed and the corresponding $y$ projection must also be observed.
+This is because for a point to be in the library (with default options) it must be fully observed and the corresponding $b$ projection must also be observed.
 Similarly, the prediction set is almost empty because (with default options) it must be fully observed.
 
 ## The `allowmissing` flag
@@ -137,7 +137,7 @@ The largest possible library and prediction sets with `allowmissing` in this exa
 \]
 
 \[
-  \mathscr{P} = M_x = \left[\begin{array}{cc}
+  \mathscr{P} = M_a = \left[\begin{array}{cc}
     11 & \text{NA} \\
     %\text{NA} & 11 \\
     %\text{NA} & \text{NA} \\
@@ -178,7 +178,7 @@ So, in this example, instead of the observed time series being:
 
 <center>
 
-| $t$ | $x_t$ |
+| $t$ | $a_t$ |
 | :-: | :---: |
 | 1.0 |  11   |
 | 2.5 |  12   |
@@ -193,7 +193,7 @@ the `dt` basically acts as if the supplied data were:
 
 <center>
 
-| $t$ | $x_t$ | $\mathrm{d}t$ |
+| $t$ | $a_t$ | $\mathrm{d}t$ |
 | :-: | :---: | :-----------: |
 | 1.0 |  11   |      1.5      |
 | 2.5 |  12   |      2.0      |
@@ -206,7 +206,7 @@ the `dt` basically acts as if the supplied data were:
 The resulting manifold and projections are:
 
 \[
-   M_x = \left[\begin{array}{cccc}
+   M_a = \left[\begin{array}{cccc}
     12 & 11 & 2.0 & 1.5 \\
     14 & 12 & 0.5 & 2.0 \\
     15 & 14 & 1.0 & 0.5 \\
@@ -222,7 +222,7 @@ The resulting manifold and projections are:
 The largest possible library and prediction sets with `dt` in this example would be:
 
 \[
-   \mathscr{L} = \mathscr{P} = M_x = \left[\begin{array}{cccc}
+   \mathscr{L} = \mathscr{P} = M_a = \left[\begin{array}{cccc}
     12 & 11 & 2.0 & 1.5 \\
     14 & 12 & 0.5 & 2.0 \\
     15 & 14 & 1.0 & 0.5 \\
@@ -243,7 +243,7 @@ So our original time series
 
 <center>
 
-| $t$ | $x_t$ |
+| $t$ | $a_t$ |
 | :-: | :---: |
 | 1.0 |  11   |
 | 2.5 |  12   |
@@ -257,7 +257,7 @@ So our original time series
 will generate the manifold
 
 \[
-  M_x = \left[\begin{array}{cccc}
+  M_a = \left[\begin{array}{cccc}
     11 & \text{NA} & 1.5 & \text{NA} \\
     12 & 11 & 0.5 & 1.5 \\
     \text{NA} & 12 & 1.5 & 0.5 \\
@@ -295,7 +295,7 @@ and the largest possible library and prediction sets would be
 \]
 
 \[
-  \mathscr{P} = M_x = \left[\begin{array}{cccc}
+  \mathscr{P} = M_a = \left[\begin{array}{cccc}
     11 & \text{NA} & 1.5 & \text{NA} \\
     12 & 11 & 0.5 & 1.5 \\
     \text{NA} & 12 & 1.5 & 0.5 \\

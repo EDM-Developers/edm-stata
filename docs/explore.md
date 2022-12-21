@@ -1,17 +1,17 @@
-# What does `edm explore x` do?
+# What does `edm explore a` do?
 
 <script src="../assets/manifold.js" defer></script>
 <script src="../assets/explore.js" defer></script>
 
 ## First split into library and prediction sets
 
-Firstly, the manifold $M_x$ is split into two parts, called the *library set* denoted $\mathscr{L}$ and the *prediction set* denoted $\mathscr{P}$.
-By default, we take the points of the $M_x$ manifold and assign the first half of them to $\mathscr{L}$ and the second half to $\mathscr{P}$.
+Firstly, the manifold $M_a$ is split into two parts, called the *library set* denoted $\mathscr{L}$ and the *prediction set* denoted $\mathscr{P}$.
+By default, we take the points of the $M_a$ manifold and assign the first half of them to $\mathscr{L}$ and the second half to $\mathscr{P}$.
 
 !!! note
     In the default case, the same point doesn't appear in both $\mathscr{L}$ and $\mathscr{P}$, though given other options then the same point may appear in both sets.
 
-Starting with the time-delayed embedding of $x$.
+Starting with the time-delayed embedding of $a$.
 
 !!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
@@ -22,9 +22,9 @@ Starting with the time-delayed embedding of $x$.
 !!! tip "Choose a value for $\tau$"
     <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
-The time-delayed embedding of the $x$ time series with the selected $E$ and $\tau$ is the manifold:
+The time-delayed embedding of the $a$ time series with the selected $E$ and $\tau$ is the manifold:
 
-<span class="dynamic-equation" data-equation="\[ M_x = ${M_x} \]" />
+<span class="dynamic-equation" data-equation="\[ M_a = ${M_a} \]" />
 
 Then we take the first half of the points to create the library set, which leaves the remaining points to create the prediction set.
 
@@ -69,11 +69,11 @@ Similarly, for the prediction set:
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{P}} = ${y_P} \]" />
 
-We may refer to elements of the $y^{\mathscr{L}}$ vector as *projections* as they come about by taking the $x$ time series and projecting it into the future by $p$ observations.
+We may refer to elements of the $y^{\mathscr{L}}$ vector as *projections* as they come about by taking the $a$ time series and projecting it into the future by $p$ observations.
 
-## What does `edm explore x` predict?
+## What does `edm explore a` predict?
 
-When running `edm explore x`, we pretend that we don't know the values in $y^{\mathscr{P}}$ and that we want to predict them given we know $\mathscr{P}$, $\mathscr{L}$ and $y^{\,\mathscr{L}}$.
+When running `edm explore a`, we pretend that we don't know the values in $y^{\mathscr{P}}$ and that we want to predict them given we know $\mathscr{P}$, $\mathscr{L}$ and $y^{\,\mathscr{L}}$.
 
 The first prediction is to try to find the value of $y_1^{\mathscr{P}}$ given the corresponding point $\mathscr{P}_1$:
 

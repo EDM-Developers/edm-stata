@@ -8,7 +8,7 @@ It can be advantageous to combine data from multiple sources into a single EDM a
 The `extra` command will incorporate additional pieces of data into the manifold.
 As an example, consider the Stata command
 
-`edm explore x, extra(y)`
+`edm explore a, extra(b)`
 
 !!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="5" class="slider" id="numObs"></div>
@@ -19,25 +19,25 @@ As an example, consider the Stata command
 !!! tip "Choose a value for $\tau$"
     <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
-The time-delayed embedding of the $x$ time series with the given $E$ and $\tau$ is the manifold:
+The time-delayed embedding of the $a$ time series with the given $E$ and $\tau$ is the manifold:
 
-<span class="dynamic-equation" data-equation="\[ M_x = ${M_x} \]" />
+<span class="dynamic-equation" data-equation="\[ M_a = ${M_a} \]" />
 
-However, with the `extra(y)` option, we use the time-delayed embedding with the extra time series included like:
+However, with the `extra(b)` option, we use the time-delayed embedding with the extra time series included like:
 
-<span class="dynamic-equation" data-equation="\[ M_{x,y} = ${M_x_y} \]" />
+<span class="dynamic-equation" data-equation="\[ M_{a,b} = ${M_a_b} \]" />
 
-After extra variables are added, the manifold $M_{x,y}$ no longer has $E$ columns.
+After extra variables are added, the manifold $M_{a,b}$ no longer has $E$ columns.
 In these cases, we make a distinction between $E$ which selects the number of lags for each time series, and the *actual* $E$ which is size of each point (i.e. the number of columns).
 
-By default just one $y$ observation is added to each point in the manifold.
-If $E$ lags of $y$ are required, then the command should be altered slightly to
+By default just one $b$ observation is added to each point in the manifold.
+If $E$ lags of $b$ are required, then the command should be altered slightly to
 
-`edm explore x, extra(y(e))`
+`edm explore a, extra(b(e))`
 
 and then the manifold will be:
 
-<span class="dynamic-equation" data-equation="\[ M_{x,y} = ${M_x_y_varying} \]" />
+<span class="dynamic-equation" data-equation="\[ M_{a,b} = ${M_a_b_varying} \]" />
 
 More than one `extra` variable can be added, and any combinations of $E$-varying and non-$E$-varying extras are permitted.
 

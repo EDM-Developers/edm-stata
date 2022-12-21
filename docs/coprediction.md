@@ -8,17 +8,17 @@
 Imagine that we use the command:
 
 ``` stata
-edm explore x, copredictvar(z) copredict(out)
+edm explore a, copredictvar(c) copredict(out)
 ```
 
 This will first do a normal
 
 ``` stata
-edm explore x
+edm explore a
 ```
 
 operation, then it will perform a second set of *copredictions*.
-This brings in a second time series $z$, and specifies that the predictions made in copredict mode should be stored in the Stata variable named `out`.
+This brings in a second time series $c$, and specifies that the predictions made in copredict mode should be stored in the Stata variable named `out`.
 
 For the following, let's first set the general manifold parameters.
 
@@ -31,21 +31,21 @@ For the following, let's first set the general manifold parameters.
 !!! tip "Choose a value for $\tau$"
     <div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div>
 
-In coprediction mode, the training set will include the entirety of the $M_x$ manifold and its projections:
+In coprediction mode, the training set will include the entirety of the $M_a$ manifold and its projections:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_x = ${M_x} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_x} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_a} \]" />
 
-In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_z$ manifold for the $z$ time series and $y^{\mathscr{P}}$ to:
+In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_c$ manifold for the $c$ time series and $y^{\mathscr{P}}$ to:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_z = ${M_z} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_z} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_c} \]" />
 
 The rest of the simplex procedure is the same as before:
 
 \[
     \begin{aligned}
-        \underbrace{ \text{For target }y_i^{\mathscr{P}} }_{ \text{Based on } z }
+        \underbrace{ \text{For target }y_i^{\mathscr{P}} }_{ \text{Based on } c }
         & \underset{\small \text{Get predictee}}{\Rightarrow}
-        \underbrace{ \mathscr{P}_{i} }{ \text{Based on } z}
+        \underbrace{ \mathscr{P}_{i} }_{ \text{Based on } c}
         \underset{\small \text{Find neighbours in } \mathscr{L}}{\Rightarrow}
         \mathcal{NN}_k(i) \\
         &\,\,\,\,
@@ -61,28 +61,28 @@ The rest of the simplex procedure is the same as before:
 Imagine that we use the command:
 
 ``` stata
-edm xmap u v, oneway copredictvar(w) copredict(out)
+edm xmap a b, oneway copredictvar(c) copredict(out)
 ```
 
 Now we combine three different time series to create the predictions in the `out` Stata variable.
 
-In this case, the training set contains all the points in $M_u$:
+In this case, the training set contains all the points in $M_a$:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_u = ${M_u} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_v} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_b_xmap} \]" />
 
-The main change in coprediction is the prediction set and the targets are based on the new $w$ time series:
+The main change in coprediction is the prediction set and the targets are based on the new $c$ time series:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_w = ${M_w} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_w} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_c_xmap} \]" />
 
 
 Finally, the simplex prediction steps are the same, with:
 
-\[ 	\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } w}
+\[ 	\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } c}
 	\underset{\small \text{Get predictee}}{\Rightarrow}
-	\underbrace{ \mathscr{P}_{i} }_{ \text{Based on } w }
+	\underbrace{ \mathscr{P}_{i} }_{ \text{Based on } c }
 	\underset{\small \text{Find neighbours in}}{\Rightarrow}
-	\underbrace{ \mathscr{L} }_{\text{Based on } u}
+	\underbrace{ \mathscr{L} }_{\text{Based on } a}
 	\underset{\small \text{Matches}}{\Rightarrow}
-	\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } v}
+	\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } b}
 	\underset{\small \text{Make prediction}}{\Rightarrow}
-	\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } v} \]
+	\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } b} \]
