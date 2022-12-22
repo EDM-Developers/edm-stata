@@ -49,6 +49,11 @@ This site serves as the primary source of documentation for the package, though 
 
 - our [Stata Journal paper](https://jinjingli.github.io/edm/edm-wp.pdf) which explains the package and the overall causal framework, and
 - Jinjing's QMNET seminar on the package, the recording is on [YouTube](https://youtu.be/kZv85k1YUVE) and the [slides are here](pdfs/EDM-talk-QMNET.pdf).
+- Patrick's short presentation on the EDM packages to the Time Series and Forecasting Symposium 2022:
+
+<center>
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ZYKoqt_nzfI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</center>
 
 ## Authors
 
