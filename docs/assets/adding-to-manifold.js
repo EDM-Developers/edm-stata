@@ -37,13 +37,17 @@ const update_centered_equations = function () {
 
     if (prevRenderedEquation != renderedEquation) {
       eqnsToTypeset.push(eqn);
-      MathJax.typesetClear([eqn]);
+      if (MathJax.typesetClear) {
+        MathJax.typesetClear([eqn]);
+      }
       eqn.innerHTML = renderedEquation;
       eqn.dataset.renderedEquation = renderedEquation;
     }
   });
 
-  MathJax.typesetPromise(eqnsToTypeset);
+  if (MathJax.typesetPromise) {
+    MathJax.typesetPromise(eqnsToTypeset);
+  }
 };
 
 const sliders = document.querySelectorAll(".slider-container input");

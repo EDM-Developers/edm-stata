@@ -17,7 +17,3 @@ window.MathJax = {
     mtextInheritFont: true,       // true to make mtext elements use surrounding font
   }
 };
-
-document$.subscribe(() => {
-  MathJax.typesetPromise()
-})

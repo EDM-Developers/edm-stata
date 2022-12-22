@@ -35,7 +35,9 @@ const update_centered_equations = function () {
       .replace(/\${M_a}/, maniTex);
   });
 
-  MathJax.typeset();
+  if (MathJax.typeset) {
+    MathJax.typeset();
+  }
 };
 
 const sliders = document.querySelectorAll(".slider-container input");
