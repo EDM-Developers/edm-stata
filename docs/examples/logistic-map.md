@@ -128,9 +128,9 @@ number of observations will be reset to 450
 Press any key to continue, or Break to abort
 Number of observations (_N) was 151, now 450.
 
-. twoway (scatter c3 c1)(lpoly c3 c1),xtitle("E") ytitle("{it:{&rho}}") legend(
-> order(1 "{it:{&rho}}" 2 "local polynomial smoothing") col(1) position(8) ring
-> (0))
+. twoway (scatter c3 c1)(lpoly c3 c1),xtitle("E") ytitle("{it:{&rho}}") ///
+>         legend(order(1 "{it:{&rho}}" 2 "local polynomial smoothing") ///
+>         col(1) position(8) ring(0))
 
 . drop c*
 
@@ -144,9 +144,9 @@ Plotting the same results:
 
 . svmat r, names(col)
 
-. twoway (scatter c3 c1)(lpoly c3 c1),xtitle("E") ytitle("{it:{&rho}}") legend(
-> order(1 "{it:{&rho}}" 2 "local polynomial smoothing") col(1) position(8) ring
-> (0))
+. twoway (scatter c3 c1)(lpoly c3 c1),xtitle("E") ytitle("{it:{&rho}}") ///
+>         legend(order(1 "{it:{&rho}}" 2 "local polynomial smoothing") ///
+>         col(1) position(8) ring(0))
 
 . drop c*
 
@@ -190,9 +190,9 @@ number of observations will be reset to 501
 Press any key to continue, or Break to abort
 Number of observations (_N) was 450, now 501.
 
-. twoway (line c3 c2) , legend(order(1 "{it:{&rho}}") position(5) ring(0)) xtit
-> le("{it:{&theta}}") ytitle("{it:{&rho}}") title("{it:{&rho}}-{it:{&theta}} of
->  variable y")
+. twoway (line c3 c2) , legend(order(1 "{it:{&rho}}") position(5) ring(0)) ///
+>         xtitle("{it:{&theta}}") ytitle("{it:{&rho}}") ///
+>         title("{it:{&rho}}-{it:{&theta}} of variable y")
 
 . drop c*
 
@@ -232,8 +232,8 @@ Number of observations (_N) was 501, now 1,460.
 
 . twoway (scatter xy3 xy2, mfcolor(%30) mlcolor(%30)) ///
 >     (scatter yx3 yx2, mfcolor(%30) mlcolor(%30)) ///
->     (lpoly xy3 xy2)(lpoly yx3 yx2), xtitle(L) ytitle("{it:{&rho}}") legend(co
-> l(2))
+>     (lpoly xy3 xy2)(lpoly yx3 yx2), xtitle(L) ytitle("{it:{&rho}}") ///
+>         legend(col(2))
 
 ````
 ![Convergent cross-mapping plot of accuracy against library size](rho-L.svg)
@@ -241,3 +241,4 @@ Number of observations (_N) was 501, now 1,460.
 As both plots of the accuracy are significantly increasing as $L$ increases, then we can say there is evidence of both $x \to y$ and $y \to x$ causal links.
 The direction which increases the most is the $x \mid M(y)$ direction.
 This notation means we used $y$ to predict $x$, and due to the backward nature of EDM means it refers to the causal link $x \to y$.
+Therefore, we'd conclude those both directions show causality, though the $x \to y$ link is stronger in the data.  

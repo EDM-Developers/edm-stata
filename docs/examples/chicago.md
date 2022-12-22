@@ -5,9 +5,6 @@ daily temperature and crime levels in Chicago, which we make available in the [c
 
 ## The data
 
-To demonstrate the usefulness of EDM in estimating the impact of causal variables, we use a real-world dataset that reflects
-daily temperature and crime levels in Chicago, which we make available in the [chicago.dta](chicago.dta) file.
-
 
 First, we load the time series from the `chicago.dta` file:
 
@@ -90,8 +87,8 @@ From the `rho` column we can see that the prediction accuracy is maximised when 
 The `edm xmap` command will run the cross-mapping task, which allows us to ascertain the causal links between the crime and temperature time series.
 
 ```` stata
-. qui edm xmap temp crime, e(7) library(10(5)200 210(10)1000 1020(20)2000 2050(
-> 50)4350 4365) rep(4)
+. qui edm xmap temp crime, e(7) rep(4) ///
+>         library(10(5)200 210(10)1000 1020(20)2000 2050(50)4350 4365) 
 
 ````
 
@@ -117,8 +114,8 @@ Plotting the results gives:
 
 . twoway (scatter chicago_xy3 chicago_xy2, mfcolor(%30) mlcolor(%30)) ///
 >     (scatter chicago_yx3 chicago_yx2, mfcolor(%30) mlcolor(%30)) ///
->     (lpoly chicago_xy3 chicago_xy2)(lpoly chicago_yx3 chicago_yx2), xtitle(L)
->  ytitle("{it:{&rho}}") legend(col(1))
+>     (lpoly chicago_xy3 chicago_xy2)(lpoly chicago_yx3 chicago_yx2), ///
+>         xtitle(L) ytitle("{it:{&rho}}") legend(col(1))
 
 . drop chicago_xy* chicago_yx*
 
@@ -159,70 +156,40 @@ For example, the coefficient variables that are created are:
 
 Variable      Storage   Display    Value
     name         type    format    label      Variable label
--------------------------------------------------------------------------------
-beta1_b0_rep1   double  %10.0g                constant in temp predicting crime
-                                                S-map equation (rep 1)
-beta1_b1_rep1   double  %10.0g                temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b2_rep1   double  %10.0g                l1.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b3_rep1   double  %10.0g                l2.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b4_rep1   double  %10.0g                l3.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b5_rep1   double  %10.0g                l4.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b6_rep1   double  %10.0g                l5.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta1_b7_rep1   double  %10.0g                l6.temp predicting crime or
-                                                crime|M(temp) S-map coefficient
-                                                (rep 1)
-beta2_b0_rep1   double  %10.0g                constant in crime predicting temp
-                                                S-map equation (rep 1)
-beta2_b1_rep1   double  %10.0g                crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b2_rep1   double  %10.0g                l1.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b3_rep1   double  %10.0g                l2.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b4_rep1   double  %10.0g                l3.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b5_rep1   double  %10.0g                l4.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b6_rep1   double  %10.0g                l5.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
-beta2_b7_rep1   double  %10.0g                l6.crime predicting temp or
-                                                temp|M(crime) S-map coefficient
-                                                (rep 1)
+-------------------------------------------------------------------------------------------------------------------------------------------------
+beta1_b0_rep1   double  %10.0g                constant in temp predicting crime S-map equation (rep 1)
+beta1_b1_rep1   double  %10.0g                temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b2_rep1   double  %10.0g                l1.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b3_rep1   double  %10.0g                l2.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b4_rep1   double  %10.0g                l3.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b5_rep1   double  %10.0g                l4.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b6_rep1   double  %10.0g                l5.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta1_b7_rep1   double  %10.0g                l6.temp predicting crime or crime|M(temp) S-map coefficient (rep 1)
+beta2_b0_rep1   double  %10.0g                constant in crime predicting temp S-map equation (rep 1)
+beta2_b1_rep1   double  %10.0g                crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b2_rep1   double  %10.0g                l1.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b3_rep1   double  %10.0g                l2.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b4_rep1   double  %10.0g                l3.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b5_rep1   double  %10.0g                l4.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b6_rep1   double  %10.0g                l5.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
+beta2_b7_rep1   double  %10.0g                l6.crime predicting temp or temp|M(crime) S-map coefficient (rep 1)
 
 ````
 
 Plotting them allows us to see the contemporaneous effect of temperature on crime.
 
 ```` stata
-. twoway (kdensity beta1_b1_rep1), xtitle("Contemporaneous effect of temperatur
-> e on crime") ytitle("Density")
+. twoway (kdensity beta1_b1_rep1), ytitle("Density") ///
+>         xtitle("Contemporaneous effect of temperature on crime")
 
 ````
 ![Contemporaneous effect of temperature on crime](chicago-crime1.svg)
 
 ```` stata
-. twoway (scatter beta1_b1_rep1 temp, xtitle("Temperature (Fahrenheit)") ytitle
-> ("Contemporaneous effect of temperature on crime") msize(small))(lpoly beta1_
-> b1_rep1 temp), legend(on order( 1 "Local coefficient" 2 "Local polynomial smo
-> othing"))
+. twoway (scatter beta1_b1_rep1 temp, xtitle("Temperature (Fahrenheit)") ///
+>         ytitle("Contemporaneous effect of temperature on crime") ///
+>         msize(small))(lpoly beta1_b1_rep1 temp), ///
+>         legend(on order( 1 "Local coefficient" 2 "Local polynomial smoothing"))
 
 ````
 ![Contemporaneous effect of temperature on crime](chicago-crime2.svg)

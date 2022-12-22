@@ -57,7 +57,8 @@ The `edm xmap` command will run the cross-mapping task, which allows us to ascer
 
 ```` stata
 <<dd_do>>
-qui edm xmap temp crime, e(7) library(10(5)200 210(10)1000 1020(20)2000 2050(50)4350 4365) rep(4)
+qui edm xmap temp crime, e(7) rep(4) ///
+	library(10(5)200 210(10)1000 1020(20)2000 2050(50)4350 4365) 
 <</dd_do>>
 ````
 
@@ -78,7 +79,8 @@ label variable chicago_xy3 "Crime|M(Temperature)"
 label variable chicago_yx3 "Temperature|M(Crime)"
 twoway (scatter chicago_xy3 chicago_xy2, mfcolor(%30) mlcolor(%30)) ///
     (scatter chicago_yx3 chicago_yx2, mfcolor(%30) mlcolor(%30)) ///
-    (lpoly chicago_xy3 chicago_xy2)(lpoly chicago_yx3 chicago_yx2), xtitle(L) ytitle("{it:{&rho}}") legend(col(1))
+    (lpoly chicago_xy3 chicago_xy2)(lpoly chicago_yx3 chicago_yx2), ///
+	xtitle(L) ytitle("{it:{&rho}}") legend(col(1))
 drop chicago_xy* chicago_yx*
 <</dd_do>>
 ````
@@ -111,14 +113,18 @@ Plotting them allows us to see the contemporaneous effect of temperature on crim
 
 ```` stata
 <<dd_do>>
-twoway (kdensity beta1_b1_rep1), xtitle("Contemporaneous effect of temperature on crime") ytitle("Density")
+twoway (kdensity beta1_b1_rep1), ytitle("Density") ///
+	xtitle("Contemporaneous effect of temperature on crime")
 <</dd_do>>
 ````
 <<dd_graph: saving("chicago-crime1.svg") alt("Contemporaneous effect of temperature on crime") replace markdown>>
 
 ```` stata
 <<dd_do>>
-twoway (scatter beta1_b1_rep1 temp, xtitle("Temperature (Fahrenheit)") ytitle("Contemporaneous effect of temperature on crime") msize(small))(lpoly beta1_b1_rep1 temp), legend(on order( 1 "Local coefficient" 2 "Local polynomial smoothing"))
+twoway (scatter beta1_b1_rep1 temp, xtitle("Temperature (Fahrenheit)") ///
+	ytitle("Contemporaneous effect of temperature on crime") ///
+	msize(small))(lpoly beta1_b1_rep1 temp), ///
+	legend(on order( 1 "Local coefficient" 2 "Local polynomial smoothing"))
 <</dd_do>>
 ````
 <<dd_graph: saving("chicago-crime2.svg") alt("Contemporaneous effect of temperature on crime") replace markdown>>

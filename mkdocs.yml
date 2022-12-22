@@ -2,9 +2,6 @@ site_name: EDM Stata Package
 
 nav:
   - Home: index.md
-  - Examples:
-    - Logistic map: examples/logistic-map.md 
-    - Chicago crime/temperature: examples/chicago.md
   - How does it work?:
     - Time-delayed embedding: time-delayed-embedding.md
     - The explore subcommand: explore.md
@@ -12,6 +9,9 @@ nav:
     - Adding variables to manifold: adding-to-manifold.md
     - Missing data: missing-data.md
     - Coprediction: coprediction.md
+  - Examples:
+    - Logistic map: examples/logistic-map.md 
+    - Chicago crime/temperature: examples/chicago.md
   - GPU Acceleration: gpu.md
   - Automated workflows: automated-workflows.md
   - Stata Help File: api.md
