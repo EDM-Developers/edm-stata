@@ -27,6 +27,7 @@ const update_centered_equations = function () {
 
   const libFirstTex = latexify(libSet.slice(0, 1));
   const predFirstTex = latexify(predSet.slice(0, 1));
+  const libFirstTargetTex = latexify(libTargets.slice(0, 1));
   const predFirstTargetTex = latexify(predTargets.slice(0, 1));
 
   const libTargetsTex = latexify(libTargets);
@@ -48,6 +49,7 @@ const update_centered_equations = function () {
       .replace(/\${P}/, predSetTex)
       .replace(/\${L_1}/, libFirstTex)
       .replace(/\${P_1}/, predFirstTex)
+      .replace(/\${y_L_1}/, libFirstTargetTex)
       .replace(/\${y_P_1}/, predFirstTargetTex)
       .replace(/\${y_L}/, libTargetsTex)
       .replace(/\${y_P}/, predTargetsTex)
