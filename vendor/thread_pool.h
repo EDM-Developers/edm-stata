@@ -28,11 +28,10 @@ class ThreadPool
 {
 public:
   ThreadPool(int);
-  template<class F, class... Args>
-  auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
-  template<class F, class... Args>
-  auto unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
-
+  template<typename F, typename... Args>
+  auto enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>;
+  template<typename F, typename... Args>
+  auto unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>;
   // the destructor joins all threads
   ~ThreadPool() { kill_all_workers(); }
 
@@ -114,10 +113,10 @@ inline void ThreadPool::set_num_workers(int threads)
 }
 
 // add new work item to the pool
-template<class F, class... Args>
-auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>
+template<typename F, typename... Args>
+auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>
 {
-  using return_type = typename std::result_of<F(Args...)>::type;
+  using return_type = typename std::invoke_result<F, Args...>::type;
 
   auto task =
     std::make_shared<std::packaged_task<return_type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
@@ -136,10 +135,10 @@ auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::res
 }
 
 // add new work item to the pool
-template<class F, class... Args>
-auto ThreadPool::unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>
+template<typename F, typename... Args>
+auto ThreadPool::unsafe_enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>
 {
-  using return_type = typename std::result_of<F(Args...)>::type;
+  using return_type = typename std::invoke_result<F, Args...>::type;
 
   auto task =
     std::make_shared<std::packaged_task<return_type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
