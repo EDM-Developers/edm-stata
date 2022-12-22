@@ -33,26 +33,26 @@ For the following, let's first set the general manifold parameters.
 
 In coprediction mode, the training set will include the entirety of the $M_a$ manifold and its projections:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_a} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{L}}  = ${y_L_a} \]" />
 
-In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_c$ manifold for the $c$ time series and $y^{\mathscr{P}}$ to:
+In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_c$ manifold for the $c$ time series and $\mathbf{y}_{\mathscr{P}} $ to:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_c} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{P}}  = ${y_P_c} \]" />
 
 The rest of the simplex procedure is the same as before:
 
 \[
     \begin{aligned}
-        \underbrace{ \text{For target }y_i^{\mathscr{P}} }_{ \text{Based on } c }
+        \underbrace{ \text{For target } y_i }_{ \text{Based on } c }
         & \underset{\small \text{Get predictee}}{\Rightarrow}
-        \underbrace{ \mathscr{P}_{i} }_{ \text{Based on } c}
+        \underbrace{ \mathbf{x}_{i} }_{ \text{Based on } c}
         \underset{\small \text{Find neighbours in } \mathscr{L}}{\Rightarrow}
         \mathcal{NN}_k(i) \\
         &\,\,\,\,
         \underset{\small \text{Extracts}}{\Rightarrow}
-        \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
+        \{ y_{[j]}\}_{j \in \mathcal{NN}_k(i)}
         \underset{\small \text{Make prediction}}{\Rightarrow}
-        \hat{y}_i^{\mathscr{P}}
+        \hat{y}_i
     \end{aligned}
 \]
 
@@ -68,21 +68,21 @@ Now we combine three different time series to create the predictions in the `out
 
 In this case, the training set contains all the points in $M_a$:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\,\mathscr{L}} = ${y_L_b_xmap} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{L}}  = ${y_L_b_xmap} \]" />
 
 The main change in coprediction is the prediction set and the targets are based on the new $c$ time series:
 
-<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y^{\mathscr{P}} = ${y_P_c_xmap} \]" />
+<span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c_xmap} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{P}}  = ${y_P_c_xmap} \]" />
 
 
 Finally, the simplex prediction steps are the same, with:
 
-\[ 	\underbrace{ \text{For target }y_i^{\mathscr{P}} }_{\text{Based on } c}
+\[ 	\underbrace{ \text{For target }y_i }_{\text{Based on } c}
 	\underset{\small \text{Get predictee}}{\Rightarrow}
-	\underbrace{ \mathscr{P}_{i} }_{ \text{Based on } c }
+	\underbrace{ \mathbf{x}_i }_{ \text{Based on } c }
 	\underset{\small \text{Find neighbours in}}{\Rightarrow}
 	\underbrace{ \mathscr{L} }_{\text{Based on } a}
 	\underset{\small \text{Matches}}{\Rightarrow}
-	\underbrace{ \{ y_j^{\,\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } b}
+	\underbrace{ \{ y_{[j]}\}_{j \in \mathcal{NN}_k(i)} }_{\text{Based on } b}
 	\underset{\small \text{Make prediction}}{\Rightarrow}
-	\underbrace{ \hat{y}_i^{\mathscr{P}} }_{\text{Based on } b} \]
+	\underbrace{ \hat{y}_i }_{\text{Based on } b} \]

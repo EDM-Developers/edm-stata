@@ -1,17 +1,18 @@
-# What does `edm explore a` do?
+# The `explore` subcommand
 
 <script src="../assets/manifold.js" defer></script>
 <script src="../assets/explore.js" defer></script>
 
-## First split into library and prediction sets
+The `explore` subcommand focuses on taking a time series and trying to forecast the values it takes in the near future.
+In the grand scheme of empirical dynamic modelling, it is usually just the first step one would use in order to find the appropriate hyperparameters to choose before running a convergent cross mapping analysis (using the `xmap` command).
 
-Firstly, the manifold $M_a$ is split into two parts, called the *library set* denoted $\mathscr{L}$ and the *prediction set* denoted $\mathscr{P}$.
-By default, we take the points of the $M_a$ manifold and assign the first half of them to $\mathscr{L}$ and the second half to $\mathscr{P}$.
+## Setup
 
-!!! note
-    In the default case, the same point doesn't appear in both $\mathscr{L}$ and $\mathscr{P}$, though given other options then the same point may appear in both sets.
+Before describing the mechanics of the `explore` subcommand, we first need to take the given time series data, convert it into time-delayed reconconstructions, and define some notation.
 
-Starting with the time-delayed embedding of $a$.
+### Create the time-delayed embedding
+
+Given the time series $a_t$, we create the time-delayed embedding.
 
 !!! tip "Choose the number of observations"
     <div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div>
@@ -26,25 +27,38 @@ The time-delayed embedding of the $a$ time series with the selected $E$ and $\ta
 
 <span class="dynamic-equation" data-equation="\[ M_a = ${M_a} \]" />
 
-Then we take the first half of the points to create the library set, which leaves the remaining points to create the prediction set.
 
-In that case, the *library set* is
+### Split the data
+
+The manifold $M_a$ is then split into two parts, called the *library set* denoted $\mathscr{L}$ and the *prediction set* denoted $\mathscr{P}$.
+
+By default, we take the points of the $M_a$ manifold and assign the half of them to $\mathscr{L}$ and the other half to $\mathscr{P}$.
+
+In this case, the library set is
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{L} = ${L} \]" />
 
-and the *prediction set* is
+and the prediction set is
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \]" />
 
 It will help to introduce a notation to refer to a specific point in these sets based on its row number.
-E.g. in the example above, the first point in the library set takes the value:
+E.g. in the example above, the first point in the library set is denoted
 
 <span class="dynamic-equation" data-equation="\[ \mathbf{x}_{[1]} = ${L_1} \]" />
+
+while the first point in the prediction set is denoted
+
+<span class="dynamic-equation" data-equation="\[ \mathbf{x}_{1} = ${P_1} \,. \]" />
 
 More generally $\mathbf{x}_{[i]}$ refers to the $i$th point in $\mathscr{L}$
 while $\mathbf{x}_{j}$ refers to the $j$th point in $\mathscr{P}$.
 
-## Next, look at the future values of each point
+!!! note
+    In the default case, the same point doesn't appear in both $\mathscr{L}$ and $\mathscr{P}$, though given other options then the same point may appear in both sets (though during the prediction process, we would ignore the duplicate point in $\mathscr{L}$ for that prediction task).
+    This is one good reason why we don't simply call these sets the 'train' and 'test' sets.
+
+### Look into the future
 
 Each point on the manifold refers to a small trajectory of a time series, and for each point we look $p$ observations into the future of the time series.
 
@@ -72,9 +86,11 @@ Similarly, for the prediction set:
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{P}} = ${y_P} \]" />
 
+<!-- 
 We may refer to elements of the $y^{\mathscr{L}}$ vector as *projections* as they come about by taking the $a$ time series and projecting it into the future by $p$ observations.
+-->
 
-## What does `edm explore a` predict?
+## What does `edm explore a` do?
 
 When running `edm explore a`, we pretend that we don't know the values in $\mathbf{y}_{\mathscr{P}}$ and that we want to predict them given we know $\mathscr{L}$ and $\mathbf{y}_{\mathscr{L}}$.
 
@@ -83,6 +99,9 @@ The first prediction is to try to find the value of $y_1$ given the correspondin
 <span class="dynamic-equation" data-equation="\[\mathbf{x}_{1} = ${P_1} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1  = \, ??? \]" />
 
 We will use $\mathbf{x}_1$ to predict $y_1$, so the $\mathbf{x}_1$ values can be viewed as *covariates* and $y_1$ as the *target* of the prediction.
+
+There are two main algorithms used to make these predctions: the simplex algorithm, and the S-map method.
+For those familiar with traditional statistical learning techniques, it may be helpful to think of the simplex algorithm as being a variation on the $k$-nearest neighbours method, and S-map being a modification of the multivariate linear regression method or equivalently the autoregressive time series model.
 
 ### Using the simplex algorithm
 
@@ -118,11 +137,11 @@ If weight $w_i$ corresponds to library point $\mathbf{x}_{[j]}$ then we have
 
 Here, the notation $d(\mathbf{x}_i, \mathbf{x}_{[j]})$ refers to the distance between prediction point $i$ and library point $j$, and $\theta \ge 0$ is a hyperparameter chosen by the user.
 
-To summarise the process in a rough algorithm, we:
+In summary, we:
 
 1. Loop through the prediction set, letting $i = 1$ to $| \mathscr{P} |$:
-    1. Start with our covariates and target from the prediction set $\mathbf{x}_{i}$ and $y_i$, though we temporarily pretend that we don't know $y_i$.
-    2. We find points in the library set that are close to $\mathbf{x}_{i}$; in effect, this is constructing a very localised training set of pairs $\mathbf{x}_{[j]} \to y_{[j]}$ for $j \in \mathcal{NN}_k(\mathbf{x}_{i})$.
+    1. Start with our covariates $\mathbf{x}_{i}$ and target $y_i$ from the prediction set, though we temporarily pretend that we don't know $y_i$.
+    2. Find the $k$ points in the library set that are closest to $\mathbf{x}_{i}$; in effect, this is constructing a very localised training set of pairs $\mathbf{x}_{[j]} \to y_{[j]}$ for $j \in \mathcal{NN}_k(\mathbf{x}_{i})$.
     3. Make the prediction $\hat{y}_i$ as a weighted average of the $y_{[j]}$ neighbour targets.
 4. Summarise the prediction accuracy (e.g. the $\rho$ correlation) between the $\hat{y}_i$ predictions and the true $y_i$ values.
 
@@ -171,33 +190,25 @@ The S-map loss function has the extra $\mathbf{w}_i$ weight vector (included by 
 
 In this equation, $d_{\text{mean}}$ refers to the average distance between $\mathbf{x}_{i}$ and every point in $\mathscr{L}$.
 
+Therefore, the S-map method constructs a unique linear regression model when it makes each prediction, and the linear system being constructed is biased so that points closer to the given $\mathbf{x}_{i}$ covariates are given higher weighting in the regression than those further away. 
 
-Given the specific
+In the extreme case of $\theta = 0$, then the S-map procedure degenerates to the simple linear regression described above.
 
-<span class="dynamic-equation" data-equation="\[ \mathbf{x}_{1} = ${P_1} \]" />
+Normally however we set $\theta > 0$, and the nearby points heavily influence the S-map predictions and the points very far away from the current $\mathbf{x}_{i}$ have a negligable impact on the predictions.
 
-in this example, the prediction would look like:
+In fact, since the points very far away from the current point have basically no impact on the S-map predictions, we can simply drop them in order to simplify the computational task. 
 
-<span class="dynamic-equation" data-equation="\[ y_{1} \approx \hat{y}_1 := ${yhat_P_1} \]" />
+Solving every linear system is a time-consuming process, so only making the linear approximations based on the most relevant $k$ points from the library set can help alleviate the computational burden.
 
-To summarise the whole S-map procedure:
+To summarise, we:
 
-\[
-    \begin{aligned}
-        \text{For target }y_i
-        & \underset{\small \text{Get predictee}}{\Rightarrow}
-        \mathbf{x}_{i}
-        \underset{\small \text{Find neighbours in } \mathscr{L}}{\Rightarrow}
-        \mathcal{NN}_k(i) \\
-        &\,\,\,\,
-        \underset{\small \text{Extracts}}{\Rightarrow}
-        \{ \mathbf{x}_{[j]}, y_j^{\mathscr{L}} \}_{j \in \mathcal{NN}_k(i)}
-        \underset{\small \text{Calculate}}{\Rightarrow}
-        \{ w_{i,j} \}_{j=1,\ldots,E}
-        \underset{\small \text{Make prediction}}{\Rightarrow}
-        \hat{y}_i
-    \end{aligned}
-\]
+1. Loop through the prediction set, letting $i = 1$ to $| \mathscr{P} |$:
+    1. Start with our covariates $\mathbf{x}_{i}$ and target $y_i$ from the prediction set, though we temporarily pretend that we don't know $y_i$.
+    2. Find the $k$ points in the library set that are closest to $\mathbf{x}_{i}$; in effect, this is constructing a very localised training set of pairs $\mathbf{x}_{[j]} \to y_{[j]}$ for $j \in \mathcal{NN}_k(\mathbf{x}_{i})$.
+    3. Solve a weighted linear system to get the coefficients $\boldsymbol{\beta}_i$.
+    4. Make the prediction $\hat{y}_i$ using the linear combination of $\mathbf{x}_i$ and $\boldsymbol{\beta}_i$.
+4. Summarise the prediction accuracy (e.g. the $\rho$ correlation) between the $\hat{y}_i$ predictions and the true $y_i$ values.
+
 
 ## Assessing the prediction quality
 

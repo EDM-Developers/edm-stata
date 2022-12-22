@@ -31,7 +31,9 @@ After extra variables are added, the manifold $M_{a,b}$ no longer has $E$ column
 In these cases, we make a distinction between $E$ which selects the number of lags for each time series, and the *actual* $E$ which is size of each point (i.e. the number of columns).
 
 By default just one $b$ observation is added to each point in the manifold.
-If $E$ lags of $b$ are required, then the command should be altered slightly to
+However, this will only allow us to capture to the contemporaneous effect of $b$ on the system.
+
+If instead we want to add the last $E$ lags of $b$ (just as we do with the $a$ time series series), then the command should be altered slightly to
 
 `edm explore a, extra(b(e))`
 

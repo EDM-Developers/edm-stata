@@ -1,7 +1,11 @@
-# Creating a time-delayed embedding
+# Time-delayed embedding
 
 <script src="../assets/manifold.js" defer></script>
 <script src="../assets/time-delayed-embedding.js" defer></script>
+
+The fundamental logic of empirical dynamic modelling are based on Taken's theorem, and the core idea of Taken's theorem is to create these things called time-delayed embeddings (or time-delayed reconstructions).
+Essentially, we take a time series and break it into many overlapping short trajectories of a fixed length.
+This page steps through a basic example of this process, highlighting some relevant hyperparameters which can be set.
 
 Imagine that we observe a time series $a$.
 

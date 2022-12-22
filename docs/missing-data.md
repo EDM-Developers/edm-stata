@@ -75,7 +75,7 @@ The manifold of $a$ and it's projections $b$ will have missing values in them:
     16 & \text{NA} \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y = \left[ \begin{array}{c}
+  \mathbf{y}_a = \left[ \begin{array}{c}
     \text{NA} \\
     %\text{NA} \\
     %12 \\
@@ -99,7 +99,7 @@ For example, if we let the library and prediction sets be as big as possible the
 \[
   \mathscr{L} = \emptyset
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{L}} = \emptyset
+  \mathbf{y}_{\mathscr{L}} = \emptyset
 \]
 
 \[
@@ -107,7 +107,7 @@ For example, if we let the library and prediction sets be as big as possible the
     15 & 14 \\
   \end{array} \right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{P}} = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{P}} = \left[ \begin{array}{c}
     \text{NA} \\
   \end{array} \right]
 \]
@@ -131,7 +131,7 @@ The largest possible library and prediction sets with `allowmissing` in this exa
     14 & \text{NA} \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{L}} = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{L}} = \left[ \begin{array}{c}
     15 \\
   \end{array} \right]
 \]
@@ -151,7 +151,7 @@ The largest possible library and prediction sets with `allowmissing` in this exa
     16 & \text{NA} \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{P}} = y = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{P}} = y = \left[ \begin{array}{c}
     \text{NA} \\
     %\text{NA} \\
     %12 \\
@@ -212,7 +212,7 @@ The resulting manifold and projections are:
     15 & 14 & 1.0 & 0.5 \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y = \left[ \begin{array}{c}
+  \mathbf{y}_a = \left[ \begin{array}{c}
     14 \\
     15 \\
     16 \\
@@ -228,7 +228,7 @@ The largest possible library and prediction sets with `dt` in this example would
     15 & 14 & 1.0 & 0.5 \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{L}} = y^{\mathscr{P}} = y = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{L}} = \mathbf{y}_{\mathscr{P}} = \mathbf{y}_a = \left[ \begin{array}{c}
     14 \\
     15 \\
     16 \\
@@ -266,7 +266,7 @@ will generate the manifold
     16 & 15 & \text{NA} & 1.0 \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y = \left[ \begin{array}{c}
+  \mathbf{y}_a = \left[ \begin{array}{c}
     12 \\
     \text{NA} \\
     14 \\
@@ -286,7 +286,7 @@ and the largest possible library and prediction sets would be
     15 & 14 & 1.0 & 0.5 \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{L}} = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{L}} = \left[ \begin{array}{c}
     12 \\
     14 \\
     15 \\
@@ -304,7 +304,7 @@ and the largest possible library and prediction sets would be
     16 & 15 & \text{NA} & 1.0 \\
   \end{array}\right]
   \underset{\small \text{Matches}}{\Rightarrow}
-  y^{\mathscr{P}} = y = \left[ \begin{array}{c}
+  \mathbf{y}_{\mathscr{P}} = \mathbf{y}_a = \left[ \begin{array}{c}
     12 \\
     \text{NA} \\
     14 \\
