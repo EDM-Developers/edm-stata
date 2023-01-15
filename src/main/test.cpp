@@ -1707,9 +1707,11 @@ int basic_edm_explore(int numThreads)
 
   opts.lowMemoryMode = false;
 
-  std::vector<std::future<PredictionResult>> futures =
-    launch_tasks(genPtr, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalPredictions,
-                 saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, nullptr, nullptr, nullptr);
+  bool saveFinalTargets = false;
+
+  std::vector<std::future<PredictionResult>> futures = launch_tasks(
+    genPtr, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle, saveFinalTargets, saveFinalPredictions,
+    saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState, nullptr, nullptr, nullptr);
 
   int rc = 0;
 

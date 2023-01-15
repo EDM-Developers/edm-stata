@@ -320,6 +320,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   opts.copredict = false;
   opts.calcRhoMAE = true;
   opts.saveManifolds = false;
+  opts.saveTargets = false;
 
   int numExtras = atoi(argv[0]);
   bool dtMode = atoi(argv[1]);
@@ -361,6 +362,9 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   int p = atoi(argv[27]);
   opts.lowMemoryMode = atoi(argv[28]);
   opts.useOnlyPastToPredictFuture = atoi(argv[29]);
+
+  // TODO: Add 'saveTargets' option.
+  bool saveFinalTargets = false;
 
   auto extrasFactorVariables = stata_numlist<bool>("z_factor_var");
 
@@ -627,8 +631,8 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
 #endif
 
   futures = launch_tasks(generator, opts, Es, libraries, k, numReps, crossfold, explore, full, shuffle,
-                         saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode, usable, rngState,
-                         &io, keep_going, all_tasks_finished);
+                         saveFinalTargets, saveFinalPredictions, saveFinalCoPredictions, saveSMAPCoeffs, copredictMode,
+                         usable, rngState, &io, keep_going, all_tasks_finished);
 
   return SUCCESS;
 }
