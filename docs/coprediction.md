@@ -35,7 +35,7 @@ In coprediction mode, the training set will include the entirety of the $M_a$ ma
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{L} = M_a = ${M_a} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{L}}  = ${y_L_a} \]" />
 
-In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_c$ manifold for the $c$ time series and $\mathbf{y}_{\mathscr{P}} $ to:
+In copredict mode the most significant difference is that we change $\mathscr{P}$ to be the $M_c$ manifold for the $c$ time series and $\mathbf{y}_{\mathscr{P}}$ to:
 
 <span class="dynamic-equation" data-equation="\[ \mathscr{P} = M_c = ${M_c} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{P}}  = ${y_P_c} \]" />
 
