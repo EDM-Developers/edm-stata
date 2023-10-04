@@ -19,6 +19,8 @@ jobs:
       id: cuda-toolkit
       with:
         cuda: '11.5.1'
+        sub-packages: '["nvcc"]'
+        method: 'network'
     - name: Install ArrayFire
       working-directory: ${{github.workspace}}/gpu
       run: |
