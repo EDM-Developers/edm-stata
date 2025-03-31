@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-2019
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         path: gpu
     - uses: Jimver/cuda-toolkit@v0.2.11
@@ -33,7 +33,7 @@ jobs:
       working-directory: ${{github.workspace}}/gpu
       run: cmake --build build --config Release --target install
     - name: Archive plugin
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: edm_Windows_x64_gpu.plugin
         path: ${{github.workspace}}/gpu/bin/edm_Windows_x64_gpu.plugin
