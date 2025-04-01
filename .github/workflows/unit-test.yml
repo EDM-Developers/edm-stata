@@ -38,7 +38,7 @@ jobs:
     #   run: ./edm_cli ci-test.json
 
   # unit-test-asan-mac-arm:
-  #   runs-on: macos-11
+  #   runs-on: macos-latest
   #   steps:
   #   - name: Checkout a copy to compile for ARM
   #     uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
   #   #   run: ./edm_cli ci-test.json
 
   unit-test-asan-mac-x64:
-    runs-on: macos-11
+    runs-on: macos-13
     steps:
     - name: Checkout a copy to compile for x86
       uses: actions/checkout@v4

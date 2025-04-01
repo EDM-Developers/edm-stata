@@ -77,7 +77,7 @@ jobs:
 
 
 #  build-mac-arm:
-#    runs-on: macos-11
+#    runs-on: macos-latest
 #    steps:
 #    - name: Checkout a copy to compile for ARM
 #      uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 #        path: ${{github.workspace}}/arm/bin/edm_MacOSX_arm.plugin
 #
 #  build-mac-x64:
-#    runs-on: macos-11
+#    runs-on: macos-13
 #    steps:
 #    - name: Checkout a copy to compile for x86
 #      uses: actions/checkout@v4
@@ -149,7 +149,7 @@ jobs:
 #        path: ${{github.workspace}}/x64/bin/edm_Windows_x64.plugin
 
   # int-test-mac-arm:
-  #   runs-on: macos
+  #   runs-on: macos-latest
   #   needs: build-mac-arm
   #   steps:
   #   - name: Prepare integration test
@@ -163,7 +163,7 @@ jobs:
   #     run: diff -B reference.log ci-test.log
 
   # unit-test-asan-mac-arm:
-  #   runs-on: macos-11
+  #   runs-on: macos-latest
   #   steps:
   #   - name: Checkout a copy to compile for ARM
   #     uses: actions/checkout@v4
@@ -192,7 +192,7 @@ jobs:
   #   #   run: ./edm_cli ci-test.json
 
   # int-test-mac-x64:
-  #   runs-on: macos
+  #   runs-on: macos-13
   #   needs: build-mac-x64
   #   steps:
   #   - name: Prepare integration test

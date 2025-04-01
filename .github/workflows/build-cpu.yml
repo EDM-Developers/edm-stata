@@ -36,7 +36,7 @@ jobs:
         path: ${{github.workspace}}/x64/stata/edm.ado
 
   build-mac-arm:
-    runs-on: macos-11
+    runs-on: macos-latest
     steps:
     - name: Checkout a copy to compile for ARM
       uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
         path: ${{github.workspace}}/arm/bin/edm_MacOSX_arm.plugin
 
   build-mac-x64:
-    runs-on: macos-11
+    runs-on: macos-13
     steps:
     - name: Checkout a copy to compile for x86
       uses: actions/checkout@v4
