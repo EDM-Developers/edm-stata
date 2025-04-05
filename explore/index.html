@@ -1,0 +1,1091 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../time-delayed-embedding/">
+      
+      
+        <link rel="next" href="../xmap/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+    
+    
+      
+        <title>The explore subcommand - EDM Stata Package</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.4af4bdda.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Alegreya+Sans:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Alegreya Sans";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/sliders.css">
+    
+      <link rel="stylesheet" href="../stylesheets/fix-mathjax-font-subscript-bug.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-HXXCTZFK3Z"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-HXXCTZFK3Z",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-HXXCTZFK3Z",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-explore-subcommand" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="EDM Stata Package" class="md-header__button md-logo" aria-label="EDM Stata Package" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M128 64c0-17.7 14.3-32 32-32h160c17.7 0 32 14.3 32 32v352h96V256c0-17.7 14.3-32 32-32h128c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v160c0 17.7-14.3 32-32 32H320c-17.7 0-32-14.3-32-32V96h-96v160c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h96z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EDM Stata Package
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The explore subcommand
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EDM Stata Package" class="md-nav__button md-logo" aria-label="EDM Stata Package" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M128 64c0-17.7 14.3-32 32-32h160c17.7 0 32 14.3 32 32v352h96V256c0-17.7 14.3-32 32-32h128c17.7 0 32 14.3 32 32s-14.3 32-32 32h-96v160c0 17.7-14.3 32-32 32H320c-17.7 0-32-14.3-32-32V96h-96v160c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h96z"/></svg>
+
+    </a>
+    EDM Stata Package
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How does it work?
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            How does it work?
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../time-delayed-embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Time-delayed embedding
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    The explore subcommand
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    The explore subcommand
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-the-time-delayed-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create the time-delayed embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Split the data
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-into-the-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look into the future
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-edm-explore-a-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What does edm explore a do?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What does edm explore a do?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-simplex-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the simplex algorithm
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-s-map-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the S-map algorithm
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using the S-map algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-linear-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using linear regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#back-to-s-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      Back to S-map
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assessing-the-prediction-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assessing the prediction quality
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../xmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    The xmap subcommand
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adding-to-manifold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Adding variables to manifold
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../missing-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Missing data
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coprediction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Coprediction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/logistic-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Logistic map
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/chicago/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Chicago crime/temperature
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gpu/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    GPU Acceleration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../automated-workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Automated workflows
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Stata Help File
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-the-time-delayed-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create the time-delayed embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Split the data
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-into-the-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look into the future
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-edm-explore-a-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What does edm explore a do?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What does edm explore a do?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-the-simplex-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the simplex algorithm
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-s-map-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the S-map algorithm
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using the S-map algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-linear-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using linear regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#back-to-s-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      Back to S-map
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assessing-the-prediction-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assessing the prediction quality
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="the-explore-subcommand">The <code>explore</code> subcommand</h1>
+<script src="../assets/manifold.js" defer></script>
+<script src="../assets/explore.js" defer></script>
+
+<p>The <code>explore</code> subcommand focuses on taking a time series and trying to forecast the values it takes in the near future.
+In the grand scheme of empirical dynamic modelling, it is usually just the first step one would use in order to find the appropriate hyperparameters to choose before running a convergent cross mapping analysis (using the <code>xmap</code> command).</p>
+<h2 id="setup">Setup</h2>
+<p>Before describing the mechanics of the <code>explore</code> subcommand, we first need to take the given time series data, convert it into time-delayed reconconstructions, and define some notation.</p>
+<h3 id="create-the-time-delayed-embedding">Create the time-delayed embedding</h3>
+<p>Given the time series <span class="arithmatex">\(a_t\)</span>, we create the time-delayed embedding.</p>
+<div class="admonition tip">
+<p class="admonition-title">Choose the number of observations</p>
+<p><div class="slider-container"><input type="range" min="1" max="20" value="10" class="slider" id="numObs"></div></p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Choose a value for <span class="arithmatex">\(E\)</span></p>
+<p><div class="slider-container"><input type="range" min="1" max="10" value="2" class="slider" id="E"></div></p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Choose a value for <span class="arithmatex">\(\tau\)</span></p>
+<p><div class="slider-container"><input type="range" min="1" max="5" value="1" class="slider" id="tau"></div></p>
+</div>
+<p>The time-delayed embedding of the <span class="arithmatex">\(a\)</span> time series with the selected <span class="arithmatex">\(E\)</span> and <span class="arithmatex">\(\tau\)</span> is the manifold:</p>
+<p><span class="dynamic-equation" data-equation="\[ M_a = ${M_a} \]" /></p>
+<h3 id="split-the-data">Split the data</h3>
+<p>The manifold <span class="arithmatex">\(M_a\)</span> is then split into two parts, called the <em>library set</em> denoted <span class="arithmatex">\(\mathscr{L}\)</span> and the <em>prediction set</em> denoted <span class="arithmatex">\(\mathscr{P}\)</span>.</p>
+<p>By default, we take the points of the <span class="arithmatex">\(M_a\)</span> manifold and assign the half of them to <span class="arithmatex">\(\mathscr{L}\)</span> and the other half to <span class="arithmatex">\(\mathscr{P}\)</span>.</p>
+<p>In this case, the library set is</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathscr{L} = ${L} \]" /></p>
+<p>and the prediction set is</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \]" /></p>
+<p>It will help to introduce a notation to refer to a specific point in these sets based on its row number.
+E.g. in the example above, the first point in the library set is denoted</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathbf{x}_{[1]} = ${L_1} \]" /></p>
+<p>while the first point in the prediction set is denoted</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathbf{x}_{1} = ${P_1} \,. \]" /></p>
+<p>More generally <span class="arithmatex">\(\mathbf{x}_{[i]}\)</span> refers to the <span class="arithmatex">\(i\)</span>th point in <span class="arithmatex">\(\mathscr{L}\)</span>
+while <span class="arithmatex">\(\mathbf{x}_{j}\)</span> refers to the <span class="arithmatex">\(j\)</span>th point in <span class="arithmatex">\(\mathscr{P}\)</span>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the default case, the same point doesn't appear in both <span class="arithmatex">\(\mathscr{L}\)</span> and <span class="arithmatex">\(\mathscr{P}\)</span>, though given other options then the same point may appear in both sets (though during the prediction process, we would ignore the duplicate point in <span class="arithmatex">\(\mathscr{L}\)</span> for that prediction task).
+This is one good reason why we don't simply call these sets the 'train' and 'test' sets.</p>
+</div>
+<h3 id="look-into-the-future">Look into the future</h3>
+<p>Each point on the manifold refers to a small trajectory of a time series, and for each point we look <span class="arithmatex">\(p\)</span> observations into the future of the time series.</p>
+<div class="admonition tip">
+<p class="admonition-title">Choose a value for <span class="arithmatex">\(p\)</span></p>
+<p><div class="slider-container"><input type="range" min="-5" max="5" value="1" class="slider" id="p"></div></p>
+</div>
+<p>So if we take the first point of the prediction set <span class="arithmatex">\(\mathbf{x}_{1}\)</span> and say that <span class="arithmatex">\(y_1\)</span> is the value it takes <span class="arithmatex">\(p\)</span> observations in the future, we get:</p>
+<p><span class="dynamic-equation" data-equation="\[\mathbf{x}_{[1]} = ${L_1} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_{[1]}  = ${y_L_1} \]" /></p>
+<p><span class="dynamic-equation" data-equation="\[\mathbf{x}_{1} = ${P_1} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1  = ${y_P_1} \]" /></p>
+<p>This <span class="arithmatex">\(p\)</span> may be thought of as the <em>prediction horizon</em>, and in <code>explore</code> mode is defaults to <span class="arithmatex">\(\tau\)</span> and in <code>xmap</code> mode it defaults to 0.</p>
+<div class="admonition note">
+<p class="admonition-title">Our <span class="arithmatex">\(p\)</span> versus the <span class="arithmatex">\(T_p\)</span> which is common in the literature</p>
+<p>In the literature, instead of measuring the number of observations <span class="arithmatex">\(p\)</span> ahead, authors normally use the value <span class="arithmatex">\(T_p\)</span> to denote the amount of time this corresponds to.
+When data is regularly sampled (e.g. <span class="arithmatex">\(t_i = i\)</span>) then there is no difference (e.g. <span class="arithmatex">\(T_p = p\)</span>), however for irregularly sampled data the actual time difference may be different for each prediction.</p>
+</div>
+<p>In the training set, this means each point of <span class="arithmatex">\(\mathscr{L}\)</span> matches the corresponding value in <span class="arithmatex">\(\mathbf{y}_{\mathscr{L}}\)</span>:</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathscr{L} = ${L} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{L}} = ${y_L} \]" /></p>
+<p>Similarly, for the prediction set:</p>
+<p><span class="dynamic-equation" data-equation="\[ \mathscr{P} = ${P} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad \mathbf{y}_{\mathscr{P}} = ${y_P} \]" /></p>
+<!-- 
+We may refer to elements of the $y^{\mathscr{L}}$ vector as *projections* as they come about by taking the $a$ time series and projecting it into the future by $p$ observations.
+-->
+
+<h2 id="what-does-edm-explore-a-do">What does <code>edm explore a</code> do?</h2>
+<p>When running <code>edm explore a</code>, we pretend that we don't know the values in <span class="arithmatex">\(\mathbf{y}_{\mathscr{P}}\)</span> and that we want to predict them given we know <span class="arithmatex">\(\mathscr{L}\)</span> and <span class="arithmatex">\(\mathbf{y}_{\mathscr{L}}\)</span>.</p>
+<p>The first prediction is to try to find the value of <span class="arithmatex">\(y_1\)</span> given the corresponding point <span class="arithmatex">\(\mathbf{x}_1\)</span>:</p>
+<p><span class="dynamic-equation" data-equation="\[\mathbf{x}_{1} = ${P_1} \quad \underset{\small \text{Matches}}{\Rightarrow} \quad y_1  = \, ??? \]" /></p>
+<p>We will use <span class="arithmatex">\(\mathbf{x}_1\)</span> to predict <span class="arithmatex">\(y_1\)</span>, so the <span class="arithmatex">\(\mathbf{x}_1\)</span> values can be viewed as <em>covariates</em> and <span class="arithmatex">\(y_1\)</span> as the <em>target</em> of the prediction.</p>
+<p>There are two main algorithms used to make these predctions: the simplex algorithm, and the S-map method.
+For those familiar with traditional statistical learning techniques, it may be helpful to think of the simplex algorithm as being a variation on the <span class="arithmatex">\(k\)</span>-nearest neighbours method, and S-map being a modification of the multivariate linear regression method or equivalently the autoregressive time series model.</p>
+<h3 id="using-the-simplex-algorithm">Using the simplex algorithm</h3>
+<p>If we have chosen the <code>algorithm</code> to be the simplex algorithm, then we start by finding the <span class="arithmatex">\(k\)</span> points in <span class="arithmatex">\(\mathscr{L}\)</span> which are closest to the given <span class="arithmatex">\(\mathbf{x}_1\)</span>.</p>
+<p>Let's say that we chose <span class="arithmatex">\(k=2\)</span> and also pretend that the two most similar points to <span class="arithmatex">\(\mathbf{x}_1\)</span> are <span class="arithmatex">\(\mathbf{x}_{[3]}\)</span> and <span class="arithmatex">\(\mathbf{x}_{[5]}\)</span>.
+We will choose the notation </p>
+<div class="arithmatex">\[
+    \mathcal{NN}_k(\mathbf{x}_{1}) = \{ 3, 5 \}
+\]</div>
+<p>to describe the set of the indices for the <span class="arithmatex">\(k\)</span> nearest neighbours of <span class="arithmatex">\(\mathbf{x}_{1}\)</span>.</p>
+<p>In this process, we also store the distances (by default, using Euclidean distance) between <span class="arithmatex">\(\mathbf{x}_{1}\)</span> and its nearest neighbours, giving special attention to the smallest distance <span class="arithmatex">\(d_{\text{min}} &gt; 0\)</span>.</p>
+<p>Then, we predict that</p>
+<div class="arithmatex">\[
+    \hat{y}_1 := w_1 \times y_{[3]} + w_2 \times y_{[5]}
+\]</div>
+<p>where <span class="arithmatex">\(w_1\)</span> and <span class="arithmatex">\(w_2\)</span> are some weights with add up to 1. Basically we are predicting that <span class="arithmatex">\(y_1\)</span> is a weighted average of the <span class="arithmatex">\(y_{[j]}\)</span> points for each <span class="arithmatex">\(j \in \mathcal{NN}_k(\mathbf{x}_{1})\)</span>.</p>
+<p>Specifically, the weights depend upon the distance from <span class="arithmatex">\(\mathbf{x}_{1}\)</span> to the corresponding points in the library set.</p>
+<p>If weight <span class="arithmatex">\(w_i\)</span> corresponds to library point <span class="arithmatex">\(\mathbf{x}_{[j]}\)</span> then we have</p>
+<div class="arithmatex">\[
+    w_i \propto \exp\bigl\{ -\theta \, d( \mathbf{x}_{i} , \mathbf{x}_{[j]} ) / d_{\text{min}} \bigr\} \,.
+\]</div>
+<p>Here, the notation <span class="arithmatex">\(d(\mathbf{x}_i, \mathbf{x}_{[j]})\)</span> refers to the distance between prediction point <span class="arithmatex">\(i\)</span> and library point <span class="arithmatex">\(j\)</span>, and <span class="arithmatex">\(\theta \ge 0\)</span> is a hyperparameter chosen by the user.</p>
+<p>In summary, we:</p>
+<ol>
+<li>Loop through the prediction set, letting <span class="arithmatex">\(i = 1\)</span> to <span class="arithmatex">\(| \mathscr{P} |\)</span>:<ol>
+<li>Start with our covariates <span class="arithmatex">\(\mathbf{x}_{i}\)</span> and target <span class="arithmatex">\(y_i\)</span> from the prediction set, though we temporarily pretend that we don't know <span class="arithmatex">\(y_i\)</span>.</li>
+<li>Find the <span class="arithmatex">\(k\)</span> points in the library set that are closest to <span class="arithmatex">\(\mathbf{x}_{i}\)</span>; in effect, this is constructing a very localised training set of pairs <span class="arithmatex">\(\mathbf{x}_{[j]} \to y_{[j]}\)</span> for <span class="arithmatex">\(j \in \mathcal{NN}_k(\mathbf{x}_{i})\)</span>.</li>
+<li>Make the prediction <span class="arithmatex">\(\hat{y}_i\)</span> as a weighted average of the <span class="arithmatex">\(y_{[j]}\)</span> neighbour targets.</li>
+</ol>
+</li>
+<li>Summarise the prediction accuracy (e.g. the <span class="arithmatex">\(\rho\)</span> correlation) between the <span class="arithmatex">\(\hat{y}_i\)</span> predictions and the true <span class="arithmatex">\(y_i\)</span> values.</li>
+</ol>
+<h3 id="using-the-s-map-algorithm">Using the S-map algorithm</h3>
+<p>The alternative choice for <code>algorithm</code> is the S-map procedure, which is short for <em>Sequential Locally Weighted Global Linear Maps</em>.</p>
+<p>This prediction algorithm uses linear regression to predict each point in the prediction set, though importantly it uses a <strong>different</strong> linear model for each prediction.</p>
+<h4 id="using-linear-regression">Using linear regression</h4>
+<p>To make the contrast obvious, let's imagine how traditional linear regression could be used to take some covariates <span class="arithmatex">\(\mathbf{x}_{i}\)</span> from <span class="arithmatex">\(\mathscr{P}\)</span> and try to predict <span class="arithmatex">\(y_i\)</span>.</p>
+<p>Linear regression would take the library set and solve the linear system <span class="arithmatex">\(\overline{\mathscr{L}} \boldsymbol{\beta} = \mathbf{y}_{\mathscr{L}}\)</span> for the <span class="arithmatex">\(\boldsymbol{\beta} \in \mathbb{R}^{E+1}\)</span> coefficients given <span class="arithmatex">\(\overline{\mathscr{L}} = [\mathbf{1}; \mathscr{L}]\)</span> (similarly <span class="arithmatex">\(\overline{\mathbf{x}}_i\)</span> is <span class="arithmatex">\(\mathbf{x}_i\)</span> prepended by a 1).</p>
+<p>These coeffecients could then be used to make predictions like</p>
+<div class="arithmatex">\[
+    \hat{y}_i = \overline{\mathbf{x}}_{i}^\top \boldsymbol{\beta}
+\]</div>
+<p>As the <span class="arithmatex">\(\overline{\mathbf{x}}_i\)</span>'s are short time series trajectories, this method of forecasting is equivalent to fitting an autoregressive process of length <span class="arithmatex">\(E\)</span>.</p>
+<h4 id="back-to-s-map">Back to S-map</h4>
+<p>The S-map procedure deviates from this process by creating a customised <span class="arithmatex">\(\boldsymbol{\beta}_i\)</span> vector when making each prediction given <span class="arithmatex">\(\mathbf{x}_i\)</span> rather than using a shared <span class="arithmatex">\(\boldsymbol{\beta}\)</span> for all of the system.</p>
+<p>It achieves this by replacing the traditional regression loss function of </p>
+<div class="arithmatex">\[
+    \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} | \mathbf{y}_{\mathscr{L}} - \overline{\mathscr{L}} \boldsymbol{\beta} |^2
+\]</div>
+<p>with a weighted form</p>
+<div class="arithmatex">\[
+    \hat{\boldsymbol{\beta}}_i = \arg\min_{\boldsymbol{\beta}} \bigl| \mathbf{w}_i \circ \bigl( \mathbf{y}_{\mathscr{L}} - \overline{\mathscr{L}} \boldsymbol{\beta} \bigr) \bigr|^2 \,.
+\]</div>
+<p>The S-map loss function has the extra <span class="arithmatex">\(\mathbf{w}_i\)</span> weight vector (included by elementwise multiplication) and the <span class="arithmatex">\(j\)</span> element of the vector is given by</p>
+<div class="arithmatex">\[
+    w_{i,j} = \exp\bigl\{ -\theta \, d( \mathbf{x}_{i} , \mathbf{x}_{[j]} ) / d_{\text{mean}} \bigr\} \,.
+\]</div>
+<p>In this equation, <span class="arithmatex">\(d_{\text{mean}}\)</span> refers to the average distance between <span class="arithmatex">\(\mathbf{x}_{i}\)</span> and every point in <span class="arithmatex">\(\mathscr{L}\)</span>.</p>
+<p>Therefore, the S-map method constructs a unique linear regression model when it makes each prediction, and the linear system being constructed is biased so that points closer to the given <span class="arithmatex">\(\mathbf{x}_{i}\)</span> covariates are given higher weighting in the regression than those further away. </p>
+<p>In the extreme case of <span class="arithmatex">\(\theta = 0\)</span>, then the S-map procedure degenerates to the simple linear regression described above.</p>
+<p>Normally however we set <span class="arithmatex">\(\theta &gt; 0\)</span>, and the nearby points heavily influence the S-map predictions and the points very far away from the current <span class="arithmatex">\(\mathbf{x}_{i}\)</span> have a negligable impact on the predictions.</p>
+<p>In fact, since the points very far away from the current point have basically no impact on the S-map predictions, we can simply drop them in order to simplify the computational task. </p>
+<p>Solving every linear system is a time-consuming process, so only making the linear approximations based on the most relevant <span class="arithmatex">\(k\)</span> points from the library set can help alleviate the computational burden.</p>
+<p>To summarise, we:</p>
+<ol>
+<li>Loop through the prediction set, letting <span class="arithmatex">\(i = 1\)</span> to <span class="arithmatex">\(| \mathscr{P} |\)</span>:<ol>
+<li>Start with our covariates <span class="arithmatex">\(\mathbf{x}_{i}\)</span> and target <span class="arithmatex">\(y_i\)</span> from the prediction set, though we temporarily pretend that we don't know <span class="arithmatex">\(y_i\)</span>.</li>
+<li>Find the <span class="arithmatex">\(k\)</span> points in the library set that are closest to <span class="arithmatex">\(\mathbf{x}_{i}\)</span>; in effect, this is constructing a very localised training set of pairs <span class="arithmatex">\(\mathbf{x}_{[j]} \to y_{[j]}\)</span> for <span class="arithmatex">\(j \in \mathcal{NN}_k(\mathbf{x}_{i})\)</span>.</li>
+<li>Solve a weighted linear system to get the coefficients <span class="arithmatex">\(\boldsymbol{\beta}_i\)</span>.</li>
+<li>Make the prediction <span class="arithmatex">\(\hat{y}_i\)</span> using the linear combination of <span class="arithmatex">\(\mathbf{x}_i\)</span> and <span class="arithmatex">\(\boldsymbol{\beta}_i\)</span>.</li>
+</ol>
+</li>
+<li>Summarise the prediction accuracy (e.g. the <span class="arithmatex">\(\rho\)</span> correlation) between the <span class="arithmatex">\(\hat{y}_i\)</span> predictions and the true <span class="arithmatex">\(y_i\)</span> values.</li>
+</ol>
+<h2 id="assessing-the-prediction-quality">Assessing the prediction quality</h2>
+<p>We calculate the <span class="arithmatex">\(\hat{y}_i\)</span> predictions for each target in the prediction set (so <span class="arithmatex">\(i = 1, \dots, |\mathscr{P}|\)</span>), and store the predictions in a vector <span class="arithmatex">\(\hat{y}\)</span>.</p>
+<p>As we observe the true value of <span class="arithmatex">\(y_i\)</span> for most (if not all) of the targets in the prediction set, we can compare our <span class="arithmatex">\(\hat{y}_i\)</span> predictions to the observed values.
+We assess the quality of the predictions using either the correlation</p>
+<div class="arithmatex">\[ \rho := \text{Correlation}(y , \hat{y}) \]</div>
+<p>or using the mean absolute error</p>
+<div class="arithmatex">\[ \text{MAE} := \frac{1}{| \mathscr{P} |} \sum_{i=1}^{| \mathscr{P} |} | y_i - \hat{y}_i | . \]</div>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+        <script src="../assets/setup-mathjax.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+      
+    
+  </body>
+</html>
