@@ -1,21 +1,16 @@
 // Adapted from https://github.com/jhasse/ThreadPool/blob/master/ThreadPool.hpp
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <format>
 #include <functional>
 #include <future>
-#include <queue>
+#include <mutex>
+#include <thread>
 #include <vector>
 
-#ifndef _MSC_VER
-#ifndef __APPLE__
-#include <pthread.h>
-
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-#include <fmt/format.h>
-#endif
-#endif
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
 

@@ -11,21 +11,22 @@
 #pragma warning(disable : 4018)
 
 #include "edm.h"
-#include "cpu.h"
+#include "thread_pool.h"
 #include "distances.h"
 #include "library_prediction_split.h"
-#include "stats.h" // for correlation and mean_absolute_error
-#include "thread_pool.h"
 
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
+#include <algorithm>
+#include <chrono>
+#include <future>
+
+#ifdef JSON
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 #endif
 
 #define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
-#include <algorithm> // std::partial_sort
-#include <chrono>
 #include <cmath>
 
 #if defined(DUMP_LOW_LEVEL_INPUTS) || defined(WITH_ARRAYFIRE)

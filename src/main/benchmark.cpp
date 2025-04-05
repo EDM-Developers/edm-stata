@@ -9,10 +9,8 @@
 #endif
 #endif
 
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-#include <fmt/format.h>
+#include <format>
+#include <iostream>
 
 #include "cli.h"
 #include "common.h"
@@ -22,8 +20,6 @@
 #define EIGEN_NO_DEBUG
 #define EIGEN_DONT_PARALLELIZE
 #include <Eigen/SVD>
-
-#include <iostream>
 
 using MatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 

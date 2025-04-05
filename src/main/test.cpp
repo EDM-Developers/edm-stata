@@ -1,11 +1,7 @@
-#include <catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <iostream>
-
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-#include <fmt/format.h>
+#include <format>
 
 #include "distances.h"
 #include "edm.h"
@@ -44,7 +40,7 @@ DistanceIndexPairs afWassersteinDistances(int Mp_i, const Options& opts, const M
 void print_raw_matrix(const double* M, int rows, int cols)
 {
 
-  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : std::format("{:.1f}", v); };
 
   std::cout << "\n";
   for (int i = 0; i < rows; i++) {
@@ -60,7 +56,7 @@ void print_raw_matrix(const double* M, int rows, int cols)
 void print_eig_matrix(const Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>& M)
 {
 
-  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : std::format("{:.1f}", v); };
 
   std::cout << "\n";
   for (int i = 0; i < M.rows(); i++) {
@@ -74,7 +70,7 @@ void print_eig_matrix(const Eigen::Map<const Eigen::Matrix<double, Eigen::Dynami
 
 void print_manifold(Manifold& M)
 {
-  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : fmt::format("{:.1f}", v); };
+  auto stringVersion = [](double v) { return (v == NA) ? std::string(" . ") : std::format("{:.1f}", v); };
 
   std::cout << "\n";
   for (int i = 0; i < M.numPoints(); i++) {
@@ -1355,7 +1351,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
     int Mp_j = 2;
 
     for (int i = 0; i < M.numPoints(); i++) {
-      // std::cout << fmt::format("Cost matrix M_i={}\n", i);
+      // std::cout << std::format("Cost matrix M_i={}\n", i);
 
       // auto M_i_map = M.laggedObsMap(i);
       // auto Mp_j_map = Mp.laggedObsMap(Mp_j);
@@ -1369,7 +1365,7 @@ TEST_CASE("Wasserstein distance", "[wasserstein]")
       int len_i, len_j;
       std::unique_ptr<double[]> C = wasserstein_cost_matrix(M, Mp, i, Mp_j, opts, len_i, len_j);
       // print_raw_matrix(C.get(), len_i, len_j);
-      // std::cout << fmt::format("len_i = {} len_j = {}\n", len_i, len_j) << std::endl;
+      // std::cout << std::format("len_i = {} len_j = {}\n", len_i, len_j) << std::endl;
     }
 
     DistanceIndexPairs wDistPairCPU = wasserstein_distances(Mp_j, opts, M, Mp);

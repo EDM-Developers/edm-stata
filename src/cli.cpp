@@ -62,7 +62,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
   int numTaskGroups = testInputs.size();
 
   if (io != nullptr) {
-    io->print(fmt::format("Number of tests in this JSON file is {}\n", numTaskGroups));
+    io->print(std::format("Number of tests in this JSON file is {}\n", numTaskGroups));
   }
 
   for (int taskGroupNum = 0; taskGroupNum < numTaskGroups; taskGroupNum++) {
@@ -72,7 +72,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
     opts.nthreads = nthreads;
 
     if (io != nullptr) {
-      io->print(fmt::format("[{}] Starting the Stata command: {}\n", taskGroupNum, opts.cmdLine));
+      io->print(std::format("[{}] Starting the Stata command: {}\n", taskGroupNum, opts.cmdLine));
     }
 
     ManifoldGenerator generator = taskGroup["generator"];
@@ -116,7 +116,7 @@ json run_tests(json testInputs, int nthreads, IO* io)
   }
 
   if (io != nullptr) {
-    io->print(fmt::format("Return code is {}\n", rc));
+    io->print(std::format("Return code is {}\n", rc));
   }
 
   return results;

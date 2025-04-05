@@ -1,11 +1,9 @@
+#pragma once
+
+#include <format>
 #include "edm.h"
 #include <fstream>
 #include <iomanip>
-
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-#include <fmt/format.h>
 
 #ifdef JSON
 

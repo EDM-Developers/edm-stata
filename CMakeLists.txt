@@ -8,16 +8,6 @@ cmake_minimum_required(VERSION 3.12)
 # - gbench creates a Google Benchmarks executable which performs
 #   microbenchmarking on the core EDM methods.
 
-# As we use vcpkg for package management, we need to run CMake will
-# the vcpkg toolchain file. As such, we require the environment variable
-# VCPKG_INSTALLATION_ROOT to be set before running cmake. This contains.
-if(DEFINED ENV{VCPKG_INSTALLATION_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-endif()
-if(DEFINED ENV{VCPKG_TARGET_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
-  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_TARGET_TRIPLET}" CACHE STRING "")
-endif()
-
 # Optionally, the ARMMODE environment variable specifies whether we are
 # compiling for ARM or x86, though it defaults to x86 and can normally
 # be ignored.
@@ -27,8 +17,7 @@ else()
   set(ARMMODE FALSE CACHE BOOL "Compiling to x86")
 endif()
 
-# Optionally build the Google Benchmarks binary, though remember
-# to add the "benchmark" dependency to vcpkg.json.
+# Optionally build the Google Benchmarks binary
 if(DEFINED ENV{GBENCH})
   set(GBENCH TRUE CACHE BOOL "Building the Google Benchmarks target")
 else()
@@ -43,11 +32,20 @@ project(edm-stata-package CXX)
 
 option(EDM_WITH_ARRAYFIRE "Enable ArrayFire based GPU support" OFF)
 
+# Only include vcpkg for developer builds
+if(DEFINED ENV{VCPKG_ROOT})
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# Core requirements for all builds
+if(NOT WIN32)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
+find_package(Threads REQUIRED)
+
 # ↓↓↓ Third-party code ↓↓↓
-find_package(fmt CONFIG REQUIRED)
-find_package(nlohmann_json 3.2.0 REQUIRED)
 if (EDM_WITH_ARRAYFIRE)
   find_package(CUDA REQUIRED)
   if (NOT WIN32)
@@ -63,11 +61,6 @@ if (EDM_WITH_ARRAYFIRE)
 
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};${cuda_architecture_flags})
 endif ()
-
-if(NOT WIN32)
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
-endif()
-find_package(Threads REQUIRED)
 
 # Output paths
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR})
@@ -85,8 +78,8 @@ set(CACHE SYSTEM PROPERTY STRINGS APPLEMAC HP9000 OPUNIX STWIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSYSTEM=${SYSTEM}")
 
 if(WIN32)
-  set(CMAKE_CXX_FLAGS_DEBUG "/MTd /W4 /permissive /ZI /fsanitize=address /bigobj")
-  set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ox /fp:fast /external:anglebrackets /external:W0")
+  set(CMAKE_CXX_FLAGS_DEBUG "/MDd /W4 /permissive /ZI /fsanitize=address /bigobj")
+  set(CMAKE_CXX_FLAGS_RELEASE "/MD /Ox /fp:fast /external:anglebrackets /external:W0")
 else()
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fsanitize=address")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
@@ -125,7 +118,7 @@ if (EDM_WITH_ARRAYFIRE)
   endif ()
 endif ()
 
-# The main EDM plugin for Stata
+# The main EDM plugin for Stata - minimal external dependencies
 add_library(edm_plugin SHARED ${COMMON_SRC} src/main/stata.cpp vendor/stplugin.h)
 
 # Rename the output plugin to 'edm_Windows_x64.plugin' or 'edm_MacOSX_arm.plugin' as appropriate
@@ -152,7 +145,7 @@ set(BUILD_SUFFIX ${BUILD_SUFFIX} CACHE STRING "Compile to edm{BUILD_SUFFIX}.plug
 if (ARMMODE)
   set_target_properties(edm_plugin
     PROPERTIES
-      CXX_STANDARD 17
+      CXX_STANDARD 20
       PREFIX ""
       POSITION_INDEPENDENT_CODE ON
       OUTPUT_NAME "edm"
@@ -162,7 +155,7 @@ if (ARMMODE)
 else()
   set_target_properties(edm_plugin
     PROPERTIES
-      CXX_STANDARD 17
+      CXX_STANDARD 20
       PREFIX ""
       POSITION_INDEPENDENT_CODE ON
       OUTPUT_NAME "edm"
@@ -171,6 +164,21 @@ else()
   )
 endif()
 
+# Core plugin dependencies
+target_include_directories(edm_plugin PRIVATE src)
+target_include_directories(edm_plugin SYSTEM PRIVATE 
+    vendor 
+    vendor/eigen-3.4.0 
+    ${CMAKE_SOURCE_DIR}/vendor/json/include  # Path for vendored nlohmann/json
+)
+target_compile_definitions(edm_plugin PRIVATE JSON NOMINMAX)
+target_link_libraries(edm_plugin PRIVATE Threads::Threads)
+
+if (EDM_WITH_ARRAYFIRE)
+  target_compile_definitions(edm_plugin PRIVATE WITH_ARRAYFIRE)
+  target_include_directories(edm_plugin SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda cu_lpDistance)
+endif()
 
 # Store output as both bin/edm_OS_ARCH.plugin and test/edm.plugin
 install(TARGETS edm_plugin DESTINATION bin)
@@ -200,110 +208,92 @@ if(DEFINED ENV{EDM_CI_DIR})
   endif()
 endif()
 
-# Grab vendored files (e.g. the Stata/C interface files)
-target_include_directories(edm_plugin PRIVATE src)
-target_include_directories(edm_plugin SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
-
-target_compile_definitions(edm_plugin PRIVATE JSON)
-target_compile_definitions(edm_plugin PRIVATE NOMINMAX)
-target_link_libraries(edm_plugin PRIVATE fmt::fmt-header-only)
-target_link_libraries(edm_plugin PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(edm_plugin PRIVATE Threads::Threads)
-
-if (EDM_WITH_ARRAYFIRE)
-  target_compile_definitions(edm_plugin PRIVATE WITH_ARRAYFIRE)
-  target_include_directories(edm_plugin SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_plugin PRIVATE ArrayFire::afcuda cu_lpDistance)
-endif ()
-
 # Formatting with clang-format
 include(ClangFormat)
 clangformat_setup(${COMMON_SRC} src/main/benchmark.cpp src/main/cli_main.cpp src/main/test.cpp src/main/stata.cpp)
 
-# ↓↓↓ Developer builds ↓↓↓
-# Command-line interface executable
-add_executable(edm_cli ${COMMON_SRC} src/main/cli_main.cpp)
+# ↓↓↓ Developer builds (require vcpkg) ↓↓↓
+if(DEFINED ENV{VCPKG_ROOT})
+  # Command-line interface executable
+  add_executable(edm_cli ${COMMON_SRC} src/main/cli_main.cpp)
 
-set_target_properties(edm_cli
-  PROPERTIES
-    CXX_STANDARD 17
-    POSITION_INDEPENDENT_CODE ON
-    OSX_ARCHITECTURES "arm64;x86_64"
-)
-
-target_compile_definitions(edm_cli PRIVATE JSON)
-target_compile_definitions(edm_cli PRIVATE NOMINMAX)
-target_include_directories(edm_cli PRIVATE src)
-target_include_directories(edm_cli SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
-target_link_libraries(edm_cli PRIVATE
-  fmt::fmt-header-only
-  Threads::Threads
-  nlohmann_json::nlohmann_json
+  set_target_properties(edm_cli
+    PROPERTIES
+      CXX_STANDARD 20
+      POSITION_INDEPENDENT_CODE ON
+      OSX_ARCHITECTURES "arm64;x86_64"
   )
-if (EDM_WITH_ARRAYFIRE)
-  target_compile_definitions(edm_cli PRIVATE WITH_ARRAYFIRE)
-  target_include_directories(edm_cli SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda cu_lpDistance)
-endif ()
-install(TARGETS edm_cli DESTINATION bin OPTIONAL)
-install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
-# Google Benchmarks
-add_executable(gbench ${COMMON_SRC} src/main/benchmark.cpp)
-set_target_properties(gbench
-  PROPERTIES
-    CXX_STANDARD 17
-    PREFIX ""
-    POSITION_INDEPENDENT_CODE ON
-)
+  target_compile_definitions(edm_cli PRIVATE JSON)
+  target_compile_definitions(edm_cli PRIVATE NOMINMAX)
+  target_include_directories(edm_cli PRIVATE src)
+  target_include_directories(edm_cli SYSTEM PRIVATE vendor vendor/eigen-3.4.0 vendor/json)
+  target_link_libraries(edm_cli PRIVATE
+    Threads::Threads
+    )
+  if (EDM_WITH_ARRAYFIRE)
+    target_compile_definitions(edm_cli PRIVATE WITH_ARRAYFIRE)
+    target_include_directories(edm_cli SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+    target_link_libraries(edm_cli PRIVATE ArrayFire::afcuda cu_lpDistance)
+  endif ()
+  install(TARGETS edm_cli DESTINATION bin OPTIONAL)
+  install(TARGETS edm_cli DESTINATION test OPTIONAL)
 
-if (GBENCH)
-  # The google benchmarks currently won't build with
-  # the GPU version due to some static/dynamic incompatibility.
-  if (NOT (EDM_WITH_ARRAYFIRE AND WIN32))
+  # Google Benchmarks
+  if(GBENCH)
+    add_executable(gbench ${COMMON_SRC} src/main/benchmark.cpp)
+    set_target_properties(gbench
+      PROPERTIES
+        CXX_STANDARD 20
+        PREFIX ""
+        POSITION_INDEPENDENT_CODE ON
+    )
+
+    # The google benchmarks currently won't build with
+    # the GPU version due to some static/dynamic incompatibility.
+    if (NOT (EDM_WITH_ARRAYFIRE AND WIN32))
+      if(WIN32)
+        target_compile_options(gbench PRIVATE "/MD")
+      endif()
+
+      find_package(benchmark CONFIG REQUIRED)
+      target_compile_definitions(gbench PRIVATE JSON)
+      target_compile_definitions(gbench PRIVATE NOMINMAX)
+      target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
+      target_include_directories(gbench PRIVATE src)
+      target_include_directories(gbench SYSTEM PRIVATE vendor vendor/eigen-3.4.0 vendor/json)
+      target_link_libraries(gbench PRIVATE Threads::Threads)
+      if (EDM_WITH_ARRAYFIRE)
+        target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
+        target_include_directories(gbench SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+        target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
+      endif ()
+      install(TARGETS gbench DESTINATION test OPTIONAL)
+
+    endif()
+  endif()
+
+  # Test executable (optional)
+  find_package(Catch2 3 QUIET)
+  if(Catch2_FOUND)
+    add_executable(edm_test ${COMMON_SRC} src/main/test.cpp)
+    set_target_properties(edm_test PROPERTIES CXX_STANDARD 20)
+    target_compile_definitions(edm_test PRIVATE NOMINMAX)
+    target_include_directories(edm_test PRIVATE src)
+    target_include_directories(edm_test SYSTEM PRIVATE vendor vendor/eigen-3.4.0 vendor/json)
     if(WIN32)
-      target_compile_options(gbench PRIVATE "/MD")
+      # Needs "/MDd" to compile in debug mode, however it still won't run in that mode..
+      target_compile_options(edm_test PRIVATE "/MD")
     endif()
 
-    find_package(benchmark CONFIG REQUIRED)
-    target_compile_definitions(gbench PRIVATE JSON)
-    target_compile_definitions(gbench PRIVATE NOMINMAX)
-    target_link_libraries(gbench PRIVATE benchmark::benchmark benchmark::benchmark_main)
-    target_include_directories(gbench PRIVATE src)
-    target_include_directories(gbench SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
-    target_link_libraries(gbench PRIVATE fmt::fmt-header-only)
-    target_link_libraries(gbench PRIVATE Threads::Threads)
-    target_link_libraries(gbench PRIVATE nlohmann_json::nlohmann_json)
+    target_link_libraries(edm_test PRIVATE Catch2::Catch2WithMain)
+    target_link_libraries(edm_test PRIVATE Threads::Threads)
     if (EDM_WITH_ARRAYFIRE)
-      target_compile_definitions(gbench PRIVATE WITH_ARRAYFIRE)
-      target_include_directories(gbench SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
-      target_link_libraries(gbench PRIVATE ArrayFire::afcuda cu_lpDistance)
+      target_compile_definitions(edm_test PRIVATE WITH_ARRAYFIRE)
+      target_include_directories(edm_test SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+      target_link_libraries(edm_test PRIVATE ArrayFire::afcuda cu_lpDistance)
     endif ()
-    install(TARGETS gbench DESTINATION test OPTIONAL)
 
+    install(TARGETS edm_test DESTINATION test OPTIONAL)
   endif()
 endif()
-
-find_package(Catch2 3 REQUIRED)
-
-add_executable(edm_test ${COMMON_SRC} src/main/test.cpp)
-set_target_properties(edm_test PROPERTIES CXX_STANDARD 17)
-target_compile_definitions(edm_test PRIVATE NOMINMAX)
-target_include_directories(edm_test PRIVATE src)
-target_include_directories(edm_test SYSTEM PRIVATE vendor vendor/eigen-3.4.0)
-if(WIN32)
-  # Needs "/MDd" to compile in debug mode, however it still won't run in that mode..
-  target_compile_options(edm_test PRIVATE "/MD")
-endif()
-
-target_link_libraries(edm_test PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(edm_test PRIVATE fmt::fmt-header-only)
-target_link_libraries(edm_test PRIVATE Threads::Threads)
-target_link_libraries(edm_test PRIVATE nlohmann_json::nlohmann_json)
-if (EDM_WITH_ARRAYFIRE)
-  target_compile_definitions(edm_test PRIVATE WITH_ARRAYFIRE)
-  target_include_directories(edm_test SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(edm_test PRIVATE ArrayFire::afcuda cu_lpDistance)
-endif ()
-
-install(TARGETS edm_test DESTINATION test OPTIONAL)

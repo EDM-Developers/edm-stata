@@ -4,10 +4,7 @@
 #include "edm.h"
 #include "stplugin.h"
 
-#ifndef FMT_HEADER_ONLY
-#define FMT_HEADER_ONLY
-#endif
-#include <fmt/format.h>
+#include <format>
 
 #include <algorithm>
 #include <future>
@@ -66,7 +63,7 @@ void print_error(std::string command, ST_retcode rc)
 {
   // Don't print header if rc=SUCCESS or rc=1 (when Break button pressed)
   if (rc > 1 && io.verbosity > 1) {
-    io.error((char*)fmt::format("Error in edm '{}': ", command).c_str());
+    io.error((char*)std::format("Error in edm '{}': ", command).c_str());
   }
   switch (rc) {
     case TOO_FEW_VARIABLES:
@@ -130,7 +127,7 @@ std::vector<T> stata_columns(ST_int j0, int numCols = 1)
         ST_double value;
         ST_retcode rc = SF_vdata(j, i, &value);
         if (rc) {
-          throw std::runtime_error(fmt::format("Cannot read Stata's variable {}", j));
+          throw std::runtime_error(std::format("Cannot read Stata's variable {}", j));
         }
         if (SF_is_missing(value)) {
           if (std::is_floating_point<T>::value) {
@@ -165,7 +162,7 @@ void write_stata_column(ST_double* data, int len, ST_int j, const std::vector<bo
         ST_double value = (data[obs] == MISSING_D) ? SV_missval : data[obs];
         ST_retcode rc = SF_vstore(j, i, value);
         if (rc) {
-          throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+          throw std::runtime_error(std::format("Cannot write to Stata's variable {}", j));
         }
         obs += 1;
       }
@@ -198,7 +195,7 @@ void write_stata_columns(double* matrix, int matrixNumRows, int matrixNumCols, S
           }
           ST_retcode rc = SF_vstore(j, i, value);
           if (rc) {
-            throw std::runtime_error(fmt::format("Cannot write to Stata's variable {}", j));
+            throw std::runtime_error(std::format("Cannot write to Stata's variable {}", j));
           }
         }
         obs += 1;
@@ -264,7 +261,7 @@ template<typename T>
 void print_vector(std::string name, std::vector<T> vec)
 {
   if (io.verbosity > 1) {
-    io.print(fmt::format("{} [{}]:\n", name, vec.size()));
+    io.print(std::format("{} [{}]:\n", name, vec.size()));
     for (int i = 0; i < vec.size(); i++) {
       if (i == 10) {
         io.print("... ");
@@ -273,7 +270,7 @@ void print_vector(std::string name, std::vector<T> vec)
       if (i > 10 && i < vec.size() - 10) {
         continue;
       }
-      io.print(fmt::format("{} ", vec[i]));
+      io.print(std::format("{} ", vec[i]));
     }
     io.print("\n");
   }
@@ -387,7 +384,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   // Restrict going over the number of logical cores available
   ST_int nlcores = (ST_int)num_logical_cores();
   if (opts.nthreads > nlcores) {
-    io.print(fmt::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
+    io.print(std::format("Restricting to {} threads (recommend {} threads)\n", nlcores, npcores));
     opts.nthreads = nlcores;
   }
 
@@ -520,19 +517,19 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   if (allowMissing && opts.missingdistance == 0) {
     opts.missingdistance = default_missing_distance(x);
   }
-  SF_macro_save(MISSING_DISTANCE_USED, (char*)fmt::format("{}", opts.missingdistance).c_str());
+  SF_macro_save(MISSING_DISTANCE_USED, (char*)std::format("{}", opts.missingdistance).c_str());
 
   const std::shared_ptr<ManifoldGenerator> generator = std::make_unique<ManifoldGenerator>(
     t, x, tau, p, xmap, co_x, panelIDs, extras, numExtrasLagged, dtMode, reldt, allowMissing, dtWeight);
 
-  SF_macro_save(DTW_USED, (char*)fmt::format("{}", generator->dtWeight()).c_str());
+  SF_macro_save(DTW_USED, (char*)std::format("{}", generator->dtWeight()).c_str());
 
   // Save some variables back to Stata, like the manifold (if savemanifold) or the dt (if dtsave).
   // Start by generating the 'usable' variable.
   std::vector<bool> usable = generator->generate_usable(maxE);
 
   int numUsable = std::accumulate(usable.begin(), usable.end(), 0);
-  SF_macro_save(NUM_USABLE, (char*)fmt::format("{}", numUsable).c_str());
+  SF_macro_save(NUM_USABLE, (char*)std::format("{}", numUsable).c_str());
 
   // Save the dt column (before scaling by 'dtWeight') back to Stata if requested.
   if (dtMode && saveDT) {
@@ -599,7 +596,7 @@ ST_retcode launch_edm_tasks(int argc, char* argv[])
   // If requested, save the inputs to a local file for testing
   if (!saveInputsFilename.empty()) {
     if (io.verbosity > 1) {
-      io.print(fmt::format("Saving inputs to '{}.json'\n", saveInputsFilename));
+      io.print(std::format("Saving inputs to '{}.json'\n", saveInputsFilename));
       io.flush();
     }
 
@@ -644,7 +641,7 @@ void save_to_stata_matrix(std::string matName, ST_int r, ST_int c, double v, ST_
   }
 
   if (SF_mat_store((char*)matName.c_str(), r, c, v)) {
-    io.error(fmt::format("Error: failed to save {} to matrix '{}[{},{}]'\n", v, matName, r, c).c_str());
+    io.error(std::format("Error: failed to save {} to matrix '{}[{},{}]'\n", v, matName, r, c).c_str());
     rc = CANNOT_SAVE_RESULTS;
   }
 }
@@ -716,8 +713,8 @@ ST_retcode save_all_task_results_to_stata(int argc, char* argv[])
     }
   }
 
-  SF_macro_save(K_MIN, (char*)fmt::format("{}", kMin).c_str());
-  SF_macro_save(K_MAX, (char*)fmt::format("{}", kMax).c_str());
+  SF_macro_save(K_MIN, (char*)std::format("{}", kMin).c_str());
+  SF_macro_save(K_MAX, (char*)std::format("{}", kMax).c_str());
 
   return rc;
 }
