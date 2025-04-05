@@ -9,7 +9,7 @@ on:
 jobs:
 
   build-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v4
@@ -17,6 +17,9 @@ jobs:
         path: x64
     - name: Configure CMake
       working-directory: ${{github.workspace}}/x64
+      env:
+        CC: clang-17
+        CXX: clang++-17
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
     - name: Build plugin
       working-directory: ${{github.workspace}}/x64
@@ -36,7 +39,7 @@ jobs:
         path: ${{github.workspace}}/x64/stata/edm.ado
 
   build-mac-arm:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
     - name: Checkout a copy to compile for ARM
       uses: actions/checkout@v4
@@ -61,7 +64,7 @@ jobs:
         path: ${{github.workspace}}/arm/bin/edm_MacOSX_arm.plugin
 
   build-mac-x64:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - name: Checkout a copy to compile for x86
       uses: actions/checkout@v4

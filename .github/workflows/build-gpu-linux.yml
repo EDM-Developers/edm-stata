@@ -9,13 +9,13 @@ on:
 jobs:
 
   build-gpu-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v4
       with:
         path: gpu
-    - uses: Jimver/cuda-toolkit@v0.2.11
+    - uses: Jimver/cuda-toolkit@v0.2.22
       id: cuda-toolkit
       with:
         cuda: '11.5.1'
@@ -30,6 +30,9 @@ jobs:
         ls /opt
     - name: Configure CMake
       working-directory: ${{github.workspace}}/gpu
+      env:
+        CC: clang-17
+        CXX: clang++-17
       run: |
         export AF_PATH=/opt/arrayfire
         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${AF_PATH}/lib64

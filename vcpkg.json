@@ -6,8 +6,6 @@
       "name": "catch2",
       "version>=": "3.3.0"
     },
-    "fmt",
-    "nlohmann-json"
   ],
   "builtin-baseline": "d52632d9a0c4a5b57de285b1e03722a067dd80eb"
 }
